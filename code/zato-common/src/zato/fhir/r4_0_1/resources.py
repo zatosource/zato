@@ -72,9 +72,9 @@ class AccountCoverage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'coverage': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    coverage: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    coverage: Reference | dict | None
     priority: Optional[PositiveInt] = None
 
 
@@ -83,11 +83,11 @@ class AccountGuarantor(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'party': 'Reference', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    party: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    party: Reference | dict | None
     onHold: Optional[Boolean] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class Account(FHIRResource):
@@ -110,24 +110,24 @@ class Account(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     name: Optional[String] = None
-    subject: Reference | FHIRList[Reference]
-    servicePeriod: Optional[Period]
-    coverage: AccountCoverage | FHIRList[AccountCoverage]
-    owner: Optional[Reference]
+    subject: Reference | FHIRList[Reference] | list | dict
+    servicePeriod: Period | dict | None
+    coverage: AccountCoverage | FHIRList[AccountCoverage] | list | dict
+    owner: Reference | dict | None
     description: Optional[String] = None
-    guarantor: AccountGuarantor | FHIRList[AccountGuarantor]
-    partOf: Optional[Reference]
+    guarantor: AccountGuarantor | FHIRList[AccountGuarantor] | list | dict
+    partOf: Reference | dict | None
 
 
 class ActivityDefinitionParticipant(FHIRElement):
@@ -135,10 +135,10 @@ class ActivityDefinitionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class ActivityDefinitionDynamicValue(FHIRElement):
@@ -146,10 +146,10 @@ class ActivityDefinitionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class ActivityDefinition(FHIRResource):
@@ -221,66 +221,66 @@ class ActivityDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
     kind: Optional[Code] = None
     profile: Optional[Canonical] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    timingTiming: Optional[Timing]
+    timingTiming: Timing | dict | None
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingRange: Optional[Range]
-    timingDuration: Optional[Duration]
-    location: Optional[Reference]
-    participant: ActivityDefinitionParticipant | FHIRList[ActivityDefinitionParticipant]
-    productReference: Optional[Reference]
-    productCodeableConcept: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
-    dosage: Dosage | FHIRList[Dosage]
-    bodySite: CodeableConcept | FHIRList[CodeableConcept]
-    specimenRequirement: Reference | FHIRList[Reference]
-    observationRequirement: Reference | FHIRList[Reference]
-    observationResultRequirement: Reference | FHIRList[Reference]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingRange: Range | dict | None
+    timingDuration: Duration | dict | None
+    location: Reference | dict | None
+    participant: ActivityDefinitionParticipant | FHIRList[ActivityDefinitionParticipant] | list | dict
+    productReference: Reference | dict | None
+    productCodeableConcept: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
+    dosage: Dosage | FHIRList[Dosage] | list | dict
+    bodySite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specimenRequirement: Reference | FHIRList[Reference] | list | dict
+    observationRequirement: Reference | FHIRList[Reference] | list | dict
+    observationResultRequirement: Reference | FHIRList[Reference] | list | dict
     transform: Optional[Canonical] = None
-    dynamicValue: ActivityDefinitionDynamicValue | FHIRList[ActivityDefinitionDynamicValue]
+    dynamicValue: ActivityDefinitionDynamicValue | FHIRList[ActivityDefinitionDynamicValue] | list | dict
 
 
 class AdverseEventSuspectEntity(FHIRElement):
@@ -288,10 +288,10 @@ class AdverseEventSuspectEntity(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'instance': 'Reference', 'causality': 'AdverseEventSuspectEntityCausality'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    instance: Optional[Reference]
-    causality: AdverseEventSuspectEntityCausality | FHIRList[AdverseEventSuspectEntityCausality]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    instance: Reference | dict | None
+    causality: AdverseEventSuspectEntityCausality | FHIRList[AdverseEventSuspectEntityCausality] | list | dict
 
 
 class AdverseEventSuspectEntityCausality(FHIRElement):
@@ -305,12 +305,12 @@ class AdverseEventSuspectEntityCausality(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    assessment: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    assessment: CodeableConcept | dict | None
     productRelatedness: Optional[String] = None
-    author: Optional[Reference]
-    method: Optional[CodeableConcept]
+    author: Reference | dict | None
+    method: CodeableConcept | dict | None
 
 
 class AdverseEvent(FHIRResource):
@@ -352,33 +352,33 @@ class AdverseEvent(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     actuality: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    event: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    event: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     date: Optional[DateTime] = None
     detected: Optional[DateTime] = None
     recordedDate: Optional[DateTime] = None
-    resultingCondition: Reference | FHIRList[Reference]
-    location: Optional[Reference]
-    seriousness: Optional[CodeableConcept]
-    severity: Optional[CodeableConcept]
-    outcome: Optional[CodeableConcept]
-    recorder: Optional[Reference]
-    contributor: Reference | FHIRList[Reference]
-    suspectEntity: AdverseEventSuspectEntity | FHIRList[AdverseEventSuspectEntity]
-    subjectMedicalHistory: Reference | FHIRList[Reference]
-    referenceDocument: Reference | FHIRList[Reference]
-    study: Reference | FHIRList[Reference]
+    resultingCondition: Reference | FHIRList[Reference] | list | dict
+    location: Reference | dict | None
+    seriousness: CodeableConcept | dict | None
+    severity: CodeableConcept | dict | None
+    outcome: CodeableConcept | dict | None
+    recorder: Reference | dict | None
+    contributor: Reference | FHIRList[Reference] | list | dict
+    suspectEntity: AdverseEventSuspectEntity | FHIRList[AdverseEventSuspectEntity] | list | dict
+    subjectMedicalHistory: Reference | FHIRList[Reference] | list | dict
+    referenceDocument: Reference | FHIRList[Reference] | list | dict
+    study: Reference | FHIRList[Reference] | list | dict
 
 
 class AllergyIntoleranceReaction(FHIRElement):
@@ -393,15 +393,15 @@ class AllergyIntoleranceReaction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    substance: Optional[CodeableConcept]
-    manifestation: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    substance: CodeableConcept | dict | None
+    manifestation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[String] = None
     onset: Optional[DateTime] = None
     severity: Optional[Code] = None
-    exposureRoute: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    exposureRoute: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class AllergyIntolerance(FHIRResource):
@@ -430,33 +430,33 @@ class AllergyIntolerance(FHIRResource):
     _choice_fields = {'onset': ['onsetDateTime', 'onsetAge', 'onsetPeriod', 'onsetRange', 'onsetString']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    clinicalStatus: Optional[CodeableConcept]
-    verificationStatus: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    clinicalStatus: CodeableConcept | dict | None
+    verificationStatus: CodeableConcept | dict | None
     type_: Optional[Code] = None
-    category: Code | FHIRList[Code] = None
+    category: Code | FHIRList[Code] | list | None = None
     criticality: Optional[Code] = None
-    code: Optional[CodeableConcept]
-    patient: Optional[Reference]
-    encounter: Optional[Reference]
+    code: CodeableConcept | dict | None
+    patient: Reference | dict | None
+    encounter: Reference | dict | None
     onsetDateTime: Optional[DateTime] = None
-    onsetAge: Optional[Age]
-    onsetPeriod: Optional[Period]
-    onsetRange: Optional[Range]
+    onsetAge: Age | dict | None
+    onsetPeriod: Period | dict | None
+    onsetRange: Range | dict | None
     onsetString: Optional[String] = None
     recordedDate: Optional[DateTime] = None
-    recorder: Optional[Reference]
-    asserter: Optional[Reference]
+    recorder: Reference | dict | None
+    asserter: Reference | dict | None
     lastOccurrence: Optional[DateTime] = None
-    note: Annotation | FHIRList[Annotation]
-    reaction: AllergyIntoleranceReaction | FHIRList[AllergyIntoleranceReaction]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    reaction: AllergyIntoleranceReaction | FHIRList[AllergyIntoleranceReaction] | list | dict
 
 
 class AppointmentParticipant(FHIRElement):
@@ -464,13 +464,13 @@ class AppointmentParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'actor': 'Reference', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    actor: Reference | dict | None
     required: Optional[Code] = None
     status: Optional[Code] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class Appointment(FHIRResource):
@@ -513,35 +513,35 @@ class Appointment(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    cancelationReason: Optional[CodeableConcept]
-    serviceCategory: CodeableConcept | FHIRList[CodeableConcept]
-    serviceType: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    appointmentType: Optional[CodeableConcept]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
+    cancelationReason: CodeableConcept | dict | None
+    serviceCategory: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    serviceType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    appointmentType: CodeableConcept | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
     priority: Optional[UnsignedInt] = None
     description: Optional[String] = None
-    supportingInformation: Reference | FHIRList[Reference]
+    supportingInformation: Reference | FHIRList[Reference] | list | dict
     start: Optional[Instant] = None
     end: Optional[Instant] = None
     minutesDuration: Optional[PositiveInt] = None
-    slot: Reference | FHIRList[Reference]
+    slot: Reference | FHIRList[Reference] | list | dict
     created: Optional[DateTime] = None
     comment: Optional[String] = None
     patientInstruction: Optional[String] = None
-    basedOn: Reference | FHIRList[Reference]
-    participant: AppointmentParticipant | FHIRList[AppointmentParticipant]
-    requestedPeriod: Period | FHIRList[Period]
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    participant: AppointmentParticipant | FHIRList[AppointmentParticipant] | list | dict
+    requestedPeriod: Period | FHIRList[Period] | list | dict
 
 
 class AppointmentResponse(FHIRResource):
@@ -560,19 +560,19 @@ class AppointmentResponse(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    appointment: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    appointment: Reference | dict | None
     start: Optional[Instant] = None
     end: Optional[Instant] = None
-    participantType: CodeableConcept | FHIRList[CodeableConcept]
-    actor: Optional[Reference]
+    participantType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    actor: Reference | dict | None
     participantStatus: Optional[Code] = None
     comment: Optional[String] = None
 
@@ -592,19 +592,19 @@ class AuditEventAgent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    role: CodeableConcept | FHIRList[CodeableConcept]
-    who: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    role: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    who: Reference | dict | None
     altId: Optional[String] = None
     name: Optional[String] = None
     requestor: Optional[Boolean] = None
-    location: Optional[Reference]
-    policy: Uri | FHIRList[Uri] = None
-    media: Optional[Coding]
-    network: Optional[AuditEventAgentNetwork]
-    purposeOfUse: CodeableConcept | FHIRList[CodeableConcept]
+    location: Reference | dict | None
+    policy: Uri | FHIRList[Uri] | list | None = None
+    media: Coding | dict | None
+    network: AuditEventAgentNetwork | dict | None
+    purposeOfUse: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class AuditEventAgentNetwork(FHIRElement):
@@ -612,8 +612,8 @@ class AuditEventAgentNetwork(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     address: Optional[String] = None
     type_: Optional[Code] = None
 
@@ -623,11 +623,11 @@ class AuditEventSource(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'observer': 'Reference', 'type_': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     site: Optional[String] = None
-    observer: Optional[Reference]
-    type_: Coding | FHIRList[Coding]
+    observer: Reference | dict | None
+    type_: Coding | FHIRList[Coding] | list | dict
 
 
 class AuditEventEntity(FHIRElement):
@@ -644,17 +644,17 @@ class AuditEventEntity(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    what: Optional[Reference]
-    type_: Optional[Coding]
-    role: Optional[Coding]
-    lifecycle: Optional[Coding]
-    securityLabel: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    what: Reference | dict | None
+    type_: Coding | dict | None
+    role: Coding | dict | None
+    lifecycle: Coding | dict | None
+    securityLabel: Coding | FHIRList[Coding] | list | dict
     name: Optional[String] = None
     description: Optional[String] = None
     query: Optional[Base64Binary] = None
-    detail: AuditEventEntityDetail | FHIRList[AuditEventEntityDetail]
+    detail: AuditEventEntityDetail | FHIRList[AuditEventEntityDetail] | list | dict
 
 
 class AuditEventEntityDetail(FHIRElement):
@@ -663,8 +663,8 @@ class AuditEventEntityDetail(FHIRElement):
     _choice_fields = {'value': ['valueString', 'valueBase64Binary']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[String] = None
     valueString: Optional[String] = None
     valueBase64Binary: Optional[Base64Binary] = None
@@ -689,24 +689,24 @@ class AuditEvent(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[Coding]
-    subtype: Coding | FHIRList[Coding]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: Coding | dict | None
+    subtype: Coding | FHIRList[Coding] | list | dict
     action: Optional[Code] = None
-    period: Optional[Period]
+    period: Period | dict | None
     recorded: Optional[Instant] = None
     outcome: Optional[Code] = None
     outcomeDesc: Optional[String] = None
-    purposeOfEvent: CodeableConcept | FHIRList[CodeableConcept]
-    agent: AuditEventAgent | FHIRList[AuditEventAgent]
-    source: Optional[AuditEventSource]
-    entity: AuditEventEntity | FHIRList[AuditEventEntity]
+    purposeOfEvent: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    agent: AuditEventAgent | FHIRList[AuditEventAgent] | list | dict
+    source: AuditEventSource | dict | None
+    entity: AuditEventEntity | FHIRList[AuditEventEntity] | list | dict
 
 
 class Basic(FHIRResource):
@@ -725,18 +725,18 @@ class Basic(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
     created: Optional[Date] = None
-    author: Optional[Reference]
+    author: Reference | dict | None
 
 
 class Binary(FHIRResource):
@@ -744,11 +744,11 @@ class Binary(FHIRResource):
     _field_types = {'meta': 'Meta', 'securityContext': 'Reference'}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
     contentType: Optional[Code] = None
-    securityContext: Optional[Reference]
+    securityContext: Reference | dict | None
     data: Optional[Base64Binary] = None
 
 
@@ -758,12 +758,12 @@ class BiologicallyDerivedProductCollection(FHIRElement):
     _choice_fields = {'collected': ['collectedDateTime', 'collectedPeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    collector: Optional[Reference]
-    source: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    collector: Reference | dict | None
+    source: Reference | dict | None
     collectedDateTime: Optional[DateTime] = None
-    collectedPeriod: Optional[Period]
+    collectedPeriod: Period | dict | None
 
 
 class BiologicallyDerivedProductProcessing(FHIRElement):
@@ -772,13 +772,13 @@ class BiologicallyDerivedProductProcessing(FHIRElement):
     _choice_fields = {'time': ['timeDateTime', 'timePeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    procedure: Optional[CodeableConcept]
-    additive: Optional[Reference]
+    procedure: CodeableConcept | dict | None
+    additive: Reference | dict | None
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period]
+    timePeriod: Period | dict | None
 
 
 class BiologicallyDerivedProductManipulation(FHIRElement):
@@ -787,11 +787,11 @@ class BiologicallyDerivedProductManipulation(FHIRElement):
     _choice_fields = {'time': ['timeDateTime', 'timePeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period]
+    timePeriod: Period | dict | None
 
 
 class BiologicallyDerivedProductStorage(FHIRElement):
@@ -799,12 +799,12 @@ class BiologicallyDerivedProductStorage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'duration': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     temperature: Optional[Decimal] = None
     scale: Optional[Code] = None
-    duration: Optional[Period]
+    duration: Period | dict | None
 
 
 class BiologicallyDerivedProduct(FHIRResource):
@@ -827,24 +827,24 @@ class BiologicallyDerivedProduct(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     productCategory: Optional[Code] = None
-    productCode: Optional[CodeableConcept]
+    productCode: CodeableConcept | dict | None
     status: Optional[Code] = None
-    request: Reference | FHIRList[Reference]
+    request: Reference | FHIRList[Reference] | list | dict
     quantity: Optional[Integer] = None
-    parent: Reference | FHIRList[Reference]
-    collection: Optional[BiologicallyDerivedProductCollection]
-    processing: BiologicallyDerivedProductProcessing | FHIRList[BiologicallyDerivedProductProcessing]
-    manipulation: Optional[BiologicallyDerivedProductManipulation]
-    storage: BiologicallyDerivedProductStorage | FHIRList[BiologicallyDerivedProductStorage]
+    parent: Reference | FHIRList[Reference] | list | dict
+    collection: BiologicallyDerivedProductCollection | dict | None
+    processing: BiologicallyDerivedProductProcessing | FHIRList[BiologicallyDerivedProductProcessing] | list | dict
+    manipulation: BiologicallyDerivedProductManipulation | dict | None
+    storage: BiologicallyDerivedProductStorage | FHIRList[BiologicallyDerivedProductStorage] | list | dict
 
 
 class BodyStructure(FHIRResource):
@@ -865,21 +865,21 @@ class BodyStructure(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    morphology: Optional[CodeableConcept]
-    location: Optional[CodeableConcept]
-    locationQualifier: CodeableConcept | FHIRList[CodeableConcept]
+    morphology: CodeableConcept | dict | None
+    location: CodeableConcept | dict | None
+    locationQualifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[String] = None
-    image: Attachment | FHIRList[Attachment]
-    patient: Optional[Reference]
+    image: Attachment | FHIRList[Attachment] | list | dict
+    patient: Reference | dict | None
 
 
 class BundleLink(FHIRElement):
@@ -887,8 +887,8 @@ class BundleLink(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     relation: Optional[String] = None
     url: Optional[Uri] = None
 
@@ -905,14 +905,14 @@ class BundleEntry(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     link: Any = None
     fullUrl: Optional[Uri] = None
-    resource: Optional[FHIRResource]
-    search: Optional[BundleEntrySearch]
-    request: Optional[BundleEntryRequest]
-    response: Optional[BundleEntryResponse]
+    resource: FHIRResource | dict | None
+    search: BundleEntrySearch | dict | None
+    request: BundleEntryRequest | dict | None
+    response: BundleEntryResponse | dict | None
 
 
 class BundleEntrySearch(FHIRElement):
@@ -920,8 +920,8 @@ class BundleEntrySearch(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     score: Optional[Decimal] = None
 
@@ -931,8 +931,8 @@ class BundleEntryRequest(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     method: Optional[Code] = None
     url: Optional[Uri] = None
     ifNoneMatch: Optional[String] = None
@@ -946,13 +946,13 @@ class BundleEntryResponse(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'outcome': 'Resource'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     status: Optional[String] = None
     location: Optional[Uri] = None
     etag: Optional[String] = None
     lastModified: Optional[Instant] = None
-    outcome: Optional[FHIRResource]
+    outcome: FHIRResource | dict | None
 
 
 class Bundle(FHIRResource):
@@ -961,16 +961,16 @@ class Bundle(FHIRResource):
     _field_types = {'meta': 'Meta', 'identifier': 'Identifier', 'link': 'BundleLink', 'entry': 'BundleEntry', 'signature': 'Signature'}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    identifier: Optional[Identifier]
+    identifier: Identifier | dict | None
     type_: Optional[Code] = None
     timestamp: Optional[Instant] = None
     total: Optional[UnsignedInt] = None
-    link: BundleLink | FHIRList[BundleLink]
-    entry: BundleEntry | FHIRList[BundleEntry]
-    signature: Optional[Signature]
+    link: BundleLink | FHIRList[BundleLink] | list | dict
+    entry: BundleEntry | FHIRList[BundleEntry] | list | dict
+    signature: Signature | dict | None
 
 
 class CapabilityStatementSoftware(FHIRElement):
@@ -978,8 +978,8 @@ class CapabilityStatementSoftware(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     version: Optional[String] = None
     releaseDate: Optional[DateTime] = None
@@ -990,11 +990,11 @@ class CapabilityStatementImplementation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'custodian': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     url: Optional[Url] = None
-    custodian: Optional[Reference]
+    custodian: Reference | dict | None
 
 
 class CapabilityStatementRest(FHIRElement):
@@ -1008,16 +1008,16 @@ class CapabilityStatementRest(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     documentation: Optional[Markdown] = None
-    security: Optional[CapabilityStatementRestSecurity]
-    resource: CapabilityStatementRestResource | FHIRList[CapabilityStatementRestResource]
-    interaction: CapabilityStatementRestInteraction | FHIRList[CapabilityStatementRestInteraction]
+    security: CapabilityStatementRestSecurity | dict | None
+    resource: CapabilityStatementRestResource | FHIRList[CapabilityStatementRestResource] | list | dict
+    interaction: CapabilityStatementRestInteraction | FHIRList[CapabilityStatementRestInteraction] | list | dict
     searchParam: Any = None
     operation: Any = None
-    compartment: Canonical | FHIRList[Canonical] = None
+    compartment: Canonical | FHIRList[Canonical] | list | None = None
 
 
 class CapabilityStatementRestSecurity(FHIRElement):
@@ -1025,10 +1025,10 @@ class CapabilityStatementRestSecurity(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'service': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     cors: Optional[Boolean] = None
-    service: CodeableConcept | FHIRList[CodeableConcept]
+    service: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[Markdown] = None
 
 
@@ -1053,13 +1053,13 @@ class CapabilityStatementRestResource(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     profile: Optional[Canonical] = None
-    supportedProfile: Canonical | FHIRList[Canonical] = None
+    supportedProfile: Canonical | FHIRList[Canonical] | list | None = None
     documentation: Optional[Markdown] = None
-    interaction: CapabilityStatementRestResourceInteraction | FHIRList[CapabilityStatementRestResourceInteraction]
+    interaction: CapabilityStatementRestResourceInteraction | FHIRList[CapabilityStatementRestResourceInteraction] | list | dict
     versioning: Optional[Code] = None
     readHistory: Optional[Boolean] = None
     updateCreate: Optional[Boolean] = None
@@ -1067,11 +1067,11 @@ class CapabilityStatementRestResource(FHIRElement):
     conditionalRead: Optional[Code] = None
     conditionalUpdate: Optional[Boolean] = None
     conditionalDelete: Optional[Code] = None
-    referencePolicy: Code | FHIRList[Code] = None
-    searchInclude: String | FHIRList[String] = None
-    searchRevInclude: String | FHIRList[String] = None
-    searchParam: CapabilityStatementRestResourceSearchParam | FHIRList[CapabilityStatementRestResourceSearchParam]
-    operation: CapabilityStatementRestResourceOperation | FHIRList[CapabilityStatementRestResourceOperation]
+    referencePolicy: Code | FHIRList[Code] | list | None = None
+    searchInclude: String | FHIRList[String] | list | None = None
+    searchRevInclude: String | FHIRList[String] | list | None = None
+    searchParam: CapabilityStatementRestResourceSearchParam | FHIRList[CapabilityStatementRestResourceSearchParam] | list | dict
+    operation: CapabilityStatementRestResourceOperation | FHIRList[CapabilityStatementRestResourceOperation] | list | dict
 
 
 class CapabilityStatementRestResourceInteraction(FHIRElement):
@@ -1079,8 +1079,8 @@ class CapabilityStatementRestResourceInteraction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     documentation: Optional[Markdown] = None
 
@@ -1090,8 +1090,8 @@ class CapabilityStatementRestResourceSearchParam(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     definition: Optional[Canonical] = None
     type_: Optional[Code] = None
@@ -1103,8 +1103,8 @@ class CapabilityStatementRestResourceOperation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     definition: Optional[Canonical] = None
     documentation: Optional[Markdown] = None
@@ -1115,8 +1115,8 @@ class CapabilityStatementRestInteraction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     documentation: Optional[Markdown] = None
 
@@ -1131,12 +1131,12 @@ class CapabilityStatementMessaging(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    endpoint: CapabilityStatementMessagingEndpoint | FHIRList[CapabilityStatementMessagingEndpoint]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    endpoint: CapabilityStatementMessagingEndpoint | FHIRList[CapabilityStatementMessagingEndpoint] | list | dict
     reliableCache: Optional[UnsignedInt] = None
     documentation: Optional[Markdown] = None
-    supportedMessage: CapabilityStatementMessagingSupportedMessage | FHIRList[CapabilityStatementMessagingSupportedMessage]
+    supportedMessage: CapabilityStatementMessagingSupportedMessage | FHIRList[CapabilityStatementMessagingSupportedMessage] | list | dict
 
 
 class CapabilityStatementMessagingEndpoint(FHIRElement):
@@ -1144,9 +1144,9 @@ class CapabilityStatementMessagingEndpoint(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'protocol': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    protocol: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    protocol: Coding | dict | None
     address: Optional[Url] = None
 
 
@@ -1155,8 +1155,8 @@ class CapabilityStatementMessagingSupportedMessage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     definition: Optional[Canonical] = None
 
@@ -1166,8 +1166,8 @@ class CapabilityStatementDocument(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     documentation: Optional[Markdown] = None
     profile: Optional[Canonical] = None
@@ -1208,13 +1208,13 @@ class CapabilityStatement(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -1223,24 +1223,24 @@ class CapabilityStatement(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     kind: Optional[Code] = None
-    instantiates: Canonical | FHIRList[Canonical] = None
-    imports: Canonical | FHIRList[Canonical] = None
-    software: Optional[CapabilityStatementSoftware]
-    implementation: Optional[CapabilityStatementImplementation]
+    instantiates: Canonical | FHIRList[Canonical] | list | None = None
+    imports: Canonical | FHIRList[Canonical] | list | None = None
+    software: CapabilityStatementSoftware | dict | None
+    implementation: CapabilityStatementImplementation | dict | None
     fhirVersion: Optional[Code] = None
-    format: Code | FHIRList[Code] = None
-    patchFormat: Code | FHIRList[Code] = None
-    implementationGuide: Canonical | FHIRList[Canonical] = None
-    rest: CapabilityStatementRest | FHIRList[CapabilityStatementRest]
-    messaging: CapabilityStatementMessaging | FHIRList[CapabilityStatementMessaging]
-    document: CapabilityStatementDocument | FHIRList[CapabilityStatementDocument]
+    format: Code | FHIRList[Code] | list | None = None
+    patchFormat: Code | FHIRList[Code] | list | None = None
+    implementationGuide: Canonical | FHIRList[Canonical] | list | None = None
+    rest: CapabilityStatementRest | FHIRList[CapabilityStatementRest] | list | dict
+    messaging: CapabilityStatementMessaging | FHIRList[CapabilityStatementMessaging] | list | dict
+    document: CapabilityStatementDocument | FHIRList[CapabilityStatementDocument] | list | dict
 
 
 class CarePlanActivity(FHIRElement):
@@ -1256,13 +1256,13 @@ class CarePlanActivity(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    outcomeCodeableConcept: CodeableConcept | FHIRList[CodeableConcept]
-    outcomeReference: Reference | FHIRList[Reference]
-    progress: Annotation | FHIRList[Annotation]
-    reference: Optional[Reference]
-    detail: Optional[CarePlanActivityDetail]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    outcomeCodeableConcept: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    outcomeReference: Reference | FHIRList[Reference] | list | dict
+    progress: Annotation | FHIRList[Annotation] | list | dict
+    reference: Reference | dict | None
+    detail: CarePlanActivityDetail | dict | None
 
 
 class CarePlanActivityDetail(FHIRElement):
@@ -1287,27 +1287,27 @@ class CarePlanActivityDetail(FHIRElement):
     _choice_fields = {'product': ['productCodeableConcept', 'productReference'], 'scheduled': ['scheduledTiming', 'scheduledPeriod', 'scheduledString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    code: Optional[CodeableConcept]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    goal: Reference | FHIRList[Reference]
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    code: CodeableConcept | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    goal: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
     doNotPerform: Optional[Boolean] = None
-    scheduledTiming: Optional[Timing]
-    scheduledPeriod: Optional[Period]
+    scheduledTiming: Timing | dict | None
+    scheduledPeriod: Period | dict | None
     scheduledString: Optional[String] = None
-    location: Optional[Reference]
-    performer: Reference | FHIRList[Reference]
-    productCodeableConcept: Optional[CodeableConcept]
-    productReference: Optional[Reference]
-    dailyAmount: Optional[Quantity]
-    quantity: Optional[Quantity]
+    location: Reference | dict | None
+    performer: Reference | FHIRList[Reference] | list | dict
+    productCodeableConcept: CodeableConcept | dict | None
+    productReference: Reference | dict | None
+    dailyAmount: Quantity | dict | None
+    quantity: Quantity | dict | None
     description: Optional[String] = None
 
 
@@ -1357,36 +1357,36 @@ class CarePlan(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    replaces: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    replaces: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
     intent: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     title: Optional[String] = None
     description: Optional[String] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
-    period: Optional[Period]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
+    period: Period | dict | None
     created: Optional[DateTime] = None
-    author: Optional[Reference]
-    contributor: Reference | FHIRList[Reference]
-    careTeam: Reference | FHIRList[Reference]
-    addresses: Reference | FHIRList[Reference]
-    supportingInfo: Reference | FHIRList[Reference]
-    goal: Reference | FHIRList[Reference]
-    activity: CarePlanActivity | FHIRList[CarePlanActivity]
-    note: Annotation | FHIRList[Annotation]
+    author: Reference | dict | None
+    contributor: Reference | FHIRList[Reference] | list | dict
+    careTeam: Reference | FHIRList[Reference] | list | dict
+    addresses: Reference | FHIRList[Reference] | list | dict
+    supportingInfo: Reference | FHIRList[Reference] | list | dict
+    goal: Reference | FHIRList[Reference] | list | dict
+    activity: CarePlanActivity | FHIRList[CarePlanActivity] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class CareTeamParticipant(FHIRElement):
@@ -1401,12 +1401,12 @@ class CareTeamParticipant(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    role: CodeableConcept | FHIRList[CodeableConcept]
-    member: Optional[Reference]
-    onBehalfOf: Optional[Reference]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    role: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    member: Reference | dict | None
+    onBehalfOf: Reference | dict | None
+    period: Period | dict | None
 
 
 class CareTeam(FHIRResource):
@@ -1444,26 +1444,26 @@ class CareTeam(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     name: Optional[String] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
-    period: Optional[Period]
-    participant: CareTeamParticipant | FHIRList[CareTeamParticipant]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    managingOrganization: Reference | FHIRList[Reference]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    note: Annotation | FHIRList[Annotation]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
+    period: Period | dict | None
+    participant: CareTeamParticipant | FHIRList[CareTeamParticipant] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    managingOrganization: Reference | FHIRList[Reference] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class CatalogEntryRelatedEntry(FHIRElement):
@@ -1471,10 +1471,10 @@ class CatalogEntryRelatedEntry(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'item': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     relationtype: Optional[Code] = None
-    item: Optional[Reference]
+    item: Reference | dict | None
 
 
 class CatalogEntry(FHIRResource):
@@ -1508,26 +1508,26 @@ class CatalogEntry(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
     orderable: Optional[Boolean] = None
-    referencedItem: Optional[Reference]
-    additionalIdentifier: Identifier | FHIRList[Identifier]
-    classification: CodeableConcept | FHIRList[CodeableConcept]
+    referencedItem: Reference | dict | None
+    additionalIdentifier: Identifier | FHIRList[Identifier] | list | dict
+    classification: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     status: Optional[Code] = None
-    validityPeriod: Optional[Period]
+    validityPeriod: Period | dict | None
     validTo: Optional[DateTime] = None
     lastUpdated: Optional[DateTime] = None
-    additionalCharacteristic: CodeableConcept | FHIRList[CodeableConcept]
-    additionalClassification: CodeableConcept | FHIRList[CodeableConcept]
-    relatedEntry: CatalogEntryRelatedEntry | FHIRList[CatalogEntryRelatedEntry]
+    additionalCharacteristic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    additionalClassification: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    relatedEntry: CatalogEntryRelatedEntry | FHIRList[CatalogEntryRelatedEntry] | list | dict
 
 
 class ChargeItemPerformer(FHIRElement):
@@ -1535,10 +1535,10 @@ class ChargeItemPerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class ChargeItem(FHIRResource):
@@ -1591,42 +1591,42 @@ class ChargeItem(FHIRResource):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrencePeriod', 'occurrenceTiming'], 'product': ['productReference', 'productCodeableConcept']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    definitionUri: Uri | FHIRList[Uri] = None
-    definitionCanonical: Canonical | FHIRList[Canonical] = None
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    definitionUri: Uri | FHIRList[Uri] | list | None = None
+    definitionCanonical: Canonical | FHIRList[Canonical] | list | None = None
     status: Optional[Code] = None
-    partOf: Reference | FHIRList[Reference]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    context: Optional[Reference]
+    partOf: Reference | FHIRList[Reference] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    context: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
-    performer: ChargeItemPerformer | FHIRList[ChargeItemPerformer]
-    performingOrganization: Optional[Reference]
-    requestingOrganization: Optional[Reference]
-    costCenter: Optional[Reference]
-    quantity: Optional[Quantity]
-    bodysite: CodeableConcept | FHIRList[CodeableConcept]
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
+    performer: ChargeItemPerformer | FHIRList[ChargeItemPerformer] | list | dict
+    performingOrganization: Reference | dict | None
+    requestingOrganization: Reference | dict | None
+    costCenter: Reference | dict | None
+    quantity: Quantity | dict | None
+    bodysite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     factorOverride: Optional[Decimal] = None
-    priceOverride: Optional[Money]
+    priceOverride: Money | dict | None
     overrideReason: Optional[String] = None
-    enterer: Optional[Reference]
+    enterer: Reference | dict | None
     enteredDate: Optional[DateTime] = None
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    service: Reference | FHIRList[Reference]
-    productReference: Optional[Reference]
-    productCodeableConcept: Optional[CodeableConcept]
-    account: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    supportingInformation: Reference | FHIRList[Reference]
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    service: Reference | FHIRList[Reference] | list | dict
+    productReference: Reference | dict | None
+    productCodeableConcept: CodeableConcept | dict | None
+    account: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    supportingInformation: Reference | FHIRList[Reference] | list | dict
 
 
 class ChargeItemDefinitionApplicability(FHIRElement):
@@ -1634,8 +1634,8 @@ class ChargeItemDefinitionApplicability(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     language: Optional[String] = None
     expression: Optional[String] = None
@@ -1646,10 +1646,10 @@ class ChargeItemDefinitionPropertyGroup(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'priceComponent': 'ChargeItemDefinitionPropertyGroupPriceComponent'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     applicability: Any = None
-    priceComponent: ChargeItemDefinitionPropertyGroupPriceComponent | FHIRList[ChargeItemDefinitionPropertyGroupPriceComponent]
+    priceComponent: ChargeItemDefinitionPropertyGroupPriceComponent | FHIRList[ChargeItemDefinitionPropertyGroupPriceComponent] | list | dict
 
 
 class ChargeItemDefinitionPropertyGroupPriceComponent(FHIRElement):
@@ -1657,12 +1657,12 @@ class ChargeItemDefinitionPropertyGroupPriceComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     factor: Optional[Decimal] = None
-    amount: Optional[Money]
+    amount: Money | dict | None
 
 
 class ChargeItemDefinition(FHIRResource):
@@ -1700,36 +1700,36 @@ class ChargeItemDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     title: Optional[String] = None
-    derivedFromUri: Uri | FHIRList[Uri] = None
-    partOf: Canonical | FHIRList[Canonical] = None
-    replaces: Canonical | FHIRList[Canonical] = None
+    derivedFromUri: Uri | FHIRList[Uri] | list | None = None
+    partOf: Canonical | FHIRList[Canonical] | list | None = None
+    replaces: Canonical | FHIRList[Canonical] | list | None = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    code: Optional[CodeableConcept]
-    instance: Reference | FHIRList[Reference]
-    applicability: ChargeItemDefinitionApplicability | FHIRList[ChargeItemDefinitionApplicability]
-    propertyGroup: ChargeItemDefinitionPropertyGroup | FHIRList[ChargeItemDefinitionPropertyGroup]
+    effectivePeriod: Period | dict | None
+    code: CodeableConcept | dict | None
+    instance: Reference | FHIRList[Reference] | list | dict
+    applicability: ChargeItemDefinitionApplicability | FHIRList[ChargeItemDefinitionApplicability] | list | dict
+    propertyGroup: ChargeItemDefinitionPropertyGroup | FHIRList[ChargeItemDefinitionPropertyGroup] | list | dict
 
 
 class ClaimRelated(FHIRElement):
@@ -1743,11 +1743,11 @@ class ClaimRelated(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    claim: Optional[Reference]
-    relationship: Optional[CodeableConcept]
-    reference: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    claim: Reference | dict | None
+    relationship: CodeableConcept | dict | None
+    reference: Identifier | dict | None
 
 
 class ClaimPayee(FHIRElement):
@@ -1755,10 +1755,10 @@ class ClaimPayee(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'party': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    party: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    party: Reference | dict | None
 
 
 class ClaimCareTeam(FHIRElement):
@@ -1772,13 +1772,13 @@ class ClaimCareTeam(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    provider: Optional[Reference]
+    provider: Reference | dict | None
     responsible: Optional[Boolean] = None
-    role: Optional[CodeableConcept]
-    qualification: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
+    qualification: CodeableConcept | dict | None
 
 
 class ClaimSupportingInfo(FHIRElement):
@@ -1797,19 +1797,19 @@ class ClaimSupportingInfo(FHIRElement):
     _choice_fields = {'timing': ['timingDate', 'timingPeriod'], 'value': ['valueBoolean', 'valueString', 'valueQuantity', 'valueAttachment', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
     timingDate: Optional[Date] = None
-    timingPeriod: Optional[Period]
+    timingPeriod: Period | dict | None
     valueBoolean: Optional[Boolean] = None
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity]
-    valueAttachment: Optional[Attachment]
-    valueReference: Optional[Reference]
-    reason: Optional[CodeableConcept]
+    valueQuantity: Quantity | dict | None
+    valueAttachment: Attachment | dict | None
+    valueReference: Reference | dict | None
+    reason: CodeableConcept | dict | None
 
 
 class ClaimDiagnosis(FHIRElement):
@@ -1826,14 +1826,14 @@ class ClaimDiagnosis(FHIRElement):
     _choice_fields = {'diagnosis': ['diagnosisCodeableConcept', 'diagnosisReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    diagnosisCodeableConcept: Optional[CodeableConcept]
-    diagnosisReference: Optional[Reference]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    onAdmission: Optional[CodeableConcept]
-    packageCode: Optional[CodeableConcept]
+    diagnosisCodeableConcept: CodeableConcept | dict | None
+    diagnosisReference: Reference | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    onAdmission: CodeableConcept | dict | None
+    packageCode: CodeableConcept | dict | None
 
 
 class ClaimProcedure(FHIRElement):
@@ -1849,14 +1849,14 @@ class ClaimProcedure(FHIRElement):
     _choice_fields = {'procedure': ['procedureCodeableConcept', 'procedureReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     date: Optional[DateTime] = None
-    procedureCodeableConcept: Optional[CodeableConcept]
-    procedureReference: Optional[Reference]
-    udi: Reference | FHIRList[Reference]
+    procedureCodeableConcept: CodeableConcept | dict | None
+    procedureReference: Reference | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
 
 
 class ClaimInsurance(FHIRElement):
@@ -1870,15 +1870,15 @@ class ClaimInsurance(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
     focal: Optional[Boolean] = None
-    identifier: Optional[Identifier]
-    coverage: Optional[Reference]
+    identifier: Identifier | dict | None
+    coverage: Reference | dict | None
     businessArrangement: Optional[String] = None
-    preAuthRef: String | FHIRList[String] = None
-    claimResponse: Optional[Reference]
+    preAuthRef: String | FHIRList[String] | list | None = None
+    claimResponse: Reference | dict | None
 
 
 class ClaimAccident(FHIRElement):
@@ -1893,12 +1893,12 @@ class ClaimAccident(FHIRElement):
     _choice_fields = {'location': ['locationAddress', 'locationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     date: Optional[Date] = None
-    type_: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
 
 
 class ClaimItem(FHIRElement):
@@ -1940,32 +1940,32 @@ class ClaimItem(FHIRElement):
     _choice_fields = {'location': ['locationCodeableConcept', 'locationAddress', 'locationReference'], 'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    careTeamSequence: PositiveInt | FHIRList[PositiveInt] = None
-    diagnosisSequence: PositiveInt | FHIRList[PositiveInt] = None
-    procedureSequence: PositiveInt | FHIRList[PositiveInt] = None
-    informationSequence: PositiveInt | FHIRList[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
+    careTeamSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    diagnosisSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    procedureSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    informationSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
-    locationCodeableConcept: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    servicedPeriod: Period | dict | None
+    locationCodeableConcept: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
-    bodySite: Optional[CodeableConcept]
-    subSite: CodeableConcept | FHIRList[CodeableConcept]
-    encounter: Reference | FHIRList[Reference]
-    detail: ClaimItemDetail | FHIRList[ClaimItemDetail]
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
+    bodySite: CodeableConcept | dict | None
+    subSite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    encounter: Reference | FHIRList[Reference] | list | dict
+    detail: ClaimItemDetail | FHIRList[ClaimItemDetail] | list | dict
 
 
 class ClaimItemDetail(FHIRElement):
@@ -1986,20 +1986,20 @@ class ClaimItemDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
-    subDetail: ClaimItemDetailSubDetail | FHIRList[ClaimItemDetailSubDetail]
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
+    subDetail: ClaimItemDetailSubDetail | FHIRList[ClaimItemDetailSubDetail] | list | dict
 
 
 class ClaimItemDetailSubDetail(FHIRElement):
@@ -2019,19 +2019,19 @@ class ClaimItemDetailSubDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
 
 
 class Claim(FHIRResource):
@@ -2082,40 +2082,40 @@ class Claim(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    subType: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | dict | None
     use: Optional[Code] = None
-    patient: Optional[Reference]
-    billablePeriod: Optional[Period]
+    patient: Reference | dict | None
+    billablePeriod: Period | dict | None
     created: Optional[DateTime] = None
-    enterer: Optional[Reference]
-    insurer: Optional[Reference]
-    provider: Optional[Reference]
-    priority: Optional[CodeableConcept]
-    fundsReserve: Optional[CodeableConcept]
-    related: ClaimRelated | FHIRList[ClaimRelated]
-    prescription: Optional[Reference]
-    originalPrescription: Optional[Reference]
-    payee: Optional[ClaimPayee]
-    referral: Optional[Reference]
-    facility: Optional[Reference]
-    careTeam: ClaimCareTeam | FHIRList[ClaimCareTeam]
-    supportingInfo: ClaimSupportingInfo | FHIRList[ClaimSupportingInfo]
-    diagnosis: ClaimDiagnosis | FHIRList[ClaimDiagnosis]
-    procedure: ClaimProcedure | FHIRList[ClaimProcedure]
-    insurance: ClaimInsurance | FHIRList[ClaimInsurance]
-    accident: Optional[ClaimAccident]
-    item: ClaimItem | FHIRList[ClaimItem]
-    total: Optional[Money]
+    enterer: Reference | dict | None
+    insurer: Reference | dict | None
+    provider: Reference | dict | None
+    priority: CodeableConcept | dict | None
+    fundsReserve: CodeableConcept | dict | None
+    related: ClaimRelated | FHIRList[ClaimRelated] | list | dict
+    prescription: Reference | dict | None
+    originalPrescription: Reference | dict | None
+    payee: ClaimPayee | dict | None
+    referral: Reference | dict | None
+    facility: Reference | dict | None
+    careTeam: ClaimCareTeam | FHIRList[ClaimCareTeam] | list | dict
+    supportingInfo: ClaimSupportingInfo | FHIRList[ClaimSupportingInfo] | list | dict
+    diagnosis: ClaimDiagnosis | FHIRList[ClaimDiagnosis] | list | dict
+    procedure: ClaimProcedure | FHIRList[ClaimProcedure] | list | dict
+    insurance: ClaimInsurance | FHIRList[ClaimInsurance] | list | dict
+    accident: ClaimAccident | dict | None
+    item: ClaimItem | FHIRList[ClaimItem] | list | dict
+    total: Money | dict | None
 
 
 class ClaimResponseItem(FHIRElement):
@@ -2128,12 +2128,12 @@ class ClaimResponseItem(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     itemSequence: Optional[PositiveInt] = None
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
-    adjudication: ClaimResponseItemAdjudication | FHIRList[ClaimResponseItemAdjudication]
-    detail: ClaimResponseItemDetail | FHIRList[ClaimResponseItemDetail]
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    adjudication: ClaimResponseItemAdjudication | FHIRList[ClaimResponseItemAdjudication] | list | dict
+    detail: ClaimResponseItemDetail | FHIRList[ClaimResponseItemDetail] | list | dict
 
 
 class ClaimResponseItemAdjudication(FHIRElement):
@@ -2141,11 +2141,11 @@ class ClaimResponseItemAdjudication(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'category': 'CodeableConcept', 'reason': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    reason: Optional[CodeableConcept]
-    amount: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    reason: CodeableConcept | dict | None
+    amount: Money | dict | None
     value: Optional[Decimal] = None
 
 
@@ -2154,12 +2154,12 @@ class ClaimResponseItemDetail(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'subDetail': 'ClaimResponseItemDetailSubDetail'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     detailSequence: Optional[PositiveInt] = None
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    subDetail: ClaimResponseItemDetailSubDetail | FHIRList[ClaimResponseItemDetailSubDetail]
+    subDetail: ClaimResponseItemDetailSubDetail | FHIRList[ClaimResponseItemDetailSubDetail] | list | dict
 
 
 class ClaimResponseItemDetailSubDetail(FHIRElement):
@@ -2167,10 +2167,10 @@ class ClaimResponseItemDetailSubDetail(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     subDetailSequence: Optional[PositiveInt] = None
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
 
 
@@ -2210,29 +2210,29 @@ class ClaimResponseAddItem(FHIRElement):
     _choice_fields = {'location': ['locationCodeableConcept', 'locationAddress', 'locationReference'], 'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemSequence: PositiveInt | FHIRList[PositiveInt] = None
-    detailSequence: PositiveInt | FHIRList[PositiveInt] = None
-    subdetailSequence: PositiveInt | FHIRList[PositiveInt] = None
-    provider: Reference | FHIRList[Reference]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    detailSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    subdetailSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    provider: Reference | FHIRList[Reference] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
-    locationCodeableConcept: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    servicedPeriod: Period | dict | None
+    locationCodeableConcept: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    bodySite: Optional[CodeableConcept]
-    subSite: CodeableConcept | FHIRList[CodeableConcept]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    bodySite: CodeableConcept | dict | None
+    subSite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    detail: ClaimResponseAddItemDetail | FHIRList[ClaimResponseAddItemDetail]
+    detail: ClaimResponseAddItemDetail | FHIRList[ClaimResponseAddItemDetail] | list | dict
 
 
 class ClaimResponseAddItemDetail(FHIRElement):
@@ -2249,17 +2249,17 @@ class ClaimResponseAddItemDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    subDetail: ClaimResponseAddItemDetailSubDetail | FHIRList[ClaimResponseAddItemDetailSubDetail]
+    subDetail: ClaimResponseAddItemDetailSubDetail | FHIRList[ClaimResponseAddItemDetailSubDetail] | list | dict
 
 
 class ClaimResponseAddItemDetailSubDetail(FHIRElement):
@@ -2275,15 +2275,15 @@ class ClaimResponseAddItemDetailSubDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
 
 
@@ -2292,10 +2292,10 @@ class ClaimResponseTotal(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'category': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    amount: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    amount: Money | dict | None
 
 
 class ClaimResponsePayment(FHIRElement):
@@ -2311,14 +2311,14 @@ class ClaimResponsePayment(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    adjustment: Optional[Money]
-    adjustmentReason: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    adjustment: Money | dict | None
+    adjustmentReason: CodeableConcept | dict | None
     date: Optional[Date] = None
-    amount: Optional[Money]
-    identifier: Optional[Identifier]
+    amount: Money | dict | None
+    identifier: Identifier | dict | None
 
 
 class ClaimResponseProcessNote(FHIRElement):
@@ -2326,12 +2326,12 @@ class ClaimResponseProcessNote(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'language': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     number: Optional[PositiveInt] = None
     type_: Optional[Code] = None
     text: Optional[String] = None
-    language: Optional[CodeableConcept]
+    language: CodeableConcept | dict | None
 
 
 class ClaimResponseInsurance(FHIRElement):
@@ -2339,13 +2339,13 @@ class ClaimResponseInsurance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'coverage': 'Reference', 'claimResponse': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
     focal: Optional[Boolean] = None
-    coverage: Optional[Reference]
+    coverage: Reference | dict | None
     businessArrangement: Optional[String] = None
-    claimResponse: Optional[Reference]
+    claimResponse: Reference | dict | None
 
 
 class ClaimResponseError(FHIRElement):
@@ -2353,12 +2353,12 @@ class ClaimResponseError(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     itemSequence: Optional[PositiveInt] = None
     detailSequence: Optional[PositiveInt] = None
     subDetailSequence: Optional[PositiveInt] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
 
 
 class ClaimResponse(FHIRResource):
@@ -2406,40 +2406,40 @@ class ClaimResponse(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    subType: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | dict | None
     use: Optional[Code] = None
-    patient: Optional[Reference]
+    patient: Reference | dict | None
     created: Optional[DateTime] = None
-    insurer: Optional[Reference]
-    requestor: Optional[Reference]
-    request: Optional[Reference]
+    insurer: Reference | dict | None
+    requestor: Reference | dict | None
+    request: Reference | dict | None
     outcome: Optional[Code] = None
     disposition: Optional[String] = None
     preAuthRef: Optional[String] = None
-    preAuthPeriod: Optional[Period]
-    payeeType: Optional[CodeableConcept]
-    item: ClaimResponseItem | FHIRList[ClaimResponseItem]
-    addItem: ClaimResponseAddItem | FHIRList[ClaimResponseAddItem]
+    preAuthPeriod: Period | dict | None
+    payeeType: CodeableConcept | dict | None
+    item: ClaimResponseItem | FHIRList[ClaimResponseItem] | list | dict
+    addItem: ClaimResponseAddItem | FHIRList[ClaimResponseAddItem] | list | dict
     adjudication: Any = None
-    total: ClaimResponseTotal | FHIRList[ClaimResponseTotal]
-    payment: Optional[ClaimResponsePayment]
-    fundsReserve: Optional[CodeableConcept]
-    formCode: Optional[CodeableConcept]
-    form: Optional[Attachment]
-    processNote: ClaimResponseProcessNote | FHIRList[ClaimResponseProcessNote]
-    communicationRequest: Reference | FHIRList[Reference]
-    insurance: ClaimResponseInsurance | FHIRList[ClaimResponseInsurance]
-    error: ClaimResponseError | FHIRList[ClaimResponseError]
+    total: ClaimResponseTotal | FHIRList[ClaimResponseTotal] | list | dict
+    payment: ClaimResponsePayment | dict | None
+    fundsReserve: CodeableConcept | dict | None
+    formCode: CodeableConcept | dict | None
+    form: Attachment | dict | None
+    processNote: ClaimResponseProcessNote | FHIRList[ClaimResponseProcessNote] | list | dict
+    communicationRequest: Reference | FHIRList[Reference] | list | dict
+    insurance: ClaimResponseInsurance | FHIRList[ClaimResponseInsurance] | list | dict
+    error: ClaimResponseError | FHIRList[ClaimResponseError] | list | dict
 
 
 class ClinicalImpressionInvestigation(FHIRElement):
@@ -2447,10 +2447,10 @@ class ClinicalImpressionInvestigation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'item': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    item: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    item: Reference | FHIRList[Reference] | list | dict
 
 
 class ClinicalImpressionFinding(FHIRElement):
@@ -2458,10 +2458,10 @@ class ClinicalImpressionFinding(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'itemCodeableConcept': 'CodeableConcept', 'itemReference': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemCodeableConcept: Optional[CodeableConcept]
-    itemReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemCodeableConcept: CodeableConcept | dict | None
+    itemReference: Reference | dict | None
     basis: Optional[String] = None
 
 
@@ -2506,34 +2506,34 @@ class ClinicalImpression(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     date: Optional[DateTime] = None
-    assessor: Optional[Reference]
-    previous: Optional[Reference]
-    problem: Reference | FHIRList[Reference]
-    investigation: ClinicalImpressionInvestigation | FHIRList[ClinicalImpressionInvestigation]
-    protocol: Uri | FHIRList[Uri] = None
+    assessor: Reference | dict | None
+    previous: Reference | dict | None
+    problem: Reference | FHIRList[Reference] | list | dict
+    investigation: ClinicalImpressionInvestigation | FHIRList[ClinicalImpressionInvestigation] | list | dict
+    protocol: Uri | FHIRList[Uri] | list | None = None
     summary: Optional[String] = None
-    finding: ClinicalImpressionFinding | FHIRList[ClinicalImpressionFinding]
-    prognosisCodeableConcept: CodeableConcept | FHIRList[CodeableConcept]
-    prognosisReference: Reference | FHIRList[Reference]
-    supportingInfo: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
+    finding: ClinicalImpressionFinding | FHIRList[ClinicalImpressionFinding] | list | dict
+    prognosisCodeableConcept: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    prognosisReference: Reference | FHIRList[Reference] | list | dict
+    supportingInfo: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class CodeSystemFilter(FHIRElement):
@@ -2541,11 +2541,11 @@ class CodeSystemFilter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     description: Optional[String] = None
-    operator: Code | FHIRList[Code] = None
+    operator: Code | FHIRList[Code] | list | None = None
     value: Optional[String] = None
 
 
@@ -2554,8 +2554,8 @@ class CodeSystemProperty(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     uri: Optional[Uri] = None
     description: Optional[String] = None
@@ -2572,13 +2572,13 @@ class CodeSystemConcept(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
     definition: Optional[String] = None
-    designation: CodeSystemConceptDesignation | FHIRList[CodeSystemConceptDesignation]
-    property: CodeSystemConceptProperty | FHIRList[CodeSystemConceptProperty]
+    designation: CodeSystemConceptDesignation | FHIRList[CodeSystemConceptDesignation] | list | dict
+    property: CodeSystemConceptProperty | FHIRList[CodeSystemConceptProperty] | list | dict
     concept: Any = None
 
 
@@ -2587,10 +2587,10 @@ class CodeSystemConceptDesignation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'use': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     language: Optional[Code] = None
-    use: Optional[Coding]
+    use: Coding | dict | None
     value: Optional[String] = None
 
 
@@ -2600,11 +2600,11 @@ class CodeSystemConceptProperty(FHIRElement):
     _choice_fields = {'value': ['valueCode', 'valueCoding', 'valueString', 'valueInteger', 'valueBoolean', 'valueDateTime', 'valueDecimal']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     valueCode: Optional[Code] = None
-    valueCoding: Optional[Coding]
+    valueCoding: Coding | dict | None
     valueString: Optional[String] = None
     valueInteger: Optional[Integer] = None
     valueBoolean: Optional[Boolean] = None
@@ -2631,15 +2631,15 @@ class CodeSystem(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -2647,10 +2647,10 @@ class CodeSystem(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     caseSensitive: Optional[Boolean] = None
@@ -2661,9 +2661,9 @@ class CodeSystem(FHIRResource):
     content: Optional[Code] = None
     supplements: Optional[Canonical] = None
     count: Optional[UnsignedInt] = None
-    filter: CodeSystemFilter | FHIRList[CodeSystemFilter]
-    property: CodeSystemProperty | FHIRList[CodeSystemProperty]
-    concept: CodeSystemConcept | FHIRList[CodeSystemConcept]
+    filter: CodeSystemFilter | FHIRList[CodeSystemFilter] | list | dict
+    property: CodeSystemProperty | FHIRList[CodeSystemProperty] | list | dict
+    concept: CodeSystemConcept | FHIRList[CodeSystemConcept] | list | dict
 
 
 class CommunicationPayload(FHIRElement):
@@ -2672,11 +2672,11 @@ class CommunicationPayload(FHIRElement):
     _choice_fields = {'content': ['contentString', 'contentAttachment', 'contentReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     contentString: Optional[String] = None
-    contentAttachment: Optional[Attachment]
-    contentReference: Optional[Reference]
+    contentAttachment: Attachment | dict | None
+    contentReference: Reference | dict | None
 
 
 class Communication(FHIRResource):
@@ -2726,36 +2726,36 @@ class Communication(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
-    inResponseTo: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
+    inResponseTo: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     priority: Optional[Code] = None
-    medium: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
-    topic: Optional[CodeableConcept]
-    about: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    medium: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
+    topic: CodeableConcept | dict | None
+    about: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     sent: Optional[DateTime] = None
     received: Optional[DateTime] = None
-    recipient: Reference | FHIRList[Reference]
-    sender: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    payload: CommunicationPayload | FHIRList[CommunicationPayload]
-    note: Annotation | FHIRList[Annotation]
+    recipient: Reference | FHIRList[Reference] | list | dict
+    sender: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    payload: CommunicationPayload | FHIRList[CommunicationPayload] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class CommunicationRequestPayload(FHIRElement):
@@ -2764,11 +2764,11 @@ class CommunicationRequestPayload(FHIRElement):
     _choice_fields = {'content': ['contentString', 'contentAttachment', 'contentReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     contentString: Optional[String] = None
-    contentAttachment: Optional[Attachment]
-    contentReference: Optional[Reference]
+    contentAttachment: Attachment | dict | None
+    contentReference: Reference | dict | None
 
 
 class CommunicationRequest(FHIRResource):
@@ -2817,36 +2817,36 @@ class CommunicationRequest(FHIRResource):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrencePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    replaces: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    replaces: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    medium: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
-    about: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
-    payload: CommunicationRequestPayload | FHIRList[CommunicationRequestPayload]
+    medium: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
+    about: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
+    payload: CommunicationRequestPayload | FHIRList[CommunicationRequestPayload] | list | dict
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
+    occurrencePeriod: Period | dict | None
     authoredOn: Optional[DateTime] = None
-    requester: Optional[Reference]
-    recipient: Reference | FHIRList[Reference]
-    sender: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
+    requester: Reference | dict | None
+    recipient: Reference | FHIRList[Reference] | list | dict
+    sender: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class CompartmentDefinitionResource(FHIRElement):
@@ -2854,10 +2854,10 @@ class CompartmentDefinitionResource(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    param: String | FHIRList[String] = None
+    param: String | FHIRList[String] | list | None = None
     documentation: Optional[String] = None
 
 
@@ -2876,13 +2876,13 @@ class CompartmentDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -2890,13 +2890,13 @@ class CompartmentDefinition(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
     purpose: Optional[Markdown] = None
     code: Optional[Code] = None
     search: Optional[Boolean] = None
-    resource: CompartmentDefinitionResource | FHIRList[CompartmentDefinitionResource]
+    resource: CompartmentDefinitionResource | FHIRList[CompartmentDefinitionResource] | list | dict
 
 
 class CompositionAttester(FHIRElement):
@@ -2904,11 +2904,11 @@ class CompositionAttester(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'party': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     time: Optional[DateTime] = None
-    party: Optional[Reference]
+    party: Reference | dict | None
 
 
 class CompositionRelatesTo(FHIRElement):
@@ -2917,11 +2917,11 @@ class CompositionRelatesTo(FHIRElement):
     _choice_fields = {'target': ['targetIdentifier', 'targetReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier]
-    targetReference: Optional[Reference]
+    targetIdentifier: Identifier | dict | None
+    targetReference: Reference | dict | None
 
 
 class CompositionEvent(FHIRElement):
@@ -2929,11 +2929,11 @@ class CompositionEvent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'period': 'Period', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    period: Optional[Period]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | dict | None
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class CompositionSection(FHIRElement):
@@ -2951,17 +2951,17 @@ class CompositionSection(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     title: Optional[String] = None
-    code: Optional[CodeableConcept]
-    author: Reference | FHIRList[Reference]
-    focus: Optional[Reference]
-    text: Optional[Narrative]
+    code: CodeableConcept | dict | None
+    author: Reference | FHIRList[Reference] | list | dict
+    focus: Reference | dict | None
+    text: Narrative | dict | None
     mode: Optional[Code] = None
-    orderedBy: Optional[CodeableConcept]
-    entry: Reference | FHIRList[Reference]
-    emptyReason: Optional[CodeableConcept]
+    orderedBy: CodeableConcept | dict | None
+    entry: Reference | FHIRList[Reference] | list | dict
+    emptyReason: CodeableConcept | dict | None
     section: Any = None
 
 
@@ -2988,28 +2988,28 @@ class Composition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     date: Optional[DateTime] = None
-    author: Reference | FHIRList[Reference]
+    author: Reference | FHIRList[Reference] | list | dict
     title: Optional[String] = None
     confidentiality: Optional[Code] = None
-    attester: CompositionAttester | FHIRList[CompositionAttester]
-    custodian: Optional[Reference]
-    relatesTo: CompositionRelatesTo | FHIRList[CompositionRelatesTo]
-    event: CompositionEvent | FHIRList[CompositionEvent]
-    section: CompositionSection | FHIRList[CompositionSection]
+    attester: CompositionAttester | FHIRList[CompositionAttester] | list | dict
+    custodian: Reference | dict | None
+    relatesTo: CompositionRelatesTo | FHIRList[CompositionRelatesTo] | list | dict
+    event: CompositionEvent | FHIRList[CompositionEvent] | list | dict
+    section: CompositionSection | FHIRList[CompositionSection] | list | dict
 
 
 class ConceptMapGroup(FHIRElement):
@@ -3017,14 +3017,14 @@ class ConceptMapGroup(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'element': 'ConceptMapGroupElement', 'unmapped': 'ConceptMapGroupUnmapped'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     source: Optional[Uri] = None
     sourceVersion: Optional[String] = None
     target: Optional[Uri] = None
     targetVersion: Optional[String] = None
-    element: ConceptMapGroupElement | FHIRList[ConceptMapGroupElement]
-    unmapped: Optional[ConceptMapGroupUnmapped]
+    element: ConceptMapGroupElement | FHIRList[ConceptMapGroupElement] | list | dict
+    unmapped: ConceptMapGroupUnmapped | dict | None
 
 
 class ConceptMapGroupElement(FHIRElement):
@@ -3032,11 +3032,11 @@ class ConceptMapGroupElement(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'target': 'ConceptMapGroupElementTarget'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
-    target: ConceptMapGroupElementTarget | FHIRList[ConceptMapGroupElementTarget]
+    target: ConceptMapGroupElementTarget | FHIRList[ConceptMapGroupElementTarget] | list | dict
 
 
 class ConceptMapGroupElementTarget(FHIRElement):
@@ -3044,13 +3044,13 @@ class ConceptMapGroupElementTarget(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'dependsOn': 'ConceptMapGroupElementTargetDependsOn'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
     equivalence: Optional[Code] = None
     comment: Optional[String] = None
-    dependsOn: ConceptMapGroupElementTargetDependsOn | FHIRList[ConceptMapGroupElementTargetDependsOn]
+    dependsOn: ConceptMapGroupElementTargetDependsOn | FHIRList[ConceptMapGroupElementTargetDependsOn] | list | dict
     product: Any = None
 
 
@@ -3059,8 +3059,8 @@ class ConceptMapGroupElementTargetDependsOn(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     property: Optional[Uri] = None
     system: Optional[Canonical] = None
     value: Optional[String] = None
@@ -3072,8 +3072,8 @@ class ConceptMapGroupUnmapped(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     code: Optional[Code] = None
     display: Optional[String] = None
@@ -3098,15 +3098,15 @@ class ConceptMap(FHIRResource):
     _choice_fields = {'source': ['sourceUri', 'sourceCanonical'], 'target': ['targetUri', 'targetCanonical']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Optional[Identifier]
+    identifier: Identifier | dict | None
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -3114,17 +3114,17 @@ class ConceptMap(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     sourceUri: Optional[Uri] = None
     sourceCanonical: Optional[Canonical] = None
     targetUri: Optional[Uri] = None
     targetCanonical: Optional[Canonical] = None
-    group: ConceptMapGroup | FHIRList[ConceptMapGroup]
+    group: ConceptMapGroup | FHIRList[ConceptMapGroup] | list | dict
 
 
 class ConditionStage(FHIRElement):
@@ -3138,11 +3138,11 @@ class ConditionStage(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    summary: Optional[CodeableConcept]
-    assessment: Reference | FHIRList[Reference]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    summary: CodeableConcept | dict | None
+    assessment: Reference | FHIRList[Reference] | list | dict
+    type_: CodeableConcept | dict | None
 
 
 class ConditionEvidence(FHIRElement):
@@ -3150,10 +3150,10 @@ class ConditionEvidence(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class Condition(FHIRResource):
@@ -3192,38 +3192,38 @@ class Condition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    clinicalStatus: Optional[CodeableConcept]
-    verificationStatus: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    severity: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    bodySite: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    clinicalStatus: CodeableConcept | dict | None
+    verificationStatus: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    severity: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    bodySite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     onsetDateTime: Optional[DateTime] = None
-    onsetAge: Optional[Age]
-    onsetPeriod: Optional[Period]
-    onsetRange: Optional[Range]
+    onsetAge: Age | dict | None
+    onsetPeriod: Period | dict | None
+    onsetRange: Range | dict | None
     onsetString: Optional[String] = None
     abatementDateTime: Optional[DateTime] = None
-    abatementAge: Optional[Age]
-    abatementPeriod: Optional[Period]
-    abatementRange: Optional[Range]
+    abatementAge: Age | dict | None
+    abatementPeriod: Period | dict | None
+    abatementRange: Range | dict | None
     abatementString: Optional[String] = None
     recordedDate: Optional[DateTime] = None
-    recorder: Optional[Reference]
-    asserter: Optional[Reference]
-    stage: ConditionStage | FHIRList[ConditionStage]
-    evidence: ConditionEvidence | FHIRList[ConditionEvidence]
-    note: Annotation | FHIRList[Annotation]
+    recorder: Reference | dict | None
+    asserter: Reference | dict | None
+    stage: ConditionStage | FHIRList[ConditionStage] | list | dict
+    evidence: ConditionEvidence | FHIRList[ConditionEvidence] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class ConsentPolicy(FHIRElement):
@@ -3231,8 +3231,8 @@ class ConsentPolicy(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     authority: Optional[Uri] = None
     uri: Optional[Uri] = None
 
@@ -3242,10 +3242,10 @@ class ConsentVerification(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'verifiedWith': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     verified: Optional[Boolean] = None
-    verifiedWith: Optional[Reference]
+    verifiedWith: Reference | dict | None
     verificationDate: Optional[DateTime] = None
 
 
@@ -3266,18 +3266,18 @@ class ConsentProvision(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    period: Optional[Period]
-    actor: ConsentProvisionActor | FHIRList[ConsentProvisionActor]
-    action: CodeableConcept | FHIRList[CodeableConcept]
-    securityLabel: Coding | FHIRList[Coding]
-    purpose: Coding | FHIRList[Coding]
-    class_: Coding | FHIRList[Coding]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    dataPeriod: Optional[Period]
-    data: ConsentProvisionData | FHIRList[ConsentProvisionData]
+    period: Period | dict | None
+    actor: ConsentProvisionActor | FHIRList[ConsentProvisionActor] | list | dict
+    action: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    securityLabel: Coding | FHIRList[Coding] | list | dict
+    purpose: Coding | FHIRList[Coding] | list | dict
+    class_: Coding | FHIRList[Coding] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    dataPeriod: Period | dict | None
+    data: ConsentProvisionData | FHIRList[ConsentProvisionData] | list | dict
     provision: Any = None
 
 
@@ -3286,10 +3286,10 @@ class ConsentProvisionActor(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept', 'reference': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    role: Optional[CodeableConcept]
-    reference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    role: CodeableConcept | dict | None
+    reference: Reference | dict | None
 
 
 class ConsentProvisionData(FHIRElement):
@@ -3297,10 +3297,10 @@ class ConsentProvisionData(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'reference': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     meaning: Optional[Code] = None
-    reference: Optional[Reference]
+    reference: Reference | dict | None
 
 
 class Consent(FHIRResource):
@@ -3328,27 +3328,27 @@ class Consent(FHIRResource):
     _choice_fields = {'source': ['sourceAttachment', 'sourceReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    scope: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    patient: Optional[Reference]
+    scope: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    patient: Reference | dict | None
     dateTime: Optional[DateTime] = None
-    performer: Reference | FHIRList[Reference]
-    organization: Reference | FHIRList[Reference]
-    sourceAttachment: Optional[Attachment]
-    sourceReference: Optional[Reference]
-    policy: ConsentPolicy | FHIRList[ConsentPolicy]
-    policyRule: Optional[CodeableConcept]
-    verification: ConsentVerification | FHIRList[ConsentVerification]
-    provision: Optional[ConsentProvision]
+    performer: Reference | FHIRList[Reference] | list | dict
+    organization: Reference | FHIRList[Reference] | list | dict
+    sourceAttachment: Attachment | dict | None
+    sourceReference: Reference | dict | None
+    policy: ConsentPolicy | FHIRList[ConsentPolicy] | list | dict
+    policyRule: CodeableConcept | dict | None
+    verification: ConsentVerification | FHIRList[ConsentVerification] | list | dict
+    provision: ConsentProvision | dict | None
 
 
 class ContractContentDefinition(FHIRElement):
@@ -3362,11 +3362,11 @@ class ContractContentDefinition(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    subType: Optional[CodeableConcept]
-    publisher: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | dict | None
+    publisher: Reference | dict | None
     publicationDate: Optional[DateTime] = None
     publicationStatus: Optional[Code] = None
     copyright: Optional[Markdown] = None
@@ -3391,20 +3391,20 @@ class ContractTerm(FHIRElement):
     _choice_fields = {'topic': ['topicCodeableConcept', 'topicReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     issued: Optional[DateTime] = None
-    applies: Optional[Period]
-    topicCodeableConcept: Optional[CodeableConcept]
-    topicReference: Optional[Reference]
-    type_: Optional[CodeableConcept]
-    subType: Optional[CodeableConcept]
+    applies: Period | dict | None
+    topicCodeableConcept: CodeableConcept | dict | None
+    topicReference: Reference | dict | None
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | dict | None
     text: Optional[String] = None
-    securityLabel: ContractTermSecurityLabel | FHIRList[ContractTermSecurityLabel]
-    offer: Optional[ContractTermOffer]
-    asset: ContractTermAsset | FHIRList[ContractTermAsset]
-    action: ContractTermAction | FHIRList[ContractTermAction]
+    securityLabel: ContractTermSecurityLabel | FHIRList[ContractTermSecurityLabel] | list | dict
+    offer: ContractTermOffer | dict | None
+    asset: ContractTermAsset | FHIRList[ContractTermAsset] | list | dict
+    action: ContractTermAction | FHIRList[ContractTermAction] | list | dict
     group: Any = None
 
 
@@ -3413,12 +3413,12 @@ class ContractTermSecurityLabel(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'classification': 'Coding', 'category': 'Coding', 'control': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    number: UnsignedInt | FHIRList[UnsignedInt] = None
-    classification: Optional[Coding]
-    category: Coding | FHIRList[Coding]
-    control: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    number: UnsignedInt | FHIRList[UnsignedInt] | list | None = None
+    classification: Coding | dict | None
+    category: Coding | FHIRList[Coding] | list | dict
+    control: Coding | FHIRList[Coding] | list | dict
 
 
 class ContractTermOffer(FHIRElement):
@@ -3436,18 +3436,18 @@ class ContractTermOffer(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    party: ContractTermOfferParty | FHIRList[ContractTermOfferParty]
-    topic: Optional[Reference]
-    type_: Optional[CodeableConcept]
-    decision: Optional[CodeableConcept]
-    decisionMode: CodeableConcept | FHIRList[CodeableConcept]
-    answer: ContractTermOfferAnswer | FHIRList[ContractTermOfferAnswer]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    party: ContractTermOfferParty | FHIRList[ContractTermOfferParty] | list | dict
+    topic: Reference | dict | None
+    type_: CodeableConcept | dict | None
+    decision: CodeableConcept | dict | None
+    decisionMode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    answer: ContractTermOfferAnswer | FHIRList[ContractTermOfferAnswer] | list | dict
     text: Optional[String] = None
-    linkId: String | FHIRList[String] = None
-    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] = None
+    linkId: String | FHIRList[String] | list | None = None
+    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] | list | None = None
 
 
 class ContractTermOfferParty(FHIRElement):
@@ -3455,10 +3455,10 @@ class ContractTermOfferParty(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'reference': 'Reference', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    reference: Reference | FHIRList[Reference]
-    role: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    reference: Reference | FHIRList[Reference] | list | dict
+    role: CodeableConcept | dict | None
 
 
 class ContractTermOfferAnswer(FHIRElement):
@@ -3489,8 +3489,8 @@ class ContractTermOfferAnswer(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     valueBoolean: Optional[Boolean] = None
     valueDecimal: Optional[Decimal] = None
     valueInteger: Optional[Integer] = None
@@ -3499,10 +3499,10 @@ class ContractTermOfferAnswer(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment]
-    valueCoding: Optional[Coding]
-    valueQuantity: Optional[Quantity]
-    valueReference: Optional[Reference]
+    valueAttachment: Attachment | dict | None
+    valueCoding: Coding | dict | None
+    valueQuantity: Quantity | dict | None
+    valueReference: Reference | dict | None
 
 
 class ContractTermAsset(FHIRElement):
@@ -3537,23 +3537,23 @@ class ContractTermAsset(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    scope: Optional[CodeableConcept]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    typeReference: Reference | FHIRList[Reference]
-    subtype: CodeableConcept | FHIRList[CodeableConcept]
-    relationship: Optional[Coding]
-    context: ContractTermAssetContext | FHIRList[ContractTermAssetContext]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    scope: CodeableConcept | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    typeReference: Reference | FHIRList[Reference] | list | dict
+    subtype: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    relationship: Coding | dict | None
+    context: ContractTermAssetContext | FHIRList[ContractTermAssetContext] | list | dict
     condition: Optional[String] = None
-    periodType: CodeableConcept | FHIRList[CodeableConcept]
-    period: Period | FHIRList[Period]
-    usePeriod: Period | FHIRList[Period]
+    periodType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | FHIRList[Period] | list | dict
+    usePeriod: Period | FHIRList[Period] | list | dict
     text: Optional[String] = None
-    linkId: String | FHIRList[String] = None
+    linkId: String | FHIRList[String] | list | None = None
     answer: Any = None
-    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] = None
-    valuedItem: ContractTermAssetValuedItem | FHIRList[ContractTermAssetValuedItem]
+    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] | list | None = None
+    valuedItem: ContractTermAssetValuedItem | FHIRList[ContractTermAssetValuedItem] | list | dict
 
 
 class ContractTermAssetContext(FHIRElement):
@@ -3561,10 +3561,10 @@ class ContractTermAssetContext(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'reference': 'Reference', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    reference: Optional[Reference]
-    code: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    reference: Reference | dict | None
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     text: Optional[String] = None
 
 
@@ -3585,23 +3585,23 @@ class ContractTermAssetValuedItem(FHIRElement):
     _choice_fields = {'entity': ['entityCodeableConcept', 'entityReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    entityCodeableConcept: Optional[CodeableConcept]
-    entityReference: Optional[Reference]
-    identifier: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    entityCodeableConcept: CodeableConcept | dict | None
+    entityReference: Reference | dict | None
+    identifier: Identifier | dict | None
     effectiveTime: Optional[DateTime] = None
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
     points: Optional[Decimal] = None
-    net: Optional[Money]
+    net: Money | dict | None
     payment: Optional[String] = None
     paymentDate: Optional[DateTime] = None
-    responsible: Optional[Reference]
-    recipient: Optional[Reference]
-    linkId: String | FHIRList[String] = None
-    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] = None
+    responsible: Reference | dict | None
+    recipient: Reference | dict | None
+    linkId: String | FHIRList[String] | list | None = None
+    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] | list | None = None
 
 
 class ContractTermAction(FHIRElement):
@@ -3643,31 +3643,31 @@ class ContractTermAction(FHIRElement):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrencePeriod', 'occurrenceTiming']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     doNotPerform: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
-    subject: ContractTermActionSubject | FHIRList[ContractTermActionSubject]
-    intent: Optional[CodeableConcept]
-    linkId: String | FHIRList[String] = None
-    status: Optional[CodeableConcept]
-    context: Optional[Reference]
-    contextLinkId: String | FHIRList[String] = None
+    type_: CodeableConcept | dict | None
+    subject: ContractTermActionSubject | FHIRList[ContractTermActionSubject] | list | dict
+    intent: CodeableConcept | dict | None
+    linkId: String | FHIRList[String] | list | None = None
+    status: CodeableConcept | dict | None
+    context: Reference | dict | None
+    contextLinkId: String | FHIRList[String] | list | None = None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
-    requester: Reference | FHIRList[Reference]
-    requesterLinkId: String | FHIRList[String] = None
-    performerType: CodeableConcept | FHIRList[CodeableConcept]
-    performerRole: Optional[CodeableConcept]
-    performer: Optional[Reference]
-    performerLinkId: String | FHIRList[String] = None
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    reason: String | FHIRList[String] = None
-    reasonLinkId: String | FHIRList[String] = None
-    note: Annotation | FHIRList[Annotation]
-    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] = None
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
+    requester: Reference | FHIRList[Reference] | list | dict
+    requesterLinkId: String | FHIRList[String] | list | None = None
+    performerType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    performerRole: CodeableConcept | dict | None
+    performer: Reference | dict | None
+    performerLinkId: String | FHIRList[String] | list | None = None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    reason: String | FHIRList[String] | list | None = None
+    reasonLinkId: String | FHIRList[String] | list | None = None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    securityLabelNumber: UnsignedInt | FHIRList[UnsignedInt] | list | None = None
 
 
 class ContractTermActionSubject(FHIRElement):
@@ -3675,10 +3675,10 @@ class ContractTermActionSubject(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'reference': 'Reference', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    reference: Reference | FHIRList[Reference]
-    role: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    reference: Reference | FHIRList[Reference] | list | dict
+    role: CodeableConcept | dict | None
 
 
 class ContractSigner(FHIRElement):
@@ -3686,11 +3686,11 @@ class ContractSigner(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'Coding', 'party': 'Reference', 'signature': 'Signature'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[Coding]
-    party: Optional[Reference]
-    signature: Signature | FHIRList[Signature]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: Coding | dict | None
+    party: Reference | dict | None
+    signature: Signature | FHIRList[Signature] | list | dict
 
 
 class ContractFriendly(FHIRElement):
@@ -3699,10 +3699,10 @@ class ContractFriendly(FHIRElement):
     _choice_fields = {'content': ['contentAttachment', 'contentReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment]
-    contentReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    contentAttachment: Attachment | dict | None
+    contentReference: Reference | dict | None
 
 
 class ContractLegal(FHIRElement):
@@ -3711,10 +3711,10 @@ class ContractLegal(FHIRElement):
     _choice_fields = {'content': ['contentAttachment', 'contentReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment]
-    contentReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    contentAttachment: Attachment | dict | None
+    contentReference: Reference | dict | None
 
 
 class ContractRule(FHIRElement):
@@ -3723,10 +3723,10 @@ class ContractRule(FHIRElement):
     _choice_fields = {'content': ['contentAttachment', 'contentReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment]
-    contentReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    contentAttachment: Attachment | dict | None
+    contentReference: Reference | dict | None
 
 
 class Contract(FHIRResource):
@@ -3786,48 +3786,48 @@ class Contract(FHIRResource):
     _choice_fields = {'legallyBinding': ['legallyBindingAttachment', 'legallyBindingReference'], 'topic': ['topicCodeableConcept', 'topicReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     status: Optional[Code] = None
-    legalState: Optional[CodeableConcept]
-    instantiatesCanonical: Optional[Reference]
+    legalState: CodeableConcept | dict | None
+    instantiatesCanonical: Reference | dict | None
     instantiatesUri: Optional[Uri] = None
-    contentDerivative: Optional[CodeableConcept]
+    contentDerivative: CodeableConcept | dict | None
     issued: Optional[DateTime] = None
-    applies: Optional[Period]
-    expirationType: Optional[CodeableConcept]
-    subject: Reference | FHIRList[Reference]
-    authority: Reference | FHIRList[Reference]
-    domain: Reference | FHIRList[Reference]
-    site: Reference | FHIRList[Reference]
+    applies: Period | dict | None
+    expirationType: CodeableConcept | dict | None
+    subject: Reference | FHIRList[Reference] | list | dict
+    authority: Reference | FHIRList[Reference] | list | dict
+    domain: Reference | FHIRList[Reference] | list | dict
+    site: Reference | FHIRList[Reference] | list | dict
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
-    alias: String | FHIRList[String] = None
-    author: Optional[Reference]
-    scope: Optional[CodeableConcept]
-    topicCodeableConcept: Optional[CodeableConcept]
-    topicReference: Optional[Reference]
-    type_: Optional[CodeableConcept]
-    subType: CodeableConcept | FHIRList[CodeableConcept]
-    contentDefinition: Optional[ContractContentDefinition]
-    term: ContractTerm | FHIRList[ContractTerm]
-    supportingInfo: Reference | FHIRList[Reference]
-    relevantHistory: Reference | FHIRList[Reference]
-    signer: ContractSigner | FHIRList[ContractSigner]
-    friendly: ContractFriendly | FHIRList[ContractFriendly]
-    legal: ContractLegal | FHIRList[ContractLegal]
-    rule: ContractRule | FHIRList[ContractRule]
-    legallyBindingAttachment: Optional[Attachment]
-    legallyBindingReference: Optional[Reference]
+    alias: String | FHIRList[String] | list | None = None
+    author: Reference | dict | None
+    scope: CodeableConcept | dict | None
+    topicCodeableConcept: CodeableConcept | dict | None
+    topicReference: Reference | dict | None
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    contentDefinition: ContractContentDefinition | dict | None
+    term: ContractTerm | FHIRList[ContractTerm] | list | dict
+    supportingInfo: Reference | FHIRList[Reference] | list | dict
+    relevantHistory: Reference | FHIRList[Reference] | list | dict
+    signer: ContractSigner | FHIRList[ContractSigner] | list | dict
+    friendly: ContractFriendly | FHIRList[ContractFriendly] | list | dict
+    legal: ContractLegal | FHIRList[ContractLegal] | list | dict
+    rule: ContractRule | FHIRList[ContractRule] | list | dict
+    legallyBindingAttachment: Attachment | dict | None
+    legallyBindingReference: Reference | dict | None
 
 
 class CoverageClass(FHIRElement):
@@ -3835,9 +3835,9 @@ class CoverageClass(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     value: Optional[String] = None
     name: Optional[String] = None
 
@@ -3855,12 +3855,12 @@ class CoverageCostToBeneficiary(FHIRElement):
     _choice_fields = {'value': ['valueQuantity', 'valueMoney']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueMoney: Optional[Money]
-    exception: CoverageCostToBeneficiaryException | FHIRList[CoverageCostToBeneficiaryException]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueMoney: Money | dict | None
+    exception: CoverageCostToBeneficiaryException | FHIRList[CoverageCostToBeneficiaryException] | list | dict
 
 
 class CoverageCostToBeneficiaryException(FHIRElement):
@@ -3868,10 +3868,10 @@ class CoverageCostToBeneficiaryException(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    period: Period | dict | None
 
 
 class Coverage(FHIRResource):
@@ -3897,30 +3897,30 @@ class Coverage(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    policyHolder: Optional[Reference]
-    subscriber: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    policyHolder: Reference | dict | None
+    subscriber: Reference | dict | None
     subscriberId: Optional[String] = None
-    beneficiary: Optional[Reference]
+    beneficiary: Reference | dict | None
     dependent: Optional[String] = None
-    relationship: Optional[CodeableConcept]
-    period: Optional[Period]
-    payor: Reference | FHIRList[Reference]
-    class_: CoverageClass | FHIRList[CoverageClass]
+    relationship: CodeableConcept | dict | None
+    period: Period | dict | None
+    payor: Reference | FHIRList[Reference] | list | dict
+    class_: CoverageClass | FHIRList[CoverageClass] | list | dict
     order: Optional[PositiveInt] = None
     network: Optional[String] = None
-    costToBeneficiary: CoverageCostToBeneficiary | FHIRList[CoverageCostToBeneficiary]
+    costToBeneficiary: CoverageCostToBeneficiary | FHIRList[CoverageCostToBeneficiary] | list | dict
     subrogation: Optional[Boolean] = None
-    contract: Reference | FHIRList[Reference]
+    contract: Reference | FHIRList[Reference] | list | dict
 
 
 class CoverageEligibilityRequestSupportingInfo(FHIRElement):
@@ -3928,10 +3928,10 @@ class CoverageEligibilityRequestSupportingInfo(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'information': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    information: Optional[Reference]
+    information: Reference | dict | None
     appliesToAll: Optional[Boolean] = None
 
 
@@ -3940,10 +3940,10 @@ class CoverageEligibilityRequestInsurance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'coverage': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     focal: Optional[Boolean] = None
-    coverage: Optional[Reference]
+    coverage: Reference | dict | None
     businessArrangement: Optional[String] = None
 
 
@@ -3964,18 +3964,18 @@ class CoverageEligibilityRequestItem(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    supportingInfoSequence: PositiveInt | FHIRList[PositiveInt] = None
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    provider: Optional[Reference]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
-    facility: Optional[Reference]
-    diagnosis: CoverageEligibilityRequestItemDiagnosis | FHIRList[CoverageEligibilityRequestItemDiagnosis]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    supportingInfoSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    provider: Reference | dict | None
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
+    facility: Reference | dict | None
+    diagnosis: CoverageEligibilityRequestItemDiagnosis | FHIRList[CoverageEligibilityRequestItemDiagnosis] | list | dict
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class CoverageEligibilityRequestItemDiagnosis(FHIRElement):
@@ -3989,10 +3989,10 @@ class CoverageEligibilityRequestItemDiagnosis(FHIRElement):
     _choice_fields = {'diagnosis': ['diagnosisCodeableConcept', 'diagnosisReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    diagnosisCodeableConcept: Optional[CodeableConcept]
-    diagnosisReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    diagnosisCodeableConcept: CodeableConcept | dict | None
+    diagnosisReference: Reference | dict | None
 
 
 class CoverageEligibilityRequest(FHIRResource):
@@ -4019,28 +4019,28 @@ class CoverageEligibilityRequest(FHIRResource):
     _choice_fields = {'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    priority: Optional[CodeableConcept]
-    purpose: Code | FHIRList[Code] = None
-    patient: Optional[Reference]
+    priority: CodeableConcept | dict | None
+    purpose: Code | FHIRList[Code] | list | None = None
+    patient: Reference | dict | None
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
+    servicedPeriod: Period | dict | None
     created: Optional[DateTime] = None
-    enterer: Optional[Reference]
-    provider: Optional[Reference]
-    insurer: Optional[Reference]
-    facility: Optional[Reference]
-    supportingInfo: CoverageEligibilityRequestSupportingInfo | FHIRList[CoverageEligibilityRequestSupportingInfo]
-    insurance: CoverageEligibilityRequestInsurance | FHIRList[CoverageEligibilityRequestInsurance]
-    item: CoverageEligibilityRequestItem | FHIRList[CoverageEligibilityRequestItem]
+    enterer: Reference | dict | None
+    provider: Reference | dict | None
+    insurer: Reference | dict | None
+    facility: Reference | dict | None
+    supportingInfo: CoverageEligibilityRequestSupportingInfo | FHIRList[CoverageEligibilityRequestSupportingInfo] | list | dict
+    insurance: CoverageEligibilityRequestInsurance | FHIRList[CoverageEligibilityRequestInsurance] | list | dict
+    item: CoverageEligibilityRequestItem | FHIRList[CoverageEligibilityRequestItem] | list | dict
 
 
 class CoverageEligibilityResponseInsurance(FHIRElement):
@@ -4054,12 +4054,12 @@ class CoverageEligibilityResponseInsurance(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    coverage: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    coverage: Reference | dict | None
     inforce: Optional[Boolean] = None
-    benefitPeriod: Optional[Period]
-    item: CoverageEligibilityResponseInsuranceItem | FHIRList[CoverageEligibilityResponseInsuranceItem]
+    benefitPeriod: Period | dict | None
+    item: CoverageEligibilityResponseInsuranceItem | FHIRList[CoverageEligibilityResponseInsuranceItem] | list | dict
 
 
 class CoverageEligibilityResponseInsuranceItem(FHIRElement):
@@ -4079,21 +4079,21 @@ class CoverageEligibilityResponseInsuranceItem(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    provider: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    provider: Reference | dict | None
     excluded: Optional[Boolean] = None
     name: Optional[String] = None
     description: Optional[String] = None
-    network: Optional[CodeableConcept]
-    unit: Optional[CodeableConcept]
-    term: Optional[CodeableConcept]
-    benefit: CoverageEligibilityResponseInsuranceItemBenefit | FHIRList[CoverageEligibilityResponseInsuranceItemBenefit]
+    network: CodeableConcept | dict | None
+    unit: CodeableConcept | dict | None
+    term: CodeableConcept | dict | None
+    benefit: CoverageEligibilityResponseInsuranceItemBenefit | FHIRList[CoverageEligibilityResponseInsuranceItemBenefit] | list | dict
     authorizationRequired: Optional[Boolean] = None
-    authorizationSupporting: CodeableConcept | FHIRList[CodeableConcept]
+    authorizationSupporting: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     authorizationUrl: Optional[Uri] = None
 
 
@@ -4103,15 +4103,15 @@ class CoverageEligibilityResponseInsuranceItemBenefit(FHIRElement):
     _choice_fields = {'allowed': ['allowedUnsignedInt', 'allowedString', 'allowedMoney'], 'used': ['usedUnsignedInt', 'usedString', 'usedMoney']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     allowedUnsignedInt: Optional[UnsignedInt] = None
     allowedString: Optional[String] = None
-    allowedMoney: Optional[Money]
+    allowedMoney: Money | dict | None
     usedUnsignedInt: Optional[UnsignedInt] = None
     usedString: Optional[String] = None
-    usedMoney: Optional[Money]
+    usedMoney: Money | dict | None
 
 
 class CoverageEligibilityResponseError(FHIRElement):
@@ -4119,9 +4119,9 @@ class CoverageEligibilityResponseError(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
 
 
 class CoverageEligibilityResponse(FHIRResource):
@@ -4146,29 +4146,29 @@ class CoverageEligibilityResponse(FHIRResource):
     _choice_fields = {'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    purpose: Code | FHIRList[Code] = None
-    patient: Optional[Reference]
+    purpose: Code | FHIRList[Code] | list | None = None
+    patient: Reference | dict | None
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
+    servicedPeriod: Period | dict | None
     created: Optional[DateTime] = None
-    requestor: Optional[Reference]
-    request: Optional[Reference]
+    requestor: Reference | dict | None
+    request: Reference | dict | None
     outcome: Optional[Code] = None
     disposition: Optional[String] = None
-    insurer: Optional[Reference]
-    insurance: CoverageEligibilityResponseInsurance | FHIRList[CoverageEligibilityResponseInsurance]
+    insurer: Reference | dict | None
+    insurance: CoverageEligibilityResponseInsurance | FHIRList[CoverageEligibilityResponseInsurance] | list | dict
     preAuthRef: Optional[String] = None
-    form: Optional[CodeableConcept]
-    error: CoverageEligibilityResponseError | FHIRList[CoverageEligibilityResponseError]
+    form: CodeableConcept | dict | None
+    error: CoverageEligibilityResponseError | FHIRList[CoverageEligibilityResponseError] | list | dict
 
 
 class DetectedIssueEvidence(FHIRElement):
@@ -4176,10 +4176,10 @@ class DetectedIssueEvidence(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class DetectedIssueMitigation(FHIRElement):
@@ -4187,11 +4187,11 @@ class DetectedIssueMitigation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'CodeableConcept', 'author': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: CodeableConcept | dict | None
     date: Optional[DateTime] = None
-    author: Optional[Reference]
+    author: Reference | dict | None
 
 
 class DetectedIssue(FHIRResource):
@@ -4215,26 +4215,26 @@ class DetectedIssue(FHIRResource):
     _choice_fields = {'identified': ['identifiedDateTime', 'identifiedPeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     severity: Optional[Code] = None
-    patient: Optional[Reference]
+    patient: Reference | dict | None
     identifiedDateTime: Optional[DateTime] = None
-    identifiedPeriod: Optional[Period]
-    author: Optional[Reference]
-    implicated: Reference | FHIRList[Reference]
-    evidence: DetectedIssueEvidence | FHIRList[DetectedIssueEvidence]
+    identifiedPeriod: Period | dict | None
+    author: Reference | dict | None
+    implicated: Reference | FHIRList[Reference] | list | dict
+    evidence: DetectedIssueEvidence | FHIRList[DetectedIssueEvidence] | list | dict
     detail: Optional[String] = None
     reference: Optional[Uri] = None
-    mitigation: DetectedIssueMitigation | FHIRList[DetectedIssueMitigation]
+    mitigation: DetectedIssueMitigation | FHIRList[DetectedIssueMitigation] | list | dict
 
 
 class DeviceUdiCarrier(FHIRElement):
@@ -4242,8 +4242,8 @@ class DeviceUdiCarrier(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     deviceIdentifier: Optional[String] = None
     issuer: Optional[Uri] = None
     jurisdiction: Optional[Uri] = None
@@ -4257,8 +4257,8 @@ class DeviceDeviceName(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     type_: Optional[Code] = None
 
@@ -4268,9 +4268,9 @@ class DeviceSpecialization(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'systemType': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    systemType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    systemType: CodeableConcept | dict | None
     version: Optional[String] = None
 
 
@@ -4279,10 +4279,10 @@ class DeviceVersion(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'component': 'Identifier'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    component: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    component: Identifier | dict | None
     value: Optional[String] = None
 
 
@@ -4297,11 +4297,11 @@ class DeviceProperty(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    valueQuantity: Quantity | FHIRList[Quantity]
-    valueCode: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    valueQuantity: Quantity | FHIRList[Quantity] | list | dict
+    valueCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class Device(FHIRResource):
@@ -4346,39 +4346,39 @@ class Device(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    definition: Optional[Reference]
-    udiCarrier: DeviceUdiCarrier | FHIRList[DeviceUdiCarrier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    definition: Reference | dict | None
+    udiCarrier: DeviceUdiCarrier | FHIRList[DeviceUdiCarrier] | list | dict
     status: Optional[Code] = None
-    statusReason: CodeableConcept | FHIRList[CodeableConcept]
+    statusReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     distinctIdentifier: Optional[String] = None
     manufacturer: Optional[String] = None
     manufactureDate: Optional[DateTime] = None
     expirationDate: Optional[DateTime] = None
     lotNumber: Optional[String] = None
     serialNumber: Optional[String] = None
-    deviceName: DeviceDeviceName | FHIRList[DeviceDeviceName]
+    deviceName: DeviceDeviceName | FHIRList[DeviceDeviceName] | list | dict
     modelNumber: Optional[String] = None
     partNumber: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    specialization: DeviceSpecialization | FHIRList[DeviceSpecialization]
-    version: DeviceVersion | FHIRList[DeviceVersion]
-    property: DeviceProperty | FHIRList[DeviceProperty]
-    patient: Optional[Reference]
-    owner: Optional[Reference]
-    contact: ContactPoint | FHIRList[ContactPoint]
-    location: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    specialization: DeviceSpecialization | FHIRList[DeviceSpecialization] | list | dict
+    version: DeviceVersion | FHIRList[DeviceVersion] | list | dict
+    property: DeviceProperty | FHIRList[DeviceProperty] | list | dict
+    patient: Reference | dict | None
+    owner: Reference | dict | None
+    contact: ContactPoint | FHIRList[ContactPoint] | list | dict
+    location: Reference | dict | None
     url: Optional[Uri] = None
-    note: Annotation | FHIRList[Annotation]
-    safety: CodeableConcept | FHIRList[CodeableConcept]
-    parent: Optional[Reference]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    safety: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    parent: Reference | dict | None
 
 
 class DeviceDefinitionUdiDeviceIdentifier(FHIRElement):
@@ -4386,8 +4386,8 @@ class DeviceDefinitionUdiDeviceIdentifier(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     deviceIdentifier: Optional[String] = None
     issuer: Optional[Uri] = None
     jurisdiction: Optional[Uri] = None
@@ -4398,8 +4398,8 @@ class DeviceDefinitionDeviceName(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     type_: Optional[Code] = None
 
@@ -4409,8 +4409,8 @@ class DeviceDefinitionSpecialization(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     systemType: Optional[String] = None
     version: Optional[String] = None
 
@@ -4420,10 +4420,10 @@ class DeviceDefinitionCapability(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'description': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    description: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    description: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class DeviceDefinitionProperty(FHIRElement):
@@ -4437,11 +4437,11 @@ class DeviceDefinitionProperty(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    valueQuantity: Quantity | FHIRList[Quantity]
-    valueCode: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    valueQuantity: Quantity | FHIRList[Quantity] | list | dict
+    valueCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class DeviceDefinitionMaterial(FHIRElement):
@@ -4449,9 +4449,9 @@ class DeviceDefinitionMaterial(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'substance': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    substance: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    substance: CodeableConcept | dict | None
     alternate: Optional[Boolean] = None
     allergenicIndicator: Optional[Boolean] = None
 
@@ -4504,36 +4504,36 @@ class DeviceDefinition(FHIRResource):
     _choice_fields = {'manufacturer': ['manufacturerString', 'manufacturerReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    udiDeviceIdentifier: DeviceDefinitionUdiDeviceIdentifier | FHIRList[DeviceDefinitionUdiDeviceIdentifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    udiDeviceIdentifier: DeviceDefinitionUdiDeviceIdentifier | FHIRList[DeviceDefinitionUdiDeviceIdentifier] | list | dict
     manufacturerString: Optional[String] = None
-    manufacturerReference: Optional[Reference]
-    deviceName: DeviceDefinitionDeviceName | FHIRList[DeviceDefinitionDeviceName]
+    manufacturerReference: Reference | dict | None
+    deviceName: DeviceDefinitionDeviceName | FHIRList[DeviceDefinitionDeviceName] | list | dict
     modelNumber: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    specialization: DeviceDefinitionSpecialization | FHIRList[DeviceDefinitionSpecialization]
-    version: String | FHIRList[String] = None
-    safety: CodeableConcept | FHIRList[CodeableConcept]
-    shelfLifeStorage: ProductShelfLife | FHIRList[ProductShelfLife]
-    physicalCharacteristics: Optional[ProdCharacteristic]
-    languageCode: CodeableConcept | FHIRList[CodeableConcept]
-    capability: DeviceDefinitionCapability | FHIRList[DeviceDefinitionCapability]
-    property: DeviceDefinitionProperty | FHIRList[DeviceDefinitionProperty]
-    owner: Optional[Reference]
-    contact: ContactPoint | FHIRList[ContactPoint]
+    type_: CodeableConcept | dict | None
+    specialization: DeviceDefinitionSpecialization | FHIRList[DeviceDefinitionSpecialization] | list | dict
+    version: String | FHIRList[String] | list | None = None
+    safety: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    shelfLifeStorage: ProductShelfLife | FHIRList[ProductShelfLife] | list | dict
+    physicalCharacteristics: ProdCharacteristic | dict | None
+    languageCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    capability: DeviceDefinitionCapability | FHIRList[DeviceDefinitionCapability] | list | dict
+    property: DeviceDefinitionProperty | FHIRList[DeviceDefinitionProperty] | list | dict
+    owner: Reference | dict | None
+    contact: ContactPoint | FHIRList[ContactPoint] | list | dict
     url: Optional[Uri] = None
     onlineInformation: Optional[Uri] = None
-    note: Annotation | FHIRList[Annotation]
-    quantity: Optional[Quantity]
-    parentDevice: Optional[Reference]
-    material: DeviceDefinitionMaterial | FHIRList[DeviceDefinitionMaterial]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    quantity: Quantity | dict | None
+    parentDevice: Reference | dict | None
+    material: DeviceDefinitionMaterial | FHIRList[DeviceDefinitionMaterial] | list | dict
 
 
 class DeviceMetricCalibration(FHIRElement):
@@ -4541,8 +4541,8 @@ class DeviceMetricCalibration(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     state: Optional[Code] = None
     time: Optional[Instant] = None
@@ -4567,23 +4567,23 @@ class DeviceMetric(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
-    unit: Optional[CodeableConcept]
-    source: Optional[Reference]
-    parent: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
+    unit: CodeableConcept | dict | None
+    source: Reference | dict | None
+    parent: Reference | dict | None
     operationalStatus: Optional[Code] = None
     color: Optional[Code] = None
     category: Optional[Code] = None
-    measurementPeriod: Optional[Timing]
-    calibration: DeviceMetricCalibration | FHIRList[DeviceMetricCalibration]
+    measurementPeriod: Timing | dict | None
+    calibration: DeviceMetricCalibration | FHIRList[DeviceMetricCalibration] | list | dict
 
 
 class DeviceRequestParameter(FHIRElement):
@@ -4599,12 +4599,12 @@ class DeviceRequestParameter(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueQuantity', 'valueRange', 'valueBoolean']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
     valueBoolean: Optional[Boolean] = None
 
 
@@ -4657,40 +4657,40 @@ class DeviceRequest(FHIRResource):
     _choice_fields = {'code': ['codeReference', 'codeCodeableConcept'], 'occurrence': ['occurrenceDateTime', 'occurrencePeriod', 'occurrenceTiming']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    priorRequest: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    priorRequest: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
     status: Optional[Code] = None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
-    codeReference: Optional[Reference]
-    codeCodeableConcept: Optional[CodeableConcept]
-    parameter: DeviceRequestParameter | FHIRList[DeviceRequestParameter]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    codeReference: Reference | dict | None
+    codeCodeableConcept: CodeableConcept | dict | None
+    parameter: DeviceRequestParameter | FHIRList[DeviceRequestParameter] | list | dict
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
     authoredOn: Optional[DateTime] = None
-    requester: Optional[Reference]
-    performerType: Optional[CodeableConcept]
-    performer: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    insurance: Reference | FHIRList[Reference]
-    supportingInfo: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    relevantHistory: Reference | FHIRList[Reference]
+    requester: Reference | dict | None
+    performerType: CodeableConcept | dict | None
+    performer: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    insurance: Reference | FHIRList[Reference] | list | dict
+    supportingInfo: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    relevantHistory: Reference | FHIRList[Reference] | list | dict
 
 
 class DeviceUseStatement(FHIRResource):
@@ -4718,28 +4718,28 @@ class DeviceUseStatement(FHIRResource):
     _choice_fields = {'timing': ['timingTiming', 'timingPeriod', 'timingDateTime']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    subject: Optional[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    timingTiming: Optional[Timing]
-    timingPeriod: Optional[Period]
+    subject: Reference | dict | None
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    timingTiming: Timing | dict | None
+    timingPeriod: Period | dict | None
     timingDateTime: Optional[DateTime] = None
     recordedOn: Optional[DateTime] = None
-    source: Optional[Reference]
-    device: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    bodySite: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    source: Reference | dict | None
+    device: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    bodySite: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class DiagnosticReportMedia(FHIRElement):
@@ -4747,10 +4747,10 @@ class DiagnosticReportMedia(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'link': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     comment: Optional[String] = None
-    link: Optional[Reference]
+    link: Reference | dict | None
 
 
 class DiagnosticReport(FHIRResource):
@@ -4796,32 +4796,32 @@ class DiagnosticReport(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    resultsInterpreter: Reference | FHIRList[Reference]
-    specimen: Reference | FHIRList[Reference]
-    result: Reference | FHIRList[Reference]
-    imagingStudy: Reference | FHIRList[Reference]
-    media: DiagnosticReportMedia | FHIRList[DiagnosticReportMedia]
+    performer: Reference | FHIRList[Reference] | list | dict
+    resultsInterpreter: Reference | FHIRList[Reference] | list | dict
+    specimen: Reference | FHIRList[Reference] | list | dict
+    result: Reference | FHIRList[Reference] | list | dict
+    imagingStudy: Reference | FHIRList[Reference] | list | dict
+    media: DiagnosticReportMedia | FHIRList[DiagnosticReportMedia] | list | dict
     conclusion: Optional[String] = None
-    conclusionCode: CodeableConcept | FHIRList[CodeableConcept]
-    presentedForm: Attachment | FHIRList[Attachment]
+    conclusionCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    presentedForm: Attachment | FHIRList[Attachment] | list | dict
 
 
 class DocumentManifestRelated(FHIRElement):
@@ -4829,10 +4829,10 @@ class DocumentManifestRelated(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'identifier': 'Identifier', 'ref': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    ref: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    ref: Reference | dict | None
 
 
 class DocumentManifest(FHIRResource):
@@ -4855,25 +4855,25 @@ class DocumentManifest(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    masterIdentifier: Optional[Identifier]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    masterIdentifier: Identifier | dict | None
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    subject: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subject: Reference | dict | None
     created: Optional[DateTime] = None
-    author: Reference | FHIRList[Reference]
-    recipient: Reference | FHIRList[Reference]
+    author: Reference | FHIRList[Reference] | list | dict
+    recipient: Reference | FHIRList[Reference] | list | dict
     source: Optional[Uri] = None
     description: Optional[String] = None
-    content: Reference | FHIRList[Reference]
-    related: DocumentManifestRelated | FHIRList[DocumentManifestRelated]
+    content: Reference | FHIRList[Reference] | list | dict
+    related: DocumentManifestRelated | FHIRList[DocumentManifestRelated] | list | dict
 
 
 class DocumentReferenceRelatesTo(FHIRElement):
@@ -4881,10 +4881,10 @@ class DocumentReferenceRelatesTo(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'target': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    target: Optional[Reference]
+    target: Reference | dict | None
 
 
 class DocumentReferenceContent(FHIRElement):
@@ -4892,10 +4892,10 @@ class DocumentReferenceContent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'attachment': 'Attachment', 'format': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    attachment: Optional[Attachment]
-    format: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    attachment: Attachment | dict | None
+    format: Coding | dict | None
 
 
 class DocumentReferenceContext(FHIRElement):
@@ -4913,15 +4913,15 @@ class DocumentReferenceContext(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    encounter: Reference | FHIRList[Reference]
-    event: CodeableConcept | FHIRList[CodeableConcept]
-    period: Optional[Period]
-    facilityType: Optional[CodeableConcept]
-    practiceSetting: Optional[CodeableConcept]
-    sourcePatientInfo: Optional[Reference]
-    related: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    encounter: Reference | FHIRList[Reference] | list | dict
+    event: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | dict | None
+    facilityType: CodeableConcept | dict | None
+    practiceSetting: CodeableConcept | dict | None
+    sourcePatientInfo: Reference | dict | None
+    related: Reference | FHIRList[Reference] | list | dict
 
 
 class DocumentReference(FHIRResource):
@@ -4948,29 +4948,29 @@ class DocumentReference(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    masterIdentifier: Optional[Identifier]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    masterIdentifier: Identifier | dict | None
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     docStatus: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
     date: Optional[Instant] = None
-    author: Reference | FHIRList[Reference]
-    authenticator: Optional[Reference]
-    custodian: Optional[Reference]
-    relatesTo: DocumentReferenceRelatesTo | FHIRList[DocumentReferenceRelatesTo]
+    author: Reference | FHIRList[Reference] | list | dict
+    authenticator: Reference | dict | None
+    custodian: Reference | dict | None
+    relatesTo: DocumentReferenceRelatesTo | FHIRList[DocumentReferenceRelatesTo] | list | dict
     description: Optional[String] = None
-    securityLabel: CodeableConcept | FHIRList[CodeableConcept]
-    content: DocumentReferenceContent | FHIRList[DocumentReferenceContent]
-    context: Optional[DocumentReferenceContext]
+    securityLabel: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    content: DocumentReferenceContent | FHIRList[DocumentReferenceContent] | list | dict
+    context: DocumentReferenceContext | dict | None
 
 
 class EffectEvidenceSynthesisSampleSize(FHIRElement):
@@ -4978,8 +4978,8 @@ class EffectEvidenceSynthesisSampleSize(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     numberOfStudies: Optional[Integer] = None
     numberOfParticipants: Optional[Integer] = None
@@ -4990,12 +4990,12 @@ class EffectEvidenceSynthesisResultsByExposure(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'variantState': 'CodeableConcept', 'riskEvidenceSynthesis': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     exposureState: Optional[Code] = None
-    variantState: Optional[CodeableConcept]
-    riskEvidenceSynthesis: Optional[Reference]
+    variantState: CodeableConcept | dict | None
+    riskEvidenceSynthesis: Reference | dict | None
 
 
 class EffectEvidenceSynthesisEffectEstimate(FHIRElement):
@@ -5010,14 +5010,14 @@ class EffectEvidenceSynthesisEffectEstimate(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    variantState: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
+    variantState: CodeableConcept | dict | None
     value: Optional[Decimal] = None
-    unitOfMeasure: Optional[CodeableConcept]
-    precisionEstimate: EffectEvidenceSynthesisEffectEstimatePrecisionEstimate | FHIRList[EffectEvidenceSynthesisEffectEstimatePrecisionEstimate]
+    unitOfMeasure: CodeableConcept | dict | None
+    precisionEstimate: EffectEvidenceSynthesisEffectEstimatePrecisionEstimate | FHIRList[EffectEvidenceSynthesisEffectEstimatePrecisionEstimate] | list | dict
 
 
 class EffectEvidenceSynthesisEffectEstimatePrecisionEstimate(FHIRElement):
@@ -5025,9 +5025,9 @@ class EffectEvidenceSynthesisEffectEstimatePrecisionEstimate(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     level: Optional[Decimal] = None
     from_: Optional[Decimal] = None
     to: Optional[Decimal] = None
@@ -5044,11 +5044,11 @@ class EffectEvidenceSynthesisCertainty(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    rating: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    certaintySubcomponent: EffectEvidenceSynthesisCertaintyCertaintySubcomponent | FHIRList[EffectEvidenceSynthesisCertaintyCertaintySubcomponent]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    rating: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    certaintySubcomponent: EffectEvidenceSynthesisCertaintyCertaintySubcomponent | FHIRList[EffectEvidenceSynthesisCertaintyCertaintySubcomponent] | list | dict
 
 
 class EffectEvidenceSynthesisCertaintyCertaintySubcomponent(FHIRElement):
@@ -5056,11 +5056,11 @@ class EffectEvidenceSynthesisCertaintyCertaintySubcomponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'rating': 'CodeableConcept', 'note': 'Annotation'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    rating: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    rating: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class EffectEvidenceSynthesis(FHIRResource):
@@ -5115,46 +5115,46 @@ class EffectEvidenceSynthesis(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    synthesisType: Optional[CodeableConcept]
-    studyType: Optional[CodeableConcept]
-    population: Optional[Reference]
-    exposure: Optional[Reference]
-    exposureAlternative: Optional[Reference]
-    outcome: Optional[Reference]
-    sampleSize: Optional[EffectEvidenceSynthesisSampleSize]
-    resultsByExposure: EffectEvidenceSynthesisResultsByExposure | FHIRList[EffectEvidenceSynthesisResultsByExposure]
-    effectEstimate: EffectEvidenceSynthesisEffectEstimate | FHIRList[EffectEvidenceSynthesisEffectEstimate]
-    certainty: EffectEvidenceSynthesisCertainty | FHIRList[EffectEvidenceSynthesisCertainty]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    synthesisType: CodeableConcept | dict | None
+    studyType: CodeableConcept | dict | None
+    population: Reference | dict | None
+    exposure: Reference | dict | None
+    exposureAlternative: Reference | dict | None
+    outcome: Reference | dict | None
+    sampleSize: EffectEvidenceSynthesisSampleSize | dict | None
+    resultsByExposure: EffectEvidenceSynthesisResultsByExposure | FHIRList[EffectEvidenceSynthesisResultsByExposure] | list | dict
+    effectEstimate: EffectEvidenceSynthesisEffectEstimate | FHIRList[EffectEvidenceSynthesisEffectEstimate] | list | dict
+    certainty: EffectEvidenceSynthesisCertainty | FHIRList[EffectEvidenceSynthesisCertainty] | list | dict
 
 
 class EncounterStatusHistory(FHIRElement):
@@ -5162,10 +5162,10 @@ class EncounterStatusHistory(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     status: Optional[Code] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class EncounterClassHistory(FHIRElement):
@@ -5173,10 +5173,10 @@ class EncounterClassHistory(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'class_': 'Coding', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    class_: Optional[Coding]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    class_: Coding | dict | None
+    period: Period | dict | None
 
 
 class EncounterParticipant(FHIRElement):
@@ -5184,11 +5184,11 @@ class EncounterParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'period': 'Period', 'individual': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    period: Optional[Period]
-    individual: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | dict | None
+    individual: Reference | dict | None
 
 
 class EncounterDiagnosis(FHIRElement):
@@ -5196,10 +5196,10 @@ class EncounterDiagnosis(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'condition': 'Reference', 'use': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    condition: Optional[Reference]
-    use: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    condition: Reference | dict | None
+    use: CodeableConcept | dict | None
     rank: Optional[PositiveInt] = None
 
 
@@ -5220,17 +5220,17 @@ class EncounterHospitalization(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    preAdmissionIdentifier: Optional[Identifier]
-    origin: Optional[Reference]
-    admitSource: Optional[CodeableConcept]
-    reAdmission: Optional[CodeableConcept]
-    dietPreference: CodeableConcept | FHIRList[CodeableConcept]
-    specialCourtesy: CodeableConcept | FHIRList[CodeableConcept]
-    specialArrangement: CodeableConcept | FHIRList[CodeableConcept]
-    destination: Optional[Reference]
-    dischargeDisposition: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    preAdmissionIdentifier: Identifier | dict | None
+    origin: Reference | dict | None
+    admitSource: CodeableConcept | dict | None
+    reAdmission: CodeableConcept | dict | None
+    dietPreference: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialCourtesy: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialArrangement: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    destination: Reference | dict | None
+    dischargeDisposition: CodeableConcept | dict | None
 
 
 class EncounterLocation(FHIRElement):
@@ -5238,12 +5238,12 @@ class EncounterLocation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'location': 'Reference', 'physicalType': 'CodeableConcept', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    location: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    location: Reference | dict | None
     status: Optional[Code] = None
-    physicalType: Optional[CodeableConcept]
-    period: Optional[Period]
+    physicalType: CodeableConcept | dict | None
+    period: Period | dict | None
 
 
 class Encounter(FHIRResource):
@@ -5297,36 +5297,36 @@ class Encounter(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    statusHistory: EncounterStatusHistory | FHIRList[EncounterStatusHistory]
-    class_: Optional[Coding]
-    classHistory: EncounterClassHistory | FHIRList[EncounterClassHistory]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    serviceType: Optional[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    episodeOfCare: Reference | FHIRList[Reference]
-    basedOn: Reference | FHIRList[Reference]
-    participant: EncounterParticipant | FHIRList[EncounterParticipant]
-    appointment: Reference | FHIRList[Reference]
-    period: Optional[Period]
-    length: Optional[Duration]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    diagnosis: EncounterDiagnosis | FHIRList[EncounterDiagnosis]
-    account: Reference | FHIRList[Reference]
-    hospitalization: Optional[EncounterHospitalization]
-    location: EncounterLocation | FHIRList[EncounterLocation]
-    serviceProvider: Optional[Reference]
-    partOf: Optional[Reference]
+    statusHistory: EncounterStatusHistory | FHIRList[EncounterStatusHistory] | list | dict
+    class_: Coding | dict | None
+    classHistory: EncounterClassHistory | FHIRList[EncounterClassHistory] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    serviceType: CodeableConcept | dict | None
+    priority: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    episodeOfCare: Reference | FHIRList[Reference] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    participant: EncounterParticipant | FHIRList[EncounterParticipant] | list | dict
+    appointment: Reference | FHIRList[Reference] | list | dict
+    period: Period | dict | None
+    length: Duration | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    diagnosis: EncounterDiagnosis | FHIRList[EncounterDiagnosis] | list | dict
+    account: Reference | FHIRList[Reference] | list | dict
+    hospitalization: EncounterHospitalization | dict | None
+    location: EncounterLocation | FHIRList[EncounterLocation] | list | dict
+    serviceProvider: Reference | dict | None
+    partOf: Reference | dict | None
 
 
 class Endpoint(FHIRResource):
@@ -5347,24 +5347,24 @@ class Endpoint(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    connectionType: Optional[Coding]
+    connectionType: Coding | dict | None
     name: Optional[String] = None
-    managingOrganization: Optional[Reference]
-    contact: ContactPoint | FHIRList[ContactPoint]
-    period: Optional[Period]
-    payloadType: CodeableConcept | FHIRList[CodeableConcept]
-    payloadMimeType: Code | FHIRList[Code] = None
+    managingOrganization: Reference | dict | None
+    contact: ContactPoint | FHIRList[ContactPoint] | list | dict
+    period: Period | dict | None
+    payloadType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    payloadMimeType: Code | FHIRList[Code] | list | None = None
     address: Optional[Url] = None
-    header: String | FHIRList[String] = None
+    header: String | FHIRList[String] | list | None = None
 
 
 class EnrollmentRequest(FHIRResource):
@@ -5384,20 +5384,20 @@ class EnrollmentRequest(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     created: Optional[DateTime] = None
-    insurer: Optional[Reference]
-    provider: Optional[Reference]
-    candidate: Optional[Reference]
-    coverage: Optional[Reference]
+    insurer: Reference | dict | None
+    provider: Reference | dict | None
+    candidate: Reference | dict | None
+    coverage: Reference | dict | None
 
 
 class EnrollmentResponse(FHIRResource):
@@ -5416,21 +5416,21 @@ class EnrollmentResponse(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    request: Optional[Reference]
+    request: Reference | dict | None
     outcome: Optional[Code] = None
     disposition: Optional[String] = None
     created: Optional[DateTime] = None
-    organization: Optional[Reference]
-    requestProvider: Optional[Reference]
+    organization: Reference | dict | None
+    requestProvider: Reference | dict | None
 
 
 class EpisodeOfCareStatusHistory(FHIRElement):
@@ -5438,10 +5438,10 @@ class EpisodeOfCareStatusHistory(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     status: Optional[Code] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class EpisodeOfCareDiagnosis(FHIRElement):
@@ -5449,10 +5449,10 @@ class EpisodeOfCareDiagnosis(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'condition': 'Reference', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    condition: Optional[Reference]
-    role: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    condition: Reference | dict | None
+    role: CodeableConcept | dict | None
     rank: Optional[PositiveInt] = None
 
 
@@ -5479,25 +5479,25 @@ class EpisodeOfCare(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    statusHistory: EpisodeOfCareStatusHistory | FHIRList[EpisodeOfCareStatusHistory]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    diagnosis: EpisodeOfCareDiagnosis | FHIRList[EpisodeOfCareDiagnosis]
-    patient: Optional[Reference]
-    managingOrganization: Optional[Reference]
-    period: Optional[Period]
-    referralRequest: Reference | FHIRList[Reference]
-    careManager: Optional[Reference]
-    team: Reference | FHIRList[Reference]
-    account: Reference | FHIRList[Reference]
+    statusHistory: EpisodeOfCareStatusHistory | FHIRList[EpisodeOfCareStatusHistory] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    diagnosis: EpisodeOfCareDiagnosis | FHIRList[EpisodeOfCareDiagnosis] | list | dict
+    patient: Reference | dict | None
+    managingOrganization: Reference | dict | None
+    period: Period | dict | None
+    referralRequest: Reference | FHIRList[Reference] | list | dict
+    careManager: Reference | dict | None
+    team: Reference | FHIRList[Reference] | list | dict
+    account: Reference | FHIRList[Reference] | list | dict
 
 
 class EventDefinition(FHIRResource):
@@ -5542,42 +5542,42 @@ class EventDefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    trigger: TriggerDefinition | FHIRList[TriggerDefinition]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    trigger: TriggerDefinition | FHIRList[TriggerDefinition] | list | dict
 
 
 class Evidence(FHIRResource):
@@ -5624,15 +5624,15 @@ class Evidence(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -5641,24 +5641,24 @@ class Evidence(FHIRResource):
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    exposureBackground: Optional[Reference]
-    exposureVariant: Reference | FHIRList[Reference]
-    outcome: Reference | FHIRList[Reference]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    exposureBackground: Reference | dict | None
+    exposureVariant: Reference | FHIRList[Reference] | list | dict
+    outcome: Reference | FHIRList[Reference] | list | dict
 
 
 class EvidenceVariableCharacteristic(FHIRElement):
@@ -5690,22 +5690,22 @@ class EvidenceVariableCharacteristic(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    definitionReference: Optional[Reference]
+    definitionReference: Reference | dict | None
     definitionCanonical: Optional[Canonical] = None
-    definitionCodeableConcept: Optional[CodeableConcept]
-    definitionExpression: Optional[Expression]
-    definitionDataRequirement: Optional[DataRequirement]
-    definitionTriggerDefinition: Optional[TriggerDefinition]
-    usageContext: UsageContext | FHIRList[UsageContext]
+    definitionCodeableConcept: CodeableConcept | dict | None
+    definitionExpression: Expression | dict | None
+    definitionDataRequirement: DataRequirement | dict | None
+    definitionTriggerDefinition: TriggerDefinition | dict | None
+    usageContext: UsageContext | FHIRList[UsageContext] | list | dict
     exclude: Optional[Boolean] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period]
-    participantEffectiveDuration: Optional[Duration]
-    participantEffectiveTiming: Optional[Timing]
-    timeFromStart: Optional[Duration]
+    participantEffectivePeriod: Period | dict | None
+    participantEffectiveDuration: Duration | dict | None
+    participantEffectiveTiming: Timing | dict | None
+    timeFromStart: Duration | dict | None
     groupMeasure: Optional[Code] = None
 
 
@@ -5750,15 +5750,15 @@ class EvidenceVariable(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -5767,23 +5767,23 @@ class EvidenceVariable(FHIRResource):
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
     type_: Optional[Code] = None
-    characteristic: EvidenceVariableCharacteristic | FHIRList[EvidenceVariableCharacteristic]
+    characteristic: EvidenceVariableCharacteristic | FHIRList[EvidenceVariableCharacteristic] | list | dict
 
 
 class ExampleScenarioActor(FHIRElement):
@@ -5791,8 +5791,8 @@ class ExampleScenarioActor(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actorId: Optional[String] = None
     type_: Optional[Code] = None
     name: Optional[String] = None
@@ -5809,14 +5809,14 @@ class ExampleScenarioInstance(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     resourceId: Optional[String] = None
     resourceType: Optional[Code] = None
     name: Optional[String] = None
     description: Optional[Markdown] = None
-    version: ExampleScenarioInstanceVersion | FHIRList[ExampleScenarioInstanceVersion]
-    containedInstance: ExampleScenarioInstanceContainedInstance | FHIRList[ExampleScenarioInstanceContainedInstance]
+    version: ExampleScenarioInstanceVersion | FHIRList[ExampleScenarioInstanceVersion] | list | dict
+    containedInstance: ExampleScenarioInstanceContainedInstance | FHIRList[ExampleScenarioInstanceContainedInstance] | list | dict
 
 
 class ExampleScenarioInstanceVersion(FHIRElement):
@@ -5824,8 +5824,8 @@ class ExampleScenarioInstanceVersion(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     versionId: Optional[String] = None
     description: Optional[Markdown] = None
 
@@ -5835,8 +5835,8 @@ class ExampleScenarioInstanceContainedInstance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     resourceId: Optional[String] = None
     versionId: Optional[String] = None
 
@@ -5846,13 +5846,13 @@ class ExampleScenarioProcess(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'step': 'ExampleScenarioProcessStep'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     title: Optional[String] = None
     description: Optional[Markdown] = None
     preConditions: Optional[Markdown] = None
     postConditions: Optional[Markdown] = None
-    step: ExampleScenarioProcessStep | FHIRList[ExampleScenarioProcessStep]
+    step: ExampleScenarioProcessStep | FHIRList[ExampleScenarioProcessStep] | list | dict
 
 
 class ExampleScenarioProcessStep(FHIRElement):
@@ -5865,12 +5865,12 @@ class ExampleScenarioProcessStep(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     process: Any = None
     pause: Optional[Boolean] = None
-    operation: Optional[ExampleScenarioProcessStepOperation]
-    alternative: ExampleScenarioProcessStepAlternative | FHIRList[ExampleScenarioProcessStepAlternative]
+    operation: ExampleScenarioProcessStepOperation | dict | None
+    alternative: ExampleScenarioProcessStepAlternative | FHIRList[ExampleScenarioProcessStepAlternative] | list | dict
 
 
 class ExampleScenarioProcessStepOperation(FHIRElement):
@@ -5878,8 +5878,8 @@ class ExampleScenarioProcessStepOperation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     number: Optional[String] = None
     type_: Optional[String] = None
     name: Optional[String] = None
@@ -5897,8 +5897,8 @@ class ExampleScenarioProcessStepAlternative(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     title: Optional[String] = None
     description: Optional[Markdown] = None
     step: Any = None
@@ -5935,30 +5935,30 @@ class ExampleScenario(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     purpose: Optional[Markdown] = None
-    actor: ExampleScenarioActor | FHIRList[ExampleScenarioActor]
-    instance: ExampleScenarioInstance | FHIRList[ExampleScenarioInstance]
-    process: ExampleScenarioProcess | FHIRList[ExampleScenarioProcess]
-    workflow: Canonical | FHIRList[Canonical] = None
+    actor: ExampleScenarioActor | FHIRList[ExampleScenarioActor] | list | dict
+    instance: ExampleScenarioInstance | FHIRList[ExampleScenarioInstance] | list | dict
+    process: ExampleScenarioProcess | FHIRList[ExampleScenarioProcess] | list | dict
+    workflow: Canonical | FHIRList[Canonical] | list | None = None
 
 
 class ExplanationOfBenefitRelated(FHIRElement):
@@ -5972,11 +5972,11 @@ class ExplanationOfBenefitRelated(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    claim: Optional[Reference]
-    relationship: Optional[CodeableConcept]
-    reference: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    claim: Reference | dict | None
+    relationship: CodeableConcept | dict | None
+    reference: Identifier | dict | None
 
 
 class ExplanationOfBenefitPayee(FHIRElement):
@@ -5984,10 +5984,10 @@ class ExplanationOfBenefitPayee(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'party': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    party: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    party: Reference | dict | None
 
 
 class ExplanationOfBenefitCareTeam(FHIRElement):
@@ -6001,13 +6001,13 @@ class ExplanationOfBenefitCareTeam(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    provider: Optional[Reference]
+    provider: Reference | dict | None
     responsible: Optional[Boolean] = None
-    role: Optional[CodeableConcept]
-    qualification: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
+    qualification: CodeableConcept | dict | None
 
 
 class ExplanationOfBenefitSupportingInfo(FHIRElement):
@@ -6026,19 +6026,19 @@ class ExplanationOfBenefitSupportingInfo(FHIRElement):
     _choice_fields = {'timing': ['timingDate', 'timingPeriod'], 'value': ['valueBoolean', 'valueString', 'valueQuantity', 'valueAttachment', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
     timingDate: Optional[Date] = None
-    timingPeriod: Optional[Period]
+    timingPeriod: Period | dict | None
     valueBoolean: Optional[Boolean] = None
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity]
-    valueAttachment: Optional[Attachment]
-    valueReference: Optional[Reference]
-    reason: Optional[Coding]
+    valueQuantity: Quantity | dict | None
+    valueAttachment: Attachment | dict | None
+    valueReference: Reference | dict | None
+    reason: Coding | dict | None
 
 
 class ExplanationOfBenefitDiagnosis(FHIRElement):
@@ -6055,14 +6055,14 @@ class ExplanationOfBenefitDiagnosis(FHIRElement):
     _choice_fields = {'diagnosis': ['diagnosisCodeableConcept', 'diagnosisReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    diagnosisCodeableConcept: Optional[CodeableConcept]
-    diagnosisReference: Optional[Reference]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    onAdmission: Optional[CodeableConcept]
-    packageCode: Optional[CodeableConcept]
+    diagnosisCodeableConcept: CodeableConcept | dict | None
+    diagnosisReference: Reference | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    onAdmission: CodeableConcept | dict | None
+    packageCode: CodeableConcept | dict | None
 
 
 class ExplanationOfBenefitProcedure(FHIRElement):
@@ -6078,14 +6078,14 @@ class ExplanationOfBenefitProcedure(FHIRElement):
     _choice_fields = {'procedure': ['procedureCodeableConcept', 'procedureReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     date: Optional[DateTime] = None
-    procedureCodeableConcept: Optional[CodeableConcept]
-    procedureReference: Optional[Reference]
-    udi: Reference | FHIRList[Reference]
+    procedureCodeableConcept: CodeableConcept | dict | None
+    procedureReference: Reference | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
 
 
 class ExplanationOfBenefitInsurance(FHIRElement):
@@ -6093,11 +6093,11 @@ class ExplanationOfBenefitInsurance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'coverage': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     focal: Optional[Boolean] = None
-    coverage: Optional[Reference]
-    preAuthRef: String | FHIRList[String] = None
+    coverage: Reference | dict | None
+    preAuthRef: String | FHIRList[String] | list | None = None
 
 
 class ExplanationOfBenefitAccident(FHIRElement):
@@ -6112,12 +6112,12 @@ class ExplanationOfBenefitAccident(FHIRElement):
     _choice_fields = {'location': ['locationAddress', 'locationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     date: Optional[Date] = None
-    type_: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
 
 
 class ExplanationOfBenefitItem(FHIRElement):
@@ -6162,34 +6162,34 @@ class ExplanationOfBenefitItem(FHIRElement):
     _choice_fields = {'location': ['locationCodeableConcept', 'locationAddress', 'locationReference'], 'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    careTeamSequence: PositiveInt | FHIRList[PositiveInt] = None
-    diagnosisSequence: PositiveInt | FHIRList[PositiveInt] = None
-    procedureSequence: PositiveInt | FHIRList[PositiveInt] = None
-    informationSequence: PositiveInt | FHIRList[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
+    careTeamSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    diagnosisSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    procedureSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    informationSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
-    locationCodeableConcept: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    servicedPeriod: Period | dict | None
+    locationCodeableConcept: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
-    bodySite: Optional[CodeableConcept]
-    subSite: CodeableConcept | FHIRList[CodeableConcept]
-    encounter: Reference | FHIRList[Reference]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
-    adjudication: ExplanationOfBenefitItemAdjudication | FHIRList[ExplanationOfBenefitItemAdjudication]
-    detail: ExplanationOfBenefitItemDetail | FHIRList[ExplanationOfBenefitItemDetail]
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
+    bodySite: CodeableConcept | dict | None
+    subSite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    encounter: Reference | FHIRList[Reference] | list | dict
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    adjudication: ExplanationOfBenefitItemAdjudication | FHIRList[ExplanationOfBenefitItemAdjudication] | list | dict
+    detail: ExplanationOfBenefitItemDetail | FHIRList[ExplanationOfBenefitItemDetail] | list | dict
 
 
 class ExplanationOfBenefitItemAdjudication(FHIRElement):
@@ -6197,11 +6197,11 @@ class ExplanationOfBenefitItemAdjudication(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'category': 'CodeableConcept', 'reason': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    reason: Optional[CodeableConcept]
-    amount: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    reason: CodeableConcept | dict | None
+    amount: Money | dict | None
     value: Optional[Decimal] = None
 
 
@@ -6223,22 +6223,22 @@ class ExplanationOfBenefitItemDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    subDetail: ExplanationOfBenefitItemDetailSubDetail | FHIRList[ExplanationOfBenefitItemDetailSubDetail]
+    subDetail: ExplanationOfBenefitItemDetailSubDetail | FHIRList[ExplanationOfBenefitItemDetailSubDetail] | list | dict
 
 
 class ExplanationOfBenefitItemDetailSubDetail(FHIRElement):
@@ -6258,20 +6258,20 @@ class ExplanationOfBenefitItemDetailSubDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    revenue: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    revenue: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    udi: Reference | FHIRList[Reference]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    udi: Reference | FHIRList[Reference] | list | dict
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
 
 
@@ -6311,29 +6311,29 @@ class ExplanationOfBenefitAddItem(FHIRElement):
     _choice_fields = {'location': ['locationCodeableConcept', 'locationAddress', 'locationReference'], 'serviced': ['servicedDate', 'servicedPeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemSequence: PositiveInt | FHIRList[PositiveInt] = None
-    detailSequence: PositiveInt | FHIRList[PositiveInt] = None
-    subDetailSequence: PositiveInt | FHIRList[PositiveInt] = None
-    provider: Reference | FHIRList[Reference]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    programCode: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    detailSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    subDetailSequence: PositiveInt | FHIRList[PositiveInt] | list | None = None
+    provider: Reference | FHIRList[Reference] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    programCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period]
-    locationCodeableConcept: Optional[CodeableConcept]
-    locationAddress: Optional[Address]
-    locationReference: Optional[Reference]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    servicedPeriod: Period | dict | None
+    locationCodeableConcept: CodeableConcept | dict | None
+    locationAddress: Address | dict | None
+    locationReference: Reference | dict | None
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    bodySite: Optional[CodeableConcept]
-    subSite: CodeableConcept | FHIRList[CodeableConcept]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    bodySite: CodeableConcept | dict | None
+    subSite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    detail: ExplanationOfBenefitAddItemDetail | FHIRList[ExplanationOfBenefitAddItemDetail]
+    detail: ExplanationOfBenefitAddItemDetail | FHIRList[ExplanationOfBenefitAddItemDetail] | list | dict
 
 
 class ExplanationOfBenefitAddItemDetail(FHIRElement):
@@ -6350,17 +6350,17 @@ class ExplanationOfBenefitAddItemDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
-    subDetail: ExplanationOfBenefitAddItemDetailSubDetail | FHIRList[ExplanationOfBenefitAddItemDetailSubDetail]
+    subDetail: ExplanationOfBenefitAddItemDetailSubDetail | FHIRList[ExplanationOfBenefitAddItemDetailSubDetail] | list | dict
 
 
 class ExplanationOfBenefitAddItemDetailSubDetail(FHIRElement):
@@ -6376,15 +6376,15 @@ class ExplanationOfBenefitAddItemDetailSubDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    productOrService: Optional[CodeableConcept]
-    modifier: CodeableConcept | FHIRList[CodeableConcept]
-    quantity: Optional[Quantity]
-    unitPrice: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    productOrService: CodeableConcept | dict | None
+    modifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantity: Quantity | dict | None
+    unitPrice: Money | dict | None
     factor: Optional[Decimal] = None
-    net: Optional[Money]
-    noteNumber: PositiveInt | FHIRList[PositiveInt] = None
+    net: Money | dict | None
+    noteNumber: PositiveInt | FHIRList[PositiveInt] | list | None = None
     adjudication: Any = None
 
 
@@ -6393,10 +6393,10 @@ class ExplanationOfBenefitTotal(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'category': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    amount: Optional[Money]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    amount: Money | dict | None
 
 
 class ExplanationOfBenefitPayment(FHIRElement):
@@ -6412,14 +6412,14 @@ class ExplanationOfBenefitPayment(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    adjustment: Optional[Money]
-    adjustmentReason: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    adjustment: Money | dict | None
+    adjustmentReason: CodeableConcept | dict | None
     date: Optional[Date] = None
-    amount: Optional[Money]
-    identifier: Optional[Identifier]
+    amount: Money | dict | None
+    identifier: Identifier | dict | None
 
 
 class ExplanationOfBenefitProcessNote(FHIRElement):
@@ -6427,12 +6427,12 @@ class ExplanationOfBenefitProcessNote(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'language': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     number: Optional[PositiveInt] = None
     type_: Optional[Code] = None
     text: Optional[String] = None
-    language: Optional[CodeableConcept]
+    language: CodeableConcept | dict | None
 
 
 class ExplanationOfBenefitBenefitBalance(FHIRElement):
@@ -6448,16 +6448,16 @@ class ExplanationOfBenefitBenefitBalance(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
     excluded: Optional[Boolean] = None
     name: Optional[String] = None
     description: Optional[String] = None
-    network: Optional[CodeableConcept]
-    unit: Optional[CodeableConcept]
-    term: Optional[CodeableConcept]
-    financial: ExplanationOfBenefitBenefitBalanceFinancial | FHIRList[ExplanationOfBenefitBenefitBalanceFinancial]
+    network: CodeableConcept | dict | None
+    unit: CodeableConcept | dict | None
+    term: CodeableConcept | dict | None
+    financial: ExplanationOfBenefitBenefitBalanceFinancial | FHIRList[ExplanationOfBenefitBenefitBalanceFinancial] | list | dict
 
 
 class ExplanationOfBenefitBenefitBalanceFinancial(FHIRElement):
@@ -6466,14 +6466,14 @@ class ExplanationOfBenefitBenefitBalanceFinancial(FHIRElement):
     _choice_fields = {'allowed': ['allowedUnsignedInt', 'allowedString', 'allowedMoney'], 'used': ['usedUnsignedInt', 'usedMoney']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     allowedUnsignedInt: Optional[UnsignedInt] = None
     allowedString: Optional[String] = None
-    allowedMoney: Optional[Money]
+    allowedMoney: Money | dict | None
     usedUnsignedInt: Optional[UnsignedInt] = None
-    usedMoney: Optional[Money]
+    usedMoney: Money | dict | None
 
 
 class ExplanationOfBenefit(FHIRResource):
@@ -6542,56 +6542,56 @@ class ExplanationOfBenefit(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    subType: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
+    subType: CodeableConcept | dict | None
     use: Optional[Code] = None
-    patient: Optional[Reference]
-    billablePeriod: Optional[Period]
+    patient: Reference | dict | None
+    billablePeriod: Period | dict | None
     created: Optional[DateTime] = None
-    enterer: Optional[Reference]
-    insurer: Optional[Reference]
-    provider: Optional[Reference]
-    priority: Optional[CodeableConcept]
-    fundsReserveRequested: Optional[CodeableConcept]
-    fundsReserve: Optional[CodeableConcept]
-    related: ExplanationOfBenefitRelated | FHIRList[ExplanationOfBenefitRelated]
-    prescription: Optional[Reference]
-    originalPrescription: Optional[Reference]
-    payee: Optional[ExplanationOfBenefitPayee]
-    referral: Optional[Reference]
-    facility: Optional[Reference]
-    claim: Optional[Reference]
-    claimResponse: Optional[Reference]
+    enterer: Reference | dict | None
+    insurer: Reference | dict | None
+    provider: Reference | dict | None
+    priority: CodeableConcept | dict | None
+    fundsReserveRequested: CodeableConcept | dict | None
+    fundsReserve: CodeableConcept | dict | None
+    related: ExplanationOfBenefitRelated | FHIRList[ExplanationOfBenefitRelated] | list | dict
+    prescription: Reference | dict | None
+    originalPrescription: Reference | dict | None
+    payee: ExplanationOfBenefitPayee | dict | None
+    referral: Reference | dict | None
+    facility: Reference | dict | None
+    claim: Reference | dict | None
+    claimResponse: Reference | dict | None
     outcome: Optional[Code] = None
     disposition: Optional[String] = None
-    preAuthRef: String | FHIRList[String] = None
-    preAuthRefPeriod: Period | FHIRList[Period]
-    careTeam: ExplanationOfBenefitCareTeam | FHIRList[ExplanationOfBenefitCareTeam]
-    supportingInfo: ExplanationOfBenefitSupportingInfo | FHIRList[ExplanationOfBenefitSupportingInfo]
-    diagnosis: ExplanationOfBenefitDiagnosis | FHIRList[ExplanationOfBenefitDiagnosis]
-    procedure: ExplanationOfBenefitProcedure | FHIRList[ExplanationOfBenefitProcedure]
+    preAuthRef: String | FHIRList[String] | list | None = None
+    preAuthRefPeriod: Period | FHIRList[Period] | list | dict
+    careTeam: ExplanationOfBenefitCareTeam | FHIRList[ExplanationOfBenefitCareTeam] | list | dict
+    supportingInfo: ExplanationOfBenefitSupportingInfo | FHIRList[ExplanationOfBenefitSupportingInfo] | list | dict
+    diagnosis: ExplanationOfBenefitDiagnosis | FHIRList[ExplanationOfBenefitDiagnosis] | list | dict
+    procedure: ExplanationOfBenefitProcedure | FHIRList[ExplanationOfBenefitProcedure] | list | dict
     precedence: Optional[PositiveInt] = None
-    insurance: ExplanationOfBenefitInsurance | FHIRList[ExplanationOfBenefitInsurance]
-    accident: Optional[ExplanationOfBenefitAccident]
-    item: ExplanationOfBenefitItem | FHIRList[ExplanationOfBenefitItem]
-    addItem: ExplanationOfBenefitAddItem | FHIRList[ExplanationOfBenefitAddItem]
+    insurance: ExplanationOfBenefitInsurance | FHIRList[ExplanationOfBenefitInsurance] | list | dict
+    accident: ExplanationOfBenefitAccident | dict | None
+    item: ExplanationOfBenefitItem | FHIRList[ExplanationOfBenefitItem] | list | dict
+    addItem: ExplanationOfBenefitAddItem | FHIRList[ExplanationOfBenefitAddItem] | list | dict
     adjudication: Any = None
-    total: ExplanationOfBenefitTotal | FHIRList[ExplanationOfBenefitTotal]
-    payment: Optional[ExplanationOfBenefitPayment]
-    formCode: Optional[CodeableConcept]
-    form: Optional[Attachment]
-    processNote: ExplanationOfBenefitProcessNote | FHIRList[ExplanationOfBenefitProcessNote]
-    benefitPeriod: Optional[Period]
-    benefitBalance: ExplanationOfBenefitBenefitBalance | FHIRList[ExplanationOfBenefitBenefitBalance]
+    total: ExplanationOfBenefitTotal | FHIRList[ExplanationOfBenefitTotal] | list | dict
+    payment: ExplanationOfBenefitPayment | dict | None
+    formCode: CodeableConcept | dict | None
+    form: Attachment | dict | None
+    processNote: ExplanationOfBenefitProcessNote | FHIRList[ExplanationOfBenefitProcessNote] | list | dict
+    benefitPeriod: Period | dict | None
+    benefitBalance: ExplanationOfBenefitBenefitBalance | FHIRList[ExplanationOfBenefitBenefitBalance] | list | dict
 
 
 class FamilyMemberHistoryCondition(FHIRElement):
@@ -6609,16 +6609,16 @@ class FamilyMemberHistoryCondition(FHIRElement):
     _choice_fields = {'onset': ['onsetAge', 'onsetRange', 'onsetPeriod', 'onsetString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    outcome: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    outcome: CodeableConcept | dict | None
     contributedToDeath: Optional[Boolean] = None
-    onsetAge: Optional[Age]
-    onsetRange: Optional[Range]
-    onsetPeriod: Optional[Period]
+    onsetAge: Age | dict | None
+    onsetRange: Range | dict | None
+    onsetPeriod: Period | dict | None
     onsetString: Optional[String] = None
-    note: Annotation | FHIRList[Annotation]
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class FamilyMemberHistory(FHIRResource):
@@ -6663,39 +6663,39 @@ class FamilyMemberHistory(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
     status: Optional[Code] = None
-    dataAbsentReason: Optional[CodeableConcept]
-    patient: Optional[Reference]
+    dataAbsentReason: CodeableConcept | dict | None
+    patient: Reference | dict | None
     date: Optional[DateTime] = None
     name: Optional[String] = None
-    relationship: Optional[CodeableConcept]
-    sex: Optional[CodeableConcept]
-    bornPeriod: Optional[Period]
+    relationship: CodeableConcept | dict | None
+    sex: CodeableConcept | dict | None
+    bornPeriod: Period | dict | None
     bornDate: Optional[Date] = None
     bornString: Optional[String] = None
-    ageAge: Optional[Age]
-    ageRange: Optional[Range]
+    ageAge: Age | dict | None
+    ageRange: Range | dict | None
     ageString: Optional[String] = None
     estimatedAge: Optional[Boolean] = None
     deceasedBoolean: Optional[Boolean] = None
-    deceasedAge: Optional[Age]
-    deceasedRange: Optional[Range]
+    deceasedAge: Age | dict | None
+    deceasedRange: Range | dict | None
     deceasedDate: Optional[Date] = None
     deceasedString: Optional[String] = None
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    condition: FamilyMemberHistoryCondition | FHIRList[FamilyMemberHistoryCondition]
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    condition: FamilyMemberHistoryCondition | FHIRList[FamilyMemberHistoryCondition] | list | dict
 
 
 class Flag(FHIRResource):
@@ -6717,21 +6717,21 @@ class Flag(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    period: Optional[Period]
-    encounter: Optional[Reference]
-    author: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    period: Period | dict | None
+    encounter: Reference | dict | None
+    author: Reference | dict | None
 
 
 class GoalTarget(FHIRElement):
@@ -6752,18 +6752,18 @@ class GoalTarget(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity]
-    detailRange: Optional[Range]
-    detailCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    measure: CodeableConcept | dict | None
+    detailQuantity: Quantity | dict | None
+    detailRange: Range | dict | None
+    detailCodeableConcept: CodeableConcept | dict | None
     detailString: Optional[String] = None
     detailBoolean: Optional[Boolean] = None
     detailInteger: Optional[Integer] = None
-    detailRatio: Optional[Ratio]
+    detailRatio: Ratio | dict | None
     dueDate: Optional[Date] = None
-    dueDuration: Optional[Duration]
+    dueDuration: Duration | dict | None
 
 
 class Goal(FHIRResource):
@@ -6792,30 +6792,30 @@ class Goal(FHIRResource):
     _choice_fields = {'start': ['startDate', 'startCodeableConcept']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     lifecycleStatus: Optional[Code] = None
-    achievementStatus: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    description: Optional[CodeableConcept]
-    subject: Optional[Reference]
+    achievementStatus: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    priority: CodeableConcept | dict | None
+    description: CodeableConcept | dict | None
+    subject: Reference | dict | None
     startDate: Optional[Date] = None
-    startCodeableConcept: Optional[CodeableConcept]
-    target: GoalTarget | FHIRList[GoalTarget]
+    startCodeableConcept: CodeableConcept | dict | None
+    target: GoalTarget | FHIRList[GoalTarget] | list | dict
     statusDate: Optional[Date] = None
     statusReason: Optional[String] = None
-    expressedBy: Optional[Reference]
-    addresses: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    outcomeCode: CodeableConcept | FHIRList[CodeableConcept]
-    outcomeReference: Reference | FHIRList[Reference]
+    expressedBy: Reference | dict | None
+    addresses: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    outcomeCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    outcomeReference: Reference | FHIRList[Reference] | list | dict
 
 
 class GraphDefinitionLink(FHIRElement):
@@ -6823,14 +6823,14 @@ class GraphDefinitionLink(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'target': 'GraphDefinitionLinkTarget'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
     sliceName: Optional[String] = None
     min: Optional[Integer] = None
     max: Optional[String] = None
     description: Optional[String] = None
-    target: GraphDefinitionLinkTarget | FHIRList[GraphDefinitionLinkTarget]
+    target: GraphDefinitionLinkTarget | FHIRList[GraphDefinitionLinkTarget] | list | dict
 
 
 class GraphDefinitionLinkTarget(FHIRElement):
@@ -6838,12 +6838,12 @@ class GraphDefinitionLinkTarget(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'compartment': 'GraphDefinitionLinkTargetCompartment'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     params: Optional[String] = None
     profile: Optional[Canonical] = None
-    compartment: GraphDefinitionLinkTargetCompartment | FHIRList[GraphDefinitionLinkTargetCompartment]
+    compartment: GraphDefinitionLinkTargetCompartment | FHIRList[GraphDefinitionLinkTargetCompartment] | list | dict
     link: Any = None
 
 
@@ -6852,8 +6852,8 @@ class GraphDefinitionLinkTargetCompartment(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     use: Optional[Code] = None
     code: Optional[Code] = None
     rule: Optional[Code] = None
@@ -6877,13 +6877,13 @@ class GraphDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -6891,14 +6891,14 @@ class GraphDefinition(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     start: Optional[Code] = None
     profile: Optional[Canonical] = None
-    link: GraphDefinitionLink | FHIRList[GraphDefinitionLink]
+    link: GraphDefinitionLink | FHIRList[GraphDefinitionLink] | list | dict
 
 
 class GroupCharacteristic(FHIRElement):
@@ -6916,16 +6916,16 @@ class GroupCharacteristic(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueBoolean', 'valueQuantity', 'valueRange', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueReference: Optional[Reference]
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueReference: Reference | dict | None
     exclude: Optional[Boolean] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class GroupMember(FHIRElement):
@@ -6933,10 +6933,10 @@ class GroupMember(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'entity': 'Reference', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    entity: Optional[Reference]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    entity: Reference | dict | None
+    period: Period | dict | None
     inactive: Optional[Boolean] = None
 
 
@@ -6957,23 +6957,23 @@ class Group(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
     type_: Optional[Code] = None
     actual: Optional[Boolean] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     name: Optional[String] = None
     quantity: Optional[UnsignedInt] = None
-    managingEntity: Optional[Reference]
-    characteristic: GroupCharacteristic | FHIRList[GroupCharacteristic]
-    member: GroupMember | FHIRList[GroupMember]
+    managingEntity: Reference | dict | None
+    characteristic: GroupCharacteristic | FHIRList[GroupCharacteristic] | list | dict
+    member: GroupMember | FHIRList[GroupMember] | list | dict
 
 
 class GuidanceResponse(FHIRResource):
@@ -7012,30 +7012,30 @@ class GuidanceResponse(FHIRResource):
     _choice_fields = {'module': ['moduleUri', 'moduleCanonical', 'moduleCodeableConcept']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    requestIdentifier: Optional[Identifier]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    requestIdentifier: Identifier | dict | None
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     moduleUri: Optional[Uri] = None
     moduleCanonical: Optional[Canonical] = None
-    moduleCodeableConcept: Optional[CodeableConcept]
+    moduleCodeableConcept: CodeableConcept | dict | None
     status: Optional[Code] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    performer: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    evaluationMessage: Reference | FHIRList[Reference]
-    outputParameters: Optional[Reference]
-    result: Optional[Reference]
-    dataRequirement: DataRequirement | FHIRList[DataRequirement]
+    performer: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    evaluationMessage: Reference | FHIRList[Reference] | list | dict
+    outputParameters: Reference | dict | None
+    result: Reference | dict | None
+    dataRequirement: DataRequirement | FHIRList[DataRequirement] | list | dict
 
 
 class HealthcareServiceEligibility(FHIRElement):
@@ -7043,9 +7043,9 @@ class HealthcareServiceEligibility(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     comment: Optional[Markdown] = None
 
 
@@ -7054,9 +7054,9 @@ class HealthcareServiceAvailableTime(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    daysOfWeek: Code | FHIRList[Code] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    daysOfWeek: Code | FHIRList[Code] | list | None = None
     allDay: Optional[Boolean] = None
     availableStartTime: Optional[Time] = None
     availableEndTime: Optional[Time] = None
@@ -7067,10 +7067,10 @@ class HealthcareServiceNotAvailable(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'during': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    during: Optional[Period]
+    during: Period | dict | None
 
 
 class HealthcareService(FHIRResource):
@@ -7123,37 +7123,37 @@ class HealthcareService(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    providedBy: Optional[Reference]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    location: Reference | FHIRList[Reference]
+    providedBy: Reference | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    location: Reference | FHIRList[Reference] | list | dict
     name: Optional[String] = None
     comment: Optional[String] = None
     extraDetails: Optional[Markdown] = None
-    photo: Optional[Attachment]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    coverageArea: Reference | FHIRList[Reference]
-    serviceProvisionCode: CodeableConcept | FHIRList[CodeableConcept]
-    eligibility: HealthcareServiceEligibility | FHIRList[HealthcareServiceEligibility]
-    program: CodeableConcept | FHIRList[CodeableConcept]
-    characteristic: CodeableConcept | FHIRList[CodeableConcept]
-    communication: CodeableConcept | FHIRList[CodeableConcept]
-    referralMethod: CodeableConcept | FHIRList[CodeableConcept]
+    photo: Attachment | dict | None
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    coverageArea: Reference | FHIRList[Reference] | list | dict
+    serviceProvisionCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    eligibility: HealthcareServiceEligibility | FHIRList[HealthcareServiceEligibility] | list | dict
+    program: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    characteristic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    communication: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    referralMethod: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     appointmentRequired: Optional[Boolean] = None
-    availableTime: HealthcareServiceAvailableTime | FHIRList[HealthcareServiceAvailableTime]
-    notAvailable: HealthcareServiceNotAvailable | FHIRList[HealthcareServiceNotAvailable]
+    availableTime: HealthcareServiceAvailableTime | FHIRList[HealthcareServiceAvailableTime] | list | dict
+    notAvailable: HealthcareServiceNotAvailable | FHIRList[HealthcareServiceNotAvailable] | list | dict
     availabilityExceptions: Optional[String] = None
-    endpoint: Reference | FHIRList[Reference]
+    endpoint: Reference | FHIRList[Reference] | list | dict
 
 
 class ImagingStudySeries(FHIRElement):
@@ -7171,20 +7171,20 @@ class ImagingStudySeries(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     uid: Optional[Id] = None
     number: Optional[UnsignedInt] = None
-    modality: Optional[Coding]
+    modality: Coding | dict | None
     description: Optional[String] = None
     numberOfInstances: Optional[UnsignedInt] = None
-    endpoint: Reference | FHIRList[Reference]
-    bodySite: Optional[Coding]
-    laterality: Optional[Coding]
-    specimen: Reference | FHIRList[Reference]
+    endpoint: Reference | FHIRList[Reference] | list | dict
+    bodySite: Coding | dict | None
+    laterality: Coding | dict | None
+    specimen: Reference | FHIRList[Reference] | list | dict
     started: Optional[DateTime] = None
-    performer: ImagingStudySeriesPerformer | FHIRList[ImagingStudySeriesPerformer]
-    instance: ImagingStudySeriesInstance | FHIRList[ImagingStudySeriesInstance]
+    performer: ImagingStudySeriesPerformer | FHIRList[ImagingStudySeriesPerformer] | list | dict
+    instance: ImagingStudySeriesInstance | FHIRList[ImagingStudySeriesInstance] | list | dict
 
 
 class ImagingStudySeriesPerformer(FHIRElement):
@@ -7192,10 +7192,10 @@ class ImagingStudySeriesPerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class ImagingStudySeriesInstance(FHIRElement):
@@ -7203,10 +7203,10 @@ class ImagingStudySeriesInstance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'sopClass': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     uid: Optional[Id] = None
-    sopClass: Optional[Coding]
+    sopClass: Coding | dict | None
     number: Optional[UnsignedInt] = None
     title: Optional[String] = None
 
@@ -7252,33 +7252,33 @@ class ImagingStudy(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    modality: Coding | FHIRList[Coding]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    modality: Coding | FHIRList[Coding] | list | dict
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     started: Optional[DateTime] = None
-    basedOn: Reference | FHIRList[Reference]
-    referrer: Optional[Reference]
-    interpreter: Reference | FHIRList[Reference]
-    endpoint: Reference | FHIRList[Reference]
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    referrer: Reference | dict | None
+    interpreter: Reference | FHIRList[Reference] | list | dict
+    endpoint: Reference | FHIRList[Reference] | list | dict
     numberOfSeries: Optional[UnsignedInt] = None
     numberOfInstances: Optional[UnsignedInt] = None
-    procedureReference: Optional[Reference]
-    procedureCode: CodeableConcept | FHIRList[CodeableConcept]
-    location: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
+    procedureReference: Reference | dict | None
+    procedureCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    location: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
     description: Optional[String] = None
-    series: ImagingStudySeries | FHIRList[ImagingStudySeries]
+    series: ImagingStudySeries | FHIRList[ImagingStudySeries] | list | dict
 
 
 class ImmunizationPerformer(FHIRElement):
@@ -7286,10 +7286,10 @@ class ImmunizationPerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class ImmunizationEducation(FHIRElement):
@@ -7297,8 +7297,8 @@ class ImmunizationEducation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     documentType: Optional[String] = None
     reference: Optional[Uri] = None
     publicationDate: Optional[DateTime] = None
@@ -7310,10 +7310,10 @@ class ImmunizationReaction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     date: Optional[DateTime] = None
-    detail: Optional[Reference]
+    detail: Reference | dict | None
     reported: Optional[Boolean] = None
 
 
@@ -7323,11 +7323,11 @@ class ImmunizationProtocolApplied(FHIRElement):
     _choice_fields = {'doseNumber': ['doseNumberPositiveInt', 'doseNumberString'], 'seriesDoses': ['seriesDosesPositiveInt', 'seriesDosesString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     series: Optional[String] = None
-    authority: Optional[Reference]
-    targetDisease: CodeableConcept | FHIRList[CodeableConcept]
+    authority: Reference | dict | None
+    targetDisease: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     doseNumberPositiveInt: Optional[PositiveInt] = None
     doseNumberString: Optional[String] = None
     seriesDosesPositiveInt: Optional[PositiveInt] = None
@@ -7382,42 +7382,42 @@ class Immunization(FHIRResource):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrenceString']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    vaccineCode: Optional[CodeableConcept]
-    patient: Optional[Reference]
-    encounter: Optional[Reference]
+    statusReason: CodeableConcept | dict | None
+    vaccineCode: CodeableConcept | dict | None
+    patient: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
     occurrenceString: Optional[String] = None
     recorded: Optional[DateTime] = None
     primarySource: Optional[Boolean] = None
-    reportOrigin: Optional[CodeableConcept]
-    location: Optional[Reference]
-    manufacturer: Optional[Reference]
+    reportOrigin: CodeableConcept | dict | None
+    location: Reference | dict | None
+    manufacturer: Reference | dict | None
     lotNumber: Optional[String] = None
     expirationDate: Optional[Date] = None
-    site: Optional[CodeableConcept]
-    route: Optional[CodeableConcept]
-    doseQuantity: Optional[Quantity]
-    performer: ImmunizationPerformer | FHIRList[ImmunizationPerformer]
-    note: Annotation | FHIRList[Annotation]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
+    site: CodeableConcept | dict | None
+    route: CodeableConcept | dict | None
+    doseQuantity: Quantity | dict | None
+    performer: ImmunizationPerformer | FHIRList[ImmunizationPerformer] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
     isSubpotent: Optional[Boolean] = None
-    subpotentReason: CodeableConcept | FHIRList[CodeableConcept]
-    education: ImmunizationEducation | FHIRList[ImmunizationEducation]
-    programEligibility: CodeableConcept | FHIRList[CodeableConcept]
-    fundingSource: Optional[CodeableConcept]
-    reaction: ImmunizationReaction | FHIRList[ImmunizationReaction]
-    protocolApplied: ImmunizationProtocolApplied | FHIRList[ImmunizationProtocolApplied]
+    subpotentReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    education: ImmunizationEducation | FHIRList[ImmunizationEducation] | list | dict
+    programEligibility: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    fundingSource: CodeableConcept | dict | None
+    reaction: ImmunizationReaction | FHIRList[ImmunizationReaction] | list | dict
+    protocolApplied: ImmunizationProtocolApplied | FHIRList[ImmunizationProtocolApplied] | list | dict
 
 
 class ImmunizationEvaluation(FHIRResource):
@@ -7440,22 +7440,22 @@ class ImmunizationEvaluation(FHIRResource):
     _choice_fields = {'doseNumber': ['doseNumberPositiveInt', 'doseNumberString'], 'seriesDoses': ['seriesDosesPositiveInt', 'seriesDosesString']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    patient: Optional[Reference]
+    patient: Reference | dict | None
     date: Optional[DateTime] = None
-    authority: Optional[Reference]
-    targetDisease: Optional[CodeableConcept]
-    immunizationEvent: Optional[Reference]
-    doseStatus: Optional[CodeableConcept]
-    doseStatusReason: CodeableConcept | FHIRList[CodeableConcept]
+    authority: Reference | dict | None
+    targetDisease: CodeableConcept | dict | None
+    immunizationEvent: Reference | dict | None
+    doseStatus: CodeableConcept | dict | None
+    doseStatusReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[String] = None
     series: Optional[String] = None
     doseNumberPositiveInt: Optional[PositiveInt] = None
@@ -7490,22 +7490,22 @@ class ImmunizationRecommendationRecommendation(FHIRElement):
     _choice_fields = {'doseNumber': ['doseNumberPositiveInt', 'doseNumberString'], 'seriesDoses': ['seriesDosesPositiveInt', 'seriesDosesString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    vaccineCode: CodeableConcept | FHIRList[CodeableConcept]
-    targetDisease: Optional[CodeableConcept]
-    contraindicatedVaccineCode: CodeableConcept | FHIRList[CodeableConcept]
-    forecastStatus: Optional[CodeableConcept]
-    forecastReason: CodeableConcept | FHIRList[CodeableConcept]
-    dateCriterion: ImmunizationRecommendationRecommendationDateCriterion | FHIRList[ImmunizationRecommendationRecommendationDateCriterion]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    vaccineCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    targetDisease: CodeableConcept | dict | None
+    contraindicatedVaccineCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    forecastStatus: CodeableConcept | dict | None
+    forecastReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    dateCriterion: ImmunizationRecommendationRecommendationDateCriterion | FHIRList[ImmunizationRecommendationRecommendationDateCriterion] | list | dict
     description: Optional[String] = None
     series: Optional[String] = None
     doseNumberPositiveInt: Optional[PositiveInt] = None
     doseNumberString: Optional[String] = None
     seriesDosesPositiveInt: Optional[PositiveInt] = None
     seriesDosesString: Optional[String] = None
-    supportingImmunization: Reference | FHIRList[Reference]
-    supportingPatientInformation: Reference | FHIRList[Reference]
+    supportingImmunization: Reference | FHIRList[Reference] | list | dict
+    supportingPatientInformation: Reference | FHIRList[Reference] | list | dict
 
 
 class ImmunizationRecommendationRecommendationDateCriterion(FHIRElement):
@@ -7513,9 +7513,9 @@ class ImmunizationRecommendationRecommendationDateCriterion(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     value: Optional[DateTime] = None
 
 
@@ -7535,18 +7535,18 @@ class ImmunizationRecommendation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    patient: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    patient: Reference | dict | None
     date: Optional[DateTime] = None
-    authority: Optional[Reference]
-    recommendation: ImmunizationRecommendationRecommendation | FHIRList[ImmunizationRecommendationRecommendation]
+    authority: Reference | dict | None
+    recommendation: ImmunizationRecommendationRecommendation | FHIRList[ImmunizationRecommendationRecommendation] | list | dict
 
 
 class ImplementationGuideDependsOn(FHIRElement):
@@ -7554,8 +7554,8 @@ class ImplementationGuideDependsOn(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     uri: Optional[Canonical] = None
     packageId: Optional[Id] = None
     version: Optional[String] = None
@@ -7566,8 +7566,8 @@ class ImplementationGuideGlobal(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     profile: Optional[Canonical] = None
 
@@ -7585,13 +7585,13 @@ class ImplementationGuideDefinition(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    grouping: ImplementationGuideDefinitionGrouping | FHIRList[ImplementationGuideDefinitionGrouping]
-    resource: ImplementationGuideDefinitionResource | FHIRList[ImplementationGuideDefinitionResource]
-    page: Optional[ImplementationGuideDefinitionPage]
-    parameter: ImplementationGuideDefinitionParameter | FHIRList[ImplementationGuideDefinitionParameter]
-    template: ImplementationGuideDefinitionTemplate | FHIRList[ImplementationGuideDefinitionTemplate]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    grouping: ImplementationGuideDefinitionGrouping | FHIRList[ImplementationGuideDefinitionGrouping] | list | dict
+    resource: ImplementationGuideDefinitionResource | FHIRList[ImplementationGuideDefinitionResource] | list | dict
+    page: ImplementationGuideDefinitionPage | dict | None
+    parameter: ImplementationGuideDefinitionParameter | FHIRList[ImplementationGuideDefinitionParameter] | list | dict
+    template: ImplementationGuideDefinitionTemplate | FHIRList[ImplementationGuideDefinitionTemplate] | list | dict
 
 
 class ImplementationGuideDefinitionGrouping(FHIRElement):
@@ -7599,8 +7599,8 @@ class ImplementationGuideDefinitionGrouping(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     description: Optional[String] = None
 
@@ -7611,10 +7611,10 @@ class ImplementationGuideDefinitionResource(FHIRElement):
     _choice_fields = {'example': ['exampleBoolean', 'exampleCanonical']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    reference: Optional[Reference]
-    fhirVersion: Code | FHIRList[Code] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    reference: Reference | dict | None
+    fhirVersion: Code | FHIRList[Code] | list | None = None
     name: Optional[String] = None
     description: Optional[String] = None
     exampleBoolean: Optional[Boolean] = None
@@ -7628,10 +7628,10 @@ class ImplementationGuideDefinitionPage(FHIRElement):
     _choice_fields = {'name': ['nameUrl', 'nameReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     nameUrl: Optional[Url] = None
-    nameReference: Optional[Reference]
+    nameReference: Reference | dict | None
     title: Optional[String] = None
     generation: Optional[Code] = None
     page: Any = None
@@ -7642,8 +7642,8 @@ class ImplementationGuideDefinitionParameter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     value: Optional[String] = None
 
@@ -7653,8 +7653,8 @@ class ImplementationGuideDefinitionTemplate(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     source: Optional[String] = None
     scope: Optional[String] = None
@@ -7670,13 +7670,13 @@ class ImplementationGuideManifest(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     rendering: Optional[Url] = None
-    resource: ImplementationGuideManifestResource | FHIRList[ImplementationGuideManifestResource]
-    page: ImplementationGuideManifestPage | FHIRList[ImplementationGuideManifestPage]
-    image: String | FHIRList[String] = None
-    other: String | FHIRList[String] = None
+    resource: ImplementationGuideManifestResource | FHIRList[ImplementationGuideManifestResource] | list | dict
+    page: ImplementationGuideManifestPage | FHIRList[ImplementationGuideManifestPage] | list | dict
+    image: String | FHIRList[String] | list | None = None
+    other: String | FHIRList[String] | list | None = None
 
 
 class ImplementationGuideManifestResource(FHIRElement):
@@ -7685,9 +7685,9 @@ class ImplementationGuideManifestResource(FHIRElement):
     _choice_fields = {'example': ['exampleBoolean', 'exampleCanonical']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    reference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    reference: Reference | dict | None
     exampleBoolean: Optional[Boolean] = None
     exampleCanonical: Optional[Canonical] = None
     relativePath: Optional[Url] = None
@@ -7698,11 +7698,11 @@ class ImplementationGuideManifestPage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     title: Optional[String] = None
-    anchor: String | FHIRList[String] = None
+    anchor: String | FHIRList[String] | list | None = None
 
 
 class ImplementationGuide(FHIRResource):
@@ -7724,13 +7724,13 @@ class ImplementationGuide(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -7739,18 +7739,18 @@ class ImplementationGuide(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     packageId: Optional[Id] = None
     license: Optional[Code] = None
-    fhirVersion: Code | FHIRList[Code] = None
-    dependsOn: ImplementationGuideDependsOn | FHIRList[ImplementationGuideDependsOn]
-    global_: ImplementationGuideGlobal | FHIRList[ImplementationGuideGlobal]
-    definition: Optional[ImplementationGuideDefinition]
-    manifest: Optional[ImplementationGuideManifest]
+    fhirVersion: Code | FHIRList[Code] | list | None = None
+    dependsOn: ImplementationGuideDependsOn | FHIRList[ImplementationGuideDependsOn] | list | dict
+    global_: ImplementationGuideGlobal | FHIRList[ImplementationGuideGlobal] | list | dict
+    definition: ImplementationGuideDefinition | dict | None
+    manifest: ImplementationGuideManifest | dict | None
 
 
 class InsurancePlanContact(FHIRElement):
@@ -7765,12 +7765,12 @@ class InsurancePlanContact(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    purpose: Optional[CodeableConcept]
-    name: Optional[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Optional[Address]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    purpose: CodeableConcept | dict | None
+    name: HumanName | dict | None
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | dict | None
 
 
 class InsurancePlanCoverage(FHIRElement):
@@ -7784,11 +7784,11 @@ class InsurancePlanCoverage(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    network: Reference | FHIRList[Reference]
-    benefit: InsurancePlanCoverageBenefit | FHIRList[InsurancePlanCoverageBenefit]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    network: Reference | FHIRList[Reference] | list | dict
+    benefit: InsurancePlanCoverageBenefit | FHIRList[InsurancePlanCoverageBenefit] | list | dict
 
 
 class InsurancePlanCoverageBenefit(FHIRElement):
@@ -7796,11 +7796,11 @@ class InsurancePlanCoverageBenefit(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'limit': 'InsurancePlanCoverageBenefitLimit'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     requirement: Optional[String] = None
-    limit: InsurancePlanCoverageBenefitLimit | FHIRList[InsurancePlanCoverageBenefitLimit]
+    limit: InsurancePlanCoverageBenefitLimit | FHIRList[InsurancePlanCoverageBenefitLimit] | list | dict
 
 
 class InsurancePlanCoverageBenefitLimit(FHIRElement):
@@ -7808,10 +7808,10 @@ class InsurancePlanCoverageBenefitLimit(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'value': 'Quantity', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    value: Optional[Quantity]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    value: Quantity | dict | None
+    code: CodeableConcept | dict | None
 
 
 class InsurancePlanPlan(FHIRElement):
@@ -7828,14 +7828,14 @@ class InsurancePlanPlan(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
-    coverageArea: Reference | FHIRList[Reference]
-    network: Reference | FHIRList[Reference]
-    generalCost: InsurancePlanPlanGeneralCost | FHIRList[InsurancePlanPlanGeneralCost]
-    specificCost: InsurancePlanPlanSpecificCost | FHIRList[InsurancePlanPlanSpecificCost]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
+    coverageArea: Reference | FHIRList[Reference] | list | dict
+    network: Reference | FHIRList[Reference] | list | dict
+    generalCost: InsurancePlanPlanGeneralCost | FHIRList[InsurancePlanPlanGeneralCost] | list | dict
+    specificCost: InsurancePlanPlanSpecificCost | FHIRList[InsurancePlanPlanSpecificCost] | list | dict
 
 
 class InsurancePlanPlanGeneralCost(FHIRElement):
@@ -7843,11 +7843,11 @@ class InsurancePlanPlanGeneralCost(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'cost': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     groupSize: Optional[PositiveInt] = None
-    cost: Optional[Money]
+    cost: Money | dict | None
     comment: Optional[String] = None
 
 
@@ -7861,10 +7861,10 @@ class InsurancePlanPlanSpecificCost(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    benefit: InsurancePlanPlanSpecificCostBenefit | FHIRList[InsurancePlanPlanSpecificCostBenefit]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    benefit: InsurancePlanPlanSpecificCostBenefit | FHIRList[InsurancePlanPlanSpecificCostBenefit] | list | dict
 
 
 class InsurancePlanPlanSpecificCostBenefit(FHIRElement):
@@ -7872,10 +7872,10 @@ class InsurancePlanPlanSpecificCostBenefit(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'cost': 'InsurancePlanPlanSpecificCostBenefitCost'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    cost: InsurancePlanPlanSpecificCostBenefitCost | FHIRList[InsurancePlanPlanSpecificCostBenefitCost]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    cost: InsurancePlanPlanSpecificCostBenefitCost | FHIRList[InsurancePlanPlanSpecificCostBenefitCost] | list | dict
 
 
 class InsurancePlanPlanSpecificCostBenefitCost(FHIRElement):
@@ -7890,12 +7890,12 @@ class InsurancePlanPlanSpecificCostBenefitCost(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    applicability: Optional[CodeableConcept]
-    qualifiers: CodeableConcept | FHIRList[CodeableConcept]
-    value: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    applicability: CodeableConcept | dict | None
+    qualifiers: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    value: Quantity | dict | None
 
 
 class InsurancePlan(FHIRResource):
@@ -7934,27 +7934,27 @@ class InsurancePlan(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     name: Optional[String] = None
-    alias: String | FHIRList[String] = None
-    period: Optional[Period]
-    ownedBy: Optional[Reference]
-    administeredBy: Optional[Reference]
-    coverageArea: Reference | FHIRList[Reference]
-    contact: InsurancePlanContact | FHIRList[InsurancePlanContact]
-    endpoint: Reference | FHIRList[Reference]
-    network: Reference | FHIRList[Reference]
-    coverage: InsurancePlanCoverage | FHIRList[InsurancePlanCoverage]
-    plan: InsurancePlanPlan | FHIRList[InsurancePlanPlan]
+    alias: String | FHIRList[String] | list | None = None
+    period: Period | dict | None
+    ownedBy: Reference | dict | None
+    administeredBy: Reference | dict | None
+    coverageArea: Reference | FHIRList[Reference] | list | dict
+    contact: InsurancePlanContact | FHIRList[InsurancePlanContact] | list | dict
+    endpoint: Reference | FHIRList[Reference] | list | dict
+    network: Reference | FHIRList[Reference] | list | dict
+    coverage: InsurancePlanCoverage | FHIRList[InsurancePlanCoverage] | list | dict
+    plan: InsurancePlanPlan | FHIRList[InsurancePlanPlan] | list | dict
 
 
 class InvoiceParticipant(FHIRElement):
@@ -7962,10 +7962,10 @@ class InvoiceParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    role: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    role: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class InvoiceLineItem(FHIRElement):
@@ -7980,12 +7980,12 @@ class InvoiceLineItem(FHIRElement):
     _choice_fields = {'chargeItem': ['chargeItemReference', 'chargeItemCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     sequence: Optional[PositiveInt] = None
-    chargeItemReference: Optional[Reference]
-    chargeItemCodeableConcept: Optional[CodeableConcept]
-    priceComponent: InvoiceLineItemPriceComponent | FHIRList[InvoiceLineItemPriceComponent]
+    chargeItemReference: Reference | dict | None
+    chargeItemCodeableConcept: CodeableConcept | dict | None
+    priceComponent: InvoiceLineItemPriceComponent | FHIRList[InvoiceLineItemPriceComponent] | list | dict
 
 
 class InvoiceLineItemPriceComponent(FHIRElement):
@@ -7993,12 +7993,12 @@ class InvoiceLineItemPriceComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'amount': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     factor: Optional[Decimal] = None
-    amount: Optional[Money]
+    amount: Money | dict | None
 
 
 class Invoice(FHIRResource):
@@ -8024,29 +8024,29 @@ class Invoice(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     cancelledReason: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    recipient: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    recipient: Reference | dict | None
     date: Optional[DateTime] = None
-    participant: InvoiceParticipant | FHIRList[InvoiceParticipant]
-    issuer: Optional[Reference]
-    account: Optional[Reference]
-    lineItem: InvoiceLineItem | FHIRList[InvoiceLineItem]
+    participant: InvoiceParticipant | FHIRList[InvoiceParticipant] | list | dict
+    issuer: Reference | dict | None
+    account: Reference | dict | None
+    lineItem: InvoiceLineItem | FHIRList[InvoiceLineItem] | list | dict
     totalPriceComponent: Any = None
-    totalNet: Optional[Money]
-    totalGross: Optional[Money]
+    totalNet: Money | dict | None
+    totalGross: Money | dict | None
     paymentTerms: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class Library(FHIRResource):
@@ -8096,45 +8096,45 @@ class Library(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    parameter: ParameterDefinition | FHIRList[ParameterDefinition]
-    dataRequirement: DataRequirement | FHIRList[DataRequirement]
-    content: Attachment | FHIRList[Attachment]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    parameter: ParameterDefinition | FHIRList[ParameterDefinition] | list | dict
+    dataRequirement: DataRequirement | FHIRList[DataRequirement] | list | dict
+    content: Attachment | FHIRList[Attachment] | list | dict
 
 
 class LinkageItem(FHIRElement):
@@ -8142,10 +8142,10 @@ class LinkageItem(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'resource': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    resource: Optional[Reference]
+    resource: Reference | dict | None
 
 
 class Linkage(FHIRResource):
@@ -8162,16 +8162,16 @@ class Linkage(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     active: Optional[Boolean] = None
-    author: Optional[Reference]
-    item: LinkageItem | FHIRList[LinkageItem]
+    author: Reference | dict | None
+    item: LinkageItem | FHIRList[LinkageItem] | list | dict
 
 
 class ListEntry(FHIRElement):
@@ -8179,12 +8179,12 @@ class ListEntry(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'flag': 'CodeableConcept', 'item': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    flag: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    flag: CodeableConcept | dict | None
     deleted: Optional[Boolean] = None
     date: Optional[DateTime] = None
-    item: Optional[Reference]
+    item: Reference | dict | None
 
 
 class List(FHIRResource):
@@ -8208,26 +8208,26 @@ class List(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     mode: Optional[Code] = None
     title: Optional[String] = None
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     date: Optional[DateTime] = None
-    source: Optional[Reference]
-    orderedBy: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    entry: ListEntry | FHIRList[ListEntry]
-    emptyReason: Optional[CodeableConcept]
+    source: Reference | dict | None
+    orderedBy: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    entry: ListEntry | FHIRList[ListEntry] | list | dict
+    emptyReason: CodeableConcept | dict | None
 
 
 class LocationPosition(FHIRElement):
@@ -8235,8 +8235,8 @@ class LocationPosition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     longitude: Optional[Decimal] = None
     latitude: Optional[Decimal] = None
     altitude: Optional[Decimal] = None
@@ -8247,9 +8247,9 @@ class LocationHoursOfOperation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    daysOfWeek: Code | FHIRList[Code] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    daysOfWeek: Code | FHIRList[Code] | list | None = None
     allDay: Optional[Boolean] = None
     openingTime: Optional[Time] = None
     closingTime: Optional[Time] = None
@@ -8278,30 +8278,30 @@ class Location(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    operationalStatus: Optional[Coding]
+    operationalStatus: Coding | dict | None
     name: Optional[String] = None
-    alias: String | FHIRList[String] = None
+    alias: String | FHIRList[String] | list | None = None
     description: Optional[String] = None
     mode: Optional[Code] = None
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Optional[Address]
-    physicalType: Optional[CodeableConcept]
-    position: Optional[LocationPosition]
-    managingOrganization: Optional[Reference]
-    partOf: Optional[Reference]
-    hoursOfOperation: LocationHoursOfOperation | FHIRList[LocationHoursOfOperation]
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | dict | None
+    physicalType: CodeableConcept | dict | None
+    position: LocationPosition | dict | None
+    managingOrganization: Reference | dict | None
+    partOf: Reference | dict | None
+    hoursOfOperation: LocationHoursOfOperation | FHIRList[LocationHoursOfOperation] | list | dict
     availabilityExceptions: Optional[String] = None
-    endpoint: Reference | FHIRList[Reference]
+    endpoint: Reference | FHIRList[Reference] | list | dict
 
 
 class MeasureGroup(FHIRElement):
@@ -8315,12 +8315,12 @@ class MeasureGroup(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    population: MeasureGroupPopulation | FHIRList[MeasureGroupPopulation]
-    stratifier: MeasureGroupStratifier | FHIRList[MeasureGroupStratifier]
+    population: MeasureGroupPopulation | FHIRList[MeasureGroupPopulation] | list | dict
+    stratifier: MeasureGroupStratifier | FHIRList[MeasureGroupStratifier] | list | dict
 
 
 class MeasureGroupPopulation(FHIRElement):
@@ -8328,11 +8328,11 @@ class MeasureGroupPopulation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class MeasureGroupStratifier(FHIRElement):
@@ -8346,12 +8346,12 @@ class MeasureGroupStratifier(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
-    component: MeasureGroupStratifierComponent | FHIRList[MeasureGroupStratifierComponent]
+    criteria: Expression | dict | None
+    component: MeasureGroupStratifierComponent | FHIRList[MeasureGroupStratifierComponent] | list | dict
 
 
 class MeasureGroupStratifierComponent(FHIRElement):
@@ -8359,11 +8359,11 @@ class MeasureGroupStratifierComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class MeasureSupplementalData(FHIRElement):
@@ -8371,12 +8371,12 @@ class MeasureSupplementalData(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'usage': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    usage: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    usage: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class Measure(FHIRResource):
@@ -8430,55 +8430,55 @@ class Measure(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
     disclaimer: Optional[Markdown] = None
-    scoring: Optional[CodeableConcept]
-    compositeScoring: Optional[CodeableConcept]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    scoring: CodeableConcept | dict | None
+    compositeScoring: CodeableConcept | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     riskAdjustment: Optional[String] = None
     rateAggregation: Optional[String] = None
     rationale: Optional[Markdown] = None
     clinicalRecommendationStatement: Optional[Markdown] = None
-    improvementNotation: Optional[CodeableConcept]
-    definition: Markdown | FHIRList[Markdown] = None
+    improvementNotation: CodeableConcept | dict | None
+    definition: Markdown | FHIRList[Markdown] | list | None = None
     guidance: Optional[Markdown] = None
-    group: MeasureGroup | FHIRList[MeasureGroup]
-    supplementalData: MeasureSupplementalData | FHIRList[MeasureSupplementalData]
+    group: MeasureGroup | FHIRList[MeasureGroup] | list | dict
+    supplementalData: MeasureSupplementalData | FHIRList[MeasureSupplementalData] | list | dict
 
 
 class MeasureReportGroup(FHIRElement):
@@ -8493,12 +8493,12 @@ class MeasureReportGroup(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    population: MeasureReportGroupPopulation | FHIRList[MeasureReportGroupPopulation]
-    measureScore: Optional[Quantity]
-    stratifier: MeasureReportGroupStratifier | FHIRList[MeasureReportGroupStratifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    population: MeasureReportGroupPopulation | FHIRList[MeasureReportGroupPopulation] | list | dict
+    measureScore: Quantity | dict | None
+    stratifier: MeasureReportGroupStratifier | FHIRList[MeasureReportGroupStratifier] | list | dict
 
 
 class MeasureReportGroupPopulation(FHIRElement):
@@ -8506,11 +8506,11 @@ class MeasureReportGroupPopulation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'subjectResults': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     count: Optional[Integer] = None
-    subjectResults: Optional[Reference]
+    subjectResults: Reference | dict | None
 
 
 class MeasureReportGroupStratifier(FHIRElement):
@@ -8518,10 +8518,10 @@ class MeasureReportGroupStratifier(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'stratum': 'MeasureReportGroupStratifierStratum'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    stratum: MeasureReportGroupStratifierStratum | FHIRList[MeasureReportGroupStratifierStratum]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    stratum: MeasureReportGroupStratifierStratum | FHIRList[MeasureReportGroupStratifierStratum] | list | dict
 
 
 class MeasureReportGroupStratifierStratum(FHIRElement):
@@ -8536,12 +8536,12 @@ class MeasureReportGroupStratifierStratum(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    value: Optional[CodeableConcept]
-    component: MeasureReportGroupStratifierStratumComponent | FHIRList[MeasureReportGroupStratifierStratumComponent]
-    population: MeasureReportGroupStratifierStratumPopulation | FHIRList[MeasureReportGroupStratifierStratumPopulation]
-    measureScore: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    value: CodeableConcept | dict | None
+    component: MeasureReportGroupStratifierStratumComponent | FHIRList[MeasureReportGroupStratifierStratumComponent] | list | dict
+    population: MeasureReportGroupStratifierStratumPopulation | FHIRList[MeasureReportGroupStratifierStratumPopulation] | list | dict
+    measureScore: Quantity | dict | None
 
 
 class MeasureReportGroupStratifierStratumComponent(FHIRElement):
@@ -8549,10 +8549,10 @@ class MeasureReportGroupStratifierStratumComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'value': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    value: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    value: CodeableConcept | dict | None
 
 
 class MeasureReportGroupStratifierStratumPopulation(FHIRElement):
@@ -8560,11 +8560,11 @@ class MeasureReportGroupStratifierStratumPopulation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'subjectResults': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     count: Optional[Integer] = None
-    subjectResults: Optional[Reference]
+    subjectResults: Reference | dict | None
 
 
 class MeasureReport(FHIRResource):
@@ -8586,24 +8586,24 @@ class MeasureReport(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     type_: Optional[Code] = None
     measure: Optional[Canonical] = None
-    subject: Optional[Reference]
+    subject: Reference | dict | None
     date: Optional[DateTime] = None
-    reporter: Optional[Reference]
-    period: Optional[Period]
-    improvementNotation: Optional[CodeableConcept]
-    group: MeasureReportGroup | FHIRList[MeasureReportGroup]
-    evaluatedResource: Reference | FHIRList[Reference]
+    reporter: Reference | dict | None
+    period: Period | dict | None
+    improvementNotation: CodeableConcept | dict | None
+    group: MeasureReportGroup | FHIRList[MeasureReportGroup] | list | dict
+    evaluatedResource: Reference | FHIRList[Reference] | list | dict
 
 
 class Media(FHIRResource):
@@ -8634,36 +8634,36 @@ class Media(FHIRResource):
     _choice_fields = {'created': ['createdDateTime', 'createdPeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    modality: Optional[CodeableConcept]
-    view: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    modality: CodeableConcept | dict | None
+    view: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     createdDateTime: Optional[DateTime] = None
-    createdPeriod: Optional[Period]
+    createdPeriod: Period | dict | None
     issued: Optional[Instant] = None
-    operator: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    bodySite: Optional[CodeableConcept]
+    operator: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    bodySite: CodeableConcept | dict | None
     deviceName: Optional[String] = None
-    device: Optional[Reference]
+    device: Reference | dict | None
     height: Optional[PositiveInt] = None
     width: Optional[PositiveInt] = None
     frames: Optional[PositiveInt] = None
     duration: Optional[Decimal] = None
-    content: Optional[Attachment]
-    note: Annotation | FHIRList[Annotation]
+    content: Attachment | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class MedicationIngredient(FHIRElement):
@@ -8678,12 +8678,12 @@ class MedicationIngredient(FHIRElement):
     _choice_fields = {'item': ['itemCodeableConcept', 'itemReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemCodeableConcept: Optional[CodeableConcept]
-    itemReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemCodeableConcept: CodeableConcept | dict | None
+    itemReference: Reference | dict | None
     isActive: Optional[Boolean] = None
-    strength: Optional[Ratio]
+    strength: Ratio | dict | None
 
 
 class MedicationBatch(FHIRElement):
@@ -8691,8 +8691,8 @@ class MedicationBatch(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     lotNumber: Optional[String] = None
     expirationDate: Optional[DateTime] = None
 
@@ -8716,21 +8716,21 @@ class Medication(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    code: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    code: CodeableConcept | dict | None
     status: Optional[Code] = None
-    manufacturer: Optional[Reference]
-    form: Optional[CodeableConcept]
-    amount: Optional[Ratio]
-    ingredient: MedicationIngredient | FHIRList[MedicationIngredient]
-    batch: Optional[MedicationBatch]
+    manufacturer: Reference | dict | None
+    form: CodeableConcept | dict | None
+    amount: Ratio | dict | None
+    ingredient: MedicationIngredient | FHIRList[MedicationIngredient] | list | dict
+    batch: MedicationBatch | dict | None
 
 
 class MedicationAdministrationPerformer(FHIRElement):
@@ -8738,10 +8738,10 @@ class MedicationAdministrationPerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class MedicationAdministrationDosage(FHIRElement):
@@ -8759,15 +8759,15 @@ class MedicationAdministrationDosage(FHIRElement):
     _choice_fields = {'rate': ['rateRatio', 'rateQuantity']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     text: Optional[String] = None
-    site: Optional[CodeableConcept]
-    route: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    dose: Optional[Quantity]
-    rateRatio: Optional[Ratio]
-    rateQuantity: Optional[Quantity]
+    site: CodeableConcept | dict | None
+    route: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    dose: Quantity | dict | None
+    rateRatio: Ratio | dict | None
+    rateQuantity: Quantity | dict | None
 
 
 class MedicationAdministration(FHIRResource):
@@ -8816,34 +8816,34 @@ class MedicationAdministration(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'medication': ['medicationCodeableConcept', 'medicationReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiates: Uri | FHIRList[Uri] = None
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiates: Uri | FHIRList[Uri] | list | None = None
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: CodeableConcept | FHIRList[CodeableConcept]
-    category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
-    subject: Optional[Reference]
-    context: Optional[Reference]
-    supportingInformation: Reference | FHIRList[Reference]
+    statusReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    category: CodeableConcept | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
+    subject: Reference | dict | None
+    context: Reference | dict | None
+    supportingInformation: Reference | FHIRList[Reference] | list | dict
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    performer: MedicationAdministrationPerformer | FHIRList[MedicationAdministrationPerformer]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    request: Optional[Reference]
-    device: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    dosage: Optional[MedicationAdministrationDosage]
-    eventHistory: Reference | FHIRList[Reference]
+    effectivePeriod: Period | dict | None
+    performer: MedicationAdministrationPerformer | FHIRList[MedicationAdministrationPerformer] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    request: Reference | dict | None
+    device: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    dosage: MedicationAdministrationDosage | dict | None
+    eventHistory: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicationDispensePerformer(FHIRElement):
@@ -8851,10 +8851,10 @@ class MedicationDispensePerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
 
 
 class MedicationDispenseSubstitution(FHIRElement):
@@ -8868,12 +8868,12 @@ class MedicationDispenseSubstitution(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     wasSubstituted: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    responsibleParty: Reference | FHIRList[Reference]
+    type_: CodeableConcept | dict | None
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    responsibleParty: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicationDispense(FHIRResource):
@@ -8929,39 +8929,39 @@ class MedicationDispense(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReasonCodeableConcept: Optional[CodeableConcept]
-    statusReasonReference: Optional[Reference]
-    category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
-    subject: Optional[Reference]
-    context: Optional[Reference]
-    supportingInformation: Reference | FHIRList[Reference]
-    performer: MedicationDispensePerformer | FHIRList[MedicationDispensePerformer]
-    location: Optional[Reference]
-    authorizingPrescription: Reference | FHIRList[Reference]
-    type_: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
-    daysSupply: Optional[Quantity]
+    statusReasonCodeableConcept: CodeableConcept | dict | None
+    statusReasonReference: Reference | dict | None
+    category: CodeableConcept | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
+    subject: Reference | dict | None
+    context: Reference | dict | None
+    supportingInformation: Reference | FHIRList[Reference] | list | dict
+    performer: MedicationDispensePerformer | FHIRList[MedicationDispensePerformer] | list | dict
+    location: Reference | dict | None
+    authorizingPrescription: Reference | FHIRList[Reference] | list | dict
+    type_: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
+    daysSupply: Quantity | dict | None
     whenPrepared: Optional[DateTime] = None
     whenHandedOver: Optional[DateTime] = None
-    destination: Optional[Reference]
-    receiver: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    dosageInstruction: Dosage | FHIRList[Dosage]
-    substitution: Optional[MedicationDispenseSubstitution]
-    detectedIssue: Reference | FHIRList[Reference]
-    eventHistory: Reference | FHIRList[Reference]
+    destination: Reference | dict | None
+    receiver: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    dosageInstruction: Dosage | FHIRList[Dosage] | list | dict
+    substitution: MedicationDispenseSubstitution | dict | None
+    detectedIssue: Reference | FHIRList[Reference] | list | dict
+    eventHistory: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicationKnowledgeRelatedMedicationKnowledge(FHIRElement):
@@ -8969,10 +8969,10 @@ class MedicationKnowledgeRelatedMedicationKnowledge(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'reference': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    reference: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    reference: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicationKnowledgeMonograph(FHIRElement):
@@ -8980,10 +8980,10 @@ class MedicationKnowledgeMonograph(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'source': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    source: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    source: Reference | dict | None
 
 
 class MedicationKnowledgeIngredient(FHIRElement):
@@ -8998,12 +8998,12 @@ class MedicationKnowledgeIngredient(FHIRElement):
     _choice_fields = {'item': ['itemCodeableConcept', 'itemReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemCodeableConcept: Optional[CodeableConcept]
-    itemReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemCodeableConcept: CodeableConcept | dict | None
+    itemReference: Reference | dict | None
     isActive: Optional[Boolean] = None
-    strength: Optional[Ratio]
+    strength: Ratio | dict | None
 
 
 class MedicationKnowledgeCost(FHIRElement):
@@ -9011,11 +9011,11 @@ class MedicationKnowledgeCost(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'cost': 'Money'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     source: Optional[String] = None
-    cost: Optional[Money]
+    cost: Money | dict | None
 
 
 class MedicationKnowledgeMonitoringProgram(FHIRElement):
@@ -9023,9 +9023,9 @@ class MedicationKnowledgeMonitoringProgram(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     name: Optional[String] = None
 
 
@@ -9042,13 +9042,16 @@ class MedicationKnowledgeAdministrationGuidelines(FHIRElement):
     _choice_fields = {'indication': ['indicationCodeableConcept', 'indicationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    dosage: MedicationKnowledgeAdministrationGuidelinesDosage | FHIRList[MedicationKnowledgeAdministrationGuidelinesDosage]
-    indicationCodeableConcept: Optional[CodeableConcept]
-    indicationReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    dosage: MedicationKnowledgeAdministrationGuidelinesDosage | FHIRList[MedicationKnowledgeAdministrationGuidelinesDosage] | list | dict
+    indicationCodeableConcept: CodeableConcept | dict | None
+    indicationReference: Reference | dict | None
     patientCharacteristics: (
-        MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics | FHIRList[MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics]
+        MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics
+        | FHIRList[MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics]
+        | list
+        | dict
     )
 
 
@@ -9057,10 +9060,10 @@ class MedicationKnowledgeAdministrationGuidelinesDosage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'dosage': 'Dosage'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    dosage: Dosage | FHIRList[Dosage]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    dosage: Dosage | FHIRList[Dosage] | list | dict
 
 
 class MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics(FHIRElement):
@@ -9074,11 +9077,11 @@ class MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics(FHIRElem
     _choice_fields = {'characteristic': ['characteristicCodeableConcept', 'characteristicQuantity']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    characteristicCodeableConcept: Optional[CodeableConcept]
-    characteristicQuantity: Optional[Quantity]
-    value: String | FHIRList[String] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    characteristicCodeableConcept: CodeableConcept | dict | None
+    characteristicQuantity: Quantity | dict | None
+    value: String | FHIRList[String] | list | None = None
 
 
 class MedicationKnowledgeMedicineClassification(FHIRElement):
@@ -9086,10 +9089,10 @@ class MedicationKnowledgeMedicineClassification(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'classification': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    classification: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    classification: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class MedicationKnowledgePackaging(FHIRElement):
@@ -9097,10 +9100,10 @@ class MedicationKnowledgePackaging(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'quantity': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
 
 
 class MedicationKnowledgeDrugCharacteristic(FHIRElement):
@@ -9115,12 +9118,12 @@ class MedicationKnowledgeDrugCharacteristic(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueString', 'valueQuantity', 'valueBase64Binary']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity]
+    valueQuantity: Quantity | dict | None
     valueBase64Binary: Optional[Base64Binary] = None
 
 
@@ -9136,12 +9139,12 @@ class MedicationKnowledgeRegulatory(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    regulatoryAuthority: Optional[Reference]
-    substitution: MedicationKnowledgeRegulatorySubstitution | FHIRList[MedicationKnowledgeRegulatorySubstitution]
-    schedule: MedicationKnowledgeRegulatorySchedule | FHIRList[MedicationKnowledgeRegulatorySchedule]
-    maxDispense: Optional[MedicationKnowledgeRegulatoryMaxDispense]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    regulatoryAuthority: Reference | dict | None
+    substitution: MedicationKnowledgeRegulatorySubstitution | FHIRList[MedicationKnowledgeRegulatorySubstitution] | list | dict
+    schedule: MedicationKnowledgeRegulatorySchedule | FHIRList[MedicationKnowledgeRegulatorySchedule] | list | dict
+    maxDispense: MedicationKnowledgeRegulatoryMaxDispense | dict | None
 
 
 class MedicationKnowledgeRegulatorySubstitution(FHIRElement):
@@ -9149,9 +9152,9 @@ class MedicationKnowledgeRegulatorySubstitution(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     allowed: Optional[Boolean] = None
 
 
@@ -9160,9 +9163,9 @@ class MedicationKnowledgeRegulatorySchedule(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'schedule': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    schedule: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    schedule: CodeableConcept | dict | None
 
 
 class MedicationKnowledgeRegulatoryMaxDispense(FHIRElement):
@@ -9170,10 +9173,10 @@ class MedicationKnowledgeRegulatoryMaxDispense(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'quantity': 'Quantity', 'period': 'Duration'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    quantity: Optional[Quantity]
-    period: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    quantity: Quantity | dict | None
+    period: Duration | dict | None
 
 
 class MedicationKnowledgeKinetics(FHIRElement):
@@ -9187,11 +9190,11 @@ class MedicationKnowledgeKinetics(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    areaUnderCurve: Quantity | FHIRList[Quantity]
-    lethalDose50: Quantity | FHIRList[Quantity]
-    halfLifePeriod: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    areaUnderCurve: Quantity | FHIRList[Quantity] | list | dict
+    lethalDose50: Quantity | FHIRList[Quantity] | list | dict
+    halfLifePeriod: Duration | dict | None
 
 
 class MedicationKnowledge(FHIRResource):
@@ -9244,35 +9247,35 @@ class MedicationKnowledge(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     status: Optional[Code] = None
-    manufacturer: Optional[Reference]
-    doseForm: Optional[CodeableConcept]
-    amount: Optional[Quantity]
-    synonym: String | FHIRList[String] = None
-    relatedMedicationKnowledge: MedicationKnowledgeRelatedMedicationKnowledge | FHIRList[MedicationKnowledgeRelatedMedicationKnowledge]
-    associatedMedication: Reference | FHIRList[Reference]
-    productType: CodeableConcept | FHIRList[CodeableConcept]
-    monograph: MedicationKnowledgeMonograph | FHIRList[MedicationKnowledgeMonograph]
-    ingredient: MedicationKnowledgeIngredient | FHIRList[MedicationKnowledgeIngredient]
+    manufacturer: Reference | dict | None
+    doseForm: CodeableConcept | dict | None
+    amount: Quantity | dict | None
+    synonym: String | FHIRList[String] | list | None = None
+    relatedMedicationKnowledge: MedicationKnowledgeRelatedMedicationKnowledge | FHIRList[MedicationKnowledgeRelatedMedicationKnowledge] | list | dict
+    associatedMedication: Reference | FHIRList[Reference] | list | dict
+    productType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    monograph: MedicationKnowledgeMonograph | FHIRList[MedicationKnowledgeMonograph] | list | dict
+    ingredient: MedicationKnowledgeIngredient | FHIRList[MedicationKnowledgeIngredient] | list | dict
     preparationInstruction: Optional[Markdown] = None
-    intendedRoute: CodeableConcept | FHIRList[CodeableConcept]
-    cost: MedicationKnowledgeCost | FHIRList[MedicationKnowledgeCost]
-    monitoringProgram: MedicationKnowledgeMonitoringProgram | FHIRList[MedicationKnowledgeMonitoringProgram]
-    administrationGuidelines: MedicationKnowledgeAdministrationGuidelines | FHIRList[MedicationKnowledgeAdministrationGuidelines]
-    medicineClassification: MedicationKnowledgeMedicineClassification | FHIRList[MedicationKnowledgeMedicineClassification]
-    packaging: Optional[MedicationKnowledgePackaging]
-    drugCharacteristic: MedicationKnowledgeDrugCharacteristic | FHIRList[MedicationKnowledgeDrugCharacteristic]
-    contraindication: Reference | FHIRList[Reference]
-    regulatory: MedicationKnowledgeRegulatory | FHIRList[MedicationKnowledgeRegulatory]
-    kinetics: MedicationKnowledgeKinetics | FHIRList[MedicationKnowledgeKinetics]
+    intendedRoute: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    cost: MedicationKnowledgeCost | FHIRList[MedicationKnowledgeCost] | list | dict
+    monitoringProgram: MedicationKnowledgeMonitoringProgram | FHIRList[MedicationKnowledgeMonitoringProgram] | list | dict
+    administrationGuidelines: MedicationKnowledgeAdministrationGuidelines | FHIRList[MedicationKnowledgeAdministrationGuidelines] | list | dict
+    medicineClassification: MedicationKnowledgeMedicineClassification | FHIRList[MedicationKnowledgeMedicineClassification] | list | dict
+    packaging: MedicationKnowledgePackaging | dict | None
+    drugCharacteristic: MedicationKnowledgeDrugCharacteristic | FHIRList[MedicationKnowledgeDrugCharacteristic] | list | dict
+    contraindication: Reference | FHIRList[Reference] | list | dict
+    regulatory: MedicationKnowledgeRegulatory | FHIRList[MedicationKnowledgeRegulatory] | list | dict
+    kinetics: MedicationKnowledgeKinetics | FHIRList[MedicationKnowledgeKinetics] | list | dict
 
 
 class MedicationRequestDispenseRequest(FHIRElement):
@@ -9289,15 +9292,15 @@ class MedicationRequestDispenseRequest(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    initialFill: Optional[MedicationRequestDispenseRequestInitialFill]
-    dispenseInterval: Optional[Duration]
-    validityPeriod: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    initialFill: MedicationRequestDispenseRequestInitialFill | dict | None
+    dispenseInterval: Duration | dict | None
+    validityPeriod: Period | dict | None
     numberOfRepeatsAllowed: Optional[UnsignedInt] = None
-    quantity: Optional[Quantity]
-    expectedSupplyDuration: Optional[Duration]
-    performer: Optional[Reference]
+    quantity: Quantity | dict | None
+    expectedSupplyDuration: Duration | dict | None
+    performer: Reference | dict | None
 
 
 class MedicationRequestDispenseRequestInitialFill(FHIRElement):
@@ -9305,10 +9308,10 @@ class MedicationRequestDispenseRequestInitialFill(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'quantity': 'Quantity', 'duration': 'Duration'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    quantity: Optional[Quantity]
-    duration: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    quantity: Quantity | dict | None
+    duration: Duration | dict | None
 
 
 class MedicationRequestSubstitution(FHIRElement):
@@ -9317,11 +9320,11 @@ class MedicationRequestSubstitution(FHIRElement):
     _choice_fields = {'allowed': ['allowedBoolean', 'allowedCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     allowedBoolean: Optional[Boolean] = None
-    allowedCodeableConcept: Optional[CodeableConcept]
-    reason: Optional[CodeableConcept]
+    allowedCodeableConcept: CodeableConcept | dict | None
+    reason: CodeableConcept | dict | None
 
 
 class MedicationRequest(FHIRResource):
@@ -9380,47 +9383,47 @@ class MedicationRequest(FHIRResource):
     _choice_fields = {'medication': ['medicationCodeableConcept', 'medicationReference'], 'reported': ['reportedBoolean', 'reportedReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
     intent: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
     reportedBoolean: Optional[Boolean] = None
-    reportedReference: Optional[Reference]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
-    supportingInformation: Reference | FHIRList[Reference]
+    reportedReference: Reference | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
+    supportingInformation: Reference | FHIRList[Reference] | list | dict
     authoredOn: Optional[DateTime] = None
-    requester: Optional[Reference]
-    performer: Optional[Reference]
-    performerType: Optional[CodeableConcept]
-    recorder: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
-    courseOfTherapyType: Optional[CodeableConcept]
-    insurance: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    dosageInstruction: Dosage | FHIRList[Dosage]
-    dispenseRequest: Optional[MedicationRequestDispenseRequest]
-    substitution: Optional[MedicationRequestSubstitution]
-    priorPrescription: Optional[Reference]
-    detectedIssue: Reference | FHIRList[Reference]
-    eventHistory: Reference | FHIRList[Reference]
+    requester: Reference | dict | None
+    performer: Reference | dict | None
+    performerType: CodeableConcept | dict | None
+    recorder: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
+    courseOfTherapyType: CodeableConcept | dict | None
+    insurance: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    dosageInstruction: Dosage | FHIRList[Dosage] | list | dict
+    dispenseRequest: MedicationRequestDispenseRequest | dict | None
+    substitution: MedicationRequestSubstitution | dict | None
+    priorPrescription: Reference | dict | None
+    detectedIssue: Reference | FHIRList[Reference] | list | dict
+    eventHistory: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicationStatement(FHIRResource):
@@ -9465,32 +9468,32 @@ class MedicationStatement(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'medication': ['medicationCodeableConcept', 'medicationReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: CodeableConcept | FHIRList[CodeableConcept]
-    category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
-    subject: Optional[Reference]
-    context: Optional[Reference]
+    statusReason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    category: CodeableConcept | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
+    subject: Reference | dict | None
+    context: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     dateAsserted: Optional[DateTime] = None
-    informationSource: Optional[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    dosage: Dosage | FHIRList[Dosage]
+    informationSource: Reference | dict | None
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    dosage: Dosage | FHIRList[Dosage] | list | dict
 
 
 class MedicinalProductName(FHIRElement):
@@ -9503,11 +9506,11 @@ class MedicinalProductName(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     productName: Optional[String] = None
-    namePart: MedicinalProductNameNamePart | FHIRList[MedicinalProductNameNamePart]
-    countryLanguage: MedicinalProductNameCountryLanguage | FHIRList[MedicinalProductNameCountryLanguage]
+    namePart: MedicinalProductNameNamePart | FHIRList[MedicinalProductNameNamePart] | list | dict
+    countryLanguage: MedicinalProductNameCountryLanguage | FHIRList[MedicinalProductNameCountryLanguage] | list | dict
 
 
 class MedicinalProductNameNamePart(FHIRElement):
@@ -9515,10 +9518,10 @@ class MedicinalProductNameNamePart(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     part: Optional[String] = None
-    type_: Optional[Coding]
+    type_: Coding | dict | None
 
 
 class MedicinalProductNameCountryLanguage(FHIRElement):
@@ -9532,11 +9535,11 @@ class MedicinalProductNameCountryLanguage(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    country: Optional[CodeableConcept]
-    jurisdiction: Optional[CodeableConcept]
-    language: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    country: CodeableConcept | dict | None
+    jurisdiction: CodeableConcept | dict | None
+    language: CodeableConcept | dict | None
 
 
 class MedicinalProductManufacturingBusinessOperation(FHIRElement):
@@ -9552,14 +9555,14 @@ class MedicinalProductManufacturingBusinessOperation(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    operationType: Optional[CodeableConcept]
-    authorisationReferenceNumber: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    operationType: CodeableConcept | dict | None
+    authorisationReferenceNumber: Identifier | dict | None
     effectiveDate: Optional[DateTime] = None
-    confidentialityIndicator: Optional[CodeableConcept]
-    manufacturer: Reference | FHIRList[Reference]
-    regulator: Optional[Reference]
+    confidentialityIndicator: CodeableConcept | dict | None
+    manufacturer: Reference | FHIRList[Reference] | list | dict
+    regulator: Reference | dict | None
 
 
 class MedicinalProductSpecialDesignation(FHIRElement):
@@ -9578,16 +9581,16 @@ class MedicinalProductSpecialDesignation(FHIRElement):
     _choice_fields = {'indication': ['indicationCodeableConcept', 'indicationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
-    intendedUse: Optional[CodeableConcept]
-    indicationCodeableConcept: Optional[CodeableConcept]
-    indicationReference: Optional[Reference]
-    status: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
+    intendedUse: CodeableConcept | dict | None
+    indicationCodeableConcept: CodeableConcept | dict | None
+    indicationReference: Reference | dict | None
+    status: CodeableConcept | dict | None
     date: Optional[DateTime] = None
-    species: Optional[CodeableConcept]
+    species: CodeableConcept | dict | None
 
 
 class MedicinalProduct(FHIRResource):
@@ -9639,33 +9642,33 @@ class MedicinalProduct(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
-    domain: Optional[Coding]
-    combinedPharmaceuticalDoseForm: Optional[CodeableConcept]
-    legalStatusOfSupply: Optional[CodeableConcept]
-    additionalMonitoringIndicator: Optional[CodeableConcept]
-    specialMeasures: String | FHIRList[String] = None
-    paediatricUseIndicator: Optional[CodeableConcept]
-    productClassification: CodeableConcept | FHIRList[CodeableConcept]
-    marketingStatus: MarketingStatus | FHIRList[MarketingStatus]
-    pharmaceuticalProduct: Reference | FHIRList[Reference]
-    packagedMedicinalProduct: Reference | FHIRList[Reference]
-    attachedDocument: Reference | FHIRList[Reference]
-    masterFile: Reference | FHIRList[Reference]
-    contact: Reference | FHIRList[Reference]
-    clinicalTrial: Reference | FHIRList[Reference]
-    name: MedicinalProductName | FHIRList[MedicinalProductName]
-    crossReference: Identifier | FHIRList[Identifier]
-    manufacturingBusinessOperation: MedicinalProductManufacturingBusinessOperation | FHIRList[MedicinalProductManufacturingBusinessOperation]
-    specialDesignation: MedicinalProductSpecialDesignation | FHIRList[MedicinalProductSpecialDesignation]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
+    domain: Coding | dict | None
+    combinedPharmaceuticalDoseForm: CodeableConcept | dict | None
+    legalStatusOfSupply: CodeableConcept | dict | None
+    additionalMonitoringIndicator: CodeableConcept | dict | None
+    specialMeasures: String | FHIRList[String] | list | None = None
+    paediatricUseIndicator: CodeableConcept | dict | None
+    productClassification: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    marketingStatus: MarketingStatus | FHIRList[MarketingStatus] | list | dict
+    pharmaceuticalProduct: Reference | FHIRList[Reference] | list | dict
+    packagedMedicinalProduct: Reference | FHIRList[Reference] | list | dict
+    attachedDocument: Reference | FHIRList[Reference] | list | dict
+    masterFile: Reference | FHIRList[Reference] | list | dict
+    contact: Reference | FHIRList[Reference] | list | dict
+    clinicalTrial: Reference | FHIRList[Reference] | list | dict
+    name: MedicinalProductName | FHIRList[MedicinalProductName] | list | dict
+    crossReference: Identifier | FHIRList[Identifier] | list | dict
+    manufacturingBusinessOperation: MedicinalProductManufacturingBusinessOperation | FHIRList[MedicinalProductManufacturingBusinessOperation] | list | dict
+    specialDesignation: MedicinalProductSpecialDesignation | FHIRList[MedicinalProductSpecialDesignation] | list | dict
 
 
 class MedicinalProductAuthorizationJurisdictionalAuthorization(FHIRElement):
@@ -9681,13 +9684,13 @@ class MedicinalProductAuthorizationJurisdictionalAuthorization(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    country: Optional[CodeableConcept]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
-    legalStatusOfSupply: Optional[CodeableConcept]
-    validityPeriod: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    country: CodeableConcept | dict | None
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    legalStatusOfSupply: CodeableConcept | dict | None
+    validityPeriod: Period | dict | None
 
 
 class MedicinalProductAuthorizationProcedure(FHIRElement):
@@ -9696,11 +9699,11 @@ class MedicinalProductAuthorizationProcedure(FHIRElement):
     _choice_fields = {'date': ['datePeriod', 'dateDateTime']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    type_: Optional[CodeableConcept]
-    datePeriod: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    type_: CodeableConcept | dict | None
+    datePeriod: Period | dict | None
     dateDateTime: Optional[DateTime] = None
     application: Any = None
 
@@ -9729,29 +9732,31 @@ class MedicinalProductAuthorization(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    subject: Optional[Reference]
-    country: CodeableConcept | FHIRList[CodeableConcept]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
-    status: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    subject: Reference | dict | None
+    country: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    status: CodeableConcept | dict | None
     statusDate: Optional[DateTime] = None
     restoreDate: Optional[DateTime] = None
-    validityPeriod: Optional[Period]
-    dataExclusivityPeriod: Optional[Period]
+    validityPeriod: Period | dict | None
+    dataExclusivityPeriod: Period | dict | None
     dateOfFirstAuthorization: Optional[DateTime] = None
     internationalBirthDate: Optional[DateTime] = None
-    legalBasis: Optional[CodeableConcept]
-    jurisdictionalAuthorization: MedicinalProductAuthorizationJurisdictionalAuthorization | FHIRList[MedicinalProductAuthorizationJurisdictionalAuthorization]
-    holder: Optional[Reference]
-    regulator: Optional[Reference]
-    procedure: Optional[MedicinalProductAuthorizationProcedure]
+    legalBasis: CodeableConcept | dict | None
+    jurisdictionalAuthorization: (
+        MedicinalProductAuthorizationJurisdictionalAuthorization | FHIRList[MedicinalProductAuthorizationJurisdictionalAuthorization] | list | dict
+    )
+    holder: Reference | dict | None
+    regulator: Reference | dict | None
+    procedure: MedicinalProductAuthorizationProcedure | dict | None
 
 
 class MedicinalProductContraindicationOtherTherapy(FHIRElement):
@@ -9766,11 +9771,11 @@ class MedicinalProductContraindicationOtherTherapy(FHIRElement):
     _choice_fields = {'medication': ['medicationCodeableConcept', 'medicationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    therapyRelationshipType: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    therapyRelationshipType: CodeableConcept | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
 
 
 class MedicinalProductContraindication(FHIRResource):
@@ -9792,20 +9797,20 @@ class MedicinalProductContraindication(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    subject: Reference | FHIRList[Reference]
-    disease: Optional[CodeableConcept]
-    diseaseStatus: Optional[CodeableConcept]
-    comorbidity: CodeableConcept | FHIRList[CodeableConcept]
-    therapeuticIndication: Reference | FHIRList[Reference]
-    otherTherapy: MedicinalProductContraindicationOtherTherapy | FHIRList[MedicinalProductContraindicationOtherTherapy]
-    population: Population | FHIRList[Population]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    subject: Reference | FHIRList[Reference] | list | dict
+    disease: CodeableConcept | dict | None
+    diseaseStatus: CodeableConcept | dict | None
+    comorbidity: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    therapeuticIndication: Reference | FHIRList[Reference] | list | dict
+    otherTherapy: MedicinalProductContraindicationOtherTherapy | FHIRList[MedicinalProductContraindicationOtherTherapy] | list | dict
+    population: Population | FHIRList[Population] | list | dict
 
 
 class MedicinalProductIndicationOtherTherapy(FHIRElement):
@@ -9820,11 +9825,11 @@ class MedicinalProductIndicationOtherTherapy(FHIRElement):
     _choice_fields = {'medication': ['medicationCodeableConcept', 'medicationReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    therapyRelationshipType: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept]
-    medicationReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    therapyRelationshipType: CodeableConcept | dict | None
+    medicationCodeableConcept: CodeableConcept | dict | None
+    medicationReference: Reference | dict | None
 
 
 class MedicinalProductIndication(FHIRResource):
@@ -9848,22 +9853,22 @@ class MedicinalProductIndication(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    subject: Reference | FHIRList[Reference]
-    diseaseSymptomProcedure: Optional[CodeableConcept]
-    diseaseStatus: Optional[CodeableConcept]
-    comorbidity: CodeableConcept | FHIRList[CodeableConcept]
-    intendedEffect: Optional[CodeableConcept]
-    duration: Optional[Quantity]
-    otherTherapy: MedicinalProductIndicationOtherTherapy | FHIRList[MedicinalProductIndicationOtherTherapy]
-    undesirableEffect: Reference | FHIRList[Reference]
-    population: Population | FHIRList[Population]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    subject: Reference | FHIRList[Reference] | list | dict
+    diseaseSymptomProcedure: CodeableConcept | dict | None
+    diseaseStatus: CodeableConcept | dict | None
+    comorbidity: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    intendedEffect: CodeableConcept | dict | None
+    duration: Quantity | dict | None
+    otherTherapy: MedicinalProductIndicationOtherTherapy | FHIRList[MedicinalProductIndicationOtherTherapy] | list | dict
+    undesirableEffect: Reference | FHIRList[Reference] | list | dict
+    population: Population | FHIRList[Population] | list | dict
 
 
 class MedicinalProductIngredientSpecifiedSubstance(FHIRElement):
@@ -9878,12 +9883,12 @@ class MedicinalProductIngredientSpecifiedSubstance(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    group: Optional[CodeableConcept]
-    confidentiality: Optional[CodeableConcept]
-    strength: MedicinalProductIngredientSpecifiedSubstanceStrength | FHIRList[MedicinalProductIngredientSpecifiedSubstanceStrength]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    group: CodeableConcept | dict | None
+    confidentiality: CodeableConcept | dict | None
+    strength: MedicinalProductIngredientSpecifiedSubstanceStrength | FHIRList[MedicinalProductIngredientSpecifiedSubstanceStrength] | list | dict
 
 
 class MedicinalProductIngredientSpecifiedSubstanceStrength(FHIRElement):
@@ -9900,16 +9905,19 @@ class MedicinalProductIngredientSpecifiedSubstanceStrength(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    presentation: Optional[Ratio]
-    presentationLowLimit: Optional[Ratio]
-    concentration: Optional[Ratio]
-    concentrationLowLimit: Optional[Ratio]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    presentation: Ratio | dict | None
+    presentationLowLimit: Ratio | dict | None
+    concentration: Ratio | dict | None
+    concentrationLowLimit: Ratio | dict | None
     measurementPoint: Optional[String] = None
-    country: CodeableConcept | FHIRList[CodeableConcept]
+    country: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceStrength: (
-        MedicinalProductIngredientSpecifiedSubstanceStrengthReferenceStrength | FHIRList[MedicinalProductIngredientSpecifiedSubstanceStrengthReferenceStrength]
+        MedicinalProductIngredientSpecifiedSubstanceStrengthReferenceStrength
+        | FHIRList[MedicinalProductIngredientSpecifiedSubstanceStrengthReferenceStrength]
+        | list
+        | dict
     )
 
 
@@ -9925,13 +9933,13 @@ class MedicinalProductIngredientSpecifiedSubstanceStrengthReferenceStrength(FHIR
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    substance: Optional[CodeableConcept]
-    strength: Optional[Ratio]
-    strengthLowLimit: Optional[Ratio]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    substance: CodeableConcept | dict | None
+    strength: Ratio | dict | None
+    strengthLowLimit: Ratio | dict | None
     measurementPoint: Optional[String] = None
-    country: CodeableConcept | FHIRList[CodeableConcept]
+    country: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class MedicinalProductIngredientSubstance(FHIRElement):
@@ -9939,9 +9947,9 @@ class MedicinalProductIngredientSubstance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     strength: Any = None
 
 
@@ -9962,19 +9970,19 @@ class MedicinalProductIngredient(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    role: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    role: CodeableConcept | dict | None
     allergenicIndicator: Optional[Boolean] = None
-    manufacturer: Reference | FHIRList[Reference]
-    specifiedSubstance: MedicinalProductIngredientSpecifiedSubstance | FHIRList[MedicinalProductIngredientSpecifiedSubstance]
-    substance: Optional[MedicinalProductIngredientSubstance]
+    manufacturer: Reference | FHIRList[Reference] | list | dict
+    specifiedSubstance: MedicinalProductIngredientSpecifiedSubstance | FHIRList[MedicinalProductIngredientSpecifiedSubstance] | list | dict
+    substance: MedicinalProductIngredientSubstance | dict | None
 
 
 class MedicinalProductInteractionInteractant(FHIRElement):
@@ -9983,10 +9991,10 @@ class MedicinalProductInteractionInteractant(FHIRElement):
     _choice_fields = {'item': ['itemReference', 'itemCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    itemReference: Optional[Reference]
-    itemCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    itemReference: Reference | dict | None
+    itemCodeableConcept: CodeableConcept | dict | None
 
 
 class MedicinalProductInteraction(FHIRResource):
@@ -10007,20 +10015,20 @@ class MedicinalProductInteraction(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    subject: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    subject: Reference | FHIRList[Reference] | list | dict
     description: Optional[String] = None
-    interactant: MedicinalProductInteractionInteractant | FHIRList[MedicinalProductInteractionInteractant]
-    type_: Optional[CodeableConcept]
-    effect: Optional[CodeableConcept]
-    incidence: Optional[CodeableConcept]
-    management: Optional[CodeableConcept]
+    interactant: MedicinalProductInteractionInteractant | FHIRList[MedicinalProductInteractionInteractant] | list | dict
+    type_: CodeableConcept | dict | None
+    effect: CodeableConcept | dict | None
+    incidence: CodeableConcept | dict | None
+    management: CodeableConcept | dict | None
 
 
 class MedicinalProductManufactured(FHIRResource):
@@ -10042,20 +10050,20 @@ class MedicinalProductManufactured(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    manufacturedDoseForm: Optional[CodeableConcept]
-    unitOfPresentation: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
-    manufacturer: Reference | FHIRList[Reference]
-    ingredient: Reference | FHIRList[Reference]
-    physicalCharacteristics: Optional[ProdCharacteristic]
-    otherCharacteristics: CodeableConcept | FHIRList[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    manufacturedDoseForm: CodeableConcept | dict | None
+    unitOfPresentation: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
+    manufacturer: Reference | FHIRList[Reference] | list | dict
+    ingredient: Reference | FHIRList[Reference] | list | dict
+    physicalCharacteristics: ProdCharacteristic | dict | None
+    otherCharacteristics: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class MedicinalProductPackagedBatchIdentifier(FHIRElement):
@@ -10063,10 +10071,10 @@ class MedicinalProductPackagedBatchIdentifier(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'outerPackaging': 'Identifier', 'immediatePackaging': 'Identifier'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    outerPackaging: Optional[Identifier]
-    immediatePackaging: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    outerPackaging: Identifier | dict | None
+    immediatePackaging: Identifier | dict | None
 
 
 class MedicinalProductPackagedPackageItem(FHIRElement):
@@ -10100,20 +10108,20 @@ class MedicinalProductPackagedPackageItem(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    type_: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
-    material: CodeableConcept | FHIRList[CodeableConcept]
-    alternateMaterial: CodeableConcept | FHIRList[CodeableConcept]
-    device: Reference | FHIRList[Reference]
-    manufacturedItem: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    type_: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
+    material: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    alternateMaterial: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    device: Reference | FHIRList[Reference] | list | dict
+    manufacturedItem: Reference | FHIRList[Reference] | list | dict
     packageItem: Any = None
-    physicalCharacteristics: Optional[ProdCharacteristic]
-    otherCharacteristics: CodeableConcept | FHIRList[CodeableConcept]
-    shelfLifeStorage: ProductShelfLife | FHIRList[ProductShelfLife]
-    manufacturer: Reference | FHIRList[Reference]
+    physicalCharacteristics: ProdCharacteristic | dict | None
+    otherCharacteristics: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    shelfLifeStorage: ProductShelfLife | FHIRList[ProductShelfLife] | list | dict
+    manufacturer: Reference | FHIRList[Reference] | list | dict
 
 
 class MedicinalProductPackaged(FHIRResource):
@@ -10136,22 +10144,22 @@ class MedicinalProductPackaged(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    subject: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    subject: Reference | FHIRList[Reference] | list | dict
     description: Optional[String] = None
-    legalStatusOfSupply: Optional[CodeableConcept]
-    marketingStatus: MarketingStatus | FHIRList[MarketingStatus]
-    marketingAuthorization: Optional[Reference]
-    manufacturer: Reference | FHIRList[Reference]
-    batchIdentifier: MedicinalProductPackagedBatchIdentifier | FHIRList[MedicinalProductPackagedBatchIdentifier]
-    packageItem: MedicinalProductPackagedPackageItem | FHIRList[MedicinalProductPackagedPackageItem]
+    legalStatusOfSupply: CodeableConcept | dict | None
+    marketingStatus: MarketingStatus | FHIRList[MarketingStatus] | list | dict
+    marketingAuthorization: Reference | dict | None
+    manufacturer: Reference | FHIRList[Reference] | list | dict
+    batchIdentifier: MedicinalProductPackagedBatchIdentifier | FHIRList[MedicinalProductPackagedBatchIdentifier] | list | dict
+    packageItem: MedicinalProductPackagedPackageItem | FHIRList[MedicinalProductPackagedPackageItem] | list | dict
 
 
 class MedicinalProductPharmaceuticalCharacteristics(FHIRElement):
@@ -10159,10 +10167,10 @@ class MedicinalProductPharmaceuticalCharacteristics(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'status': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
 
 
 class MedicinalProductPharmaceuticalRouteOfAdministration(FHIRElement):
@@ -10180,15 +10188,20 @@ class MedicinalProductPharmaceuticalRouteOfAdministration(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    firstDose: Optional[Quantity]
-    maxSingleDose: Optional[Quantity]
-    maxDosePerDay: Optional[Quantity]
-    maxDosePerTreatmentPeriod: Optional[Ratio]
-    maxTreatmentPeriod: Optional[Duration]
-    targetSpecies: MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies | FHIRList[MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    firstDose: Quantity | dict | None
+    maxSingleDose: Quantity | dict | None
+    maxDosePerDay: Quantity | dict | None
+    maxDosePerTreatmentPeriod: Ratio | dict | None
+    maxTreatmentPeriod: Duration | dict | None
+    targetSpecies: (
+        MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies
+        | FHIRList[MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies]
+        | list
+        | dict
+    )
 
 
 class MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies(FHIRElement):
@@ -10201,12 +10214,14 @@ class MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpecies(FHIREleme
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     withdrawalPeriod: (
         MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpeciesWithdrawalPeriod
         | FHIRList[MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpeciesWithdrawalPeriod]
+        | list
+        | dict
     )
 
 
@@ -10215,10 +10230,10 @@ class MedicinalProductPharmaceuticalRouteOfAdministrationTargetSpeciesWithdrawal
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'tissue': 'CodeableConcept', 'value': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    tissue: Optional[CodeableConcept]
-    value: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    tissue: CodeableConcept | dict | None
+    value: Quantity | dict | None
     supportingInformation: Optional[String] = None
 
 
@@ -10241,20 +10256,20 @@ class MedicinalProductPharmaceutical(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    administrableDoseForm: Optional[CodeableConcept]
-    unitOfPresentation: Optional[CodeableConcept]
-    ingredient: Reference | FHIRList[Reference]
-    device: Reference | FHIRList[Reference]
-    characteristics: MedicinalProductPharmaceuticalCharacteristics | FHIRList[MedicinalProductPharmaceuticalCharacteristics]
-    routeOfAdministration: MedicinalProductPharmaceuticalRouteOfAdministration | FHIRList[MedicinalProductPharmaceuticalRouteOfAdministration]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    administrableDoseForm: CodeableConcept | dict | None
+    unitOfPresentation: CodeableConcept | dict | None
+    ingredient: Reference | FHIRList[Reference] | list | dict
+    device: Reference | FHIRList[Reference] | list | dict
+    characteristics: MedicinalProductPharmaceuticalCharacteristics | FHIRList[MedicinalProductPharmaceuticalCharacteristics] | list | dict
+    routeOfAdministration: MedicinalProductPharmaceuticalRouteOfAdministration | FHIRList[MedicinalProductPharmaceuticalRouteOfAdministration] | list | dict
 
 
 class MedicinalProductUndesirableEffect(FHIRResource):
@@ -10274,18 +10289,18 @@ class MedicinalProductUndesirableEffect(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    subject: Reference | FHIRList[Reference]
-    symptomConditionEffect: Optional[CodeableConcept]
-    classification: Optional[CodeableConcept]
-    frequencyOfOccurrence: Optional[CodeableConcept]
-    population: Population | FHIRList[Population]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    subject: Reference | FHIRList[Reference] | list | dict
+    symptomConditionEffect: CodeableConcept | dict | None
+    classification: CodeableConcept | dict | None
+    frequencyOfOccurrence: CodeableConcept | dict | None
+    population: Population | FHIRList[Population] | list | dict
 
 
 class MessageDefinitionFocus(FHIRElement):
@@ -10293,8 +10308,8 @@ class MessageDefinitionFocus(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     profile: Optional[Canonical] = None
     min: Optional[UnsignedInt] = None
@@ -10306,8 +10321,8 @@ class MessageDefinitionAllowedResponse(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     message: Optional[Canonical] = None
     situation: Optional[Markdown] = None
 
@@ -10345,38 +10360,38 @@ class MessageDefinition(FHIRResource):
     _choice_fields = {'event': ['eventCoding', 'eventUri']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
-    replaces: Canonical | FHIRList[Canonical] = None
+    replaces: Canonical | FHIRList[Canonical] | list | None = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     base: Optional[Canonical] = None
-    parent: Canonical | FHIRList[Canonical] = None
-    eventCoding: Optional[Coding]
+    parent: Canonical | FHIRList[Canonical] | list | None = None
+    eventCoding: Coding | dict | None
     eventUri: Optional[Uri] = None
     category: Optional[Code] = None
-    focus: MessageDefinitionFocus | FHIRList[MessageDefinitionFocus]
+    focus: MessageDefinitionFocus | FHIRList[MessageDefinitionFocus] | list | dict
     responseRequired: Optional[Code] = None
-    allowedResponse: MessageDefinitionAllowedResponse | FHIRList[MessageDefinitionAllowedResponse]
-    graph: Canonical | FHIRList[Canonical] = None
+    allowedResponse: MessageDefinitionAllowedResponse | FHIRList[MessageDefinitionAllowedResponse] | list | dict
+    graph: Canonical | FHIRList[Canonical] | list | None = None
 
 
 class MessageHeaderDestination(FHIRElement):
@@ -10384,12 +10399,12 @@ class MessageHeaderDestination(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'target': 'Reference', 'receiver': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
-    target: Optional[Reference]
+    target: Reference | dict | None
     endpoint: Optional[Url] = None
-    receiver: Optional[Reference]
+    receiver: Reference | dict | None
 
 
 class MessageHeaderSource(FHIRElement):
@@ -10397,12 +10412,12 @@ class MessageHeaderSource(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'contact': 'ContactPoint'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     software: Optional[String] = None
     version: Optional[String] = None
-    contact: Optional[ContactPoint]
+    contact: ContactPoint | dict | None
     endpoint: Optional[Url] = None
 
 
@@ -10411,11 +10426,11 @@ class MessageHeaderResponse(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'details': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     identifier: Optional[Id] = None
     code: Optional[Code] = None
-    details: Optional[Reference]
+    details: Reference | dict | None
 
 
 class MessageHeader(FHIRResource):
@@ -10441,24 +10456,24 @@ class MessageHeader(FHIRResource):
     _choice_fields = {'event': ['eventCoding', 'eventUri']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    eventCoding: Optional[Coding]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    eventCoding: Coding | dict | None
     eventUri: Optional[Uri] = None
-    destination: MessageHeaderDestination | FHIRList[MessageHeaderDestination]
-    sender: Optional[Reference]
-    enterer: Optional[Reference]
-    author: Optional[Reference]
-    source: Optional[MessageHeaderSource]
-    responsible: Optional[Reference]
-    reason: Optional[CodeableConcept]
-    response: Optional[MessageHeaderResponse]
-    focus: Reference | FHIRList[Reference]
+    destination: MessageHeaderDestination | FHIRList[MessageHeaderDestination] | list | dict
+    sender: Reference | dict | None
+    enterer: Reference | dict | None
+    author: Reference | dict | None
+    source: MessageHeaderSource | dict | None
+    responsible: Reference | dict | None
+    reason: CodeableConcept | dict | None
+    response: MessageHeaderResponse | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
     definition: Optional[Canonical] = None
 
 
@@ -10473,13 +10488,13 @@ class MolecularSequenceReferenceSeq(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    chromosome: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    chromosome: CodeableConcept | dict | None
     genomeBuild: Optional[String] = None
     orientation: Optional[Code] = None
-    referenceSeqId: Optional[CodeableConcept]
-    referenceSeqPointer: Optional[Reference]
+    referenceSeqId: CodeableConcept | dict | None
+    referenceSeqPointer: Reference | dict | None
     referenceSeqString: Optional[String] = None
     strand: Optional[Code] = None
     windowStart: Optional[Integer] = None
@@ -10491,14 +10506,14 @@ class MolecularSequenceVariant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'variantPointer': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     start: Optional[Integer] = None
     end: Optional[Integer] = None
     observedAllele: Optional[String] = None
     referenceAllele: Optional[String] = None
     cigar: Optional[String] = None
-    variantPointer: Optional[Reference]
+    variantPointer: Reference | dict | None
 
 
 class MolecularSequenceQuality(FHIRElement):
@@ -10513,14 +10528,14 @@ class MolecularSequenceQuality(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    standardSequence: Optional[CodeableConcept]
+    standardSequence: CodeableConcept | dict | None
     start: Optional[Integer] = None
     end: Optional[Integer] = None
-    score: Optional[Quantity]
-    method: Optional[CodeableConcept]
+    score: Quantity | dict | None
+    method: CodeableConcept | dict | None
     truthTP: Optional[Decimal] = None
     queryTP: Optional[Decimal] = None
     truthFN: Optional[Decimal] = None
@@ -10529,7 +10544,7 @@ class MolecularSequenceQuality(FHIRElement):
     precision: Optional[Decimal] = None
     recall: Optional[Decimal] = None
     fScore: Optional[Decimal] = None
-    roc: Optional[MolecularSequenceQualityRoc]
+    roc: MolecularSequenceQualityRoc | dict | None
 
 
 class MolecularSequenceQualityRoc(FHIRElement):
@@ -10537,15 +10552,15 @@ class MolecularSequenceQualityRoc(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    score: Integer | FHIRList[Integer] = None
-    numTP: Integer | FHIRList[Integer] = None
-    numFP: Integer | FHIRList[Integer] = None
-    numFN: Integer | FHIRList[Integer] = None
-    precision: Decimal | FHIRList[Decimal] = None
-    sensitivity: Decimal | FHIRList[Decimal] = None
-    fMeasure: Decimal | FHIRList[Decimal] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    score: Integer | FHIRList[Integer] | list | None = None
+    numTP: Integer | FHIRList[Integer] | list | None = None
+    numFP: Integer | FHIRList[Integer] | list | None = None
+    numFN: Integer | FHIRList[Integer] | list | None = None
+    precision: Decimal | FHIRList[Decimal] | list | None = None
+    sensitivity: Decimal | FHIRList[Decimal] | list | None = None
+    fMeasure: Decimal | FHIRList[Decimal] | list | None = None
 
 
 class MolecularSequenceRepository(FHIRElement):
@@ -10553,8 +10568,8 @@ class MolecularSequenceRepository(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     url: Optional[Uri] = None
     name: Optional[String] = None
@@ -10574,13 +10589,13 @@ class MolecularSequenceStructureVariant(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    variantType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    variantType: CodeableConcept | dict | None
     exact: Optional[Boolean] = None
     length: Optional[Integer] = None
-    outer: Optional[MolecularSequenceStructureVariantOuter]
-    inner: Optional[MolecularSequenceStructureVariantInner]
+    outer: MolecularSequenceStructureVariantOuter | dict | None
+    inner: MolecularSequenceStructureVariantInner | dict | None
 
 
 class MolecularSequenceStructureVariantOuter(FHIRElement):
@@ -10588,8 +10603,8 @@ class MolecularSequenceStructureVariantOuter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     start: Optional[Integer] = None
     end: Optional[Integer] = None
 
@@ -10599,8 +10614,8 @@ class MolecularSequenceStructureVariantInner(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     start: Optional[Integer] = None
     end: Optional[Integer] = None
 
@@ -10629,29 +10644,29 @@ class MolecularSequence(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     type_: Optional[Code] = None
     coordinateSystem: Optional[Integer] = None
-    patient: Optional[Reference]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    performer: Optional[Reference]
-    quantity: Optional[Quantity]
-    referenceSeq: Optional[MolecularSequenceReferenceSeq]
-    variant: MolecularSequenceVariant | FHIRList[MolecularSequenceVariant]
+    patient: Reference | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    performer: Reference | dict | None
+    quantity: Quantity | dict | None
+    referenceSeq: MolecularSequenceReferenceSeq | dict | None
+    variant: MolecularSequenceVariant | FHIRList[MolecularSequenceVariant] | list | dict
     observedSeq: Optional[String] = None
-    quality: MolecularSequenceQuality | FHIRList[MolecularSequenceQuality]
+    quality: MolecularSequenceQuality | FHIRList[MolecularSequenceQuality] | list | dict
     readCoverage: Optional[Integer] = None
-    repository: MolecularSequenceRepository | FHIRList[MolecularSequenceRepository]
-    pointer: Reference | FHIRList[Reference]
-    structureVariant: MolecularSequenceStructureVariant | FHIRList[MolecularSequenceStructureVariant]
+    repository: MolecularSequenceRepository | FHIRList[MolecularSequenceRepository] | list | dict
+    pointer: Reference | FHIRList[Reference] | list | dict
+    structureVariant: MolecularSequenceStructureVariant | FHIRList[MolecularSequenceStructureVariant] | list | dict
 
 
 class NamingSystemUniqueId(FHIRElement):
@@ -10659,13 +10674,13 @@ class NamingSystemUniqueId(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     value: Optional[String] = None
     preferred: Optional[Boolean] = None
     comment: Optional[String] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class NamingSystem(FHIRResource):
@@ -10685,26 +10700,26 @@ class NamingSystem(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     status: Optional[Code] = None
     kind: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     responsible: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     usage: Optional[String] = None
-    uniqueId: NamingSystemUniqueId | FHIRList[NamingSystemUniqueId]
+    uniqueId: NamingSystemUniqueId | FHIRList[NamingSystemUniqueId] | list | dict
 
 
 class NutritionOrderOralDiet(FHIRElement):
@@ -10720,13 +10735,13 @@ class NutritionOrderOralDiet(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    schedule: Timing | FHIRList[Timing]
-    nutrient: NutritionOrderOralDietNutrient | FHIRList[NutritionOrderOralDietNutrient]
-    texture: NutritionOrderOralDietTexture | FHIRList[NutritionOrderOralDietTexture]
-    fluidConsistencyType: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    schedule: Timing | FHIRList[Timing] | list | dict
+    nutrient: NutritionOrderOralDietNutrient | FHIRList[NutritionOrderOralDietNutrient] | list | dict
+    texture: NutritionOrderOralDietTexture | FHIRList[NutritionOrderOralDietTexture] | list | dict
+    fluidConsistencyType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     instruction: Optional[String] = None
 
 
@@ -10735,10 +10750,10 @@ class NutritionOrderOralDietNutrient(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'modifier': 'CodeableConcept', 'amount': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    modifier: Optional[CodeableConcept]
-    amount: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    modifier: CodeableConcept | dict | None
+    amount: Quantity | dict | None
 
 
 class NutritionOrderOralDietTexture(FHIRElement):
@@ -10746,10 +10761,10 @@ class NutritionOrderOralDietTexture(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'modifier': 'CodeableConcept', 'foodType': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    modifier: Optional[CodeableConcept]
-    foodType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    modifier: CodeableConcept | dict | None
+    foodType: CodeableConcept | dict | None
 
 
 class NutritionOrderSupplement(FHIRElement):
@@ -10757,12 +10772,12 @@ class NutritionOrderSupplement(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'schedule': 'Timing', 'quantity': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     productName: Optional[String] = None
-    schedule: Timing | FHIRList[Timing]
-    quantity: Optional[Quantity]
+    schedule: Timing | FHIRList[Timing] | list | dict
+    quantity: Quantity | dict | None
     instruction: Optional[String] = None
 
 
@@ -10780,16 +10795,16 @@ class NutritionOrderEnteralFormula(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    baseFormulaType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    baseFormulaType: CodeableConcept | dict | None
     baseFormulaProductName: Optional[String] = None
-    additiveType: Optional[CodeableConcept]
+    additiveType: CodeableConcept | dict | None
     additiveProductName: Optional[String] = None
-    caloricDensity: Optional[Quantity]
-    routeofAdministration: Optional[CodeableConcept]
-    administration: NutritionOrderEnteralFormulaAdministration | FHIRList[NutritionOrderEnteralFormulaAdministration]
-    maxVolumeToDeliver: Optional[Quantity]
+    caloricDensity: Quantity | dict | None
+    routeofAdministration: CodeableConcept | dict | None
+    administration: NutritionOrderEnteralFormulaAdministration | FHIRList[NutritionOrderEnteralFormulaAdministration] | list | dict
+    maxVolumeToDeliver: Quantity | dict | None
     administrationInstruction: Optional[String] = None
 
 
@@ -10806,12 +10821,12 @@ class NutritionOrderEnteralFormulaAdministration(FHIRElement):
     _choice_fields = {'rate': ['rateQuantity', 'rateRatio']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    schedule: Optional[Timing]
-    quantity: Optional[Quantity]
-    rateQuantity: Optional[Quantity]
-    rateRatio: Optional[Ratio]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    schedule: Timing | dict | None
+    quantity: Quantity | dict | None
+    rateQuantity: Quantity | dict | None
+    rateRatio: Ratio | dict | None
 
 
 class NutritionOrder(FHIRResource):
@@ -10850,30 +10865,30 @@ class NutritionOrder(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    instantiates: Uri | FHIRList[Uri] = None
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    instantiates: Uri | FHIRList[Uri] | list | None = None
     status: Optional[Code] = None
     intent: Optional[Code] = None
-    patient: Optional[Reference]
-    encounter: Optional[Reference]
+    patient: Reference | dict | None
+    encounter: Reference | dict | None
     dateTime: Optional[DateTime] = None
-    orderer: Optional[Reference]
-    allergyIntolerance: Reference | FHIRList[Reference]
-    foodPreferenceModifier: CodeableConcept | FHIRList[CodeableConcept]
-    excludeFoodModifier: CodeableConcept | FHIRList[CodeableConcept]
-    oralDiet: Optional[NutritionOrderOralDiet]
-    supplement: NutritionOrderSupplement | FHIRList[NutritionOrderSupplement]
-    enteralFormula: Optional[NutritionOrderEnteralFormula]
-    note: Annotation | FHIRList[Annotation]
+    orderer: Reference | dict | None
+    allergyIntolerance: Reference | FHIRList[Reference] | list | dict
+    foodPreferenceModifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    excludeFoodModifier: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    oralDiet: NutritionOrderOralDiet | dict | None
+    supplement: NutritionOrderSupplement | FHIRList[NutritionOrderSupplement] | list | dict
+    enteralFormula: NutritionOrderEnteralFormula | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class ObservationReferenceRange(FHIRElement):
@@ -10889,13 +10904,13 @@ class ObservationReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -10931,22 +10946,22 @@ class ObservationComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -11022,50 +11037,50 @@ class Observation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    effectiveTiming: Optional[Timing]
+    effectivePeriod: Period | dict | None
+    effectiveTiming: Timing | dict | None
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: ObservationReferenceRange | FHIRList[ObservationReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: ObservationComponent | FHIRList[ObservationComponent]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: ObservationReferenceRange | FHIRList[ObservationReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: ObservationComponent | FHIRList[ObservationComponent] | list | dict
 
 
 class ObservationDefinitionQuantitativeDetails(FHIRElement):
@@ -11073,10 +11088,10 @@ class ObservationDefinitionQuantitativeDetails(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'customaryUnit': 'CodeableConcept', 'unit': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    customaryUnit: Optional[CodeableConcept]
-    unit: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    customaryUnit: CodeableConcept | dict | None
+    unit: CodeableConcept | dict | None
     conversionFactor: Optional[Decimal] = None
     decimalPrecision: Optional[Integer] = None
 
@@ -11094,15 +11109,15 @@ class ObservationDefinitionQualifiedInterval(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     category: Optional[Code] = None
-    range: Optional[Range]
-    context: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
+    range: Range | dict | None
+    context: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     gender: Optional[Code] = None
-    age: Optional[Range]
-    gestationalAge: Optional[Range]
+    age: Range | dict | None
+    gestationalAge: Range | dict | None
     condition: Optional[String] = None
 
 
@@ -11128,26 +11143,26 @@ class ObservationDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    identifier: Identifier | FHIRList[Identifier]
-    permittedDataType: Code | FHIRList[Code] = None
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    permittedDataType: Code | FHIRList[Code] | list | None = None
     multipleResultsAllowed: Optional[Boolean] = None
-    method: Optional[CodeableConcept]
+    method: CodeableConcept | dict | None
     preferredReportName: Optional[String] = None
-    quantitativeDetails: Optional[ObservationDefinitionQuantitativeDetails]
-    qualifiedInterval: ObservationDefinitionQualifiedInterval | FHIRList[ObservationDefinitionQualifiedInterval]
-    validCodedValueSet: Optional[Reference]
-    normalCodedValueSet: Optional[Reference]
-    abnormalCodedValueSet: Optional[Reference]
-    criticalCodedValueSet: Optional[Reference]
+    quantitativeDetails: ObservationDefinitionQuantitativeDetails | dict | None
+    qualifiedInterval: ObservationDefinitionQualifiedInterval | FHIRList[ObservationDefinitionQualifiedInterval] | list | dict
+    validCodedValueSet: Reference | dict | None
+    normalCodedValueSet: Reference | dict | None
+    abnormalCodedValueSet: Reference | dict | None
+    criticalCodedValueSet: Reference | dict | None
 
 
 class OperationDefinitionParameter(FHIRElement):
@@ -11160,18 +11175,18 @@ class OperationDefinitionParameter(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Code] = None
     use: Optional[Code] = None
     min: Optional[Integer] = None
     max: Optional[String] = None
     documentation: Optional[String] = None
     type_: Optional[Code] = None
-    targetProfile: Canonical | FHIRList[Canonical] = None
+    targetProfile: Canonical | FHIRList[Canonical] | list | None = None
     searchType: Optional[Code] = None
-    binding: Optional[OperationDefinitionParameterBinding]
-    referencedFrom: OperationDefinitionParameterReferencedFrom | FHIRList[OperationDefinitionParameterReferencedFrom]
+    binding: OperationDefinitionParameterBinding | dict | None
+    referencedFrom: OperationDefinitionParameterReferencedFrom | FHIRList[OperationDefinitionParameterReferencedFrom] | list | dict
     part: Any = None
 
 
@@ -11180,8 +11195,8 @@ class OperationDefinitionParameterBinding(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     strength: Optional[Code] = None
     valueSet: Optional[Canonical] = None
 
@@ -11191,8 +11206,8 @@ class OperationDefinitionParameterReferencedFrom(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     source: Optional[String] = None
     sourceId: Optional[String] = None
 
@@ -11202,9 +11217,9 @@ class OperationDefinitionOverload(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    parameterName: String | FHIRList[String] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    parameterName: String | FHIRList[String] | list | None = None
     comment: Optional[String] = None
 
 
@@ -11225,13 +11240,13 @@ class OperationDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -11241,23 +11256,23 @@ class OperationDefinition(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     affectsState: Optional[Boolean] = None
     code: Optional[Code] = None
     comment: Optional[Markdown] = None
     base: Optional[Canonical] = None
-    resource: Code | FHIRList[Code] = None
+    resource: Code | FHIRList[Code] | list | None = None
     system: Optional[Boolean] = None
     type_: Optional[Boolean] = None
     instance: Optional[Boolean] = None
     inputProfile: Optional[Canonical] = None
     outputProfile: Optional[Canonical] = None
-    parameter: OperationDefinitionParameter | FHIRList[OperationDefinitionParameter]
-    overload: OperationDefinitionOverload | FHIRList[OperationDefinitionOverload]
+    parameter: OperationDefinitionParameter | FHIRList[OperationDefinitionParameter] | list | dict
+    overload: OperationDefinitionOverload | FHIRList[OperationDefinitionOverload] | list | dict
 
 
 class OperationOutcomeIssue(FHIRElement):
@@ -11265,14 +11280,14 @@ class OperationOutcomeIssue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'details': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     severity: Optional[Code] = None
     code: Optional[Code] = None
-    details: Optional[CodeableConcept]
+    details: CodeableConcept | dict | None
     diagnostics: Optional[String] = None
-    location: String | FHIRList[String] = None
-    expression: String | FHIRList[String] = None
+    location: String | FHIRList[String] | list | None = None
+    expression: String | FHIRList[String] | list | None = None
 
 
 class OperationOutcome(FHIRResource):
@@ -11288,14 +11303,14 @@ class OperationOutcome(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    issue: OperationOutcomeIssue | FHIRList[OperationOutcomeIssue]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    issue: OperationOutcomeIssue | FHIRList[OperationOutcomeIssue] | list | dict
 
 
 class OrganizationContact(FHIRElement):
@@ -11310,12 +11325,12 @@ class OrganizationContact(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    purpose: Optional[CodeableConcept]
-    name: Optional[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Optional[Address]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    purpose: CodeableConcept | dict | None
+    name: HumanName | dict | None
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | dict | None
 
 
 class Organization(FHIRResource):
@@ -11337,23 +11352,23 @@ class Organization(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     name: Optional[String] = None
-    alias: String | FHIRList[String] = None
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Address | FHIRList[Address]
-    partOf: Optional[Reference]
-    contact: OrganizationContact | FHIRList[OrganizationContact]
-    endpoint: Reference | FHIRList[Reference]
+    alias: String | FHIRList[String] | list | None = None
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | FHIRList[Address] | list | dict
+    partOf: Reference | dict | None
+    contact: OrganizationContact | FHIRList[OrganizationContact] | list | dict
+    endpoint: Reference | FHIRList[Reference] | list | dict
 
 
 class OrganizationAffiliation(FHIRResource):
@@ -11391,25 +11406,25 @@ class OrganizationAffiliation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    period: Optional[Period]
-    organization: Optional[Reference]
-    participatingOrganization: Optional[Reference]
-    network: Reference | FHIRList[Reference]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    location: Reference | FHIRList[Reference]
-    healthcareService: Reference | FHIRList[Reference]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    endpoint: Reference | FHIRList[Reference]
+    period: Period | dict | None
+    organization: Reference | dict | None
+    participatingOrganization: Reference | dict | None
+    network: Reference | FHIRList[Reference] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    location: Reference | FHIRList[Reference] | list | dict
+    healthcareService: Reference | FHIRList[Reference] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    endpoint: Reference | FHIRList[Reference] | list | dict
 
 
 class ParametersParameter(FHIRElement):
@@ -11506,8 +11521,8 @@ class ParametersParameter(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
@@ -11528,38 +11543,38 @@ class ParametersParameter(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address]
-    valueAge: Optional[Age]
-    valueAnnotation: Optional[Annotation]
-    valueAttachment: Optional[Attachment]
-    valueCodeableConcept: Optional[CodeableConcept]
-    valueCoding: Optional[Coding]
-    valueContactPoint: Optional[ContactPoint]
-    valueCount: Optional[Count]
-    valueDistance: Optional[Distance]
-    valueDuration: Optional[Duration]
-    valueHumanName: Optional[HumanName]
-    valueIdentifier: Optional[Identifier]
-    valueMoney: Optional[Money]
-    valuePeriod: Optional[Period]
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueReference: Optional[Reference]
-    valueSampledData: Optional[SampledData]
-    valueSignature: Optional[Signature]
-    valueTiming: Optional[Timing]
-    valueContactDetail: Optional[ContactDetail]
-    valueContributor: Optional[Contributor]
-    valueDataRequirement: Optional[DataRequirement]
-    valueExpression: Optional[Expression]
-    valueParameterDefinition: Optional[ParameterDefinition]
-    valueRelatedArtifact: Optional[RelatedArtifact]
-    valueTriggerDefinition: Optional[TriggerDefinition]
-    valueUsageContext: Optional[UsageContext]
-    valueDosage: Optional[Dosage]
-    valueMeta: Optional[Meta]
-    resource: Optional[FHIRResource]
+    valueAddress: Address | dict | None
+    valueAge: Age | dict | None
+    valueAnnotation: Annotation | dict | None
+    valueAttachment: Attachment | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
+    valueCoding: Coding | dict | None
+    valueContactPoint: ContactPoint | dict | None
+    valueCount: Count | dict | None
+    valueDistance: Distance | dict | None
+    valueDuration: Duration | dict | None
+    valueHumanName: HumanName | dict | None
+    valueIdentifier: Identifier | dict | None
+    valueMoney: Money | dict | None
+    valuePeriod: Period | dict | None
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueReference: Reference | dict | None
+    valueSampledData: SampledData | dict | None
+    valueSignature: Signature | dict | None
+    valueTiming: Timing | dict | None
+    valueContactDetail: ContactDetail | dict | None
+    valueContributor: Contributor | dict | None
+    valueDataRequirement: DataRequirement | dict | None
+    valueExpression: Expression | dict | None
+    valueParameterDefinition: ParameterDefinition | dict | None
+    valueRelatedArtifact: RelatedArtifact | dict | None
+    valueTriggerDefinition: TriggerDefinition | dict | None
+    valueUsageContext: UsageContext | dict | None
+    valueDosage: Dosage | dict | None
+    valueMeta: Meta | dict | None
+    resource: FHIRResource | dict | None
     part: Any = None
 
 
@@ -11569,10 +11584,10 @@ class Parameters(FHIRResource):
     _field_types = {'meta': 'Meta', 'parameter': 'ParametersParameter'}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    parameter: ParametersParameter | FHIRList[ParametersParameter]
+    parameter: ParametersParameter | FHIRList[ParametersParameter] | list | dict
 
 
 class PatientContact(FHIRElement):
@@ -11589,15 +11604,15 @@ class PatientContact(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    relationship: CodeableConcept | FHIRList[CodeableConcept]
-    name: Optional[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Optional[Address]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    relationship: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    name: HumanName | dict | None
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | dict | None
     gender: Optional[Code] = None
-    organization: Optional[Reference]
-    period: Optional[Period]
+    organization: Reference | dict | None
+    period: Period | dict | None
 
 
 class PatientCommunication(FHIRElement):
@@ -11605,9 +11620,9 @@ class PatientCommunication(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'language': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    language: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    language: CodeableConcept | dict | None
     preferred: Optional[Boolean] = None
 
 
@@ -11616,9 +11631,9 @@ class PatientLink(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'other': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    other: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    other: Reference | dict | None
     type_: Optional[Code] = None
 
 
@@ -11659,31 +11674,31 @@ class Patient(FHIRResource):
     _choice_fields = {'deceased': ['deceasedBoolean', 'deceasedDateTime'], 'multipleBirth': ['multipleBirthBoolean', 'multipleBirthInteger']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    name: HumanName | FHIRList[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
+    name: HumanName | FHIRList[HumanName] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
     gender: Optional[Code] = None
     birthDate: Optional[Date] = None
     deceasedBoolean: Optional[Boolean] = None
     deceasedDateTime: Optional[DateTime] = None
-    address: Address | FHIRList[Address]
-    maritalStatus: Optional[CodeableConcept]
+    address: Address | FHIRList[Address] | list | dict
+    maritalStatus: CodeableConcept | dict | None
     multipleBirthBoolean: Optional[Boolean] = None
     multipleBirthInteger: Optional[Integer] = None
-    photo: Attachment | FHIRList[Attachment]
-    contact: PatientContact | FHIRList[PatientContact]
-    communication: PatientCommunication | FHIRList[PatientCommunication]
-    generalPractitioner: Reference | FHIRList[Reference]
-    managingOrganization: Optional[Reference]
-    link: PatientLink | FHIRList[PatientLink]
+    photo: Attachment | FHIRList[Attachment] | list | dict
+    contact: PatientContact | FHIRList[PatientContact] | list | dict
+    communication: PatientCommunication | FHIRList[PatientCommunication] | list | dict
+    generalPractitioner: Reference | FHIRList[Reference] | list | dict
+    managingOrganization: Reference | dict | None
+    link: PatientLink | FHIRList[PatientLink] | list | dict
 
 
 class PaymentNotice(FHIRResource):
@@ -11707,25 +11722,25 @@ class PaymentNotice(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    request: Optional[Reference]
-    response: Optional[Reference]
+    request: Reference | dict | None
+    response: Reference | dict | None
     created: Optional[DateTime] = None
-    provider: Optional[Reference]
-    payment: Optional[Reference]
+    provider: Reference | dict | None
+    payment: Reference | dict | None
     paymentDate: Optional[Date] = None
-    payee: Optional[Reference]
-    recipient: Optional[Reference]
-    amount: Optional[Money]
-    paymentStatus: Optional[CodeableConcept]
+    payee: Reference | dict | None
+    recipient: Reference | dict | None
+    amount: Money | dict | None
+    paymentStatus: CodeableConcept | dict | None
 
 
 class PaymentReconciliationDetail(FHIRElement):
@@ -11745,18 +11760,18 @@ class PaymentReconciliationDetail(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    predecessor: Optional[Identifier]
-    type_: Optional[CodeableConcept]
-    request: Optional[Reference]
-    submitter: Optional[Reference]
-    response: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    predecessor: Identifier | dict | None
+    type_: CodeableConcept | dict | None
+    request: Reference | dict | None
+    submitter: Reference | dict | None
+    response: Reference | dict | None
     date: Optional[Date] = None
-    responsible: Optional[Reference]
-    payee: Optional[Reference]
-    amount: Optional[Money]
+    responsible: Reference | dict | None
+    payee: Reference | dict | None
+    amount: Money | dict | None
 
 
 class PaymentReconciliationProcessNote(FHIRElement):
@@ -11764,8 +11779,8 @@ class PaymentReconciliationProcessNote(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     text: Optional[String] = None
 
@@ -11792,28 +11807,28 @@ class PaymentReconciliation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    period: Optional[Period]
+    period: Period | dict | None
     created: Optional[DateTime] = None
-    paymentIssuer: Optional[Reference]
-    request: Optional[Reference]
-    requestor: Optional[Reference]
+    paymentIssuer: Reference | dict | None
+    request: Reference | dict | None
+    requestor: Reference | dict | None
     outcome: Optional[Code] = None
     disposition: Optional[String] = None
     paymentDate: Optional[Date] = None
-    paymentAmount: Optional[Money]
-    paymentIdentifier: Optional[Identifier]
-    detail: PaymentReconciliationDetail | FHIRList[PaymentReconciliationDetail]
-    formCode: Optional[CodeableConcept]
-    processNote: PaymentReconciliationProcessNote | FHIRList[PaymentReconciliationProcessNote]
+    paymentAmount: Money | dict | None
+    paymentIdentifier: Identifier | dict | None
+    detail: PaymentReconciliationDetail | FHIRList[PaymentReconciliationDetail] | list | dict
+    formCode: CodeableConcept | dict | None
+    processNote: PaymentReconciliationProcessNote | FHIRList[PaymentReconciliationProcessNote] | list | dict
 
 
 class PersonLink(FHIRElement):
@@ -11821,9 +11836,9 @@ class PersonLink(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'target': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    target: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    target: Reference | dict | None
     assurance: Optional[Code] = None
 
 
@@ -11846,23 +11861,23 @@ class Person(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    name: HumanName | FHIRList[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    name: HumanName | FHIRList[HumanName] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
     gender: Optional[Code] = None
     birthDate: Optional[Date] = None
-    address: Address | FHIRList[Address]
-    photo: Optional[Attachment]
-    managingOrganization: Optional[Reference]
+    address: Address | FHIRList[Address] | list | dict
+    photo: Attachment | dict | None
+    managingOrganization: Reference | dict | None
     active: Optional[Boolean] = None
-    link: PersonLink | FHIRList[PersonLink]
+    link: PersonLink | FHIRList[PersonLink] | list | dict
 
 
 class PlanDefinitionGoal(FHIRElement):
@@ -11880,15 +11895,15 @@ class PlanDefinitionGoal(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    description: Optional[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    start: Optional[CodeableConcept]
-    addresses: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    target: PlanDefinitionGoalTarget | FHIRList[PlanDefinitionGoalTarget]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    description: CodeableConcept | dict | None
+    priority: CodeableConcept | dict | None
+    start: CodeableConcept | dict | None
+    addresses: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    target: PlanDefinitionGoalTarget | FHIRList[PlanDefinitionGoalTarget] | list | dict
 
 
 class PlanDefinitionGoalTarget(FHIRElement):
@@ -11905,13 +11920,13 @@ class PlanDefinitionGoalTarget(FHIRElement):
     _choice_fields = {'detail': ['detailQuantity', 'detailRange', 'detailCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity]
-    detailRange: Optional[Range]
-    detailCodeableConcept: Optional[CodeableConcept]
-    due: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    measure: CodeableConcept | dict | None
+    detailQuantity: Quantity | dict | None
+    detailRange: Range | dict | None
+    detailCodeableConcept: CodeableConcept | dict | None
+    due: Duration | dict | None
 
 
 class PlanDefinitionAction(FHIRElement):
@@ -11960,32 +11975,32 @@ class PlanDefinitionAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
-    trigger: TriggerDefinition | FHIRList[TriggerDefinition]
-    condition: PlanDefinitionActionCondition | FHIRList[PlanDefinitionActionCondition]
-    input: DataRequirement | FHIRList[DataRequirement]
-    output: DataRequirement | FHIRList[DataRequirement]
-    relatedAction: PlanDefinitionActionRelatedAction | FHIRList[PlanDefinitionActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    goalId: Id | FHIRList[Id] | list | None = None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
+    trigger: TriggerDefinition | FHIRList[TriggerDefinition] | list | dict
+    condition: PlanDefinitionActionCondition | FHIRList[PlanDefinitionActionCondition] | list | dict
+    input: DataRequirement | FHIRList[DataRequirement] | list | dict
+    output: DataRequirement | FHIRList[DataRequirement] | list | dict
+    relatedAction: PlanDefinitionActionRelatedAction | FHIRList[PlanDefinitionActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: PlanDefinitionActionParticipant | FHIRList[PlanDefinitionActionParticipant]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: PlanDefinitionActionParticipant | FHIRList[PlanDefinitionActionParticipant] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
@@ -11994,7 +12009,7 @@ class PlanDefinitionAction(FHIRElement):
     definitionCanonical: Optional[Canonical] = None
     definitionUri: Optional[Uri] = None
     transform: Optional[Canonical] = None
-    dynamicValue: PlanDefinitionActionDynamicValue | FHIRList[PlanDefinitionActionDynamicValue]
+    dynamicValue: PlanDefinitionActionDynamicValue | FHIRList[PlanDefinitionActionDynamicValue] | list | dict
     action: Any = None
 
 
@@ -12003,10 +12018,10 @@ class PlanDefinitionActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class PlanDefinitionActionRelatedAction(FHIRElement):
@@ -12015,12 +12030,12 @@ class PlanDefinitionActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class PlanDefinitionActionParticipant(FHIRElement):
@@ -12028,10 +12043,10 @@ class PlanDefinitionActionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class PlanDefinitionActionDynamicValue(FHIRElement):
@@ -12039,10 +12054,10 @@ class PlanDefinitionActionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class PlanDefinition(FHIRResource):
@@ -12091,45 +12106,45 @@ class PlanDefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
-    goal: PlanDefinitionGoal | FHIRList[PlanDefinitionGoal]
-    action: PlanDefinitionAction | FHIRList[PlanDefinitionAction]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
+    goal: PlanDefinitionGoal | FHIRList[PlanDefinitionGoal] | list | dict
+    action: PlanDefinitionAction | FHIRList[PlanDefinitionAction] | list | dict
 
 
 class PractitionerQualification(FHIRElement):
@@ -12144,12 +12159,12 @@ class PractitionerQualification(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    code: Optional[CodeableConcept]
-    period: Optional[Period]
-    issuer: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    code: CodeableConcept | dict | None
+    period: Period | dict | None
+    issuer: Reference | dict | None
 
 
 class Practitioner(FHIRResource):
@@ -12171,23 +12186,23 @@ class Practitioner(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    name: HumanName | FHIRList[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    address: Address | FHIRList[Address]
+    name: HumanName | FHIRList[HumanName] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    address: Address | FHIRList[Address] | list | dict
     gender: Optional[Code] = None
     birthDate: Optional[Date] = None
-    photo: Attachment | FHIRList[Attachment]
-    qualification: PractitionerQualification | FHIRList[PractitionerQualification]
-    communication: CodeableConcept | FHIRList[CodeableConcept]
+    photo: Attachment | FHIRList[Attachment] | list | dict
+    qualification: PractitionerQualification | FHIRList[PractitionerQualification] | list | dict
+    communication: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class PractitionerRoleAvailableTime(FHIRElement):
@@ -12195,9 +12210,9 @@ class PractitionerRoleAvailableTime(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    daysOfWeek: Code | FHIRList[Code] = None
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    daysOfWeek: Code | FHIRList[Code] | list | None = None
     allDay: Optional[Boolean] = None
     availableStartTime: Optional[Time] = None
     availableEndTime: Optional[Time] = None
@@ -12208,10 +12223,10 @@ class PractitionerRoleNotAvailable(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'during': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    during: Optional[Period]
+    during: Period | dict | None
 
 
 class PractitionerRole(FHIRResource):
@@ -12251,27 +12266,27 @@ class PractitionerRole(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    period: Optional[Period]
-    practitioner: Optional[Reference]
-    organization: Optional[Reference]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    location: Reference | FHIRList[Reference]
-    healthcareService: Reference | FHIRList[Reference]
-    telecom: ContactPoint | FHIRList[ContactPoint]
-    availableTime: PractitionerRoleAvailableTime | FHIRList[PractitionerRoleAvailableTime]
-    notAvailable: PractitionerRoleNotAvailable | FHIRList[PractitionerRoleNotAvailable]
+    period: Period | dict | None
+    practitioner: Reference | dict | None
+    organization: Reference | dict | None
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    location: Reference | FHIRList[Reference] | list | dict
+    healthcareService: Reference | FHIRList[Reference] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
+    availableTime: PractitionerRoleAvailableTime | FHIRList[PractitionerRoleAvailableTime] | list | dict
+    notAvailable: PractitionerRoleNotAvailable | FHIRList[PractitionerRoleNotAvailable] | list | dict
     availabilityExceptions: Optional[String] = None
-    endpoint: Reference | FHIRList[Reference]
+    endpoint: Reference | FHIRList[Reference] | list | dict
 
 
 class ProcedurePerformer(FHIRElement):
@@ -12279,11 +12294,11 @@ class ProcedurePerformer(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'function': 'CodeableConcept', 'actor': 'Reference', 'onBehalfOf': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    function: Optional[CodeableConcept]
-    actor: Optional[Reference]
-    onBehalfOf: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    function: CodeableConcept | dict | None
+    actor: Reference | dict | None
+    onBehalfOf: Reference | dict | None
 
 
 class ProcedureFocalDevice(FHIRElement):
@@ -12291,10 +12306,10 @@ class ProcedureFocalDevice(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'CodeableConcept', 'manipulated': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: Optional[CodeableConcept]
-    manipulated: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: CodeableConcept | dict | None
+    manipulated: Reference | dict | None
 
 
 class Procedure(FHIRResource):
@@ -12358,45 +12373,45 @@ class Procedure(FHIRResource):
     _choice_fields = {'performed': ['performedDateTime', 'performedPeriod', 'performedString', 'performedAge', 'performedRange']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    statusReason: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     performedDateTime: Optional[DateTime] = None
-    performedPeriod: Optional[Period]
+    performedPeriod: Period | dict | None
     performedString: Optional[String] = None
-    performedAge: Optional[Age]
-    performedRange: Optional[Range]
-    recorder: Optional[Reference]
-    asserter: Optional[Reference]
-    performer: ProcedurePerformer | FHIRList[ProcedurePerformer]
-    location: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    bodySite: CodeableConcept | FHIRList[CodeableConcept]
-    outcome: Optional[CodeableConcept]
-    report: Reference | FHIRList[Reference]
-    complication: CodeableConcept | FHIRList[CodeableConcept]
-    complicationDetail: Reference | FHIRList[Reference]
-    followUp: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    focalDevice: ProcedureFocalDevice | FHIRList[ProcedureFocalDevice]
-    usedReference: Reference | FHIRList[Reference]
-    usedCode: CodeableConcept | FHIRList[CodeableConcept]
+    performedAge: Age | dict | None
+    performedRange: Range | dict | None
+    recorder: Reference | dict | None
+    asserter: Reference | dict | None
+    performer: ProcedurePerformer | FHIRList[ProcedurePerformer] | list | dict
+    location: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    bodySite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    outcome: CodeableConcept | dict | None
+    report: Reference | FHIRList[Reference] | list | dict
+    complication: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    complicationDetail: Reference | FHIRList[Reference] | list | dict
+    followUp: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    focalDevice: ProcedureFocalDevice | FHIRList[ProcedureFocalDevice] | list | dict
+    usedReference: Reference | FHIRList[Reference] | list | dict
+    usedCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class ProvenanceAgent(FHIRElement):
@@ -12411,12 +12426,12 @@ class ProvenanceAgent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    role: CodeableConcept | FHIRList[CodeableConcept]
-    who: Optional[Reference]
-    onBehalfOf: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    role: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    who: Reference | dict | None
+    onBehalfOf: Reference | dict | None
 
 
 class ProvenanceEntity(FHIRElement):
@@ -12424,10 +12439,10 @@ class ProvenanceEntity(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'what': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     role: Optional[Code] = None
-    what: Optional[Reference]
+    what: Reference | dict | None
     agent: Any = None
 
 
@@ -12452,24 +12467,24 @@ class Provenance(FHIRResource):
     _choice_fields = {'occurred': ['occurredPeriod', 'occurredDateTime']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    target: Reference | FHIRList[Reference]
-    occurredPeriod: Optional[Period]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    target: Reference | FHIRList[Reference] | list | dict
+    occurredPeriod: Period | dict | None
     occurredDateTime: Optional[DateTime] = None
     recorded: Optional[Instant] = None
-    policy: Uri | FHIRList[Uri] = None
-    location: Optional[Reference]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    activity: Optional[CodeableConcept]
-    agent: ProvenanceAgent | FHIRList[ProvenanceAgent]
-    entity: ProvenanceEntity | FHIRList[ProvenanceEntity]
-    signature: Signature | FHIRList[Signature]
+    policy: Uri | FHIRList[Uri] | list | None = None
+    location: Reference | dict | None
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    activity: CodeableConcept | dict | None
+    agent: ProvenanceAgent | FHIRList[ProvenanceAgent] | list | dict
+    entity: ProvenanceEntity | FHIRList[ProvenanceEntity] | list | dict
+    signature: Signature | FHIRList[Signature] | list | dict
 
 
 class QuestionnaireItem(FHIRElement):
@@ -12484,23 +12499,23 @@ class QuestionnaireItem(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     linkId: Optional[String] = None
     definition: Optional[Uri] = None
-    code: Coding | FHIRList[Coding]
+    code: Coding | FHIRList[Coding] | list | dict
     prefix: Optional[String] = None
     text: Optional[String] = None
     type_: Optional[Code] = None
-    enableWhen: QuestionnaireItemEnableWhen | FHIRList[QuestionnaireItemEnableWhen]
+    enableWhen: QuestionnaireItemEnableWhen | FHIRList[QuestionnaireItemEnableWhen] | list | dict
     enableBehavior: Optional[Code] = None
     required: Optional[Boolean] = None
     repeats: Optional[Boolean] = None
     readOnly: Optional[Boolean] = None
     maxLength: Optional[Integer] = None
     answerValueSet: Optional[Canonical] = None
-    answerOption: QuestionnaireItemAnswerOption | FHIRList[QuestionnaireItemAnswerOption]
-    initial: QuestionnaireItemInitial | FHIRList[QuestionnaireItemInitial]
+    answerOption: QuestionnaireItemAnswerOption | FHIRList[QuestionnaireItemAnswerOption] | list | dict
+    initial: QuestionnaireItemInitial | FHIRList[QuestionnaireItemInitial] | list | dict
     item: Any = None
 
 
@@ -12529,8 +12544,8 @@ class QuestionnaireItemEnableWhen(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     question: Optional[String] = None
     operator: Optional[Code] = None
     answerBoolean: Optional[Boolean] = None
@@ -12540,9 +12555,9 @@ class QuestionnaireItemEnableWhen(FHIRElement):
     answerDateTime: Optional[DateTime] = None
     answerTime: Optional[Time] = None
     answerString: Optional[String] = None
-    answerCoding: Optional[Coding]
-    answerQuantity: Optional[Quantity]
-    answerReference: Optional[Reference]
+    answerCoding: Coding | dict | None
+    answerQuantity: Quantity | dict | None
+    answerReference: Reference | dict | None
 
 
 class QuestionnaireItemAnswerOption(FHIRElement):
@@ -12551,14 +12566,14 @@ class QuestionnaireItemAnswerOption(FHIRElement):
     _choice_fields = {'value': ['valueInteger', 'valueDate', 'valueTime', 'valueString', 'valueCoding', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     valueInteger: Optional[Integer] = None
     valueDate: Optional[Date] = None
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
-    valueCoding: Optional[Coding]
-    valueReference: Optional[Reference]
+    valueCoding: Coding | dict | None
+    valueReference: Reference | dict | None
     initialSelected: Optional[Boolean] = None
 
 
@@ -12590,8 +12605,8 @@ class QuestionnaireItemInitial(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     valueBoolean: Optional[Boolean] = None
     valueDecimal: Optional[Decimal] = None
     valueInteger: Optional[Integer] = None
@@ -12600,10 +12615,10 @@ class QuestionnaireItemInitial(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment]
-    valueCoding: Optional[Coding]
-    valueQuantity: Optional[Quantity]
-    valueReference: Optional[Reference]
+    valueAttachment: Attachment | dict | None
+    valueCoding: Coding | dict | None
+    valueQuantity: Quantity | dict | None
+    valueReference: Reference | dict | None
 
 
 class Questionnaire(FHIRResource):
@@ -12637,35 +12652,35 @@ class Questionnaire(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
-    derivedFrom: Canonical | FHIRList[Canonical] = None
+    derivedFrom: Canonical | FHIRList[Canonical] | list | None = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectType: Code | FHIRList[Code] = None
+    subjectType: Code | FHIRList[Code] | list | None = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    code: Coding | FHIRList[Coding]
-    item: QuestionnaireItem | FHIRList[QuestionnaireItem]
+    effectivePeriod: Period | dict | None
+    code: Coding | FHIRList[Coding] | list | dict
+    item: QuestionnaireItem | FHIRList[QuestionnaireItem] | list | dict
 
 
 class QuestionnaireResponseItem(FHIRElement):
@@ -12673,12 +12688,12 @@ class QuestionnaireResponseItem(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'answer': 'QuestionnaireResponseItemAnswer'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     linkId: Optional[String] = None
     definition: Optional[Uri] = None
     text: Optional[String] = None
-    answer: QuestionnaireResponseItemAnswer | FHIRList[QuestionnaireResponseItemAnswer]
+    answer: QuestionnaireResponseItemAnswer | FHIRList[QuestionnaireResponseItemAnswer] | list | dict
     item: Any = None
 
 
@@ -12710,8 +12725,8 @@ class QuestionnaireResponseItemAnswer(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     valueBoolean: Optional[Boolean] = None
     valueDecimal: Optional[Decimal] = None
     valueInteger: Optional[Integer] = None
@@ -12720,10 +12735,10 @@ class QuestionnaireResponseItemAnswer(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment]
-    valueCoding: Optional[Coding]
-    valueQuantity: Optional[Quantity]
-    valueReference: Optional[Reference]
+    valueAttachment: Attachment | dict | None
+    valueCoding: Coding | dict | None
+    valueQuantity: Quantity | dict | None
+    valueReference: Reference | dict | None
     item: Any = None
 
 
@@ -12747,24 +12762,24 @@ class QuestionnaireResponse(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     questionnaire: Optional[Canonical] = None
     status: Optional[Code] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     authored: Optional[DateTime] = None
-    author: Optional[Reference]
-    source: Optional[Reference]
-    item: QuestionnaireResponseItem | FHIRList[QuestionnaireResponseItem]
+    author: Reference | dict | None
+    source: Reference | dict | None
+    item: QuestionnaireResponseItem | FHIRList[QuestionnaireResponseItem] | list | dict
 
 
 class RelatedPersonCommunication(FHIRElement):
@@ -12772,9 +12787,9 @@ class RelatedPersonCommunication(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'language': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    language: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    language: CodeableConcept | dict | None
     preferred: Optional[Boolean] = None
 
 
@@ -12799,25 +12814,25 @@ class RelatedPerson(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    patient: Optional[Reference]
-    relationship: CodeableConcept | FHIRList[CodeableConcept]
-    name: HumanName | FHIRList[HumanName]
-    telecom: ContactPoint | FHIRList[ContactPoint]
+    patient: Reference | dict | None
+    relationship: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    name: HumanName | FHIRList[HumanName] | list | dict
+    telecom: ContactPoint | FHIRList[ContactPoint] | list | dict
     gender: Optional[Code] = None
     birthDate: Optional[Date] = None
-    address: Address | FHIRList[Address]
-    photo: Attachment | FHIRList[Attachment]
-    period: Optional[Period]
-    communication: RelatedPersonCommunication | FHIRList[RelatedPersonCommunication]
+    address: Address | FHIRList[Address] | list | dict
+    photo: Attachment | FHIRList[Attachment] | list | dict
+    period: Period | dict | None
+    communication: RelatedPersonCommunication | FHIRList[RelatedPersonCommunication] | list | dict
 
 
 class RequestGroupAction(FHIRElement):
@@ -12841,31 +12856,31 @@ class RequestGroupAction(FHIRElement):
     _choice_fields = {'timing': ['timingDateTime', 'timingAge', 'timingPeriod', 'timingDuration', 'timingRange', 'timingTiming']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    condition: RequestGroupActionCondition | FHIRList[RequestGroupActionCondition]
-    relatedAction: RequestGroupActionRelatedAction | FHIRList[RequestGroupActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    condition: RequestGroupActionCondition | FHIRList[RequestGroupActionCondition] | list | dict
+    relatedAction: RequestGroupActionRelatedAction | FHIRList[RequestGroupActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: Reference | FHIRList[Reference]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: Reference | FHIRList[Reference] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
     precheckBehavior: Optional[Code] = None
     cardinalityBehavior: Optional[Code] = None
-    resource: Optional[Reference]
+    resource: Reference | dict | None
     action: Any = None
 
 
@@ -12874,10 +12889,10 @@ class RequestGroupActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class RequestGroupActionRelatedAction(FHIRElement):
@@ -12886,12 +12901,12 @@ class RequestGroupActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class RequestGroup(FHIRResource):
@@ -12931,31 +12946,31 @@ class RequestGroup(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    replaces: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    replaces: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
     status: Optional[Code] = None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     authoredOn: Optional[DateTime] = None
-    author: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    action: RequestGroupAction | FHIRList[RequestGroupAction]
+    author: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    action: RequestGroupAction | FHIRList[RequestGroupAction] | list | dict
 
 
 class ResearchDefinition(FHIRResource):
@@ -13004,15 +13019,15 @@ class ResearchDefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -13020,32 +13035,32 @@ class ResearchDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    comment: String | FHIRList[String] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    comment: String | FHIRList[String] | list | None = None
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
-    population: Optional[Reference]
-    exposure: Optional[Reference]
-    exposureAlternative: Optional[Reference]
-    outcome: Optional[Reference]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
+    population: Reference | dict | None
+    exposure: Reference | dict | None
+    exposureAlternative: Reference | dict | None
+    outcome: Reference | dict | None
 
 
 class ResearchElementDefinitionCharacteristic(FHIRElement):
@@ -13074,28 +13089,28 @@ class ResearchElementDefinitionCharacteristic(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    definitionCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    definitionCodeableConcept: CodeableConcept | dict | None
     definitionCanonical: Optional[Canonical] = None
-    definitionExpression: Optional[Expression]
-    definitionDataRequirement: Optional[DataRequirement]
-    usageContext: UsageContext | FHIRList[UsageContext]
+    definitionExpression: Expression | dict | None
+    definitionDataRequirement: DataRequirement | dict | None
+    usageContext: UsageContext | FHIRList[UsageContext] | list | dict
     exclude: Optional[Boolean] = None
-    unitOfMeasure: Optional[CodeableConcept]
+    unitOfMeasure: CodeableConcept | dict | None
     studyEffectiveDescription: Optional[String] = None
     studyEffectiveDateTime: Optional[DateTime] = None
-    studyEffectivePeriod: Optional[Period]
-    studyEffectiveDuration: Optional[Duration]
-    studyEffectiveTiming: Optional[Timing]
-    studyEffectiveTimeFromStart: Optional[Duration]
+    studyEffectivePeriod: Period | dict | None
+    studyEffectiveDuration: Duration | dict | None
+    studyEffectiveTiming: Timing | dict | None
+    studyEffectiveTimeFromStart: Duration | dict | None
     studyEffectiveGroupMeasure: Optional[Code] = None
     participantEffectiveDescription: Optional[String] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period]
-    participantEffectiveDuration: Optional[Duration]
-    participantEffectiveTiming: Optional[Timing]
-    participantEffectiveTimeFromStart: Optional[Duration]
+    participantEffectivePeriod: Period | dict | None
+    participantEffectiveDuration: Duration | dict | None
+    participantEffectiveTiming: Timing | dict | None
+    participantEffectiveTimeFromStart: Duration | dict | None
     participantEffectiveGroupMeasure: Optional[Code] = None
 
 
@@ -13143,15 +13158,15 @@ class ResearchElementDefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -13159,31 +13174,31 @@ class ResearchElementDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    comment: String | FHIRList[String] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    comment: String | FHIRList[String] | list | None = None
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
     type_: Optional[Code] = None
     variableType: Optional[Code] = None
-    characteristic: ResearchElementDefinitionCharacteristic | FHIRList[ResearchElementDefinitionCharacteristic]
+    characteristic: ResearchElementDefinitionCharacteristic | FHIRList[ResearchElementDefinitionCharacteristic] | list | dict
 
 
 class ResearchStudyArm(FHIRElement):
@@ -13191,10 +13206,10 @@ class ResearchStudyArm(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     description: Optional[String] = None
 
 
@@ -13203,10 +13218,10 @@ class ResearchStudyObjective(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
 
 
 class ResearchStudy(FHIRResource):
@@ -13261,37 +13276,37 @@ class ResearchStudy(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     title: Optional[String] = None
-    protocol: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    protocol: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    primaryPurposeType: Optional[CodeableConcept]
-    phase: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    focus: CodeableConcept | FHIRList[CodeableConcept]
-    condition: CodeableConcept | FHIRList[CodeableConcept]
-    contact: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    keyword: CodeableConcept | FHIRList[CodeableConcept]
-    location: CodeableConcept | FHIRList[CodeableConcept]
+    primaryPurposeType: CodeableConcept | dict | None
+    phase: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    focus: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    condition: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    keyword: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    location: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[Markdown] = None
-    enrollment: Reference | FHIRList[Reference]
-    period: Optional[Period]
-    sponsor: Optional[Reference]
-    principalInvestigator: Optional[Reference]
-    site: Reference | FHIRList[Reference]
-    reasonStopped: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    arm: ResearchStudyArm | FHIRList[ResearchStudyArm]
-    objective: ResearchStudyObjective | FHIRList[ResearchStudyObjective]
+    enrollment: Reference | FHIRList[Reference] | list | dict
+    period: Period | dict | None
+    sponsor: Reference | dict | None
+    principalInvestigator: Reference | dict | None
+    site: Reference | FHIRList[Reference] | list | dict
+    reasonStopped: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    arm: ResearchStudyArm | FHIRList[ResearchStudyArm] | list | dict
+    objective: ResearchStudyObjective | FHIRList[ResearchStudyObjective] | list | dict
 
 
 class ResearchSubject(FHIRResource):
@@ -13311,21 +13326,21 @@ class ResearchSubject(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    period: Optional[Period]
-    study: Optional[Reference]
-    individual: Optional[Reference]
+    period: Period | dict | None
+    study: Reference | dict | None
+    individual: Reference | dict | None
     assignedArm: Optional[String] = None
     actualArm: Optional[String] = None
-    consent: Optional[Reference]
+    consent: Reference | dict | None
 
 
 class RiskAssessmentPrediction(FHIRElement):
@@ -13342,15 +13357,15 @@ class RiskAssessmentPrediction(FHIRElement):
     _choice_fields = {'probability': ['probabilityDecimal', 'probabilityRange'], 'when': ['whenPeriod', 'whenRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    outcome: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    outcome: CodeableConcept | dict | None
     probabilityDecimal: Optional[Decimal] = None
-    probabilityRange: Optional[Range]
-    qualitativeRisk: Optional[CodeableConcept]
+    probabilityRange: Range | dict | None
+    qualitativeRisk: CodeableConcept | dict | None
     relativeRisk: Optional[Decimal] = None
-    whenPeriod: Optional[Period]
-    whenRange: Optional[Range]
+    whenPeriod: Period | dict | None
+    whenRange: Range | dict | None
     rationale: Optional[String] = None
 
 
@@ -13382,31 +13397,31 @@ class RiskAssessment(FHIRResource):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrencePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Optional[Reference]
-    parent: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | dict | None
+    parent: Reference | dict | None
     status: Optional[Code] = None
-    method: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    method: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    condition: Optional[Reference]
-    performer: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    basis: Reference | FHIRList[Reference]
-    prediction: RiskAssessmentPrediction | FHIRList[RiskAssessmentPrediction]
+    occurrencePeriod: Period | dict | None
+    condition: Reference | dict | None
+    performer: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    basis: Reference | FHIRList[Reference] | list | dict
+    prediction: RiskAssessmentPrediction | FHIRList[RiskAssessmentPrediction] | list | dict
     mitigation: Optional[String] = None
-    note: Annotation | FHIRList[Annotation]
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class RiskEvidenceSynthesisSampleSize(FHIRElement):
@@ -13414,8 +13429,8 @@ class RiskEvidenceSynthesisSampleSize(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     numberOfStudies: Optional[Integer] = None
     numberOfParticipants: Optional[Integer] = None
@@ -13432,15 +13447,15 @@ class RiskEvidenceSynthesisRiskEstimate(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     value: Optional[Decimal] = None
-    unitOfMeasure: Optional[CodeableConcept]
+    unitOfMeasure: CodeableConcept | dict | None
     denominatorCount: Optional[Integer] = None
     numeratorCount: Optional[Integer] = None
-    precisionEstimate: RiskEvidenceSynthesisRiskEstimatePrecisionEstimate | FHIRList[RiskEvidenceSynthesisRiskEstimatePrecisionEstimate]
+    precisionEstimate: RiskEvidenceSynthesisRiskEstimatePrecisionEstimate | FHIRList[RiskEvidenceSynthesisRiskEstimatePrecisionEstimate] | list | dict
 
 
 class RiskEvidenceSynthesisRiskEstimatePrecisionEstimate(FHIRElement):
@@ -13448,9 +13463,9 @@ class RiskEvidenceSynthesisRiskEstimatePrecisionEstimate(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     level: Optional[Decimal] = None
     from_: Optional[Decimal] = None
     to: Optional[Decimal] = None
@@ -13467,11 +13482,11 @@ class RiskEvidenceSynthesisCertainty(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    rating: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    certaintySubcomponent: RiskEvidenceSynthesisCertaintyCertaintySubcomponent | FHIRList[RiskEvidenceSynthesisCertaintyCertaintySubcomponent]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    rating: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    certaintySubcomponent: RiskEvidenceSynthesisCertaintyCertaintySubcomponent | FHIRList[RiskEvidenceSynthesisCertaintyCertaintySubcomponent] | list | dict
 
 
 class RiskEvidenceSynthesisCertaintyCertaintySubcomponent(FHIRElement):
@@ -13479,11 +13494,11 @@ class RiskEvidenceSynthesisCertaintyCertaintySubcomponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'rating': 'CodeableConcept', 'note': 'Annotation'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    rating: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    rating: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class RiskEvidenceSynthesis(FHIRResource):
@@ -13534,44 +13549,44 @@ class RiskEvidenceSynthesis(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    synthesisType: Optional[CodeableConcept]
-    studyType: Optional[CodeableConcept]
-    population: Optional[Reference]
-    exposure: Optional[Reference]
-    outcome: Optional[Reference]
-    sampleSize: Optional[RiskEvidenceSynthesisSampleSize]
-    riskEstimate: Optional[RiskEvidenceSynthesisRiskEstimate]
-    certainty: RiskEvidenceSynthesisCertainty | FHIRList[RiskEvidenceSynthesisCertainty]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    synthesisType: CodeableConcept | dict | None
+    studyType: CodeableConcept | dict | None
+    population: Reference | dict | None
+    exposure: Reference | dict | None
+    outcome: Reference | dict | None
+    sampleSize: RiskEvidenceSynthesisSampleSize | dict | None
+    riskEstimate: RiskEvidenceSynthesisRiskEstimate | dict | None
+    certainty: RiskEvidenceSynthesisCertainty | FHIRList[RiskEvidenceSynthesisCertainty] | list | dict
 
 
 class Schedule(FHIRResource):
@@ -13592,20 +13607,20 @@ class Schedule(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
-    serviceCategory: CodeableConcept | FHIRList[CodeableConcept]
-    serviceType: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    actor: Reference | FHIRList[Reference]
-    planningHorizon: Optional[Period]
+    serviceCategory: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    serviceType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    actor: Reference | FHIRList[Reference] | list | dict
+    planningHorizon: Period | dict | None
     comment: Optional[String] = None
 
 
@@ -13614,8 +13629,8 @@ class SearchParameterComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     definition: Optional[Canonical] = None
     expression: Optional[String] = None
 
@@ -13649,13 +13664,13 @@ class SearchParameter(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -13664,24 +13679,24 @@ class SearchParameter(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     code: Optional[Code] = None
-    base: Code | FHIRList[Code] = None
+    base: Code | FHIRList[Code] | list | None = None
     type_: Optional[Code] = None
     expression: Optional[String] = None
     xpath: Optional[String] = None
     xpathUsage: Optional[Code] = None
-    target: Code | FHIRList[Code] = None
+    target: Code | FHIRList[Code] | list | None = None
     multipleOr: Optional[Boolean] = None
     multipleAnd: Optional[Boolean] = None
-    comparator: Code | FHIRList[Code] = None
-    modifier: Code | FHIRList[Code] = None
-    chain: String | FHIRList[String] = None
-    component: SearchParameterComponent | FHIRList[SearchParameterComponent]
+    comparator: Code | FHIRList[Code] | list | None = None
+    modifier: Code | FHIRList[Code] | list | None = None
+    chain: String | FHIRList[String] | list | None = None
+    component: SearchParameterComponent | FHIRList[SearchParameterComponent] | list | dict
 
 
 class ServiceRequest(FHIRResource):
@@ -13751,51 +13766,51 @@ class ServiceRequest(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
-    instantiatesUri: Uri | FHIRList[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    replaces: Reference | FHIRList[Reference]
-    requisition: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
+    instantiatesUri: Uri | FHIRList[Uri] | list | None = None
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    replaces: Reference | FHIRList[Reference] | list | dict
+    requisition: Identifier | dict | None
     status: Optional[Code] = None
     intent: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    code: Optional[CodeableConcept]
-    orderDetail: CodeableConcept | FHIRList[CodeableConcept]
-    quantityQuantity: Optional[Quantity]
-    quantityRatio: Optional[Ratio]
-    quantityRange: Optional[Range]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    code: CodeableConcept | dict | None
+    orderDetail: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    quantityQuantity: Quantity | dict | None
+    quantityRatio: Ratio | dict | None
+    quantityRange: Range | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
     asNeededBoolean: Optional[Boolean] = None
-    asNeededCodeableConcept: Optional[CodeableConcept]
+    asNeededCodeableConcept: CodeableConcept | dict | None
     authoredOn: Optional[DateTime] = None
-    requester: Optional[Reference]
-    performerType: Optional[CodeableConcept]
-    performer: Reference | FHIRList[Reference]
-    locationCode: CodeableConcept | FHIRList[CodeableConcept]
-    locationReference: Reference | FHIRList[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    insurance: Reference | FHIRList[Reference]
-    supportingInfo: Reference | FHIRList[Reference]
-    specimen: Reference | FHIRList[Reference]
-    bodySite: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    requester: Reference | dict | None
+    performerType: CodeableConcept | dict | None
+    performer: Reference | FHIRList[Reference] | list | dict
+    locationCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    locationReference: Reference | FHIRList[Reference] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    insurance: Reference | FHIRList[Reference] | list | dict
+    supportingInfo: Reference | FHIRList[Reference] | list | dict
+    specimen: Reference | FHIRList[Reference] | list | dict
+    bodySite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
     patientInstruction: Optional[String] = None
-    relevantHistory: Reference | FHIRList[Reference]
+    relevantHistory: Reference | FHIRList[Reference] | list | dict
 
 
 class Slot(FHIRResource):
@@ -13816,19 +13831,19 @@ class Slot(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    serviceCategory: CodeableConcept | FHIRList[CodeableConcept]
-    serviceType: CodeableConcept | FHIRList[CodeableConcept]
-    specialty: CodeableConcept | FHIRList[CodeableConcept]
-    appointmentType: Optional[CodeableConcept]
-    schedule: Optional[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    serviceCategory: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    serviceType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specialty: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    appointmentType: CodeableConcept | dict | None
+    schedule: Reference | dict | None
     status: Optional[Code] = None
     start: Optional[Instant] = None
     end: Optional[Instant] = None
@@ -13853,17 +13868,17 @@ class SpecimenCollection(FHIRElement):
     _choice_fields = {'collected': ['collectedDateTime', 'collectedPeriod'], 'fastingStatus': ['fastingStatusCodeableConcept', 'fastingStatusDuration']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    collector: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    collector: Reference | dict | None
     collectedDateTime: Optional[DateTime] = None
-    collectedPeriod: Optional[Period]
-    duration: Optional[Duration]
-    quantity: Optional[Quantity]
-    method: Optional[CodeableConcept]
-    bodySite: Optional[CodeableConcept]
-    fastingStatusCodeableConcept: Optional[CodeableConcept]
-    fastingStatusDuration: Optional[Duration]
+    collectedPeriod: Period | dict | None
+    duration: Duration | dict | None
+    quantity: Quantity | dict | None
+    method: CodeableConcept | dict | None
+    bodySite: CodeableConcept | dict | None
+    fastingStatusCodeableConcept: CodeableConcept | dict | None
+    fastingStatusDuration: Duration | dict | None
 
 
 class SpecimenProcessing(FHIRElement):
@@ -13872,13 +13887,13 @@ class SpecimenProcessing(FHIRElement):
     _choice_fields = {'time': ['timeDateTime', 'timePeriod']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    procedure: Optional[CodeableConcept]
-    additive: Reference | FHIRList[Reference]
+    procedure: CodeableConcept | dict | None
+    additive: Reference | FHIRList[Reference] | list | dict
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period]
+    timePeriod: Period | dict | None
 
 
 class SpecimenContainer(FHIRElement):
@@ -13896,15 +13911,15 @@ class SpecimenContainer(FHIRElement):
     _choice_fields = {'additive': ['additiveCodeableConcept', 'additiveReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     description: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    capacity: Optional[Quantity]
-    specimenQuantity: Optional[Quantity]
-    additiveCodeableConcept: Optional[CodeableConcept]
-    additiveReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    capacity: Quantity | dict | None
+    specimenQuantity: Quantity | dict | None
+    additiveCodeableConcept: CodeableConcept | dict | None
+    additiveReference: Reference | dict | None
 
 
 class Specimen(FHIRResource):
@@ -13930,26 +13945,26 @@ class Specimen(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    accessionIdentifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    accessionIdentifier: Identifier | dict | None
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    subject: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subject: Reference | dict | None
     receivedTime: Optional[DateTime] = None
-    parent: Reference | FHIRList[Reference]
-    request: Reference | FHIRList[Reference]
-    collection: Optional[SpecimenCollection]
-    processing: SpecimenProcessing | FHIRList[SpecimenProcessing]
-    container: SpecimenContainer | FHIRList[SpecimenContainer]
-    condition: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
+    parent: Reference | FHIRList[Reference] | list | dict
+    request: Reference | FHIRList[Reference] | list | dict
+    collection: SpecimenCollection | dict | None
+    processing: SpecimenProcessing | FHIRList[SpecimenProcessing] | list | dict
+    container: SpecimenContainer | FHIRList[SpecimenContainer] | list | dict
+    condition: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class SpecimenDefinitionTypeTested(FHIRElement):
@@ -13965,16 +13980,16 @@ class SpecimenDefinitionTypeTested(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     isDerived: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     preference: Optional[Code] = None
-    container: Optional[SpecimenDefinitionTypeTestedContainer]
+    container: SpecimenDefinitionTypeTestedContainer | dict | None
     requirement: Optional[String] = None
-    retentionTime: Optional[Duration]
-    rejectionCriterion: CodeableConcept | FHIRList[CodeableConcept]
-    handling: SpecimenDefinitionTypeTestedHandling | FHIRList[SpecimenDefinitionTypeTestedHandling]
+    retentionTime: Duration | dict | None
+    rejectionCriterion: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    handling: SpecimenDefinitionTypeTestedHandling | FHIRList[SpecimenDefinitionTypeTestedHandling] | list | dict
 
 
 class SpecimenDefinitionTypeTestedContainer(FHIRElement):
@@ -13992,16 +14007,16 @@ class SpecimenDefinitionTypeTestedContainer(FHIRElement):
     _choice_fields = {'minimumVolume': ['minimumVolumeQuantity', 'minimumVolumeString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    material: Optional[CodeableConcept]
-    type_: Optional[CodeableConcept]
-    cap: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    material: CodeableConcept | dict | None
+    type_: CodeableConcept | dict | None
+    cap: CodeableConcept | dict | None
     description: Optional[String] = None
-    capacity: Optional[Quantity]
-    minimumVolumeQuantity: Optional[Quantity]
+    capacity: Quantity | dict | None
+    minimumVolumeQuantity: Quantity | dict | None
     minimumVolumeString: Optional[String] = None
-    additive: SpecimenDefinitionTypeTestedContainerAdditive | FHIRList[SpecimenDefinitionTypeTestedContainerAdditive]
+    additive: SpecimenDefinitionTypeTestedContainerAdditive | FHIRList[SpecimenDefinitionTypeTestedContainerAdditive] | list | dict
     preparation: Optional[String] = None
 
 
@@ -14011,10 +14026,10 @@ class SpecimenDefinitionTypeTestedContainerAdditive(FHIRElement):
     _choice_fields = {'additive': ['additiveCodeableConcept', 'additiveReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    additiveCodeableConcept: Optional[CodeableConcept]
-    additiveReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    additiveCodeableConcept: CodeableConcept | dict | None
+    additiveReference: Reference | dict | None
 
 
 class SpecimenDefinitionTypeTestedHandling(FHIRElement):
@@ -14028,11 +14043,11 @@ class SpecimenDefinitionTypeTestedHandling(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    temperatureQualifier: Optional[CodeableConcept]
-    temperatureRange: Optional[Range]
-    maxDuration: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    temperatureQualifier: CodeableConcept | dict | None
+    temperatureRange: Range | dict | None
+    maxDuration: Duration | dict | None
     instruction: Optional[String] = None
 
 
@@ -14053,19 +14068,19 @@ class SpecimenDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    typeCollected: Optional[CodeableConcept]
-    patientPreparation: CodeableConcept | FHIRList[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    typeCollected: CodeableConcept | dict | None
+    patientPreparation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     timeAspect: Optional[String] = None
-    collection: CodeableConcept | FHIRList[CodeableConcept]
-    typeTested: SpecimenDefinitionTypeTested | FHIRList[SpecimenDefinitionTypeTested]
+    collection: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    typeTested: SpecimenDefinitionTypeTested | FHIRList[SpecimenDefinitionTypeTested] | list | dict
 
 
 class StructureDefinitionMapping(FHIRElement):
@@ -14073,8 +14088,8 @@ class StructureDefinitionMapping(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     identity: Optional[Id] = None
     uri: Optional[Uri] = None
     name: Optional[String] = None
@@ -14086,8 +14101,8 @@ class StructureDefinitionContext(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     expression: Optional[String] = None
 
@@ -14097,9 +14112,9 @@ class StructureDefinitionSnapshot(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'element': 'ElementDefinition'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    element: ElementDefinition | FHIRList[ElementDefinition]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    element: ElementDefinition | FHIRList[ElementDefinition] | list | dict
 
 
 class StructureDefinitionDifferential(FHIRElement):
@@ -14107,9 +14122,9 @@ class StructureDefinitionDifferential(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'element': 'ElementDefinition'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    element: ElementDefinition | FHIRList[ElementDefinition]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    element: ElementDefinition | FHIRList[ElementDefinition] | list | dict
 
 
 class StructureDefinition(FHIRResource):
@@ -14145,15 +14160,15 @@ class StructureDefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -14161,24 +14176,24 @@ class StructureDefinition(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
-    keyword: Coding | FHIRList[Coding]
+    keyword: Coding | FHIRList[Coding] | list | dict
     fhirVersion: Optional[Code] = None
-    mapping: StructureDefinitionMapping | FHIRList[StructureDefinitionMapping]
+    mapping: StructureDefinitionMapping | FHIRList[StructureDefinitionMapping] | list | dict
     kind: Optional[Code] = None
     abstract: Optional[Boolean] = None
-    context: StructureDefinitionContext | FHIRList[StructureDefinitionContext]
-    contextInvariant: String | FHIRList[String] = None
+    context: StructureDefinitionContext | FHIRList[StructureDefinitionContext] | list | dict
+    contextInvariant: String | FHIRList[String] | list | None = None
     type_: Optional[Uri] = None
     baseDefinition: Optional[Canonical] = None
     derivation: Optional[Code] = None
-    snapshot: Optional[StructureDefinitionSnapshot]
-    differential: Optional[StructureDefinitionDifferential]
+    snapshot: StructureDefinitionSnapshot | dict | None
+    differential: StructureDefinitionDifferential | dict | None
 
 
 class StructureMapStructure(FHIRElement):
@@ -14186,8 +14201,8 @@ class StructureMapStructure(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Canonical] = None
     mode: Optional[Code] = None
     alias: Optional[String] = None
@@ -14199,14 +14214,14 @@ class StructureMapGroup(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'input': 'StructureMapGroupInput', 'rule': 'StructureMapGroupRule'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Id] = None
     extends: Optional[Id] = None
     typeMode: Optional[Code] = None
     documentation: Optional[String] = None
-    input: StructureMapGroupInput | FHIRList[StructureMapGroupInput]
-    rule: StructureMapGroupRule | FHIRList[StructureMapGroupRule]
+    input: StructureMapGroupInput | FHIRList[StructureMapGroupInput] | list | dict
+    rule: StructureMapGroupRule | FHIRList[StructureMapGroupRule] | list | dict
 
 
 class StructureMapGroupInput(FHIRElement):
@@ -14214,8 +14229,8 @@ class StructureMapGroupInput(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Id] = None
     type_: Optional[String] = None
     mode: Optional[Code] = None
@@ -14233,13 +14248,13 @@ class StructureMapGroupRule(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Id] = None
-    source: StructureMapGroupRuleSource | FHIRList[StructureMapGroupRuleSource]
-    target: StructureMapGroupRuleTarget | FHIRList[StructureMapGroupRuleTarget]
+    source: StructureMapGroupRuleSource | FHIRList[StructureMapGroupRuleSource] | list | dict
+    target: StructureMapGroupRuleTarget | FHIRList[StructureMapGroupRuleTarget] | list | dict
     rule: Any = None
-    dependent: StructureMapGroupRuleDependent | FHIRList[StructureMapGroupRuleDependent]
+    dependent: StructureMapGroupRuleDependent | FHIRList[StructureMapGroupRuleDependent] | list | dict
     documentation: Optional[String] = None
 
 
@@ -14336,8 +14351,8 @@ class StructureMapGroupRuleSource(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     context: Optional[Id] = None
     min: Optional[Integer] = None
     max: Optional[String] = None
@@ -14361,37 +14376,37 @@ class StructureMapGroupRuleSource(FHIRElement):
     defaultValueUri: Optional[Uri] = None
     defaultValueUrl: Optional[Url] = None
     defaultValueUuid: Optional[Uuid] = None
-    defaultValueAddress: Optional[Address]
-    defaultValueAge: Optional[Age]
-    defaultValueAnnotation: Optional[Annotation]
-    defaultValueAttachment: Optional[Attachment]
-    defaultValueCodeableConcept: Optional[CodeableConcept]
-    defaultValueCoding: Optional[Coding]
-    defaultValueContactPoint: Optional[ContactPoint]
-    defaultValueCount: Optional[Count]
-    defaultValueDistance: Optional[Distance]
-    defaultValueDuration: Optional[Duration]
-    defaultValueHumanName: Optional[HumanName]
-    defaultValueIdentifier: Optional[Identifier]
-    defaultValueMoney: Optional[Money]
-    defaultValuePeriod: Optional[Period]
-    defaultValueQuantity: Optional[Quantity]
-    defaultValueRange: Optional[Range]
-    defaultValueRatio: Optional[Ratio]
-    defaultValueReference: Optional[Reference]
-    defaultValueSampledData: Optional[SampledData]
-    defaultValueSignature: Optional[Signature]
-    defaultValueTiming: Optional[Timing]
-    defaultValueContactDetail: Optional[ContactDetail]
-    defaultValueContributor: Optional[Contributor]
-    defaultValueDataRequirement: Optional[DataRequirement]
-    defaultValueExpression: Optional[Expression]
-    defaultValueParameterDefinition: Optional[ParameterDefinition]
-    defaultValueRelatedArtifact: Optional[RelatedArtifact]
-    defaultValueTriggerDefinition: Optional[TriggerDefinition]
-    defaultValueUsageContext: Optional[UsageContext]
-    defaultValueDosage: Optional[Dosage]
-    defaultValueMeta: Optional[Meta]
+    defaultValueAddress: Address | dict | None
+    defaultValueAge: Age | dict | None
+    defaultValueAnnotation: Annotation | dict | None
+    defaultValueAttachment: Attachment | dict | None
+    defaultValueCodeableConcept: CodeableConcept | dict | None
+    defaultValueCoding: Coding | dict | None
+    defaultValueContactPoint: ContactPoint | dict | None
+    defaultValueCount: Count | dict | None
+    defaultValueDistance: Distance | dict | None
+    defaultValueDuration: Duration | dict | None
+    defaultValueHumanName: HumanName | dict | None
+    defaultValueIdentifier: Identifier | dict | None
+    defaultValueMoney: Money | dict | None
+    defaultValuePeriod: Period | dict | None
+    defaultValueQuantity: Quantity | dict | None
+    defaultValueRange: Range | dict | None
+    defaultValueRatio: Ratio | dict | None
+    defaultValueReference: Reference | dict | None
+    defaultValueSampledData: SampledData | dict | None
+    defaultValueSignature: Signature | dict | None
+    defaultValueTiming: Timing | dict | None
+    defaultValueContactDetail: ContactDetail | dict | None
+    defaultValueContributor: Contributor | dict | None
+    defaultValueDataRequirement: DataRequirement | dict | None
+    defaultValueExpression: Expression | dict | None
+    defaultValueParameterDefinition: ParameterDefinition | dict | None
+    defaultValueRelatedArtifact: RelatedArtifact | dict | None
+    defaultValueTriggerDefinition: TriggerDefinition | dict | None
+    defaultValueUsageContext: UsageContext | dict | None
+    defaultValueDosage: Dosage | dict | None
+    defaultValueMeta: Meta | dict | None
     element: Optional[String] = None
     listMode: Optional[Code] = None
     variable: Optional[Id] = None
@@ -14405,16 +14420,16 @@ class StructureMapGroupRuleTarget(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'parameter': 'StructureMapGroupRuleTargetParameter'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     context: Optional[Id] = None
     contextType: Optional[Code] = None
     element: Optional[String] = None
     variable: Optional[Id] = None
-    listMode: Code | FHIRList[Code] = None
+    listMode: Code | FHIRList[Code] | list | None = None
     listRuleId: Optional[Id] = None
     transform: Optional[Code] = None
-    parameter: StructureMapGroupRuleTargetParameter | FHIRList[StructureMapGroupRuleTargetParameter]
+    parameter: StructureMapGroupRuleTargetParameter | FHIRList[StructureMapGroupRuleTargetParameter] | list | dict
 
 
 class StructureMapGroupRuleTargetParameter(FHIRElement):
@@ -14423,8 +14438,8 @@ class StructureMapGroupRuleTargetParameter(FHIRElement):
     _choice_fields = {'value': ['valueId', 'valueString', 'valueBoolean', 'valueInteger', 'valueDecimal']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     valueId: Optional[Id] = None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
@@ -14437,10 +14452,10 @@ class StructureMapGroupRuleDependent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Id] = None
-    variable: String | FHIRList[String] = None
+    variable: String | FHIRList[String] | list | None = None
 
 
 class StructureMap(FHIRResource):
@@ -14461,15 +14476,15 @@ class StructureMap(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -14477,15 +14492,15 @@ class StructureMap(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
-    structure: StructureMapStructure | FHIRList[StructureMapStructure]
-    import_: Canonical | FHIRList[Canonical] = None
-    group: StructureMapGroup | FHIRList[StructureMapGroup]
+    structure: StructureMapStructure | FHIRList[StructureMapStructure] | list | dict
+    import_: Canonical | FHIRList[Canonical] | list | None = None
+    group: StructureMapGroup | FHIRList[StructureMapGroup] | list | dict
 
 
 class SubscriptionChannel(FHIRElement):
@@ -14493,12 +14508,12 @@ class SubscriptionChannel(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     endpoint: Optional[Url] = None
     payload: Optional[Code] = None
-    header: String | FHIRList[String] = None
+    header: String | FHIRList[String] | list | None = None
 
 
 class Subscription(FHIRResource):
@@ -14515,20 +14530,20 @@ class Subscription(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     status: Optional[Code] = None
-    contact: ContactPoint | FHIRList[ContactPoint]
+    contact: ContactPoint | FHIRList[ContactPoint] | list | dict
     end: Optional[Instant] = None
     reason: Optional[String] = None
     criteria: Optional[String] = None
     error: Optional[String] = None
-    channel: Optional[SubscriptionChannel]
+    channel: SubscriptionChannel | dict | None
 
 
 class SubstanceInstance(FHIRElement):
@@ -14536,11 +14551,11 @@ class SubstanceInstance(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'identifier': 'Identifier', 'quantity': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     expiry: Optional[DateTime] = None
-    quantity: Optional[Quantity]
+    quantity: Quantity | dict | None
 
 
 class SubstanceIngredient(FHIRElement):
@@ -14555,11 +14570,11 @@ class SubstanceIngredient(FHIRElement):
     _choice_fields = {'substance': ['substanceCodeableConcept', 'substanceReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    quantity: Optional[Ratio]
-    substanceCodeableConcept: Optional[CodeableConcept]
-    substanceReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    quantity: Ratio | dict | None
+    substanceCodeableConcept: CodeableConcept | dict | None
+    substanceReference: Reference | dict | None
 
 
 class Substance(FHIRResource):
@@ -14579,20 +14594,20 @@ class Substance(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    instance: SubstanceInstance | FHIRList[SubstanceInstance]
-    ingredient: SubstanceIngredient | FHIRList[SubstanceIngredient]
+    instance: SubstanceInstance | FHIRList[SubstanceInstance] | list | dict
+    ingredient: SubstanceIngredient | FHIRList[SubstanceIngredient] | list | dict
 
 
 class SubstanceNucleicAcidSubunit(FHIRElement):
@@ -14608,16 +14623,16 @@ class SubstanceNucleicAcidSubunit(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     subunit: Optional[Integer] = None
     sequence: Optional[String] = None
     length: Optional[Integer] = None
-    sequenceAttachment: Optional[Attachment]
-    fivePrime: Optional[CodeableConcept]
-    threePrime: Optional[CodeableConcept]
-    linkage: SubstanceNucleicAcidSubunitLinkage | FHIRList[SubstanceNucleicAcidSubunitLinkage]
-    sugar: SubstanceNucleicAcidSubunitSugar | FHIRList[SubstanceNucleicAcidSubunitSugar]
+    sequenceAttachment: Attachment | dict | None
+    fivePrime: CodeableConcept | dict | None
+    threePrime: CodeableConcept | dict | None
+    linkage: SubstanceNucleicAcidSubunitLinkage | FHIRList[SubstanceNucleicAcidSubunitLinkage] | list | dict
+    sugar: SubstanceNucleicAcidSubunitSugar | FHIRList[SubstanceNucleicAcidSubunitSugar] | list | dict
 
 
 class SubstanceNucleicAcidSubunitLinkage(FHIRElement):
@@ -14625,10 +14640,10 @@ class SubstanceNucleicAcidSubunitLinkage(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'identifier': 'Identifier'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     connectivity: Optional[String] = None
-    identifier: Optional[Identifier]
+    identifier: Identifier | dict | None
     name: Optional[String] = None
     residueSite: Optional[String] = None
 
@@ -14638,9 +14653,9 @@ class SubstanceNucleicAcidSubunitSugar(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'identifier': 'Identifier'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     name: Optional[String] = None
     residueSite: Optional[String] = None
 
@@ -14660,18 +14675,18 @@ class SubstanceNucleicAcid(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    sequenceType: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    sequenceType: CodeableConcept | dict | None
     numberOfSubunits: Optional[Integer] = None
     areaOfHybridisation: Optional[String] = None
-    oligoNucleotideType: Optional[CodeableConcept]
-    subunit: SubstanceNucleicAcidSubunit | FHIRList[SubstanceNucleicAcidSubunit]
+    oligoNucleotideType: CodeableConcept | dict | None
+    subunit: SubstanceNucleicAcidSubunit | FHIRList[SubstanceNucleicAcidSubunit] | list | dict
 
 
 class SubstancePolymerMonomerSet(FHIRElement):
@@ -14684,10 +14699,10 @@ class SubstancePolymerMonomerSet(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    ratioType: Optional[CodeableConcept]
-    startingMaterial: SubstancePolymerMonomerSetStartingMaterial | FHIRList[SubstancePolymerMonomerSetStartingMaterial]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    ratioType: CodeableConcept | dict | None
+    startingMaterial: SubstancePolymerMonomerSetStartingMaterial | FHIRList[SubstancePolymerMonomerSetStartingMaterial] | list | dict
 
 
 class SubstancePolymerMonomerSetStartingMaterial(FHIRElement):
@@ -14701,12 +14716,12 @@ class SubstancePolymerMonomerSetStartingMaterial(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    material: Optional[CodeableConcept]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    material: CodeableConcept | dict | None
+    type_: CodeableConcept | dict | None
     isDefining: Optional[Boolean] = None
-    amount: Optional[SubstanceAmount]
+    amount: SubstanceAmount | dict | None
 
 
 class SubstancePolymerRepeat(FHIRElement):
@@ -14719,12 +14734,12 @@ class SubstancePolymerRepeat(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     numberOfUnits: Optional[Integer] = None
     averageMolecularFormula: Optional[String] = None
-    repeatUnitAmountType: Optional[CodeableConcept]
-    repeatUnit: SubstancePolymerRepeatRepeatUnit | FHIRList[SubstancePolymerRepeatRepeatUnit]
+    repeatUnitAmountType: CodeableConcept | dict | None
+    repeatUnit: SubstancePolymerRepeatRepeatUnit | FHIRList[SubstancePolymerRepeatRepeatUnit] | list | dict
 
 
 class SubstancePolymerRepeatRepeatUnit(FHIRElement):
@@ -14739,13 +14754,17 @@ class SubstancePolymerRepeatRepeatUnit(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    orientationOfPolymerisation: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    orientationOfPolymerisation: CodeableConcept | dict | None
     repeatUnit: Optional[String] = None
-    amount: Optional[SubstanceAmount]
-    degreeOfPolymerisation: SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation | FHIRList[SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation]
-    structuralRepresentation: SubstancePolymerRepeatRepeatUnitStructuralRepresentation | FHIRList[SubstancePolymerRepeatRepeatUnitStructuralRepresentation]
+    amount: SubstanceAmount | dict | None
+    degreeOfPolymerisation: (
+        SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation | FHIRList[SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation] | list | dict
+    )
+    structuralRepresentation: (
+        SubstancePolymerRepeatRepeatUnitStructuralRepresentation | FHIRList[SubstancePolymerRepeatRepeatUnitStructuralRepresentation] | list | dict
+    )
 
 
 class SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation(FHIRElement):
@@ -14753,10 +14772,10 @@ class SubstancePolymerRepeatRepeatUnitDegreeOfPolymerisation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'degree': 'CodeableConcept', 'amount': 'SubstanceAmount'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    degree: Optional[CodeableConcept]
-    amount: Optional[SubstanceAmount]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    degree: CodeableConcept | dict | None
+    amount: SubstanceAmount | dict | None
 
 
 class SubstancePolymerRepeatRepeatUnitStructuralRepresentation(FHIRElement):
@@ -14764,11 +14783,11 @@ class SubstancePolymerRepeatRepeatUnitStructuralRepresentation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'attachment': 'Attachment'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     representation: Optional[String] = None
-    attachment: Optional[Attachment]
+    attachment: Attachment | dict | None
 
 
 class SubstancePolymer(FHIRResource):
@@ -14788,19 +14807,19 @@ class SubstancePolymer(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    class_: Optional[CodeableConcept]
-    geometry: Optional[CodeableConcept]
-    copolymerConnectivity: CodeableConcept | FHIRList[CodeableConcept]
-    modification: String | FHIRList[String] = None
-    monomerSet: SubstancePolymerMonomerSet | FHIRList[SubstancePolymerMonomerSet]
-    repeat: SubstancePolymerRepeat | FHIRList[SubstancePolymerRepeat]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    class_: CodeableConcept | dict | None
+    geometry: CodeableConcept | dict | None
+    copolymerConnectivity: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    modification: String | FHIRList[String] | list | None = None
+    monomerSet: SubstancePolymerMonomerSet | FHIRList[SubstancePolymerMonomerSet] | list | dict
+    repeat: SubstancePolymerRepeat | FHIRList[SubstancePolymerRepeat] | list | dict
 
 
 class SubstanceProteinSubunit(FHIRElement):
@@ -14814,15 +14833,15 @@ class SubstanceProteinSubunit(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     subunit: Optional[Integer] = None
     sequence: Optional[String] = None
     length: Optional[Integer] = None
-    sequenceAttachment: Optional[Attachment]
-    nTerminalModificationId: Optional[Identifier]
+    sequenceAttachment: Attachment | dict | None
+    nTerminalModificationId: Identifier | dict | None
     nTerminalModification: Optional[String] = None
-    cTerminalModificationId: Optional[Identifier]
+    cTerminalModificationId: Identifier | dict | None
     cTerminalModification: Optional[String] = None
 
 
@@ -14840,17 +14859,17 @@ class SubstanceProtein(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    sequenceType: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    sequenceType: CodeableConcept | dict | None
     numberOfSubunits: Optional[Integer] = None
-    disulfideLinkage: String | FHIRList[String] = None
-    subunit: SubstanceProteinSubunit | FHIRList[SubstanceProteinSubunit]
+    disulfideLinkage: String | FHIRList[String] | list | None = None
+    subunit: SubstanceProteinSubunit | FHIRList[SubstanceProteinSubunit] | list | dict
 
 
 class SubstanceReferenceInformationGene(FHIRElement):
@@ -14864,11 +14883,11 @@ class SubstanceReferenceInformationGene(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    geneSequenceOrigin: Optional[CodeableConcept]
-    gene: Optional[CodeableConcept]
-    source: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    geneSequenceOrigin: CodeableConcept | dict | None
+    gene: CodeableConcept | dict | None
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceReferenceInformationGeneElement(FHIRElement):
@@ -14876,11 +14895,11 @@ class SubstanceReferenceInformationGeneElement(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'element': 'Identifier', 'source': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
-    element: Optional[Identifier]
-    source: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
+    element: Identifier | dict | None
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceReferenceInformationClassification(FHIRElement):
@@ -14895,12 +14914,12 @@ class SubstanceReferenceInformationClassification(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    domain: Optional[CodeableConcept]
-    classification: Optional[CodeableConcept]
-    subtype: CodeableConcept | FHIRList[CodeableConcept]
-    source: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    domain: CodeableConcept | dict | None
+    classification: CodeableConcept | dict | None
+    subtype: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceReferenceInformationTarget(FHIRElement):
@@ -14921,18 +14940,18 @@ class SubstanceReferenceInformationTarget(FHIRElement):
     _choice_fields = {'amount': ['amountQuantity', 'amountRange', 'amountString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    target: Optional[Identifier]
-    type_: Optional[CodeableConcept]
-    interaction: Optional[CodeableConcept]
-    organism: Optional[CodeableConcept]
-    organismType: Optional[CodeableConcept]
-    amountQuantity: Optional[Quantity]
-    amountRange: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    target: Identifier | dict | None
+    type_: CodeableConcept | dict | None
+    interaction: CodeableConcept | dict | None
+    organism: CodeableConcept | dict | None
+    organismType: CodeableConcept | dict | None
+    amountQuantity: Quantity | dict | None
+    amountRange: Range | dict | None
     amountString: Optional[String] = None
-    amountType: Optional[CodeableConcept]
-    source: Reference | FHIRList[Reference]
+    amountType: CodeableConcept | dict | None
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceReferenceInformation(FHIRResource):
@@ -14951,18 +14970,18 @@ class SubstanceReferenceInformation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     comment: Optional[String] = None
-    gene: SubstanceReferenceInformationGene | FHIRList[SubstanceReferenceInformationGene]
-    geneElement: SubstanceReferenceInformationGeneElement | FHIRList[SubstanceReferenceInformationGeneElement]
-    classification: SubstanceReferenceInformationClassification | FHIRList[SubstanceReferenceInformationClassification]
-    target: SubstanceReferenceInformationTarget | FHIRList[SubstanceReferenceInformationTarget]
+    gene: SubstanceReferenceInformationGene | FHIRList[SubstanceReferenceInformationGene] | list | dict
+    geneElement: SubstanceReferenceInformationGeneElement | FHIRList[SubstanceReferenceInformationGeneElement] | list | dict
+    classification: SubstanceReferenceInformationClassification | FHIRList[SubstanceReferenceInformationClassification] | list | dict
+    target: SubstanceReferenceInformationTarget | FHIRList[SubstanceReferenceInformationTarget] | list | dict
 
 
 class SubstanceSourceMaterialFractionDescription(FHIRElement):
@@ -14970,10 +14989,10 @@ class SubstanceSourceMaterialFractionDescription(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'materialType': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     fraction: Optional[String] = None
-    materialType: Optional[CodeableConcept]
+    materialType: CodeableConcept | dict | None
 
 
 class SubstanceSourceMaterialOrganism(FHIRElement):
@@ -14991,16 +15010,16 @@ class SubstanceSourceMaterialOrganism(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    family: Optional[CodeableConcept]
-    genus: Optional[CodeableConcept]
-    species: Optional[CodeableConcept]
-    intraspecificType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    family: CodeableConcept | dict | None
+    genus: CodeableConcept | dict | None
+    species: CodeableConcept | dict | None
+    intraspecificType: CodeableConcept | dict | None
     intraspecificDescription: Optional[String] = None
-    author: SubstanceSourceMaterialOrganismAuthor | FHIRList[SubstanceSourceMaterialOrganismAuthor]
-    hybrid: Optional[SubstanceSourceMaterialOrganismHybrid]
-    organismGeneral: Optional[SubstanceSourceMaterialOrganismOrganismGeneral]
+    author: SubstanceSourceMaterialOrganismAuthor | FHIRList[SubstanceSourceMaterialOrganismAuthor] | list | dict
+    hybrid: SubstanceSourceMaterialOrganismHybrid | dict | None
+    organismGeneral: SubstanceSourceMaterialOrganismOrganismGeneral | dict | None
 
 
 class SubstanceSourceMaterialOrganismAuthor(FHIRElement):
@@ -15008,9 +15027,9 @@ class SubstanceSourceMaterialOrganismAuthor(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'authorType': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    authorType: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    authorType: CodeableConcept | dict | None
     authorDescription: Optional[String] = None
 
 
@@ -15019,13 +15038,13 @@ class SubstanceSourceMaterialOrganismHybrid(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'hybridType': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     maternalOrganismId: Optional[String] = None
     maternalOrganismName: Optional[String] = None
     paternalOrganismId: Optional[String] = None
     paternalOrganismName: Optional[String] = None
-    hybridType: Optional[CodeableConcept]
+    hybridType: CodeableConcept | dict | None
 
 
 class SubstanceSourceMaterialOrganismOrganismGeneral(FHIRElement):
@@ -15040,12 +15059,12 @@ class SubstanceSourceMaterialOrganismOrganismGeneral(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    kingdom: Optional[CodeableConcept]
-    phylum: Optional[CodeableConcept]
-    class_: Optional[CodeableConcept]
-    order: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    kingdom: CodeableConcept | dict | None
+    phylum: CodeableConcept | dict | None
+    class_: CodeableConcept | dict | None
+    order: CodeableConcept | dict | None
 
 
 class SubstanceSourceMaterialPartDescription(FHIRElement):
@@ -15053,10 +15072,10 @@ class SubstanceSourceMaterialPartDescription(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'part': 'CodeableConcept', 'partLocation': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    part: Optional[CodeableConcept]
-    partLocation: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    part: CodeableConcept | dict | None
+    partLocation: CodeableConcept | dict | None
 
 
 class SubstanceSourceMaterial(FHIRResource):
@@ -15091,26 +15110,26 @@ class SubstanceSourceMaterial(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    sourceMaterialClass: Optional[CodeableConcept]
-    sourceMaterialType: Optional[CodeableConcept]
-    sourceMaterialState: Optional[CodeableConcept]
-    organismId: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    sourceMaterialClass: CodeableConcept | dict | None
+    sourceMaterialType: CodeableConcept | dict | None
+    sourceMaterialState: CodeableConcept | dict | None
+    organismId: Identifier | dict | None
     organismName: Optional[String] = None
-    parentSubstanceId: Identifier | FHIRList[Identifier]
-    parentSubstanceName: String | FHIRList[String] = None
-    countryOfOrigin: CodeableConcept | FHIRList[CodeableConcept]
-    geographicalLocation: String | FHIRList[String] = None
-    developmentStage: Optional[CodeableConcept]
-    fractionDescription: SubstanceSourceMaterialFractionDescription | FHIRList[SubstanceSourceMaterialFractionDescription]
-    organism: Optional[SubstanceSourceMaterialOrganism]
-    partDescription: SubstanceSourceMaterialPartDescription | FHIRList[SubstanceSourceMaterialPartDescription]
+    parentSubstanceId: Identifier | FHIRList[Identifier] | list | dict
+    parentSubstanceName: String | FHIRList[String] | list | None = None
+    countryOfOrigin: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    geographicalLocation: String | FHIRList[String] | list | None = None
+    developmentStage: CodeableConcept | dict | None
+    fractionDescription: SubstanceSourceMaterialFractionDescription | FHIRList[SubstanceSourceMaterialFractionDescription] | list | dict
+    organism: SubstanceSourceMaterialOrganism | dict | None
+    partDescription: SubstanceSourceMaterialPartDescription | FHIRList[SubstanceSourceMaterialPartDescription] | list | dict
 
 
 class SubstanceSpecificationMoiety(FHIRElement):
@@ -15127,15 +15146,15 @@ class SubstanceSpecificationMoiety(FHIRElement):
     _choice_fields = {'amount': ['amountQuantity', 'amountString']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    role: Optional[CodeableConcept]
-    identifier: Optional[Identifier]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    role: CodeableConcept | dict | None
+    identifier: Identifier | dict | None
     name: Optional[String] = None
-    stereochemistry: Optional[CodeableConcept]
-    opticalActivity: Optional[CodeableConcept]
+    stereochemistry: CodeableConcept | dict | None
+    opticalActivity: CodeableConcept | dict | None
     molecularFormula: Optional[String] = None
-    amountQuantity: Optional[Quantity]
+    amountQuantity: Quantity | dict | None
     amountString: Optional[String] = None
 
 
@@ -15153,14 +15172,14 @@ class SubstanceSpecificationProperty(FHIRElement):
     _choice_fields = {'amount': ['amountQuantity', 'amountString'], 'definingSubstance': ['definingSubstanceReference', 'definingSubstanceCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
     parameters: Optional[String] = None
-    definingSubstanceReference: Optional[Reference]
-    definingSubstanceCodeableConcept: Optional[CodeableConcept]
-    amountQuantity: Optional[Quantity]
+    definingSubstanceReference: Reference | dict | None
+    definingSubstanceCodeableConcept: CodeableConcept | dict | None
+    amountQuantity: Quantity | dict | None
     amountString: Optional[String] = None
 
 
@@ -15177,16 +15196,16 @@ class SubstanceSpecificationStructure(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    stereochemistry: Optional[CodeableConcept]
-    opticalActivity: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    stereochemistry: CodeableConcept | dict | None
+    opticalActivity: CodeableConcept | dict | None
     molecularFormula: Optional[String] = None
     molecularFormulaByMoiety: Optional[String] = None
-    isotope: SubstanceSpecificationStructureIsotope | FHIRList[SubstanceSpecificationStructureIsotope]
+    isotope: SubstanceSpecificationStructureIsotope | FHIRList[SubstanceSpecificationStructureIsotope] | list | dict
     molecularWeight: Any = None
-    source: Reference | FHIRList[Reference]
-    representation: SubstanceSpecificationStructureRepresentation | FHIRList[SubstanceSpecificationStructureRepresentation]
+    source: Reference | FHIRList[Reference] | list | dict
+    representation: SubstanceSpecificationStructureRepresentation | FHIRList[SubstanceSpecificationStructureRepresentation] | list | dict
 
 
 class SubstanceSpecificationStructureIsotope(FHIRElement):
@@ -15202,13 +15221,13 @@ class SubstanceSpecificationStructureIsotope(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    name: Optional[CodeableConcept]
-    substitution: Optional[CodeableConcept]
-    halfLife: Optional[Quantity]
-    molecularWeight: Optional[SubstanceSpecificationStructureIsotopeMolecularWeight]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    name: CodeableConcept | dict | None
+    substitution: CodeableConcept | dict | None
+    halfLife: Quantity | dict | None
+    molecularWeight: SubstanceSpecificationStructureIsotopeMolecularWeight | dict | None
 
 
 class SubstanceSpecificationStructureIsotopeMolecularWeight(FHIRElement):
@@ -15216,11 +15235,11 @@ class SubstanceSpecificationStructureIsotopeMolecularWeight(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'method': 'CodeableConcept', 'type_': 'CodeableConcept', 'amount': 'Quantity'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    method: Optional[CodeableConcept]
-    type_: Optional[CodeableConcept]
-    amount: Optional[Quantity]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    method: CodeableConcept | dict | None
+    type_: CodeableConcept | dict | None
+    amount: Quantity | dict | None
 
 
 class SubstanceSpecificationStructureRepresentation(FHIRElement):
@@ -15228,11 +15247,11 @@ class SubstanceSpecificationStructureRepresentation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'type_': 'CodeableConcept', 'attachment': 'Attachment'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     representation: Optional[String] = None
-    attachment: Optional[Attachment]
+    attachment: Attachment | dict | None
 
 
 class SubstanceSpecificationCode(FHIRElement):
@@ -15240,13 +15259,13 @@ class SubstanceSpecificationCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'status': 'CodeableConcept', 'source': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
     statusDate: Optional[DateTime] = None
     comment: Optional[String] = None
-    source: Reference | FHIRList[Reference]
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceSpecificationName(FHIRElement):
@@ -15264,19 +15283,19 @@ class SubstanceSpecificationName(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
-    type_: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
     preferred: Optional[Boolean] = None
-    language: CodeableConcept | FHIRList[CodeableConcept]
-    domain: CodeableConcept | FHIRList[CodeableConcept]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    language: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    domain: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     synonym: Any = None
     translation: Any = None
-    official: SubstanceSpecificationNameOfficial | FHIRList[SubstanceSpecificationNameOfficial]
-    source: Reference | FHIRList[Reference]
+    official: SubstanceSpecificationNameOfficial | FHIRList[SubstanceSpecificationNameOfficial] | list | dict
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceSpecificationNameOfficial(FHIRElement):
@@ -15284,10 +15303,10 @@ class SubstanceSpecificationNameOfficial(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'authority': 'CodeableConcept', 'status': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    authority: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    authority: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
     date: Optional[DateTime] = None
 
 
@@ -15312,19 +15331,19 @@ class SubstanceSpecificationRelationship(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    substanceReference: Optional[Reference]
-    substanceCodeableConcept: Optional[CodeableConcept]
-    relationship: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    substanceReference: Reference | dict | None
+    substanceCodeableConcept: CodeableConcept | dict | None
+    relationship: CodeableConcept | dict | None
     isDefining: Optional[Boolean] = None
-    amountQuantity: Optional[Quantity]
-    amountRange: Optional[Range]
-    amountRatio: Optional[Ratio]
+    amountQuantity: Quantity | dict | None
+    amountRange: Range | dict | None
+    amountRatio: Ratio | dict | None
     amountString: Optional[String] = None
-    amountRatioLowLimit: Optional[Ratio]
-    amountType: Optional[CodeableConcept]
-    source: Reference | FHIRList[Reference]
+    amountRatioLowLimit: Ratio | dict | None
+    amountType: CodeableConcept | dict | None
+    source: Reference | FHIRList[Reference] | list | dict
 
 
 class SubstanceSpecification(FHIRResource):
@@ -15355,32 +15374,32 @@ class SubstanceSpecification(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    type_: Optional[CodeableConcept]
-    status: Optional[CodeableConcept]
-    domain: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    type_: CodeableConcept | dict | None
+    status: CodeableConcept | dict | None
+    domain: CodeableConcept | dict | None
     description: Optional[String] = None
-    source: Reference | FHIRList[Reference]
+    source: Reference | FHIRList[Reference] | list | dict
     comment: Optional[String] = None
-    moiety: SubstanceSpecificationMoiety | FHIRList[SubstanceSpecificationMoiety]
-    property: SubstanceSpecificationProperty | FHIRList[SubstanceSpecificationProperty]
-    referenceInformation: Optional[Reference]
-    structure: Optional[SubstanceSpecificationStructure]
-    code: SubstanceSpecificationCode | FHIRList[SubstanceSpecificationCode]
-    name: SubstanceSpecificationName | FHIRList[SubstanceSpecificationName]
+    moiety: SubstanceSpecificationMoiety | FHIRList[SubstanceSpecificationMoiety] | list | dict
+    property: SubstanceSpecificationProperty | FHIRList[SubstanceSpecificationProperty] | list | dict
+    referenceInformation: Reference | dict | None
+    structure: SubstanceSpecificationStructure | dict | None
+    code: SubstanceSpecificationCode | FHIRList[SubstanceSpecificationCode] | list | dict
+    name: SubstanceSpecificationName | FHIRList[SubstanceSpecificationName] | list | dict
     molecularWeight: Any = None
-    relationship: SubstanceSpecificationRelationship | FHIRList[SubstanceSpecificationRelationship]
-    nucleicAcid: Optional[Reference]
-    polymer: Optional[Reference]
-    protein: Optional[Reference]
-    sourceMaterial: Optional[Reference]
+    relationship: SubstanceSpecificationRelationship | FHIRList[SubstanceSpecificationRelationship] | list | dict
+    nucleicAcid: Reference | dict | None
+    polymer: Reference | dict | None
+    protein: Reference | dict | None
+    sourceMaterial: Reference | dict | None
 
 
 class SupplyDeliverySuppliedItem(FHIRElement):
@@ -15395,11 +15414,11 @@ class SupplyDeliverySuppliedItem(FHIRElement):
     _choice_fields = {'item': ['itemCodeableConcept', 'itemReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    quantity: Optional[Quantity]
-    itemCodeableConcept: Optional[CodeableConcept]
-    itemReference: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    quantity: Quantity | dict | None
+    itemCodeableConcept: CodeableConcept | dict | None
+    itemReference: Reference | dict | None
 
 
 class SupplyDelivery(FHIRResource):
@@ -15426,26 +15445,26 @@ class SupplyDelivery(FHIRResource):
     _choice_fields = {'occurrence': ['occurrenceDateTime', 'occurrencePeriod', 'occurrenceTiming']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    patient: Optional[Reference]
-    type_: Optional[CodeableConcept]
-    suppliedItem: Optional[SupplyDeliverySuppliedItem]
+    patient: Reference | dict | None
+    type_: CodeableConcept | dict | None
+    suppliedItem: SupplyDeliverySuppliedItem | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
-    supplier: Optional[Reference]
-    destination: Optional[Reference]
-    receiver: Reference | FHIRList[Reference]
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
+    supplier: Reference | dict | None
+    destination: Reference | dict | None
+    receiver: Reference | FHIRList[Reference] | list | dict
 
 
 class SupplyRequestParameter(FHIRElement):
@@ -15461,12 +15480,12 @@ class SupplyRequestParameter(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueQuantity', 'valueRange', 'valueBoolean']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
     valueBoolean: Optional[Boolean] = None
 
 
@@ -15497,31 +15516,31 @@ class SupplyRequest(FHIRResource):
     _choice_fields = {'item': ['itemCodeableConcept', 'itemReference'], 'occurrence': ['occurrenceDateTime', 'occurrencePeriod', 'occurrenceTiming']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
+    category: CodeableConcept | dict | None
     priority: Optional[Code] = None
-    itemCodeableConcept: Optional[CodeableConcept]
-    itemReference: Optional[Reference]
-    quantity: Optional[Quantity]
-    parameter: SupplyRequestParameter | FHIRList[SupplyRequestParameter]
+    itemCodeableConcept: CodeableConcept | dict | None
+    itemReference: Reference | dict | None
+    quantity: Quantity | dict | None
+    parameter: SupplyRequestParameter | FHIRList[SupplyRequestParameter] | list | dict
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period]
-    occurrenceTiming: Optional[Timing]
+    occurrencePeriod: Period | dict | None
+    occurrenceTiming: Timing | dict | None
     authoredOn: Optional[DateTime] = None
-    requester: Optional[Reference]
-    supplier: Reference | FHIRList[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    deliverFrom: Optional[Reference]
-    deliverTo: Optional[Reference]
+    requester: Reference | dict | None
+    supplier: Reference | FHIRList[Reference] | list | dict
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    deliverFrom: Reference | dict | None
+    deliverTo: Reference | dict | None
 
 
 class TaskRestriction(FHIRElement):
@@ -15529,11 +15548,11 @@ class TaskRestriction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'period': 'Period', 'recipient': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     repetitions: Optional[PositiveInt] = None
-    period: Optional[Period]
-    recipient: Reference | FHIRList[Reference]
+    period: Period | dict | None
+    recipient: Reference | FHIRList[Reference] | list | dict
 
 
 class TaskInput(FHIRElement):
@@ -15630,9 +15649,9 @@ class TaskInput(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
     valueCanonical: Optional[Canonical] = None
@@ -15652,37 +15671,37 @@ class TaskInput(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address]
-    valueAge: Optional[Age]
-    valueAnnotation: Optional[Annotation]
-    valueAttachment: Optional[Attachment]
-    valueCodeableConcept: Optional[CodeableConcept]
-    valueCoding: Optional[Coding]
-    valueContactPoint: Optional[ContactPoint]
-    valueCount: Optional[Count]
-    valueDistance: Optional[Distance]
-    valueDuration: Optional[Duration]
-    valueHumanName: Optional[HumanName]
-    valueIdentifier: Optional[Identifier]
-    valueMoney: Optional[Money]
-    valuePeriod: Optional[Period]
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueReference: Optional[Reference]
-    valueSampledData: Optional[SampledData]
-    valueSignature: Optional[Signature]
-    valueTiming: Optional[Timing]
-    valueContactDetail: Optional[ContactDetail]
-    valueContributor: Optional[Contributor]
-    valueDataRequirement: Optional[DataRequirement]
-    valueExpression: Optional[Expression]
-    valueParameterDefinition: Optional[ParameterDefinition]
-    valueRelatedArtifact: Optional[RelatedArtifact]
-    valueTriggerDefinition: Optional[TriggerDefinition]
-    valueUsageContext: Optional[UsageContext]
-    valueDosage: Optional[Dosage]
-    valueMeta: Optional[Meta]
+    valueAddress: Address | dict | None
+    valueAge: Age | dict | None
+    valueAnnotation: Annotation | dict | None
+    valueAttachment: Attachment | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
+    valueCoding: Coding | dict | None
+    valueContactPoint: ContactPoint | dict | None
+    valueCount: Count | dict | None
+    valueDistance: Distance | dict | None
+    valueDuration: Duration | dict | None
+    valueHumanName: HumanName | dict | None
+    valueIdentifier: Identifier | dict | None
+    valueMoney: Money | dict | None
+    valuePeriod: Period | dict | None
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueReference: Reference | dict | None
+    valueSampledData: SampledData | dict | None
+    valueSignature: Signature | dict | None
+    valueTiming: Timing | dict | None
+    valueContactDetail: ContactDetail | dict | None
+    valueContributor: Contributor | dict | None
+    valueDataRequirement: DataRequirement | dict | None
+    valueExpression: Expression | dict | None
+    valueParameterDefinition: ParameterDefinition | dict | None
+    valueRelatedArtifact: RelatedArtifact | dict | None
+    valueTriggerDefinition: TriggerDefinition | dict | None
+    valueUsageContext: UsageContext | dict | None
+    valueDosage: Dosage | dict | None
+    valueMeta: Meta | dict | None
 
 
 class TaskOutput(FHIRElement):
@@ -15779,9 +15798,9 @@ class TaskOutput(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: CodeableConcept | dict | None
     valueBase64Binary: Optional[Base64Binary] = None
     valueBoolean: Optional[Boolean] = None
     valueCanonical: Optional[Canonical] = None
@@ -15801,37 +15820,37 @@ class TaskOutput(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address]
-    valueAge: Optional[Age]
-    valueAnnotation: Optional[Annotation]
-    valueAttachment: Optional[Attachment]
-    valueCodeableConcept: Optional[CodeableConcept]
-    valueCoding: Optional[Coding]
-    valueContactPoint: Optional[ContactPoint]
-    valueCount: Optional[Count]
-    valueDistance: Optional[Distance]
-    valueDuration: Optional[Duration]
-    valueHumanName: Optional[HumanName]
-    valueIdentifier: Optional[Identifier]
-    valueMoney: Optional[Money]
-    valuePeriod: Optional[Period]
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueReference: Optional[Reference]
-    valueSampledData: Optional[SampledData]
-    valueSignature: Optional[Signature]
-    valueTiming: Optional[Timing]
-    valueContactDetail: Optional[ContactDetail]
-    valueContributor: Optional[Contributor]
-    valueDataRequirement: Optional[DataRequirement]
-    valueExpression: Optional[Expression]
-    valueParameterDefinition: Optional[ParameterDefinition]
-    valueRelatedArtifact: Optional[RelatedArtifact]
-    valueTriggerDefinition: Optional[TriggerDefinition]
-    valueUsageContext: Optional[UsageContext]
-    valueDosage: Optional[Dosage]
-    valueMeta: Optional[Meta]
+    valueAddress: Address | dict | None
+    valueAge: Age | dict | None
+    valueAnnotation: Annotation | dict | None
+    valueAttachment: Attachment | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
+    valueCoding: Coding | dict | None
+    valueContactPoint: ContactPoint | dict | None
+    valueCount: Count | dict | None
+    valueDistance: Distance | dict | None
+    valueDuration: Duration | dict | None
+    valueHumanName: HumanName | dict | None
+    valueIdentifier: Identifier | dict | None
+    valueMoney: Money | dict | None
+    valuePeriod: Period | dict | None
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueReference: Reference | dict | None
+    valueSampledData: SampledData | dict | None
+    valueSignature: Signature | dict | None
+    valueTiming: Timing | dict | None
+    valueContactDetail: ContactDetail | dict | None
+    valueContributor: Contributor | dict | None
+    valueDataRequirement: DataRequirement | dict | None
+    valueExpression: Expression | dict | None
+    valueParameterDefinition: ParameterDefinition | dict | None
+    valueRelatedArtifact: RelatedArtifact | dict | None
+    valueTriggerDefinition: TriggerDefinition | dict | None
+    valueUsageContext: UsageContext | dict | None
+    valueDosage: Dosage | dict | None
+    valueMeta: Meta | dict | None
 
 
 class Task(FHIRResource):
@@ -15882,44 +15901,44 @@ class Task(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     instantiatesCanonical: Optional[Canonical] = None
     instantiatesUri: Optional[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
-    partOf: Reference | FHIRList[Reference]
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    statusReason: Optional[CodeableConcept]
-    businessStatus: Optional[CodeableConcept]
+    statusReason: CodeableConcept | dict | None
+    businessStatus: CodeableConcept | dict | None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    focus: Optional[Reference]
-    for_: Optional[Reference]
-    encounter: Optional[Reference]
-    executionPeriod: Optional[Period]
+    focus: Reference | dict | None
+    for_: Reference | dict | None
+    encounter: Reference | dict | None
+    executionPeriod: Period | dict | None
     authoredOn: Optional[DateTime] = None
     lastModified: Optional[DateTime] = None
-    requester: Optional[Reference]
-    performerType: CodeableConcept | FHIRList[CodeableConcept]
-    owner: Optional[Reference]
-    location: Optional[Reference]
-    reasonCode: Optional[CodeableConcept]
-    reasonReference: Optional[Reference]
-    insurance: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    relevantHistory: Reference | FHIRList[Reference]
-    restriction: Optional[TaskRestriction]
-    input: TaskInput | FHIRList[TaskInput]
-    output: TaskOutput | FHIRList[TaskOutput]
+    requester: Reference | dict | None
+    performerType: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    owner: Reference | dict | None
+    location: Reference | dict | None
+    reasonCode: CodeableConcept | dict | None
+    reasonReference: Reference | dict | None
+    insurance: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    relevantHistory: Reference | FHIRList[Reference] | list | dict
+    restriction: TaskRestriction | dict | None
+    input: TaskInput | FHIRList[TaskInput] | list | dict
+    output: TaskOutput | FHIRList[TaskOutput] | list | dict
 
 
 class TerminologyCapabilitiesSoftware(FHIRElement):
@@ -15927,8 +15946,8 @@ class TerminologyCapabilitiesSoftware(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     version: Optional[String] = None
 
@@ -15938,8 +15957,8 @@ class TerminologyCapabilitiesImplementation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
     url: Optional[Url] = None
 
@@ -15949,10 +15968,10 @@ class TerminologyCapabilitiesCodeSystem(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'version': 'TerminologyCapabilitiesCodeSystemVersion'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     uri: Optional[Canonical] = None
-    version: TerminologyCapabilitiesCodeSystemVersion | FHIRList[TerminologyCapabilitiesCodeSystemVersion]
+    version: TerminologyCapabilitiesCodeSystemVersion | FHIRList[TerminologyCapabilitiesCodeSystemVersion] | list | dict
     subsumption: Optional[Boolean] = None
 
 
@@ -15961,14 +15980,14 @@ class TerminologyCapabilitiesCodeSystemVersion(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'filter': 'TerminologyCapabilitiesCodeSystemVersionFilter'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[String] = None
     isDefault: Optional[Boolean] = None
     compositional: Optional[Boolean] = None
-    language: Code | FHIRList[Code] = None
-    filter: TerminologyCapabilitiesCodeSystemVersionFilter | FHIRList[TerminologyCapabilitiesCodeSystemVersionFilter]
-    property: Code | FHIRList[Code] = None
+    language: Code | FHIRList[Code] | list | None = None
+    filter: TerminologyCapabilitiesCodeSystemVersionFilter | FHIRList[TerminologyCapabilitiesCodeSystemVersionFilter] | list | dict
+    property: Code | FHIRList[Code] | list | None = None
 
 
 class TerminologyCapabilitiesCodeSystemVersionFilter(FHIRElement):
@@ -15976,10 +15995,10 @@ class TerminologyCapabilitiesCodeSystemVersionFilter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    op: Code | FHIRList[Code] = None
+    op: Code | FHIRList[Code] | list | None = None
 
 
 class TerminologyCapabilitiesExpansion(FHIRElement):
@@ -15987,12 +16006,12 @@ class TerminologyCapabilitiesExpansion(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'parameter': 'TerminologyCapabilitiesExpansionParameter'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     hierarchical: Optional[Boolean] = None
     paging: Optional[Boolean] = None
     incomplete: Optional[Boolean] = None
-    parameter: TerminologyCapabilitiesExpansionParameter | FHIRList[TerminologyCapabilitiesExpansionParameter]
+    parameter: TerminologyCapabilitiesExpansionParameter | FHIRList[TerminologyCapabilitiesExpansionParameter] | list | dict
     textFilter: Optional[Markdown] = None
 
 
@@ -16001,8 +16020,8 @@ class TerminologyCapabilitiesExpansionParameter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[Code] = None
     documentation: Optional[String] = None
 
@@ -16012,8 +16031,8 @@ class TerminologyCapabilitiesValidateCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     translations: Optional[Boolean] = None
 
 
@@ -16022,8 +16041,8 @@ class TerminologyCapabilitiesTranslation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     needsMap: Optional[Boolean] = None
 
 
@@ -16032,8 +16051,8 @@ class TerminologyCapabilitiesClosure(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     translation: Optional[Boolean] = None
 
 
@@ -16059,13 +16078,13 @@ class TerminologyCapabilities(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     version: Optional[String] = None
     name: Optional[String] = None
@@ -16074,22 +16093,22 @@ class TerminologyCapabilities(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     kind: Optional[Code] = None
-    software: Optional[TerminologyCapabilitiesSoftware]
-    implementation: Optional[TerminologyCapabilitiesImplementation]
+    software: TerminologyCapabilitiesSoftware | dict | None
+    implementation: TerminologyCapabilitiesImplementation | dict | None
     lockedDate: Optional[Boolean] = None
-    codeSystem: TerminologyCapabilitiesCodeSystem | FHIRList[TerminologyCapabilitiesCodeSystem]
-    expansion: Optional[TerminologyCapabilitiesExpansion]
+    codeSystem: TerminologyCapabilitiesCodeSystem | FHIRList[TerminologyCapabilitiesCodeSystem] | list | dict
+    expansion: TerminologyCapabilitiesExpansion | dict | None
     codeSearch: Optional[Code] = None
-    validateCode: Optional[TerminologyCapabilitiesValidateCode]
-    translation: Optional[TerminologyCapabilitiesTranslation]
-    closure: Optional[TerminologyCapabilitiesClosure]
+    validateCode: TerminologyCapabilitiesValidateCode | dict | None
+    translation: TerminologyCapabilitiesTranslation | dict | None
+    closure: TerminologyCapabilitiesClosure | dict | None
 
 
 class TestReportParticipant(FHIRElement):
@@ -16097,8 +16116,8 @@ class TestReportParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
     uri: Optional[Uri] = None
     display: Optional[String] = None
@@ -16109,9 +16128,9 @@ class TestReportSetup(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestReportSetupAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: TestReportSetupAction | FHIRList[TestReportSetupAction]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: TestReportSetupAction | FHIRList[TestReportSetupAction] | list | dict
 
 
 class TestReportSetupAction(FHIRElement):
@@ -16124,10 +16143,10 @@ class TestReportSetupAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    operation: Optional[TestReportSetupActionOperation]
-    assert_: Optional[TestReportSetupActionAssert]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    operation: TestReportSetupActionOperation | dict | None
+    assert_: TestReportSetupActionAssert | dict | None
 
 
 class TestReportSetupActionOperation(FHIRElement):
@@ -16135,8 +16154,8 @@ class TestReportSetupActionOperation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     result: Optional[Code] = None
     message: Optional[Markdown] = None
     detail: Optional[Uri] = None
@@ -16147,8 +16166,8 @@ class TestReportSetupActionAssert(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     result: Optional[Code] = None
     message: Optional[Markdown] = None
     detail: Optional[String] = None
@@ -16159,11 +16178,11 @@ class TestReportTest(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestReportTestAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     description: Optional[String] = None
-    action: TestReportTestAction | FHIRList[TestReportTestAction]
+    action: TestReportTestAction | FHIRList[TestReportTestAction] | list | dict
 
 
 class TestReportTestAction(FHIRElement):
@@ -16171,8 +16190,8 @@ class TestReportTestAction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     operation: Any = None
     assert_: Any = None
 
@@ -16182,9 +16201,9 @@ class TestReportTeardown(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestReportTeardownAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: TestReportTeardownAction | FHIRList[TestReportTeardownAction]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: TestReportTeardownAction | FHIRList[TestReportTeardownAction] | list | dict
 
 
 class TestReportTeardownAction(FHIRElement):
@@ -16192,8 +16211,8 @@ class TestReportTeardownAction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     operation: Any = None
 
 
@@ -16215,25 +16234,25 @@ class TestReport(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     name: Optional[String] = None
     status: Optional[Code] = None
-    testScript: Optional[Reference]
+    testScript: Reference | dict | None
     result: Optional[Code] = None
     score: Optional[Decimal] = None
     tester: Optional[String] = None
     issued: Optional[DateTime] = None
-    participant: TestReportParticipant | FHIRList[TestReportParticipant]
-    setup: Optional[TestReportSetup]
-    test: TestReportTest | FHIRList[TestReportTest]
-    teardown: Optional[TestReportTeardown]
+    participant: TestReportParticipant | FHIRList[TestReportParticipant] | list | dict
+    setup: TestReportSetup | dict | None
+    test: TestReportTest | FHIRList[TestReportTest] | list | dict
+    teardown: TestReportTeardown | dict | None
 
 
 class TestScriptOrigin(FHIRElement):
@@ -16241,10 +16260,10 @@ class TestScriptOrigin(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'profile': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     index: Optional[Integer] = None
-    profile: Optional[Coding]
+    profile: Coding | dict | None
 
 
 class TestScriptDestination(FHIRElement):
@@ -16252,10 +16271,10 @@ class TestScriptDestination(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'profile': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     index: Optional[Integer] = None
-    profile: Optional[Coding]
+    profile: Coding | dict | None
 
 
 class TestScriptMetadata(FHIRElement):
@@ -16263,10 +16282,10 @@ class TestScriptMetadata(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'link': 'TestScriptMetadataLink', 'capability': 'TestScriptMetadataCapability'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    link: TestScriptMetadataLink | FHIRList[TestScriptMetadataLink]
-    capability: TestScriptMetadataCapability | FHIRList[TestScriptMetadataCapability]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    link: TestScriptMetadataLink | FHIRList[TestScriptMetadataLink] | list | dict
+    capability: TestScriptMetadataCapability | FHIRList[TestScriptMetadataCapability] | list | dict
 
 
 class TestScriptMetadataLink(FHIRElement):
@@ -16274,8 +16293,8 @@ class TestScriptMetadataLink(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
     description: Optional[String] = None
 
@@ -16285,14 +16304,14 @@ class TestScriptMetadataCapability(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     required: Optional[Boolean] = None
     validated: Optional[Boolean] = None
     description: Optional[String] = None
-    origin: Integer | FHIRList[Integer] = None
+    origin: Integer | FHIRList[Integer] | list | None = None
     destination: Optional[Integer] = None
-    link: Uri | FHIRList[Uri] = None
+    link: Uri | FHIRList[Uri] | list | None = None
     capabilities: Optional[Canonical] = None
 
 
@@ -16301,11 +16320,11 @@ class TestScriptFixture(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'resource': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     autocreate: Optional[Boolean] = None
     autodelete: Optional[Boolean] = None
-    resource: Optional[Reference]
+    resource: Reference | dict | None
 
 
 class TestScriptVariable(FHIRElement):
@@ -16313,8 +16332,8 @@ class TestScriptVariable(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     defaultValue: Optional[String] = None
     description: Optional[String] = None
@@ -16330,9 +16349,9 @@ class TestScriptSetup(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestScriptSetupAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: TestScriptSetupAction | FHIRList[TestScriptSetupAction]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: TestScriptSetupAction | FHIRList[TestScriptSetupAction] | list | dict
 
 
 class TestScriptSetupAction(FHIRElement):
@@ -16345,10 +16364,10 @@ class TestScriptSetupAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    operation: Optional[TestScriptSetupActionOperation]
-    assert_: Optional[TestScriptSetupActionAssert]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    operation: TestScriptSetupActionOperation | dict | None
+    assert_: TestScriptSetupActionAssert | dict | None
 
 
 class TestScriptSetupActionOperation(FHIRElement):
@@ -16361,9 +16380,9 @@ class TestScriptSetupActionOperation(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    type_: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    type_: Coding | dict | None
     resource: Optional[Code] = None
     label: Optional[String] = None
     description: Optional[String] = None
@@ -16374,7 +16393,7 @@ class TestScriptSetupActionOperation(FHIRElement):
     method: Optional[Code] = None
     origin: Optional[Integer] = None
     params: Optional[String] = None
-    requestHeader: TestScriptSetupActionOperationRequestHeader | FHIRList[TestScriptSetupActionOperationRequestHeader]
+    requestHeader: TestScriptSetupActionOperationRequestHeader | FHIRList[TestScriptSetupActionOperationRequestHeader] | list | dict
     requestId: Optional[Id] = None
     responseId: Optional[Id] = None
     sourceId: Optional[Id] = None
@@ -16387,8 +16406,8 @@ class TestScriptSetupActionOperationRequestHeader(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     field: Optional[String] = None
     value: Optional[String] = None
 
@@ -16398,8 +16417,8 @@ class TestScriptSetupActionAssert(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     label: Optional[String] = None
     description: Optional[String] = None
     direction: Optional[Code] = None
@@ -16429,11 +16448,11 @@ class TestScriptTest(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestScriptTestAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     description: Optional[String] = None
-    action: TestScriptTestAction | FHIRList[TestScriptTestAction]
+    action: TestScriptTestAction | FHIRList[TestScriptTestAction] | list | dict
 
 
 class TestScriptTestAction(FHIRElement):
@@ -16441,8 +16460,8 @@ class TestScriptTestAction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     operation: Any = None
     assert_: Any = None
 
@@ -16452,9 +16471,9 @@ class TestScriptTeardown(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'action': 'TestScriptTeardownAction'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    action: TestScriptTeardownAction | FHIRList[TestScriptTeardownAction]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    action: TestScriptTeardownAction | FHIRList[TestScriptTeardownAction] | list | dict
 
 
 class TestScriptTeardownAction(FHIRElement):
@@ -16462,8 +16481,8 @@ class TestScriptTeardownAction(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     operation: Any = None
 
 
@@ -16505,15 +16524,15 @@ class TestScript(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Optional[Identifier]
+    identifier: Identifier | dict | None
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -16521,21 +16540,21 @@ class TestScript(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
-    origin: TestScriptOrigin | FHIRList[TestScriptOrigin]
-    destination: TestScriptDestination | FHIRList[TestScriptDestination]
-    metadata: Optional[TestScriptMetadata]
-    fixture: TestScriptFixture | FHIRList[TestScriptFixture]
-    profile: Reference | FHIRList[Reference]
-    variable: TestScriptVariable | FHIRList[TestScriptVariable]
-    setup: Optional[TestScriptSetup]
-    test: TestScriptTest | FHIRList[TestScriptTest]
-    teardown: Optional[TestScriptTeardown]
+    origin: TestScriptOrigin | FHIRList[TestScriptOrigin] | list | dict
+    destination: TestScriptDestination | FHIRList[TestScriptDestination] | list | dict
+    metadata: TestScriptMetadata | dict | None
+    fixture: TestScriptFixture | FHIRList[TestScriptFixture] | list | dict
+    profile: Reference | FHIRList[Reference] | list | dict
+    variable: TestScriptVariable | FHIRList[TestScriptVariable] | list | dict
+    setup: TestScriptSetup | dict | None
+    test: TestScriptTest | FHIRList[TestScriptTest] | list | dict
+    teardown: TestScriptTeardown | dict | None
 
 
 class ValueSetCompose(FHIRElement):
@@ -16543,11 +16562,11 @@ class ValueSetCompose(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'include': 'ValueSetComposeInclude'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     lockedDate: Optional[Date] = None
     inactive: Optional[Boolean] = None
-    include: ValueSetComposeInclude | FHIRList[ValueSetComposeInclude]
+    include: ValueSetComposeInclude | FHIRList[ValueSetComposeInclude] | list | dict
     exclude: Any = None
 
 
@@ -16561,13 +16580,13 @@ class ValueSetComposeInclude(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
-    concept: ValueSetComposeIncludeConcept | FHIRList[ValueSetComposeIncludeConcept]
-    filter: ValueSetComposeIncludeFilter | FHIRList[ValueSetComposeIncludeFilter]
-    valueSet: Canonical | FHIRList[Canonical] = None
+    concept: ValueSetComposeIncludeConcept | FHIRList[ValueSetComposeIncludeConcept] | list | dict
+    filter: ValueSetComposeIncludeFilter | FHIRList[ValueSetComposeIncludeFilter] | list | dict
+    valueSet: Canonical | FHIRList[Canonical] | list | None = None
 
 
 class ValueSetComposeIncludeConcept(FHIRElement):
@@ -16575,11 +16594,11 @@ class ValueSetComposeIncludeConcept(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'designation': 'ValueSetComposeIncludeConceptDesignation'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
-    designation: ValueSetComposeIncludeConceptDesignation | FHIRList[ValueSetComposeIncludeConceptDesignation]
+    designation: ValueSetComposeIncludeConceptDesignation | FHIRList[ValueSetComposeIncludeConceptDesignation] | list | dict
 
 
 class ValueSetComposeIncludeConceptDesignation(FHIRElement):
@@ -16587,10 +16606,10 @@ class ValueSetComposeIncludeConceptDesignation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'use': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     language: Optional[Code] = None
-    use: Optional[Coding]
+    use: Coding | dict | None
     value: Optional[String] = None
 
 
@@ -16599,8 +16618,8 @@ class ValueSetComposeIncludeFilter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     property: Optional[Code] = None
     op: Optional[Code] = None
     value: Optional[String] = None
@@ -16616,14 +16635,14 @@ class ValueSetExpansion(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     identifier: Optional[Uri] = None
     timestamp: Optional[DateTime] = None
     total: Optional[Integer] = None
     offset: Optional[Integer] = None
-    parameter: ValueSetExpansionParameter | FHIRList[ValueSetExpansionParameter]
-    contains: ValueSetExpansionContains | FHIRList[ValueSetExpansionContains]
+    parameter: ValueSetExpansionParameter | FHIRList[ValueSetExpansionParameter] | list | dict
+    contains: ValueSetExpansionContains | FHIRList[ValueSetExpansionContains] | list | dict
 
 
 class ValueSetExpansionParameter(FHIRElement):
@@ -16632,8 +16651,8 @@ class ValueSetExpansionParameter(FHIRElement):
     _choice_fields = {'value': ['valueString', 'valueBoolean', 'valueInteger', 'valueDecimal', 'valueUri', 'valueCode', 'valueDateTime']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
@@ -16649,8 +16668,8 @@ class ValueSetExpansionContains(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     abstract: Optional[Boolean] = None
     inactive: Optional[Boolean] = None
@@ -16679,15 +16698,15 @@ class ValueSet(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -16695,15 +16714,15 @@ class ValueSet(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     immutable: Optional[Boolean] = None
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
-    compose: Optional[ValueSetCompose]
-    expansion: Optional[ValueSetExpansion]
+    compose: ValueSetCompose | dict | None
+    expansion: ValueSetExpansion | dict | None
 
 
 class VerificationResultPrimarySource(FHIRElement):
@@ -16720,15 +16739,15 @@ class VerificationResultPrimarySource(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    who: Optional[Reference]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
-    communicationMethod: CodeableConcept | FHIRList[CodeableConcept]
-    validationStatus: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    who: Reference | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    communicationMethod: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    validationStatus: CodeableConcept | dict | None
     validationDate: Optional[DateTime] = None
-    canPushUpdates: Optional[CodeableConcept]
-    pushTypeAvailable: CodeableConcept | FHIRList[CodeableConcept]
+    canPushUpdates: CodeableConcept | dict | None
+    pushTypeAvailable: CodeableConcept | FHIRList[CodeableConcept] | list | dict
 
 
 class VerificationResultAttestation(FHIRElement):
@@ -16744,16 +16763,16 @@ class VerificationResultAttestation(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    who: Optional[Reference]
-    onBehalfOf: Optional[Reference]
-    communicationMethod: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    who: Reference | dict | None
+    onBehalfOf: Reference | dict | None
+    communicationMethod: CodeableConcept | dict | None
     date: Optional[Date] = None
     sourceIdentityCertificate: Optional[String] = None
     proxyIdentityCertificate: Optional[String] = None
-    proxySignature: Optional[Signature]
-    sourceSignature: Optional[Signature]
+    proxySignature: Signature | dict | None
+    sourceSignature: Signature | dict | None
 
 
 class VerificationResultValidator(FHIRElement):
@@ -16761,11 +16780,11 @@ class VerificationResultValidator(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'organization': 'Reference', 'attestationSignature': 'Signature'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    organization: Optional[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    organization: Reference | dict | None
     identityCertificate: Optional[String] = None
-    attestationSignature: Optional[Signature]
+    attestationSignature: Signature | dict | None
 
 
 class VerificationResult(FHIRResource):
@@ -16789,27 +16808,27 @@ class VerificationResult(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    target: Reference | FHIRList[Reference]
-    targetLocation: String | FHIRList[String] = None
-    need: Optional[CodeableConcept]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    target: Reference | FHIRList[Reference] | list | dict
+    targetLocation: String | FHIRList[String] | list | None = None
+    need: CodeableConcept | dict | None
     status: Optional[Code] = None
     statusDate: Optional[DateTime] = None
-    validationType: Optional[CodeableConcept]
-    validationProcess: CodeableConcept | FHIRList[CodeableConcept]
-    frequency: Optional[Timing]
+    validationType: CodeableConcept | dict | None
+    validationProcess: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    frequency: Timing | dict | None
     lastPerformed: Optional[DateTime] = None
     nextScheduled: Optional[Date] = None
-    failureAction: Optional[CodeableConcept]
-    primarySource: VerificationResultPrimarySource | FHIRList[VerificationResultPrimarySource]
-    attestation: Optional[VerificationResultAttestation]
-    validator: VerificationResultValidator | FHIRList[VerificationResultValidator]
+    failureAction: CodeableConcept | dict | None
+    primarySource: VerificationResultPrimarySource | FHIRList[VerificationResultPrimarySource] | list | dict
+    attestation: VerificationResultAttestation | dict | None
+    validator: VerificationResultValidator | FHIRList[VerificationResultValidator] | list | dict
 
 
 class VisionPrescriptionLensSpecification(FHIRElement):
@@ -16824,22 +16843,22 @@ class VisionPrescriptionLensSpecification(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    product: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    product: CodeableConcept | dict | None
     eye: Optional[Code] = None
     sphere: Optional[Decimal] = None
     cylinder: Optional[Decimal] = None
     axis: Optional[Integer] = None
-    prism: VisionPrescriptionLensSpecificationPrism | FHIRList[VisionPrescriptionLensSpecificationPrism]
+    prism: VisionPrescriptionLensSpecificationPrism | FHIRList[VisionPrescriptionLensSpecificationPrism] | list | dict
     add: Optional[Decimal] = None
     power: Optional[Decimal] = None
     backCurve: Optional[Decimal] = None
     diameter: Optional[Decimal] = None
-    duration: Optional[Quantity]
+    duration: Quantity | dict | None
     color: Optional[String] = None
     brand: Optional[String] = None
-    note: Annotation | FHIRList[Annotation]
+    note: Annotation | FHIRList[Annotation] | list | dict
 
 
 class VisionPrescriptionLensSpecificationPrism(FHIRElement):
@@ -16847,8 +16866,8 @@ class VisionPrescriptionLensSpecificationPrism(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     amount: Optional[Decimal] = None
     base: Optional[Code] = None
 
@@ -16870,21 +16889,21 @@ class VisionPrescription(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     status: Optional[Code] = None
     created: Optional[DateTime] = None
-    patient: Optional[Reference]
-    encounter: Optional[Reference]
+    patient: Reference | dict | None
+    encounter: Reference | dict | None
     dateWritten: Optional[DateTime] = None
-    prescriber: Optional[Reference]
-    lensSpecification: VisionPrescriptionLensSpecification | FHIRList[VisionPrescriptionLensSpecification]
+    prescriber: Reference | dict | None
+    lensSpecification: VisionPrescriptionLensSpecification | FHIRList[VisionPrescriptionLensSpecification] | list | dict
 
 
 class actualgroupCharacteristic(FHIRElement):
@@ -16902,16 +16921,16 @@ class actualgroupCharacteristic(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueBoolean', 'valueQuantity', 'valueRange', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueReference: Optional[Reference]
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueReference: Reference | dict | None
     exclude: Optional[Boolean] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class actualgroupMember(FHIRElement):
@@ -16919,10 +16938,10 @@ class actualgroupMember(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'entity': 'Reference', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    entity: Optional[Reference]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    entity: Reference | dict | None
+    period: Period | dict | None
     inactive: Optional[Boolean] = None
 
 
@@ -16943,23 +16962,23 @@ class actualgroup(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
     type_: Optional[Code] = None
     actual: Optional[Boolean] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     name: Optional[String] = None
     quantity: Optional[UnsignedInt] = None
-    managingEntity: Optional[Reference]
-    characteristic: Optional[actualgroupCharacteristic]
-    member: actualgroupMember | FHIRList[actualgroupMember]
+    managingEntity: Reference | dict | None
+    characteristic: actualgroupCharacteristic | dict | None
+    member: actualgroupMember | FHIRList[actualgroupMember] | list | dict
 
 
 class bmiCategory(FHIRElement):
@@ -16967,8 +16986,8 @@ class bmiCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -16977,7 +16996,7 @@ class bmiCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -16990,8 +17009,8 @@ class bmiCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17000,7 +17019,7 @@ class bmiCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17013,7 +17032,7 @@ class bmiValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -17034,13 +17053,13 @@ class bmiReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -17076,22 +17095,22 @@ class bmiComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -17145,38 +17164,38 @@ class bmi(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: bmiReferenceRange | FHIRList[bmiReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: bmiComponent | FHIRList[bmiComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: bmiReferenceRange | FHIRList[bmiReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: bmiComponent | FHIRList[bmiComponent] | list | dict
 
 
 class bodyheightCategory(FHIRElement):
@@ -17184,8 +17203,8 @@ class bodyheightCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -17194,7 +17213,7 @@ class bodyheightCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17207,8 +17226,8 @@ class bodyheightCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17217,7 +17236,7 @@ class bodyheightCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17230,7 +17249,7 @@ class bodyheightValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -17251,13 +17270,13 @@ class bodyheightReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -17293,22 +17312,22 @@ class bodyheightComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -17362,38 +17381,38 @@ class bodyheight(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: bodyheightReferenceRange | FHIRList[bodyheightReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: bodyheightComponent | FHIRList[bodyheightComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: bodyheightReferenceRange | FHIRList[bodyheightReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: bodyheightComponent | FHIRList[bodyheightComponent] | list | dict
 
 
 class bodytempCategory(FHIRElement):
@@ -17401,8 +17420,8 @@ class bodytempCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -17411,7 +17430,7 @@ class bodytempCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17424,8 +17443,8 @@ class bodytempCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17434,7 +17453,7 @@ class bodytempCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17447,7 +17466,7 @@ class bodytempValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -17468,13 +17487,13 @@ class bodytempReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -17510,22 +17529,22 @@ class bodytempComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -17579,38 +17598,38 @@ class bodytemp(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: bodytempReferenceRange | FHIRList[bodytempReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: bodytempComponent | FHIRList[bodytempComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: bodytempReferenceRange | FHIRList[bodytempReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: bodytempComponent | FHIRList[bodytempComponent] | list | dict
 
 
 class bodyweightCategory(FHIRElement):
@@ -17618,8 +17637,8 @@ class bodyweightCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -17628,7 +17647,7 @@ class bodyweightCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17641,8 +17660,8 @@ class bodyweightCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17651,7 +17670,7 @@ class bodyweightCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17664,7 +17683,7 @@ class bodyweightValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -17685,13 +17704,13 @@ class bodyweightReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -17727,22 +17746,22 @@ class bodyweightComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -17796,38 +17815,38 @@ class bodyweight(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: bodyweightReferenceRange | FHIRList[bodyweightReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: bodyweightComponent | FHIRList[bodyweightComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: bodyweightReferenceRange | FHIRList[bodyweightReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: bodyweightComponent | FHIRList[bodyweightComponent] | list | dict
 
 
 class bpCategory(FHIRElement):
@@ -17835,8 +17854,8 @@ class bpCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -17845,7 +17864,7 @@ class bpCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17858,8 +17877,8 @@ class bpCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17868,7 +17887,7 @@ class bpCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17889,13 +17908,13 @@ class bpReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -17917,22 +17936,22 @@ class bpComponent(FHIRElement):
     _choice_fields = {'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -17941,8 +17960,8 @@ class bpComponentCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -17951,7 +17970,7 @@ class bpComponentCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -17964,7 +17983,7 @@ class bpComponentValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -18021,38 +18040,38 @@ class bp(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: bpReferenceRange | FHIRList[bpReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: Optional[bpComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: bpReferenceRange | FHIRList[bpReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: bpComponent | dict | None
 
 
 class catalogAttester(FHIRElement):
@@ -18060,11 +18079,11 @@ class catalogAttester(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'party': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     time: Optional[DateTime] = None
-    party: Optional[Reference]
+    party: Reference | dict | None
 
 
 class catalogRelatesTo(FHIRElement):
@@ -18073,11 +18092,11 @@ class catalogRelatesTo(FHIRElement):
     _choice_fields = {'target': ['targetIdentifier', 'targetReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier]
-    targetReference: Optional[Reference]
+    targetIdentifier: Identifier | dict | None
+    targetReference: Reference | dict | None
 
 
 class catalogEvent(FHIRElement):
@@ -18085,11 +18104,11 @@ class catalogEvent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'period': 'Period', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    period: Optional[Period]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | dict | None
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class catalogSection(FHIRElement):
@@ -18107,17 +18126,17 @@ class catalogSection(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     title: Optional[String] = None
-    code: Optional[CodeableConcept]
-    author: Reference | FHIRList[Reference]
-    focus: Optional[Reference]
-    text: Optional[Narrative]
+    code: CodeableConcept | dict | None
+    author: Reference | FHIRList[Reference] | list | dict
+    focus: Reference | dict | None
+    text: Narrative | dict | None
     mode: Optional[Code] = None
-    orderedBy: Optional[CodeableConcept]
-    entry: Reference | FHIRList[Reference]
-    emptyReason: Optional[CodeableConcept]
+    orderedBy: CodeableConcept | dict | None
+    entry: Reference | FHIRList[Reference] | list | dict
+    emptyReason: CodeableConcept | dict | None
     section: Any = None
 
 
@@ -18144,28 +18163,28 @@ class catalog(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Optional[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | dict | None
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    category: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    category: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     date: Optional[DateTime] = None
-    author: Reference | FHIRList[Reference]
+    author: Reference | FHIRList[Reference] | list | dict
     title: Optional[String] = None
     confidentiality: Optional[Code] = None
-    attester: catalogAttester | FHIRList[catalogAttester]
-    custodian: Optional[Reference]
-    relatesTo: catalogRelatesTo | FHIRList[catalogRelatesTo]
-    event: catalogEvent | FHIRList[catalogEvent]
-    section: catalogSection | FHIRList[catalogSection]
+    attester: catalogAttester | FHIRList[catalogAttester] | list | dict
+    custodian: Reference | dict | None
+    relatesTo: catalogRelatesTo | FHIRList[catalogRelatesTo] | list | dict
+    event: catalogEvent | FHIRList[catalogEvent] | list | dict
+    section: catalogSection | FHIRList[catalogSection] | list | dict
 
 
 class cdshooksguidanceresponse(FHIRResource):
@@ -18193,28 +18212,28 @@ class cdshooksguidanceresponse(FHIRResource):
     _choice_fields = {'module': ['moduleUri']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Optional[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    requestIdentifier: Optional[Identifier]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | dict | None
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    requestIdentifier: Identifier | dict | None
+    identifier: Identifier | dict | None
     moduleUri: Optional[Uri] = None
     status: Optional[Code] = None
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     occurrenceDateTime: Optional[DateTime] = None
-    performer: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    evaluationMessage: Reference | FHIRList[Reference]
-    outputParameters: Optional[Reference]
-    result: Optional[Reference]
-    dataRequirement: DataRequirement | FHIRList[DataRequirement]
+    performer: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    evaluationMessage: Reference | FHIRList[Reference] | list | dict
+    outputParameters: Reference | dict | None
+    result: Reference | dict | None
+    dataRequirement: DataRequirement | FHIRList[DataRequirement] | list | dict
 
 
 class cdshooksrequestgroupAction(FHIRElement):
@@ -18238,31 +18257,31 @@ class cdshooksrequestgroupAction(FHIRElement):
     _choice_fields = {'timing': ['timingDateTime', 'timingAge', 'timingPeriod', 'timingDuration', 'timingRange', 'timingTiming']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    condition: cdshooksrequestgroupActionCondition | FHIRList[cdshooksrequestgroupActionCondition]
-    relatedAction: cdshooksrequestgroupActionRelatedAction | FHIRList[cdshooksrequestgroupActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    condition: cdshooksrequestgroupActionCondition | FHIRList[cdshooksrequestgroupActionCondition] | list | dict
+    relatedAction: cdshooksrequestgroupActionRelatedAction | FHIRList[cdshooksrequestgroupActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: Reference | FHIRList[Reference]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: Reference | FHIRList[Reference] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
     precheckBehavior: Optional[Code] = None
     cardinalityBehavior: Optional[Code] = None
-    resource: Optional[Reference]
+    resource: Reference | dict | None
     action: Any = None
 
 
@@ -18271,10 +18290,10 @@ class cdshooksrequestgroupActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class cdshooksrequestgroupActionRelatedAction(FHIRElement):
@@ -18283,12 +18302,12 @@ class cdshooksrequestgroupActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class cdshooksrequestgroup(FHIRResource):
@@ -18326,31 +18345,31 @@ class cdshooksrequestgroup(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
-    instantiatesCanonical: Canonical | FHIRList[Canonical] = None
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
+    instantiatesCanonical: Canonical | FHIRList[Canonical] | list | None = None
     instantiatesUri: Optional[Uri] = None
-    basedOn: Reference | FHIRList[Reference]
-    replaces: Reference | FHIRList[Reference]
-    groupIdentifier: Optional[Identifier]
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    replaces: Reference | FHIRList[Reference] | list | dict
+    groupIdentifier: Identifier | dict | None
     status: Optional[Code] = None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     authoredOn: Optional[DateTime] = None
-    author: Optional[Reference]
-    reasonCode: CodeableConcept | FHIRList[CodeableConcept]
-    reasonReference: Reference | FHIRList[Reference]
-    note: Annotation | FHIRList[Annotation]
-    action: cdshooksrequestgroupAction | FHIRList[cdshooksrequestgroupAction]
+    author: Reference | dict | None
+    reasonCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reasonReference: Reference | FHIRList[Reference] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    action: cdshooksrequestgroupAction | FHIRList[cdshooksrequestgroupAction] | list | dict
 
 
 class cdshooksserviceplandefinitionGoal(FHIRElement):
@@ -18368,15 +18387,15 @@ class cdshooksserviceplandefinitionGoal(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    description: Optional[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    start: Optional[CodeableConcept]
-    addresses: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    target: cdshooksserviceplandefinitionGoalTarget | FHIRList[cdshooksserviceplandefinitionGoalTarget]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    description: CodeableConcept | dict | None
+    priority: CodeableConcept | dict | None
+    start: CodeableConcept | dict | None
+    addresses: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    target: cdshooksserviceplandefinitionGoalTarget | FHIRList[cdshooksserviceplandefinitionGoalTarget] | list | dict
 
 
 class cdshooksserviceplandefinitionGoalTarget(FHIRElement):
@@ -18393,13 +18412,13 @@ class cdshooksserviceplandefinitionGoalTarget(FHIRElement):
     _choice_fields = {'detail': ['detailQuantity', 'detailRange', 'detailCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity]
-    detailRange: Optional[Range]
-    detailCodeableConcept: Optional[CodeableConcept]
-    due: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    measure: CodeableConcept | dict | None
+    detailQuantity: Quantity | dict | None
+    detailRange: Range | dict | None
+    detailCodeableConcept: CodeableConcept | dict | None
+    due: Duration | dict | None
 
 
 class cdshooksserviceplandefinitionAction(FHIRElement):
@@ -18448,32 +18467,32 @@ class cdshooksserviceplandefinitionAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
-    trigger: TriggerDefinition | FHIRList[TriggerDefinition]
-    condition: cdshooksserviceplandefinitionActionCondition | FHIRList[cdshooksserviceplandefinitionActionCondition]
-    input: DataRequirement | FHIRList[DataRequirement]
-    output: DataRequirement | FHIRList[DataRequirement]
-    relatedAction: cdshooksserviceplandefinitionActionRelatedAction | FHIRList[cdshooksserviceplandefinitionActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    goalId: Id | FHIRList[Id] | list | None = None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
+    trigger: TriggerDefinition | FHIRList[TriggerDefinition] | list | dict
+    condition: cdshooksserviceplandefinitionActionCondition | FHIRList[cdshooksserviceplandefinitionActionCondition] | list | dict
+    input: DataRequirement | FHIRList[DataRequirement] | list | dict
+    output: DataRequirement | FHIRList[DataRequirement] | list | dict
+    relatedAction: cdshooksserviceplandefinitionActionRelatedAction | FHIRList[cdshooksserviceplandefinitionActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: cdshooksserviceplandefinitionActionParticipant | FHIRList[cdshooksserviceplandefinitionActionParticipant]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: cdshooksserviceplandefinitionActionParticipant | FHIRList[cdshooksserviceplandefinitionActionParticipant] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
@@ -18482,7 +18501,7 @@ class cdshooksserviceplandefinitionAction(FHIRElement):
     definitionCanonical: Optional[Canonical] = None
     definitionUri: Optional[Uri] = None
     transform: Optional[Canonical] = None
-    dynamicValue: cdshooksserviceplandefinitionActionDynamicValue | FHIRList[cdshooksserviceplandefinitionActionDynamicValue]
+    dynamicValue: cdshooksserviceplandefinitionActionDynamicValue | FHIRList[cdshooksserviceplandefinitionActionDynamicValue] | list | dict
     action: Any = None
 
 
@@ -18491,10 +18510,10 @@ class cdshooksserviceplandefinitionActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class cdshooksserviceplandefinitionActionRelatedAction(FHIRElement):
@@ -18503,12 +18522,12 @@ class cdshooksserviceplandefinitionActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class cdshooksserviceplandefinitionActionParticipant(FHIRElement):
@@ -18516,10 +18535,10 @@ class cdshooksserviceplandefinitionActionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class cdshooksserviceplandefinitionActionDynamicValue(FHIRElement):
@@ -18527,10 +18546,10 @@ class cdshooksserviceplandefinitionActionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class cdshooksserviceplandefinition(FHIRResource):
@@ -18578,45 +18597,45 @@ class cdshooksserviceplandefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Optional[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | dict | None
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
-    goal: cdshooksserviceplandefinitionGoal | FHIRList[cdshooksserviceplandefinitionGoal]
-    action: cdshooksserviceplandefinitionAction | FHIRList[cdshooksserviceplandefinitionAction]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
+    goal: cdshooksserviceplandefinitionGoal | FHIRList[cdshooksserviceplandefinitionGoal] | list | dict
+    action: cdshooksserviceplandefinitionAction | FHIRList[cdshooksserviceplandefinitionAction] | list | dict
 
 
 class cholesterolValue(FHIRElement):
@@ -18624,7 +18643,7 @@ class cholesterolValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -18645,13 +18664,13 @@ class cholesterolReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: Optional[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | dict | None
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -18687,22 +18706,22 @@ class cholesterolComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -18742,40 +18761,40 @@ class cholesterol(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod', 'effectiveTiming', 'effectiveInstant'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    effectiveTiming: Optional[Timing]
+    effectivePeriod: Period | dict | None
+    effectiveTiming: Timing | dict | None
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: Optional[cholesterolReferenceRange]
-    hasMember: Optional[Reference]
-    derivedFrom: Optional[Reference]
-    component: cholesterolComponent | FHIRList[cholesterolComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: cholesterolReferenceRange | dict | None
+    hasMember: Reference | dict | None
+    derivedFrom: Reference | dict | None
+    component: cholesterolComponent | FHIRList[cholesterolComponent] | list | dict
 
 
 class clinicaldocumentAttester(FHIRElement):
@@ -18783,11 +18802,11 @@ class clinicaldocumentAttester(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'party': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     mode: Optional[Code] = None
     time: Optional[DateTime] = None
-    party: Optional[Reference]
+    party: Reference | dict | None
 
 
 class clinicaldocumentRelatesTo(FHIRElement):
@@ -18796,11 +18815,11 @@ class clinicaldocumentRelatesTo(FHIRElement):
     _choice_fields = {'target': ['targetIdentifier', 'targetReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier]
-    targetReference: Optional[Reference]
+    targetIdentifier: Identifier | dict | None
+    targetReference: Reference | dict | None
 
 
 class clinicaldocumentEvent(FHIRElement):
@@ -18808,11 +18827,11 @@ class clinicaldocumentEvent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'period': 'Period', 'detail': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    period: Optional[Period]
-    detail: Reference | FHIRList[Reference]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    period: Period | dict | None
+    detail: Reference | FHIRList[Reference] | list | dict
 
 
 class clinicaldocumentSection(FHIRElement):
@@ -18830,17 +18849,17 @@ class clinicaldocumentSection(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     title: Optional[String] = None
-    code: Optional[CodeableConcept]
-    author: Reference | FHIRList[Reference]
-    focus: Optional[Reference]
-    text: Optional[Narrative]
+    code: CodeableConcept | dict | None
+    author: Reference | FHIRList[Reference] | list | dict
+    focus: Reference | dict | None
+    text: Narrative | dict | None
     mode: Optional[Code] = None
-    orderedBy: Optional[CodeableConcept]
-    entry: Reference | FHIRList[Reference]
-    emptyReason: Optional[CodeableConcept]
+    orderedBy: CodeableConcept | dict | None
+    entry: Reference | FHIRList[Reference] | list | dict
+    emptyReason: CodeableConcept | dict | None
     section: Any = None
 
 
@@ -18867,28 +18886,28 @@ class clinicaldocument(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Optional[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | dict | None
     status: Optional[Code] = None
-    type_: Optional[CodeableConcept]
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     date: Optional[DateTime] = None
-    author: Reference | FHIRList[Reference]
+    author: Reference | FHIRList[Reference] | list | dict
     title: Optional[String] = None
     confidentiality: Optional[Code] = None
-    attester: clinicaldocumentAttester | FHIRList[clinicaldocumentAttester]
-    custodian: Optional[Reference]
-    relatesTo: clinicaldocumentRelatesTo | FHIRList[clinicaldocumentRelatesTo]
-    event: clinicaldocumentEvent | FHIRList[clinicaldocumentEvent]
-    section: clinicaldocumentSection | FHIRList[clinicaldocumentSection]
+    attester: clinicaldocumentAttester | FHIRList[clinicaldocumentAttester] | list | dict
+    custodian: Reference | dict | None
+    relatesTo: clinicaldocumentRelatesTo | FHIRList[clinicaldocumentRelatesTo] | list | dict
+    event: clinicaldocumentEvent | FHIRList[clinicaldocumentEvent] | list | dict
+    section: clinicaldocumentSection | FHIRList[clinicaldocumentSection] | list | dict
 
 
 class computableplandefinitionGoal(FHIRElement):
@@ -18906,15 +18925,15 @@ class computableplandefinitionGoal(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    description: Optional[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    start: Optional[CodeableConcept]
-    addresses: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    target: computableplandefinitionGoalTarget | FHIRList[computableplandefinitionGoalTarget]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    description: CodeableConcept | dict | None
+    priority: CodeableConcept | dict | None
+    start: CodeableConcept | dict | None
+    addresses: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    target: computableplandefinitionGoalTarget | FHIRList[computableplandefinitionGoalTarget] | list | dict
 
 
 class computableplandefinitionGoalTarget(FHIRElement):
@@ -18931,13 +18950,13 @@ class computableplandefinitionGoalTarget(FHIRElement):
     _choice_fields = {'detail': ['detailQuantity', 'detailRange', 'detailCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity]
-    detailRange: Optional[Range]
-    detailCodeableConcept: Optional[CodeableConcept]
-    due: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    measure: CodeableConcept | dict | None
+    detailQuantity: Quantity | dict | None
+    detailRange: Range | dict | None
+    detailCodeableConcept: CodeableConcept | dict | None
+    due: Duration | dict | None
 
 
 class computableplandefinitionAction(FHIRElement):
@@ -18986,32 +19005,32 @@ class computableplandefinitionAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
-    trigger: TriggerDefinition | FHIRList[TriggerDefinition]
-    condition: computableplandefinitionActionCondition | FHIRList[computableplandefinitionActionCondition]
-    input: DataRequirement | FHIRList[DataRequirement]
-    output: DataRequirement | FHIRList[DataRequirement]
-    relatedAction: computableplandefinitionActionRelatedAction | FHIRList[computableplandefinitionActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    goalId: Id | FHIRList[Id] | list | None = None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
+    trigger: TriggerDefinition | FHIRList[TriggerDefinition] | list | dict
+    condition: computableplandefinitionActionCondition | FHIRList[computableplandefinitionActionCondition] | list | dict
+    input: DataRequirement | FHIRList[DataRequirement] | list | dict
+    output: DataRequirement | FHIRList[DataRequirement] | list | dict
+    relatedAction: computableplandefinitionActionRelatedAction | FHIRList[computableplandefinitionActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: computableplandefinitionActionParticipant | FHIRList[computableplandefinitionActionParticipant]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: computableplandefinitionActionParticipant | FHIRList[computableplandefinitionActionParticipant] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
@@ -19020,7 +19039,7 @@ class computableplandefinitionAction(FHIRElement):
     definitionCanonical: Optional[Canonical] = None
     definitionUri: Optional[Uri] = None
     transform: Optional[Canonical] = None
-    dynamicValue: computableplandefinitionActionDynamicValue | FHIRList[computableplandefinitionActionDynamicValue]
+    dynamicValue: computableplandefinitionActionDynamicValue | FHIRList[computableplandefinitionActionDynamicValue] | list | dict
     action: Any = None
 
 
@@ -19029,10 +19048,10 @@ class computableplandefinitionActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class computableplandefinitionActionRelatedAction(FHIRElement):
@@ -19041,12 +19060,12 @@ class computableplandefinitionActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class computableplandefinitionActionParticipant(FHIRElement):
@@ -19054,10 +19073,10 @@ class computableplandefinitionActionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class computableplandefinitionActionDynamicValue(FHIRElement):
@@ -19065,10 +19084,10 @@ class computableplandefinitionActionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class computableplandefinition(FHIRResource):
@@ -19116,45 +19135,45 @@ class computableplandefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
     library: Optional[Canonical] = None
-    goal: computableplandefinitionGoal | FHIRList[computableplandefinitionGoal]
-    action: computableplandefinitionAction | FHIRList[computableplandefinitionAction]
+    goal: computableplandefinitionGoal | FHIRList[computableplandefinitionGoal] | list | dict
+    action: computableplandefinitionAction | FHIRList[computableplandefinitionAction] | list | dict
 
 
 class cqllibrary(FHIRResource):
@@ -19204,45 +19223,45 @@ class cqllibrary(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    parameter: ParameterDefinition | FHIRList[ParameterDefinition]
-    dataRequirement: DataRequirement | FHIRList[DataRequirement]
-    content: Attachment | FHIRList[Attachment]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    parameter: ParameterDefinition | FHIRList[ParameterDefinition] | list | dict
+    dataRequirement: DataRequirement | FHIRList[DataRequirement] | list | dict
+    content: Attachment | FHIRList[Attachment] | list | dict
 
 
 class devicemetricobservationReferenceRange(FHIRElement):
@@ -19258,13 +19277,13 @@ class devicemetricobservationReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -19300,22 +19319,22 @@ class devicemetricobservationComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -19385,45 +19404,45 @@ class devicemetricobservation(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: Optional[devicemetricobservationReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: devicemetricobservationComponent | FHIRList[devicemetricobservationComponent]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: devicemetricobservationReferenceRange | dict | None
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: devicemetricobservationComponent | FHIRList[devicemetricobservationComponent] | list | dict
 
 
 class groupdefinitionCharacteristic(FHIRElement):
@@ -19441,16 +19460,16 @@ class groupdefinitionCharacteristic(FHIRElement):
     _choice_fields = {'value': ['valueCodeableConcept', 'valueBoolean', 'valueQuantity', 'valueRange', 'valueReference']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity]
-    valueRange: Optional[Range]
-    valueReference: Optional[Reference]
+    valueQuantity: Quantity | dict | None
+    valueRange: Range | dict | None
+    valueReference: Reference | dict | None
     exclude: Optional[Boolean] = None
-    period: Optional[Period]
+    period: Period | dict | None
 
 
 class groupdefinitionMember(FHIRElement):
@@ -19458,10 +19477,10 @@ class groupdefinitionMember(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'entity': 'Reference', 'period': 'Period'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    entity: Optional[Reference]
-    period: Optional[Period]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    entity: Reference | dict | None
+    period: Period | dict | None
     inactive: Optional[Boolean] = None
 
 
@@ -19482,23 +19501,23 @@ class groupdefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     active: Optional[Boolean] = None
     type_: Optional[Code] = None
     actual: Optional[Boolean] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     name: Optional[String] = None
     quantity: Optional[UnsignedInt] = None
-    managingEntity: Optional[Reference]
-    characteristic: groupdefinitionCharacteristic | FHIRList[groupdefinitionCharacteristic]
-    member: Optional[groupdefinitionMember]
+    managingEntity: Reference | dict | None
+    characteristic: groupdefinitionCharacteristic | FHIRList[groupdefinitionCharacteristic] | list | dict
+    member: groupdefinitionMember | dict | None
 
 
 class hdlcholesterolReferenceRange(FHIRElement):
@@ -19514,13 +19533,13 @@ class hdlcholesterolReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: Optional[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | dict | None
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -19556,22 +19575,22 @@ class hdlcholesterolComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -19611,40 +19630,40 @@ class hdlcholesterol(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod', 'effectiveTiming', 'effectiveInstant'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    effectiveTiming: Optional[Timing]
+    effectivePeriod: Period | dict | None
+    effectiveTiming: Timing | dict | None
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: Optional[hdlcholesterolReferenceRange]
-    hasMember: Optional[Reference]
-    derivedFrom: Optional[Reference]
-    component: hdlcholesterolComponent | FHIRList[hdlcholesterolComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: hdlcholesterolReferenceRange | dict | None
+    hasMember: Reference | dict | None
+    derivedFrom: Reference | dict | None
+    component: hdlcholesterolComponent | FHIRList[hdlcholesterolComponent] | list | dict
 
 
 class headcircumCategory(FHIRElement):
@@ -19652,8 +19671,8 @@ class headcircumCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -19662,7 +19681,7 @@ class headcircumCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -19675,8 +19694,8 @@ class headcircumCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -19685,7 +19704,7 @@ class headcircumCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -19698,7 +19717,7 @@ class headcircumValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -19719,13 +19738,13 @@ class headcircumReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -19761,22 +19780,22 @@ class headcircumComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -19830,38 +19849,38 @@ class headcircum(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: headcircumReferenceRange | FHIRList[headcircumReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: headcircumComponent | FHIRList[headcircumComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: headcircumReferenceRange | FHIRList[headcircumReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: headcircumComponent | FHIRList[headcircumComponent] | list | dict
 
 
 class heartrateCategory(FHIRElement):
@@ -19869,8 +19888,8 @@ class heartrateCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -19879,7 +19898,7 @@ class heartrateCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -19892,8 +19911,8 @@ class heartrateCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -19902,7 +19921,7 @@ class heartrateCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -19915,7 +19934,7 @@ class heartrateValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -19936,13 +19955,13 @@ class heartrateReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -19978,22 +19997,22 @@ class heartrateComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -20047,38 +20066,38 @@ class heartrate(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: heartrateReferenceRange | FHIRList[heartrateReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: heartrateComponent | FHIRList[heartrateComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: heartrateReferenceRange | FHIRList[heartrateReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: heartrateComponent | FHIRList[heartrateComponent] | list | dict
 
 
 class hlaresultMedia(FHIRElement):
@@ -20086,10 +20105,10 @@ class hlaresultMedia(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'link': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     comment: Optional[String] = None
-    link: Optional[Reference]
+    link: Reference | dict | None
 
 
 class hlaresult(FHIRResource):
@@ -20134,32 +20153,32 @@ class hlaresult(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Optional[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | dict | None
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    resultsInterpreter: Reference | FHIRList[Reference]
-    specimen: Reference | FHIRList[Reference]
-    result: Reference | FHIRList[Reference]
-    imagingStudy: Reference | FHIRList[Reference]
-    media: hlaresultMedia | FHIRList[hlaresultMedia]
+    performer: Reference | FHIRList[Reference] | list | dict
+    resultsInterpreter: Reference | FHIRList[Reference] | list | dict
+    specimen: Reference | FHIRList[Reference] | list | dict
+    result: Reference | FHIRList[Reference] | list | dict
+    imagingStudy: Reference | FHIRList[Reference] | list | dict
+    media: hlaresultMedia | FHIRList[hlaresultMedia] | list | dict
     conclusion: Optional[String] = None
-    conclusionCode: CodeableConcept | FHIRList[CodeableConcept]
-    presentedForm: Attachment | FHIRList[Attachment]
+    conclusionCode: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    presentedForm: Attachment | FHIRList[Attachment] | list | dict
 
 
 class ldlcholesterolReferenceRange(FHIRElement):
@@ -20175,13 +20194,13 @@ class ldlcholesterolReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: Optional[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | dict | None
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -20217,22 +20236,22 @@ class ldlcholesterolComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -20272,40 +20291,40 @@ class ldlcholesterol(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod', 'effectiveTiming', 'effectiveInstant'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    effectiveTiming: Optional[Timing]
+    effectivePeriod: Period | dict | None
+    effectiveTiming: Timing | dict | None
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: Optional[ldlcholesterolReferenceRange]
-    hasMember: Optional[Reference]
-    derivedFrom: Optional[Reference]
-    component: ldlcholesterolComponent | FHIRList[ldlcholesterolComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: ldlcholesterolReferenceRange | dict | None
+    hasMember: Reference | dict | None
+    derivedFrom: Reference | dict | None
+    component: ldlcholesterolComponent | FHIRList[ldlcholesterolComponent] | list | dict
 
 
 class lipidprofileMedia(FHIRElement):
@@ -20313,10 +20332,10 @@ class lipidprofileMedia(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'link': 'Reference'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     comment: Optional[String] = None
-    link: Optional[Reference]
+    link: Reference | dict | None
 
 
 class lipidprofile(FHIRResource):
@@ -20360,32 +20379,32 @@ class lipidprofile(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    resultsInterpreter: Reference | FHIRList[Reference]
-    specimen: Reference | FHIRList[Reference]
-    result: Optional[Reference]
-    imagingStudy: Reference | FHIRList[Reference]
-    media: lipidprofileMedia | FHIRList[lipidprofileMedia]
+    performer: Reference | FHIRList[Reference] | list | dict
+    resultsInterpreter: Reference | FHIRList[Reference] | list | dict
+    specimen: Reference | FHIRList[Reference] | list | dict
+    result: Reference | dict | None
+    imagingStudy: Reference | FHIRList[Reference] | list | dict
+    media: lipidprofileMedia | FHIRList[lipidprofileMedia] | list | dict
     conclusion: Optional[String] = None
-    conclusionCode: Optional[CodeableConcept]
-    presentedForm: Attachment | FHIRList[Attachment]
+    conclusionCode: CodeableConcept | dict | None
+    presentedForm: Attachment | FHIRList[Attachment] | list | dict
 
 
 class oxygensatCategory(FHIRElement):
@@ -20393,8 +20412,8 @@ class oxygensatCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -20403,7 +20422,7 @@ class oxygensatCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -20416,8 +20435,8 @@ class oxygensatCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -20426,7 +20445,7 @@ class oxygensatCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -20439,7 +20458,7 @@ class oxygensatValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -20460,13 +20479,13 @@ class oxygensatReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -20502,22 +20521,22 @@ class oxygensatComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -20571,38 +20590,38 @@ class oxygensat(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: oxygensatReferenceRange | FHIRList[oxygensatReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: oxygensatComponent | FHIRList[oxygensatComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: oxygensatReferenceRange | FHIRList[oxygensatReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: oxygensatComponent | FHIRList[oxygensatComponent] | list | dict
 
 
 class picoelementCharacteristic(FHIRElement):
@@ -20634,22 +20653,22 @@ class picoelementCharacteristic(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     description: Optional[String] = None
-    definitionReference: Optional[Reference]
+    definitionReference: Reference | dict | None
     definitionCanonical: Optional[Canonical] = None
-    definitionCodeableConcept: Optional[CodeableConcept]
-    definitionExpression: Optional[Expression]
-    definitionDataRequirement: Optional[DataRequirement]
-    definitionTriggerDefinition: Optional[TriggerDefinition]
-    usageContext: UsageContext | FHIRList[UsageContext]
+    definitionCodeableConcept: CodeableConcept | dict | None
+    definitionExpression: Expression | dict | None
+    definitionDataRequirement: DataRequirement | dict | None
+    definitionTriggerDefinition: TriggerDefinition | dict | None
+    usageContext: UsageContext | FHIRList[UsageContext] | list | dict
     exclude: Optional[Boolean] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period]
-    participantEffectiveDuration: Optional[Duration]
-    participantEffectiveTiming: Optional[Timing]
-    timeFromStart: Optional[Duration]
+    participantEffectivePeriod: Period | dict | None
+    participantEffectiveDuration: Duration | dict | None
+    participantEffectiveTiming: Timing | dict | None
+    timeFromStart: Duration | dict | None
     groupMeasure: Optional[Code] = None
 
 
@@ -20694,15 +20713,15 @@ class picoelement(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -20711,23 +20730,23 @@ class picoelement(FHIRResource):
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
     type_: Optional[Code] = None
-    characteristic: picoelementCharacteristic | FHIRList[picoelementCharacteristic]
+    characteristic: picoelementCharacteristic | FHIRList[picoelementCharacteristic] | list | dict
 
 
 class resprateCategory(FHIRElement):
@@ -20735,8 +20754,8 @@ class resprateCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -20745,7 +20764,7 @@ class resprateCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -20758,8 +20777,8 @@ class resprateCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Optional[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | dict | None
     text: Optional[String] = None
 
 
@@ -20768,7 +20787,7 @@ class resprateCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -20781,7 +20800,7 @@ class resprateValue(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     value: Optional[Decimal] = None
     comparator: Optional[Code] = None
     unit: Optional[String] = None
@@ -20802,13 +20821,13 @@ class resprateReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -20844,22 +20863,22 @@ class resprateComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -20913,38 +20932,38 @@ class resprate(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: resprateReferenceRange | FHIRList[resprateReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: resprateComponent | FHIRList[resprateComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: resprateReferenceRange | FHIRList[resprateReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: resprateComponent | FHIRList[resprateComponent] | list | dict
 
 
 class shareableactivitydefinitionParticipant(FHIRElement):
@@ -20952,10 +20971,10 @@ class shareableactivitydefinitionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class shareableactivitydefinitionDynamicValue(FHIRElement):
@@ -20963,10 +20982,10 @@ class shareableactivitydefinitionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class shareableactivitydefinition(FHIRResource):
@@ -21038,66 +21057,66 @@ class shareableactivitydefinition(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
     kind: Optional[Code] = None
     profile: Optional[Canonical] = None
-    code: Optional[CodeableConcept]
+    code: CodeableConcept | dict | None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    timingTiming: Optional[Timing]
+    timingTiming: Timing | dict | None
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingRange: Optional[Range]
-    timingDuration: Optional[Duration]
-    location: Optional[Reference]
-    participant: shareableactivitydefinitionParticipant | FHIRList[shareableactivitydefinitionParticipant]
-    productReference: Optional[Reference]
-    productCodeableConcept: Optional[CodeableConcept]
-    quantity: Optional[Quantity]
-    dosage: Dosage | FHIRList[Dosage]
-    bodySite: CodeableConcept | FHIRList[CodeableConcept]
-    specimenRequirement: Reference | FHIRList[Reference]
-    observationRequirement: Reference | FHIRList[Reference]
-    observationResultRequirement: Reference | FHIRList[Reference]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingRange: Range | dict | None
+    timingDuration: Duration | dict | None
+    location: Reference | dict | None
+    participant: shareableactivitydefinitionParticipant | FHIRList[shareableactivitydefinitionParticipant] | list | dict
+    productReference: Reference | dict | None
+    productCodeableConcept: CodeableConcept | dict | None
+    quantity: Quantity | dict | None
+    dosage: Dosage | FHIRList[Dosage] | list | dict
+    bodySite: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    specimenRequirement: Reference | FHIRList[Reference] | list | dict
+    observationRequirement: Reference | FHIRList[Reference] | list | dict
+    observationResultRequirement: Reference | FHIRList[Reference] | list | dict
     transform: Optional[Canonical] = None
-    dynamicValue: shareableactivitydefinitionDynamicValue | FHIRList[shareableactivitydefinitionDynamicValue]
+    dynamicValue: shareableactivitydefinitionDynamicValue | FHIRList[shareableactivitydefinitionDynamicValue] | list | dict
 
 
 class shareablecodesystemFilter(FHIRElement):
@@ -21105,11 +21124,11 @@ class shareablecodesystemFilter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     description: Optional[String] = None
-    operator: Code | FHIRList[Code] = None
+    operator: Code | FHIRList[Code] | list | None = None
     value: Optional[String] = None
 
 
@@ -21118,8 +21137,8 @@ class shareablecodesystemProperty(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     uri: Optional[Uri] = None
     description: Optional[String] = None
@@ -21136,13 +21155,13 @@ class shareablecodesystemConcept(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
     definition: Optional[String] = None
-    designation: shareablecodesystemConceptDesignation | FHIRList[shareablecodesystemConceptDesignation]
-    property: shareablecodesystemConceptProperty | FHIRList[shareablecodesystemConceptProperty]
+    designation: shareablecodesystemConceptDesignation | FHIRList[shareablecodesystemConceptDesignation] | list | dict
+    property: shareablecodesystemConceptProperty | FHIRList[shareablecodesystemConceptProperty] | list | dict
     concept: Any = None
 
 
@@ -21151,10 +21170,10 @@ class shareablecodesystemConceptDesignation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'use': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     language: Optional[Code] = None
-    use: Optional[Coding]
+    use: Coding | dict | None
     value: Optional[String] = None
 
 
@@ -21164,11 +21183,11 @@ class shareablecodesystemConceptProperty(FHIRElement):
     _choice_fields = {'value': ['valueCode', 'valueCoding', 'valueString', 'valueInteger', 'valueBoolean', 'valueDateTime', 'valueDecimal']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     valueCode: Optional[Code] = None
-    valueCoding: Optional[Coding]
+    valueCoding: Coding | dict | None
     valueString: Optional[String] = None
     valueInteger: Optional[Integer] = None
     valueBoolean: Optional[Boolean] = None
@@ -21195,15 +21214,15 @@ class shareablecodesystem(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -21211,10 +21230,10 @@ class shareablecodesystem(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
     caseSensitive: Optional[Boolean] = None
@@ -21225,9 +21244,9 @@ class shareablecodesystem(FHIRResource):
     content: Optional[Code] = None
     supplements: Optional[Canonical] = None
     count: Optional[UnsignedInt] = None
-    filter: shareablecodesystemFilter | FHIRList[shareablecodesystemFilter]
-    property: shareablecodesystemProperty | FHIRList[shareablecodesystemProperty]
-    concept: shareablecodesystemConcept | FHIRList[shareablecodesystemConcept]
+    filter: shareablecodesystemFilter | FHIRList[shareablecodesystemFilter] | list | dict
+    property: shareablecodesystemProperty | FHIRList[shareablecodesystemProperty] | list | dict
+    concept: shareablecodesystemConcept | FHIRList[shareablecodesystemConcept] | list | dict
 
 
 class shareablelibrary(FHIRResource):
@@ -21277,45 +21296,45 @@ class shareablelibrary(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    type_: CodeableConcept | dict | None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    parameter: ParameterDefinition | FHIRList[ParameterDefinition]
-    dataRequirement: DataRequirement | FHIRList[DataRequirement]
-    content: Attachment | FHIRList[Attachment]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    parameter: ParameterDefinition | FHIRList[ParameterDefinition] | list | dict
+    dataRequirement: DataRequirement | FHIRList[DataRequirement] | list | dict
+    content: Attachment | FHIRList[Attachment] | list | dict
 
 
 class shareablemeasureGroup(FHIRElement):
@@ -21329,12 +21348,12 @@ class shareablemeasureGroup(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    population: shareablemeasureGroupPopulation | FHIRList[shareablemeasureGroupPopulation]
-    stratifier: shareablemeasureGroupStratifier | FHIRList[shareablemeasureGroupStratifier]
+    population: shareablemeasureGroupPopulation | FHIRList[shareablemeasureGroupPopulation] | list | dict
+    stratifier: shareablemeasureGroupStratifier | FHIRList[shareablemeasureGroupStratifier] | list | dict
 
 
 class shareablemeasureGroupPopulation(FHIRElement):
@@ -21342,11 +21361,11 @@ class shareablemeasureGroupPopulation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class shareablemeasureGroupStratifier(FHIRElement):
@@ -21360,12 +21379,12 @@ class shareablemeasureGroupStratifier(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
-    component: shareablemeasureGroupStratifierComponent | FHIRList[shareablemeasureGroupStratifierComponent]
+    criteria: Expression | dict | None
+    component: shareablemeasureGroupStratifierComponent | FHIRList[shareablemeasureGroupStratifierComponent] | list | dict
 
 
 class shareablemeasureGroupStratifierComponent(FHIRElement):
@@ -21373,11 +21392,11 @@ class shareablemeasureGroupStratifierComponent(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class shareablemeasureSupplementalData(FHIRElement):
@@ -21385,12 +21404,12 @@ class shareablemeasureSupplementalData(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'code': 'CodeableConcept', 'usage': 'CodeableConcept', 'criteria': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    usage: CodeableConcept | FHIRList[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    usage: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     description: Optional[String] = None
-    criteria: Optional[Expression]
+    criteria: Expression | dict | None
 
 
 class shareablemeasure(FHIRResource):
@@ -21444,55 +21463,55 @@ class shareablemeasure(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
     disclaimer: Optional[Markdown] = None
-    scoring: Optional[CodeableConcept]
-    compositeScoring: Optional[CodeableConcept]
-    type_: CodeableConcept | FHIRList[CodeableConcept]
+    scoring: CodeableConcept | dict | None
+    compositeScoring: CodeableConcept | dict | None
+    type_: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     riskAdjustment: Optional[String] = None
     rateAggregation: Optional[String] = None
     rationale: Optional[Markdown] = None
     clinicalRecommendationStatement: Optional[Markdown] = None
-    improvementNotation: Optional[CodeableConcept]
-    definition: Markdown | FHIRList[Markdown] = None
+    improvementNotation: CodeableConcept | dict | None
+    definition: Markdown | FHIRList[Markdown] | list | None = None
     guidance: Optional[Markdown] = None
-    group: shareablemeasureGroup | FHIRList[shareablemeasureGroup]
-    supplementalData: shareablemeasureSupplementalData | FHIRList[shareablemeasureSupplementalData]
+    group: shareablemeasureGroup | FHIRList[shareablemeasureGroup] | list | dict
+    supplementalData: shareablemeasureSupplementalData | FHIRList[shareablemeasureSupplementalData] | list | dict
 
 
 class shareableplandefinitionGoal(FHIRElement):
@@ -21510,15 +21529,15 @@ class shareableplandefinitionGoal(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    category: Optional[CodeableConcept]
-    description: Optional[CodeableConcept]
-    priority: Optional[CodeableConcept]
-    start: Optional[CodeableConcept]
-    addresses: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    target: shareableplandefinitionGoalTarget | FHIRList[shareableplandefinitionGoalTarget]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    category: CodeableConcept | dict | None
+    description: CodeableConcept | dict | None
+    priority: CodeableConcept | dict | None
+    start: CodeableConcept | dict | None
+    addresses: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    target: shareableplandefinitionGoalTarget | FHIRList[shareableplandefinitionGoalTarget] | list | dict
 
 
 class shareableplandefinitionGoalTarget(FHIRElement):
@@ -21535,13 +21554,13 @@ class shareableplandefinitionGoalTarget(FHIRElement):
     _choice_fields = {'detail': ['detailQuantity', 'detailRange', 'detailCodeableConcept']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity]
-    detailRange: Optional[Range]
-    detailCodeableConcept: Optional[CodeableConcept]
-    due: Optional[Duration]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    measure: CodeableConcept | dict | None
+    detailQuantity: Quantity | dict | None
+    detailRange: Range | dict | None
+    detailCodeableConcept: CodeableConcept | dict | None
+    due: Duration | dict | None
 
 
 class shareableplandefinitionAction(FHIRElement):
@@ -21590,32 +21609,32 @@ class shareableplandefinitionAction(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     prefix: Optional[String] = None
     title: Optional[String] = None
     description: Optional[String] = None
     textEquivalent: Optional[String] = None
     priority: Optional[Code] = None
-    code: CodeableConcept | FHIRList[CodeableConcept]
-    reason: CodeableConcept | FHIRList[CodeableConcept]
-    documentation: RelatedArtifact | FHIRList[RelatedArtifact]
-    goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
-    trigger: TriggerDefinition | FHIRList[TriggerDefinition]
-    condition: shareableplandefinitionActionCondition | FHIRList[shareableplandefinitionActionCondition]
-    input: DataRequirement | FHIRList[DataRequirement]
-    output: DataRequirement | FHIRList[DataRequirement]
-    relatedAction: shareableplandefinitionActionRelatedAction | FHIRList[shareableplandefinitionActionRelatedAction]
+    code: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    reason: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    documentation: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    goalId: Id | FHIRList[Id] | list | None = None
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
+    trigger: TriggerDefinition | FHIRList[TriggerDefinition] | list | dict
+    condition: shareableplandefinitionActionCondition | FHIRList[shareableplandefinitionActionCondition] | list | dict
+    input: DataRequirement | FHIRList[DataRequirement] | list | dict
+    output: DataRequirement | FHIRList[DataRequirement] | list | dict
+    relatedAction: shareableplandefinitionActionRelatedAction | FHIRList[shareableplandefinitionActionRelatedAction] | list | dict
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age]
-    timingPeriod: Optional[Period]
-    timingDuration: Optional[Duration]
-    timingRange: Optional[Range]
-    timingTiming: Optional[Timing]
-    participant: shareableplandefinitionActionParticipant | FHIRList[shareableplandefinitionActionParticipant]
-    type_: Optional[CodeableConcept]
+    timingAge: Age | dict | None
+    timingPeriod: Period | dict | None
+    timingDuration: Duration | dict | None
+    timingRange: Range | dict | None
+    timingTiming: Timing | dict | None
+    participant: shareableplandefinitionActionParticipant | FHIRList[shareableplandefinitionActionParticipant] | list | dict
+    type_: CodeableConcept | dict | None
     groupingBehavior: Optional[Code] = None
     selectionBehavior: Optional[Code] = None
     requiredBehavior: Optional[Code] = None
@@ -21624,7 +21643,7 @@ class shareableplandefinitionAction(FHIRElement):
     definitionCanonical: Optional[Canonical] = None
     definitionUri: Optional[Uri] = None
     transform: Optional[Canonical] = None
-    dynamicValue: shareableplandefinitionActionDynamicValue | FHIRList[shareableplandefinitionActionDynamicValue]
+    dynamicValue: shareableplandefinitionActionDynamicValue | FHIRList[shareableplandefinitionActionDynamicValue] | list | dict
     action: Any = None
 
 
@@ -21633,10 +21652,10 @@ class shareableplandefinitionActionCondition(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     kind: Optional[Code] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class shareableplandefinitionActionRelatedAction(FHIRElement):
@@ -21645,12 +21664,12 @@ class shareableplandefinitionActionRelatedAction(FHIRElement):
     _choice_fields = {'offset': ['offsetDuration', 'offsetRange']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration]
-    offsetRange: Optional[Range]
+    offsetDuration: Duration | dict | None
+    offsetRange: Range | dict | None
 
 
 class shareableplandefinitionActionParticipant(FHIRElement):
@@ -21658,10 +21677,10 @@ class shareableplandefinitionActionParticipant(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'role': 'CodeableConcept'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     type_: Optional[Code] = None
-    role: Optional[CodeableConcept]
+    role: CodeableConcept | dict | None
 
 
 class shareableplandefinitionActionDynamicValue(FHIRElement):
@@ -21669,10 +21688,10 @@ class shareableplandefinitionActionDynamicValue(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'expression': 'Expression'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     path: Optional[String] = None
-    expression: Optional[Expression]
+    expression: Expression | dict | None
 
 
 class shareableplandefinition(FHIRResource):
@@ -21721,45 +21740,45 @@ class shareableplandefinition(FHIRResource):
     _choice_fields = {'subject': ['subjectCodeableConcept', 'subjectReference']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
     subtitle: Optional[String] = None
-    type_: Optional[CodeableConcept]
+    type_: CodeableConcept | dict | None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept]
-    subjectReference: Optional[Reference]
+    subjectCodeableConcept: CodeableConcept | dict | None
+    subjectReference: Reference | dict | None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     purpose: Optional[Markdown] = None
     usage: Optional[String] = None
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    library: Canonical | FHIRList[Canonical] = None
-    goal: shareableplandefinitionGoal | FHIRList[shareableplandefinitionGoal]
-    action: shareableplandefinitionAction | FHIRList[shareableplandefinitionAction]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    library: Canonical | FHIRList[Canonical] | list | None = None
+    goal: shareableplandefinitionGoal | FHIRList[shareableplandefinitionGoal] | list | dict
+    action: shareableplandefinitionAction | FHIRList[shareableplandefinitionAction] | list | dict
 
 
 class shareablevaluesetCompose(FHIRElement):
@@ -21767,11 +21786,11 @@ class shareablevaluesetCompose(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'include': 'shareablevaluesetComposeInclude'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     lockedDate: Optional[Date] = None
     inactive: Optional[Boolean] = None
-    include: shareablevaluesetComposeInclude | FHIRList[shareablevaluesetComposeInclude]
+    include: shareablevaluesetComposeInclude | FHIRList[shareablevaluesetComposeInclude] | list | dict
     exclude: Any = None
 
 
@@ -21785,13 +21804,13 @@ class shareablevaluesetComposeInclude(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
-    concept: shareablevaluesetComposeIncludeConcept | FHIRList[shareablevaluesetComposeIncludeConcept]
-    filter: shareablevaluesetComposeIncludeFilter | FHIRList[shareablevaluesetComposeIncludeFilter]
-    valueSet: Canonical | FHIRList[Canonical] = None
+    concept: shareablevaluesetComposeIncludeConcept | FHIRList[shareablevaluesetComposeIncludeConcept] | list | dict
+    filter: shareablevaluesetComposeIncludeFilter | FHIRList[shareablevaluesetComposeIncludeFilter] | list | dict
+    valueSet: Canonical | FHIRList[Canonical] | list | None = None
 
 
 class shareablevaluesetComposeIncludeConcept(FHIRElement):
@@ -21799,11 +21818,11 @@ class shareablevaluesetComposeIncludeConcept(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'designation': 'shareablevaluesetComposeIncludeConceptDesignation'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     code: Optional[Code] = None
     display: Optional[String] = None
-    designation: shareablevaluesetComposeIncludeConceptDesignation | FHIRList[shareablevaluesetComposeIncludeConceptDesignation]
+    designation: shareablevaluesetComposeIncludeConceptDesignation | FHIRList[shareablevaluesetComposeIncludeConceptDesignation] | list | dict
 
 
 class shareablevaluesetComposeIncludeConceptDesignation(FHIRElement):
@@ -21811,10 +21830,10 @@ class shareablevaluesetComposeIncludeConceptDesignation(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension', 'use': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     language: Optional[Code] = None
-    use: Optional[Coding]
+    use: Coding | dict | None
     value: Optional[String] = None
 
 
@@ -21823,8 +21842,8 @@ class shareablevaluesetComposeIncludeFilter(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     property: Optional[Code] = None
     op: Optional[Code] = None
     value: Optional[String] = None
@@ -21840,14 +21859,14 @@ class shareablevaluesetExpansion(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     identifier: Optional[Uri] = None
     timestamp: Optional[DateTime] = None
     total: Optional[Integer] = None
     offset: Optional[Integer] = None
-    parameter: shareablevaluesetExpansionParameter | FHIRList[shareablevaluesetExpansionParameter]
-    contains: shareablevaluesetExpansionContains | FHIRList[shareablevaluesetExpansionContains]
+    parameter: shareablevaluesetExpansionParameter | FHIRList[shareablevaluesetExpansionParameter] | list | dict
+    contains: shareablevaluesetExpansionContains | FHIRList[shareablevaluesetExpansionContains] | list | dict
 
 
 class shareablevaluesetExpansionParameter(FHIRElement):
@@ -21856,8 +21875,8 @@ class shareablevaluesetExpansionParameter(FHIRElement):
     _choice_fields = {'value': ['valueString', 'valueBoolean', 'valueInteger', 'valueDecimal', 'valueUri', 'valueCode', 'valueDateTime']}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     name: Optional[String] = None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
@@ -21873,8 +21892,8 @@ class shareablevaluesetExpansionContains(FHIRElement):
     _field_types = {'extension': 'Extension', 'modifierExtension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     abstract: Optional[Boolean] = None
     inactive: Optional[Boolean] = None
@@ -21903,15 +21922,15 @@ class shareablevalueset(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -21919,15 +21938,15 @@ class shareablevalueset(FHIRResource):
     experimental: Optional[Boolean] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     immutable: Optional[Boolean] = None
     purpose: Optional[Markdown] = None
     copyright: Optional[Markdown] = None
-    compose: Optional[shareablevaluesetCompose]
-    expansion: Optional[shareablevaluesetExpansion]
+    compose: shareablevaluesetCompose | dict | None
+    expansion: shareablevaluesetExpansion | dict | None
 
 
 class synthesis(FHIRResource):
@@ -21974,15 +21993,15 @@ class synthesis(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
     url: Optional[Uri] = None
-    identifier: Identifier | FHIRList[Identifier]
+    identifier: Identifier | FHIRList[Identifier] | list | dict
     version: Optional[String] = None
     name: Optional[String] = None
     title: Optional[String] = None
@@ -21991,24 +22010,24 @@ class synthesis(FHIRResource):
     status: Optional[Code] = None
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
-    contact: ContactDetail | FHIRList[ContactDetail]
+    contact: ContactDetail | FHIRList[ContactDetail] | list | dict
     description: Optional[Markdown] = None
-    note: Annotation | FHIRList[Annotation]
-    useContext: UsageContext | FHIRList[UsageContext]
-    jurisdiction: CodeableConcept | FHIRList[CodeableConcept]
+    note: Annotation | FHIRList[Annotation] | list | dict
+    useContext: UsageContext | FHIRList[UsageContext] | list | dict
+    jurisdiction: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     copyright: Optional[Markdown] = None
     approvalDate: Optional[Date] = None
     lastReviewDate: Optional[Date] = None
-    effectivePeriod: Optional[Period]
-    topic: CodeableConcept | FHIRList[CodeableConcept]
-    author: ContactDetail | FHIRList[ContactDetail]
-    editor: ContactDetail | FHIRList[ContactDetail]
-    reviewer: ContactDetail | FHIRList[ContactDetail]
-    endorser: ContactDetail | FHIRList[ContactDetail]
-    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact]
-    exposureBackground: Optional[Reference]
-    exposureVariant: Reference | FHIRList[Reference]
-    outcome: Reference | FHIRList[Reference]
+    effectivePeriod: Period | dict | None
+    topic: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    author: ContactDetail | FHIRList[ContactDetail] | list | dict
+    editor: ContactDetail | FHIRList[ContactDetail] | list | dict
+    reviewer: ContactDetail | FHIRList[ContactDetail] | list | dict
+    endorser: ContactDetail | FHIRList[ContactDetail] | list | dict
+    relatedArtifact: RelatedArtifact | FHIRList[RelatedArtifact] | list | dict
+    exposureBackground: Reference | dict | None
+    exposureVariant: Reference | FHIRList[Reference] | list | dict
+    outcome: Reference | FHIRList[Reference] | list | dict
 
 
 class triglycerideReferenceRange(FHIRElement):
@@ -22024,13 +22043,13 @@ class triglycerideReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: Optional[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | dict | None
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -22066,22 +22085,22 @@ class triglycerideComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -22121,40 +22140,40 @@ class triglyceride(FHIRResource):
     _choice_fields = {'effective': ['effectiveDateTime', 'effectivePeriod', 'effectiveTiming', 'effectiveInstant'], 'value': ['valueQuantity']}
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: CodeableConcept | FHIRList[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
-    effectiveTiming: Optional[Timing]
+    effectivePeriod: Period | dict | None
+    effectiveTiming: Timing | dict | None
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: Optional[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: Optional[triglycerideReferenceRange]
-    hasMember: Optional[Reference]
-    derivedFrom: Optional[Reference]
-    component: triglycerideComponent | FHIRList[triglycerideComponent]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | dict | None
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: triglycerideReferenceRange | dict | None
+    hasMember: Reference | dict | None
+    derivedFrom: Reference | dict | None
+    component: triglycerideComponent | FHIRList[triglycerideComponent] | list | dict
 
 
 class vitalsignsCategory(FHIRElement):
@@ -22162,8 +22181,8 @@ class vitalsignsCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -22172,7 +22191,7 @@ class vitalsignsCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -22193,13 +22212,13 @@ class vitalsignsReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -22235,22 +22254,22 @@ class vitalsignsComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -22324,48 +22343,48 @@ class vitalsigns(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: vitalsignsReferenceRange | FHIRList[vitalsignsReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: vitalsignsComponent | FHIRList[vitalsignsComponent]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: vitalsignsReferenceRange | FHIRList[vitalsignsReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: vitalsignsComponent | FHIRList[vitalsignsComponent] | list | dict
 
 
 class vitalspanelCategory(FHIRElement):
@@ -22373,8 +22392,8 @@ class vitalspanelCategory(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -22383,7 +22402,7 @@ class vitalspanelCategoryCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -22396,8 +22415,8 @@ class vitalspanelCode(FHIRElement):
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    coding: Coding | FHIRList[Coding]
+    extension: Extension | FHIRList[Extension] | list | dict
+    coding: Coding | FHIRList[Coding] | list | dict
     text: Optional[String] = None
 
 
@@ -22406,7 +22425,7 @@ class vitalspanelCodeCoding(FHIRElement):
     _field_types = {'extension': 'Extension'}
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
+    extension: Extension | FHIRList[Extension] | list | dict
     system: Optional[Uri] = None
     version: Optional[String] = None
     code: Optional[Code] = None
@@ -22427,13 +22446,13 @@ class vitalspanelReferenceRange(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    low: Optional[Quantity]
-    high: Optional[Quantity]
-    type_: Optional[CodeableConcept]
-    appliesTo: CodeableConcept | FHIRList[CodeableConcept]
-    age: Optional[Range]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    low: Quantity | dict | None
+    high: Quantity | dict | None
+    type_: CodeableConcept | dict | None
+    appliesTo: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    age: Range | dict | None
     text: Optional[String] = None
 
 
@@ -22469,22 +22488,22 @@ class vitalspanelComponent(FHIRElement):
     }
 
     id: Optional[str] = None
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    code: CodeableConcept | dict | None
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
     referenceRange: Any = None
 
 
@@ -22558,45 +22577,45 @@ class vitalspanel(FHIRResource):
     }
 
     id: Optional[str] = None
-    meta: Optional[Meta]
+    meta: Meta | dict | None
     implicitRules: Optional[Uri] = None
     language: Optional[Code] = None
-    text: Optional[Narrative]
-    contained: FHIRResource | FHIRList[FHIRResource]
-    extension: Extension | FHIRList[Extension]
-    modifierExtension: Extension | FHIRList[Extension]
-    identifier: Identifier | FHIRList[Identifier]
-    basedOn: Reference | FHIRList[Reference]
-    partOf: Reference | FHIRList[Reference]
+    text: Narrative | dict | None
+    contained: FHIRResource | FHIRList[FHIRResource] | list | dict
+    extension: Extension | FHIRList[Extension] | list | dict
+    modifierExtension: Extension | FHIRList[Extension] | list | dict
+    identifier: Identifier | FHIRList[Identifier] | list | dict
+    basedOn: Reference | FHIRList[Reference] | list | dict
+    partOf: Reference | FHIRList[Reference] | list | dict
     status: Optional[Code] = None
-    category: Optional[CodeableConcept]
-    code: Optional[CodeableConcept]
-    subject: Optional[Reference]
-    focus: Reference | FHIRList[Reference]
-    encounter: Optional[Reference]
+    category: CodeableConcept | dict | None
+    code: CodeableConcept | dict | None
+    subject: Reference | dict | None
+    focus: Reference | FHIRList[Reference] | list | dict
+    encounter: Reference | dict | None
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period]
+    effectivePeriod: Period | dict | None
     issued: Optional[Instant] = None
-    performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity]
-    valueCodeableConcept: Optional[CodeableConcept]
+    performer: Reference | FHIRList[Reference] | list | dict
+    valueQuantity: Quantity | dict | None
+    valueCodeableConcept: CodeableConcept | dict | None
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range]
-    valueRatio: Optional[Ratio]
-    valueSampledData: Optional[SampledData]
+    valueRange: Range | dict | None
+    valueRatio: Ratio | dict | None
+    valueSampledData: SampledData | dict | None
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period]
-    dataAbsentReason: Optional[CodeableConcept]
-    interpretation: CodeableConcept | FHIRList[CodeableConcept]
-    note: Annotation | FHIRList[Annotation]
-    bodySite: Optional[CodeableConcept]
-    method: Optional[CodeableConcept]
-    specimen: Optional[Reference]
-    device: Optional[Reference]
-    referenceRange: vitalspanelReferenceRange | FHIRList[vitalspanelReferenceRange]
-    hasMember: Reference | FHIRList[Reference]
-    derivedFrom: Reference | FHIRList[Reference]
-    component: vitalspanelComponent | FHIRList[vitalspanelComponent]
+    valuePeriod: Period | dict | None
+    dataAbsentReason: CodeableConcept | dict | None
+    interpretation: CodeableConcept | FHIRList[CodeableConcept] | list | dict
+    note: Annotation | FHIRList[Annotation] | list | dict
+    bodySite: CodeableConcept | dict | None
+    method: CodeableConcept | dict | None
+    specimen: Reference | dict | None
+    device: Reference | dict | None
+    referenceRange: vitalspanelReferenceRange | FHIRList[vitalspanelReferenceRange] | list | dict
+    hasMember: Reference | FHIRList[Reference] | list | dict
+    derivedFrom: Reference | FHIRList[Reference] | list | dict
+    component: vitalspanelComponent | FHIRList[vitalspanelComponent] | list | dict

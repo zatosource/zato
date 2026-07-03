@@ -26,7 +26,7 @@ class TestFuzzSubstanceSourceMaterial:
 
     @given(fhir_safe_text)
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_substance_source_material_id(self, value):
+    def test_fuzz_substance_source_material_id(self, value: str) -> None:
         r = SubstanceSourceMaterial()
         r.id = value
         d = r.to_dict()
@@ -34,7 +34,7 @@ class TestFuzzSubstanceSourceMaterial:
 
     @given(fhir_safe_text)
     @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_substance_source_material_roundtrip(self, value):
+    def test_fuzz_substance_source_material_roundtrip(self, value: str) -> None:
         r = SubstanceSourceMaterial()
         r.id = value
         json_str = r.to_json()
@@ -43,7 +43,7 @@ class TestFuzzSubstanceSourceMaterial:
 
     @given(st.lists(fhir_safe_text, min_size=0, max_size=10))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_substance_source_material_extension_values(self, values):
+    def test_fuzz_substance_source_material_extension_values(self, values: list[str]) -> None:
         r = SubstanceSourceMaterial()
         r.id = 'fuzz-test'
         r.extension = [{'url': f'http://example.org/ext{i}', 'valueString': v} for i, v in enumerate(values)]
@@ -52,7 +52,7 @@ class TestFuzzSubstanceSourceMaterial:
 
     @given(fhir_safe_text, fhir_safe_text)
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_substance_source_material_meta_fields(self, version_id, source):
+    def test_fuzz_substance_source_material_meta_fields(self, version_id: str, source: str) -> None:
         r = SubstanceSourceMaterial()
         r.id = 'fuzz-test'
         r.meta = {'versionId': version_id, 'source': source}
@@ -61,13 +61,13 @@ class TestFuzzSubstanceSourceMaterial:
 
     @given(st.binary(min_size=0, max_size=200))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
-    def test_fuzz_substance_source_material_binary_to_string(self, data):
+    def test_fuzz_substance_source_material_binary_to_string(self, data: bytes) -> None:
         r = SubstanceSourceMaterial()
         r.id = data.decode('utf-8', errors='replace')
         d = r.to_dict()
         assert d.get('resourceType') == 'SubstanceSourceMaterial'
 
-    def test_substance_source_material_validation_no_crash(self):
+    def test_substance_source_material_validation_no_crash(self) -> None:
         r = SubstanceSourceMaterial()
         r.id = 'test-validation'
         result = validate(r)
