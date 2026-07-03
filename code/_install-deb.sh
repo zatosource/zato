@@ -62,6 +62,17 @@ echo Adding support-linux to Python path
 SITE_PACKAGES=$($CURDIR/bin/python -c "import site; print(site.getsitepackages()[0])")
 echo "$CURDIR/support-linux" > "$SITE_PACKAGES/zato_hl7v2.pth"
 
+# Copy the prebuilt HL7v2 Rust extension matching this Python version into the package,
+# support-linux/zato_hl7v2/ holds one binary per supported interpreter.
+EXT_SUFFIX=$($CURDIR/bin/python -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+HL7V2_SO="$CURDIR/support-linux/zato_hl7v2/zato_hl7v2_rs$EXT_SUFFIX"
+if [[ -f "$HL7V2_SO" ]]; then
+    echo Copying HL7v2 Rust extension for $EXT_SUFFIX
+    cp "$HL7V2_SO" "$CURDIR/zato-common/src/zato/hl7v2_rs/"
+else
+    echo "Note: no prebuilt HL7v2 Rust extension for $EXT_SUFFIX in $CURDIR/support-linux/zato_hl7v2/"
+fi
+
 mkdir -p "$CURDIR/zato-libs"
 cp "$CURDIR/zato-libs.pth" "$SITE_PACKAGES/zato-libs.pth"
 
