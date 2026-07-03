@@ -21,24 +21,37 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import json
+import os
+
 # Zato
 from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_received_messages = []
+# The file where received messages are stored, one JSON string per line.
+# A file is used because hot-deployed service modules do not share module-level state.
+_messages_file = os.environ['Zato_Test_MLLP_Messages_File']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestHL7MLLPEcho(Service):
-    """ Stores each inbound HL7 message in a module-level list. Returns nothing, so the channel auto-ACKs with AA.
+    """ Appends each inbound HL7 message to a file. Returns nothing, so the channel auto-ACKs with AA.
     """
     name = 'test.hl7.mllp.echo'
 
     def handle(self):
-        _received_messages.append(self.request.raw_request)
+
+        # The MLLP channel delivers text while the REST channel delivers bytes
+        message = self.request.raw_request
+        if isinstance(message, bytes):
+            message = message.decode('utf-8')
+
+        with open(_messages_file, 'a') as file_handle:
+            _ = file_handle.write(json.dumps(message) + '\\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,9 +143,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import os
 
 # Zato
 from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The file where the echo service stores received messages, one JSON string per line
+_messages_file = os.environ['Zato_Test_MLLP_Messages_File']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,10 +164,17 @@ class TestHL7MLLPInspect(Service):
 
     def handle(self):
 
-        # Import the echo service module to access its captured messages ..
-        from _test_hl7_mllp_echo import _received_messages
+        messages = []
 
-        out = json.dumps({'messages': list(_received_messages)})
+        # The file does not exist until the echo service receives its first message
+        if os.path.exists(_messages_file):
+            with open(_messages_file) as file_handle:
+                for line in file_handle:
+                    line = line.strip()
+                    if line:
+                        messages.append(json.loads(line))
+
+        out = json.dumps({'messages': messages})
         self.response.payload = out
 
 # ################################################################################################################################

@@ -190,6 +190,9 @@ class TestMLLPRestBridge:
             use_rest=True,
             rest_only=False,
             rest_channel_id=self.__class__.rest_channel_id,
+
+            # The echo service needs the raw ER7 text, not a parsed message object
+            should_parse_on_input=False,
         )
 
         assert 'id' in response
