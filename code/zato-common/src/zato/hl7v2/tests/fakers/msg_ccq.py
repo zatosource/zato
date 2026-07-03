@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from zato.hl7v2.tests.fakers.base import fake_msh
-from zato.hl7v2.tests.fakers.patient import fake_pid
+from zato.hl7v2.tests.fakers.clinical import fake_rf1
 
 
 def fake_ccqi19() -> str:
-    return fake_msh("CCQ", "I19", "CCQ_I19") + fake_pid()
+    return fake_msh("CCQ", "I19", "CCQ_I19") + fake_rf1()
