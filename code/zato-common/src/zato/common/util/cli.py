@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from io import UnsupportedOperation
 from json import dumps
 import select
 import sys
@@ -67,6 +68,13 @@ def read_stdin_data(strip=True):
 
     # This function is not support under Windows
     if sys.platform.startswith('win32'):
+        return ''
+
+    # Under pytest's default capture, sys.stdin is replaced with a pseudofile that has
+    # no file descriptor, in which case there is no actual stdin to read from at all.
+    try:
+        _ = sys.stdin.fileno()
+    except UnsupportedOperation:
         return ''
 
     # Note that we check only sys.stdin for read and that there is no timeout,

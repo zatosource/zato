@@ -41,7 +41,7 @@ class TestGroupNavigationIN1(unittest.TestCase):
     def test_in1_set_id(self) -> 'None':
         """ IN1-1 (set_id) must be reachable via msg.get().
         """
-        message = parse_hl7(_ADT_A01_With_Insurance)
+        message = parse_hl7(_ADT_A01_With_Insurance, validate=False)
 
         out = message.get('IN1.1')
         self.assertEqual(out, '1')
@@ -49,7 +49,7 @@ class TestGroupNavigationIN1(unittest.TestCase):
     def test_in1_insurance_company_id(self) -> 'None':
         """ IN1-3 (insurance_company_id) must be reachable via msg.get().
         """
-        message = parse_hl7(_ADT_A01_With_Insurance)
+        message = parse_hl7(_ADT_A01_With_Insurance, validate=False)
 
         out = message.get('IN1.3')
         self.assertEqual(out, 'KV001')
@@ -57,7 +57,7 @@ class TestGroupNavigationIN1(unittest.TestCase):
     def test_in1_insurance_company_name(self) -> 'None':
         """ IN1-4 (insurance_company_name) must be reachable via msg.get().
         """
-        message = parse_hl7(_ADT_A01_With_Insurance)
+        message = parse_hl7(_ADT_A01_With_Insurance, validate=False)
 
         out = message.get('IN1.4')
         self.assertEqual(out, 'BÜRGERKRANKENVERSICHERUNG')
@@ -65,7 +65,7 @@ class TestGroupNavigationIN1(unittest.TestCase):
     def test_in1_insureds_id_number(self) -> 'None':
         """ IN1-49 (insureds_id_number) must be reachable via msg.get().
         """
-        message = parse_hl7(_ADT_A01_With_Insurance)
+        message = parse_hl7(_ADT_A01_With_Insurance, validate=False)
 
         out = message.get('IN1.49')
         self.assertEqual(out, '49')
@@ -81,7 +81,7 @@ class TestGroupNavigationMRG(unittest.TestCase):
     def test_mrg_prior_patient_id(self) -> 'None':
         """ MRG-1 first repetition must be reachable via msg.get().
         """
-        message = parse_hl7(_ADT_A40_With_Merge)
+        message = parse_hl7(_ADT_A40_With_Merge, validate=False)
 
         out = message.get('MRG.1')
         self.assertEqual(out, '9876')
@@ -89,7 +89,7 @@ class TestGroupNavigationMRG(unittest.TestCase):
     def test_pid_inside_group(self) -> 'None':
         """ PID inside an ADT_A40 group must be reachable.
         """
-        message = parse_hl7(_ADT_A40_With_Merge)
+        message = parse_hl7(_ADT_A40_With_Merge, validate=False)
 
         out = message.get('PID.1')
         self.assertEqual(out, '1')
@@ -97,7 +97,7 @@ class TestGroupNavigationMRG(unittest.TestCase):
     def test_pid_patient_name_inside_group(self) -> 'None':
         """ PID-5 inside an ADT_A40 group must return the patient name.
         """
-        message = parse_hl7(_ADT_A40_With_Merge)
+        message = parse_hl7(_ADT_A40_With_Merge, validate=False)
 
         out = message.get('PID.5')
         self.assertEqual(out, 'Größe')

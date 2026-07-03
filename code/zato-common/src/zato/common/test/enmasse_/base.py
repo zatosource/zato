@@ -83,6 +83,10 @@ class BaseEnmasseTestCase(TestCase):
                 '--output', config_path
             ])
 
+            # Limit the export to specific object types only, if requested
+            if include_type:
+                args.extend(['--include-type', include_type])
+
         # Invoke enmasse ..
         out:'RunningCommand' = command(*args)
 

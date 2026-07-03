@@ -9,6 +9,7 @@ from zato.hl7v2.base import (
     HL7Message,
     HL7Segment,
     HL7SegmentAttr,
+    HL7ValidationError,
     Usage,
 )
 from zato.hl7v2.validator import validate_message, ValidationResult, ValidationError  # pyright: ignore[reportAttributeAccessIssue]
@@ -32,6 +33,7 @@ __all__ = [
     "HL7Message",
     "HL7Segment",
     "HL7SegmentAttr",
+    "HL7ValidationError",
     "Usage",
     "parse_hl7",
     "validate_message",
