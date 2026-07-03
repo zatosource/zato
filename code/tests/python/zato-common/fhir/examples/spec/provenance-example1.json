@@ -1,0 +1,22 @@
+{
+  "resourceType": "Provenance",
+  "id": "example1",
+  "target": {
+    "extension": {
+      "valueUri": "n1"
+    },
+    "reference": "Patient/pat3/_history/1"
+  },
+  "recorded": "2021-12-07T12:23:45+11:00",
+  "agent": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        "code": "INF"
+      }
+    },
+    "who": {
+      "reference": "Patient/pat3"
+    }
+  }
+}

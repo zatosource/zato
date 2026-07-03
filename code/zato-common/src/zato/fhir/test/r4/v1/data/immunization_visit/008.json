@@ -1,0 +1,854 @@
+{
+  "_meta": {
+    "scenario": "immunization_visit",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.n9cvzt86",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Claude Ledoux</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8394167"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5642"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Ledoux",
+        "given": [
+          "Claude"
+        ],
+        "text": "Claude Ledoux"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-634-810-6437x841",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kevinterry@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1986-06-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "885 Shawn Neck"
+        ],
+        "city": "East Leslieborough",
+        "state": "OK",
+        "postalCode": "18937",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.833acxwx",
+        "display": "Dr. Thérèse Merle"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.a922hqxh",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.833acxwx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Thérèse Merle</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9840133257"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Merle",
+        "given": [
+          "Thérèse"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Thérèse Merle"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "4034988466",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "235 Wilkinson Harbors Apt. 154"
+        ],
+        "city": "West Christine",
+        "state": "WV",
+        "postalCode": "32975",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.a922hqxh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Centre de Bien-Etre Lumiere</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8248331858"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Centre de Bien-Etre Lumiere",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(257)823-7100x2781",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "758 Dougherty Crossroad Suite 479"
+        ],
+        "city": "South Kim",
+        "state": "AZ",
+        "postalCode": "80029",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.38m4y4sp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization visit on 2024-06-03</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization visit"
+            }
+          ],
+          "text": "Immunization visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.n9cvzt86",
+        "display": "Claude Ledoux"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.833acxwx",
+            "display": "Dr. Thérèse Merle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-03T13:30:00+00:00",
+        "end": "2024-06-03T14:25:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization visit"
+            }
+          ],
+          "text": "Immunization visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a922hqxh",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kbjdzpdk",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.jxuw9dkg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization follow-up on 2024-12-28</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization follow-up"
+            }
+          ],
+          "text": "Immunization follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.n9cvzt86",
+        "display": "Claude Ledoux"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.833acxwx",
+            "display": "Dr. Thérèse Merle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-28T10:30:00+00:00",
+        "end": "2024-12-28T11:25:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization follow-up"
+            }
+          ],
+          "text": "Immunization follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a922hqxh",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kbjdzpdk",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rgfy893h",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization review"
+            }
+          ],
+          "text": "Immunization review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.n9cvzt86",
+        "display": "Claude Ledoux"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.833acxwx",
+            "display": "Dr. Thérèse Merle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:45:00+00:00",
+        "end": "2025-06-15T16:36:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization review"
+            }
+          ],
+          "text": "Immunization review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a922hqxh",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kbjdzpdk",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "immunization": {
+    "resourceType": "Immunization",
+    "id": "imm.su5ggr7c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Immunization: Influenza, injectable, quadrivalent</p></div>"
+    },
+    "status": "completed",
+    "vaccineCode": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/cvx",
+          "code": "150",
+          "display": "Influenza, injectable, quadrivalent"
+        }
+      ],
+      "text": "Influenza, injectable, quadrivalent"
+    },
+    "patient": {
+      "reference": "Patient/pt.n9cvzt86",
+      "display": "Claude Ledoux"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.rgfy893h"
+    },
+    "occurrenceDateTime": "2025-06-15T11:31:00+00:00",
+    "primarySource": true,
+    "location": {
+      "reference": "Location/loc.kbjdzpdk",
+      "display": "Centre de Bien-Etre Lumiere - Main Office"
+    },
+    "site": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "368208006",
+          "display": "Left upper arm structure"
+        }
+      ],
+      "text": "Left upper arm structure"
+    },
+    "route": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "34206005",
+          "display": "Subcutaneous route"
+        }
+      ],
+      "text": "Subcutaneous route"
+    },
+    "doseQuantity": {
+      "value": 0.5,
+      "unit": "mL",
+      "system": "http://unitsofmeasure.org",
+      "code": "mL"
+    },
+    "performer": [
+      {
+        "function": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0443",
+              "code": "AP",
+              "display": "Administering Provider"
+            }
+          ],
+          "text": "Administering Provider"
+        },
+        "actor": {
+          "reference": "Practitioner/pr.833acxwx",
+          "display": "Dr. Thérèse Merle"
+        }
+      }
+    ],
+    "lotNumber": "LOT212822",
+    "expirationDate": "2026-09-28"
+  },
+  "immunization_eval": {
+    "resourceType": "ImmunizationEvaluation",
+    "id": "ie.zfycbv2c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ImmunizationEvaluation: Dose valid</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.n9cvzt86",
+      "display": "Claude Ledoux"
+    },
+    "date": "2025-06-15T11:31:00+00:00",
+    "targetDisease": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "6142004",
+          "display": "Influenza"
+        }
+      ],
+      "text": "Influenza"
+    },
+    "immunizationEvent": {
+      "reference": "Immunization/imm.su5ggr7c"
+    },
+    "doseStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status",
+          "code": "valid",
+          "display": "Valid"
+        }
+      ],
+      "text": "Valid"
+    },
+    "doseStatusReason": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status-reason",
+            "code": "administer",
+            "display": "Administered"
+          }
+        ],
+        "text": "Administered"
+      }
+    ],
+    "series": "Annual influenza",
+    "doseNumberPositiveInt": 1,
+    "seriesDosesPositiveInt": 1
+  },
+  "immunization_rec": {
+    "resourceType": "ImmunizationRecommendation",
+    "id": "ir.h237rnyf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ImmunizationRecommendation: Next annual influenza dose</p></div>"
+    },
+    "patient": {
+      "reference": "Patient/pt.n9cvzt86",
+      "display": "Claude Ledoux"
+    },
+    "date": "2025-06-15T11:31:00+00:00",
+    "authority": {
+      "reference": "Organization/org.a922hqxh",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "recommendation": [
+      {
+        "vaccineCode": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/cvx",
+                "code": "150",
+                "display": "Influenza, injectable, quadrivalent"
+              }
+            ],
+            "text": "Influenza, injectable, quadrivalent"
+          }
+        ],
+        "targetDisease": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "6142004",
+              "display": "Influenza"
+            }
+          ],
+          "text": "Influenza"
+        },
+        "forecastStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
+              "code": "due",
+              "display": "Due"
+            }
+          ],
+          "text": "Due"
+        },
+        "dateCriterion": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "30981-5",
+                  "display": "Earliest date to give"
+                }
+              ],
+              "text": "Earliest date to give"
+            },
+            "value": "2026-06-01"
+          }
+        ],
+        "doseNumberPositiveInt": 1
+      }
+    ]
+  },
+  "medication": {
+    "resourceType": "Medication",
+    "id": "med.zngjcsyd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Medication: Influenza, injectable, quadrivalent</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/cvx",
+          "code": "150",
+          "display": "Influenza, injectable, quadrivalent"
+        }
+      ],
+      "text": "Influenza, injectable, quadrivalent"
+    },
+    "status": "active",
+    "form": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385219001",
+          "display": "Injection solution"
+        }
+      ],
+      "text": "Injection solution"
+    },
+    "batch": {
+      "lotNumber": "LOT212822",
+      "expirationDate": "2026-09-28"
+    }
+  },
+  "medication_admin": {
+    "resourceType": "MedicationAdministration",
+    "id": "ma.6hqe6bek",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationAdministration: Influenza, injectable, quadrivalent administered</p></div>"
+    },
+    "status": "completed",
+    "medicationReference": {
+      "reference": "Medication/med.zngjcsyd",
+      "display": "Influenza, injectable, quadrivalent"
+    },
+    "subject": {
+      "reference": "Patient/pt.n9cvzt86",
+      "display": "Claude Ledoux"
+    },
+    "context": {
+      "reference": "Encounter/enc.rgfy893h"
+    },
+    "effectiveDateTime": "2025-06-15T11:31:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.833acxwx",
+          "display": "Dr. Thérèse Merle"
+        }
+      }
+    ],
+    "dosage": {
+      "route": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "34206005",
+            "display": "Subcutaneous route"
+          }
+        ],
+        "text": "Subcutaneous route"
+      },
+      "dose": {
+        "value": 0.5,
+        "unit": "mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL"
+      },
+      "site": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "368208006",
+            "display": "Left upper arm structure"
+          }
+        ],
+        "text": "Left upper arm structure"
+      }
+    }
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.74wp82db",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.n9cvzt86"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.833acxwx",
+          "display": "Dr. Thérèse Merle"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.a922hqxh"
+        }
+      }
+    ]
+  }
+}

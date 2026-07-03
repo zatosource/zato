@@ -1,0 +1,47 @@
+{
+  "resourceType": "Practitioner",
+  "id": "f202",
+  "identifier": [
+    {
+      "use": "official",
+      "type": {
+        "text": "UZI-nummer"
+      },
+      "system": "urn:oid:2.16.528.1.1007.3.1",
+      "value": 12345678902
+    },
+    {
+      "use": "official",
+      "type": {
+        "text": "BIG-nummer"
+      },
+      "system": "https://www.bigregister.nl/",
+      "value": 12345678902
+    }
+  ],
+  "active": true,
+  "name": {
+    "use": "official",
+    "text": "Luigi Maas",
+    "family": "Maas",
+    "given": "Luigi",
+    "prefix": "Dr."
+  },
+  "telecom": {
+    "system": "phone",
+    "value": 31715269111,
+    "use": "work"
+  },
+  "gender": "male",
+  "birthDate": "1960-06-12",
+  "address": {
+    "use": "work",
+    "line": [
+      "Walvisbaai 3",
+      "C4 - Automatisering"
+    ],
+    "city": "Den helder",
+    "postalCode": "2333ZA",
+    "country": "NLD"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "resourceType": "Slot",
+  "id": "example-hcs",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}b": null
+    }
+  },
+  "serviceType": {
+    "reference": {
+      "reference": "HealthcareService/example",
+      "display": "Burgers UMC, Posttraumatic Stress Disorder Clinic"
+    }
+  },
+  "schedule": {
+    "reference": "Schedule/example-hcs"
+  },
+  "status": "free",
+  "start": "2023-12-25T09:15:00Z",
+  "end": "2023-12-25T09:30:00Z",
+  "comment": "Assessments should be performed before requesting appointments in this slot."
+}

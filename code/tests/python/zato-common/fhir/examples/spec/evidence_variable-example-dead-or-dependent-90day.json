@@ -1,0 +1,98 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-dead-or-dependent-90day",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": {
+    "Group": {
+      "id": "Definition-Group",
+      "title": "VariableDefinition: Alive and not functionally dependent at 90 days",
+      "type": "person",
+      "membership": "definitional",
+      "combinationMethod": "any-of",
+      "characteristic": [
+        {
+          "code": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 260905004,
+              "display": "Condition"
+            }
+          },
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 419099009,
+              "display": "Dead (finding)"
+            }
+          },
+          "exclude": false,
+          "description": "dead at 90 days",
+          "timing": {
+            "contextCode": {
+              "coding": {
+                "system": "http://hl7.org/fhir/evidence-variable-event",
+                "code": "study-start",
+                "display": "Study Start"
+              }
+            },
+            "offsetDuration": {
+              "value": 90,
+              "unit": "days",
+              "system": "http://unitsofmeasure.org",
+              "code": "d"
+            }
+          }
+        },
+        {
+          "code": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 260905004,
+              "display": "Condition"
+            }
+          },
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 718705001,
+              "display": "Functionally dependent (finding)"
+            }
+          },
+          "exclude": false,
+          "description": "functionally dependent at 90 days",
+          "timing": {
+            "contextCode": {
+              "coding": {
+                "system": "http://hl7.org/fhir/evidence-variable-event",
+                "code": "study-start",
+                "display": "Study Start"
+              }
+            },
+            "offsetDuration": {
+              "value": 90,
+              "unit": "days",
+              "system": "http://unitsofmeasure.org",
+              "code": "d"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "name": "DeadOrFunctionallyDependentAt90Days",
+  "title": "Dead or functionally dependent at 90 days",
+  "status": "draft",
+  "description": "Dead or functionally dependent at 90 days",
+  "actual": false,
+  "definition": {
+    "reference": {
+      "reference": "#Definition-Group"
+    }
+  },
+  "handling": "dichotomous"
+}

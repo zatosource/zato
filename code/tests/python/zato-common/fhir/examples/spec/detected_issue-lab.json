@@ -1,0 +1,9 @@
+{
+  "resourceType": "DetectedIssue",
+  "id": "lab",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "final"
+}

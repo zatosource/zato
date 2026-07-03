@@ -1,0 +1,13 @@
+{
+  "resourceType": "Practitioner",
+  "id": "prac4",
+  "active": true,
+  "name": {
+    "use": "official",
+    "family": "Notsowell",
+    "given": "Sandy"
+  },
+  "gender": "female",
+  "birthDate": "1982-08-02",
+  "deceasedDateTime": "2021-12-12"
+}

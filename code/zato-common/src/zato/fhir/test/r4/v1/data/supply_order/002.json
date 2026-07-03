@@ -1,0 +1,629 @@
+{
+  "_meta": {
+    "scenario": "supply_order",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.kprbkte2",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Eugène Neveu</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9621673"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1389"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Neveu",
+        "given": [
+          "Eugène"
+        ],
+        "text": "Eugène Neveu"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-719-419-1967",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "jessica70@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1969-04-23",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "159 Gonzalez Locks Apt. 110"
+        ],
+        "city": "New Melinda",
+        "state": "NH",
+        "postalCode": "44284",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.qg9ztqyg",
+        "display": "Dr. Éric Marin"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.a84b7s8c",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.a84b7s8c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4512807406"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(552)911-7273x562",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "025 Michelle Forks Apt. 351"
+        ],
+        "city": "New Erikaborough",
+        "state": "MT",
+        "postalCode": "90634",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zx694zya",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply request on 2024-07-29</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.kprbkte2",
+        "display": "Eugène Neveu"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qg9ztqyg",
+            "display": "Dr. Éric Marin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-29T14:15:00+00:00",
+        "end": "2024-07-29T14:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a84b7s8c",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bc4eahw5",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.bybqxfh6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply follow-up on 2025-01-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.kprbkte2",
+        "display": "Eugène Neveu"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qg9ztqyg",
+            "display": "Dr. Éric Marin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-21T11:00:00+00:00",
+        "end": "2025-01-21T11:47:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a84b7s8c",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bc4eahw5",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.xqv7c6cj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply confirmation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.kprbkte2",
+        "display": "Eugène Neveu"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qg9ztqyg",
+            "display": "Dr. Éric Marin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:45:00+00:00",
+        "end": "2025-06-15T09:16:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a84b7s8c",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bc4eahw5",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "supply_request": {
+    "resourceType": "SupplyRequest",
+    "id": "sr.pjh5ut2n",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyRequest: Adhesive bandages for school clinic</p></div>"
+    },
+    "status": "completed",
+    "category": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supplyrequest-kind",
+          "code": "nonstock",
+          "display": "Non-Stock"
+        }
+      ],
+      "text": "Non-Stock"
+    },
+    "itemCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "412020006",
+          "display": "Adhesive bandage"
+        }
+      ],
+      "text": "Adhesive bandage"
+    },
+    "quantity": {
+      "value": 200,
+      "unit": "unit",
+      "system": "http://unitsofmeasure.org",
+      "code": "{each}"
+    },
+    "occurrenceDateTime": "2025-06-15T09:00:00+00:00",
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Organization/rorg.v69b4bae",
+      "display": "Riverside School Health Office"
+    },
+    "supplier": [
+      {
+        "reference": "Organization/org.a84b7s8c",
+        "display": "Lakeside Wellness Center"
+      }
+    ],
+    "deliverFrom": {
+      "reference": "Organization/org.a84b7s8c",
+      "display": "Lakeside Wellness Center"
+    },
+    "deliverTo": {
+      "reference": "Organization/rorg.v69b4bae",
+      "display": "Riverside School Health Office"
+    }
+  },
+  "supply_delivery": {
+    "resourceType": "SupplyDelivery",
+    "id": "sd.2gg3n3mt",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyDelivery: Bandages delivered to school clinic</p></div>"
+    },
+    "status": "completed",
+    "basedOn": [
+      {
+        "reference": "SupplyRequest/sr.pjh5ut2n"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.kprbkte2",
+      "display": "Eugène Neveu"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supply-item-type",
+          "code": "device",
+          "display": "Device"
+        }
+      ],
+      "text": "Device"
+    },
+    "suppliedItem": {
+      "quantity": {
+        "value": 200,
+        "unit": "unit",
+        "system": "http://unitsofmeasure.org",
+        "code": "{each}"
+      },
+      "itemCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "412020006",
+            "display": "Adhesive bandage"
+          }
+        ],
+        "text": "Adhesive bandage"
+      }
+    },
+    "occurrenceDateTime": "2025-06-21T14:00:00+00:00",
+    "supplier": {
+      "reference": "Organization/org.a84b7s8c",
+      "display": "Lakeside Wellness Center"
+    },
+    "destination": {
+      "reference": "Location/loc.bc4eahw5",
+      "display": "Lakeside Wellness Center - Main Office"
+    }
+  },
+  "receiving_organization": {
+    "resourceType": "Organization",
+    "id": "rorg.v69b4bae",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverside School Health Office</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "edu",
+            "display": "Educational Institute"
+          }
+        ],
+        "text": "Educational Institute"
+      }
+    ],
+    "name": "Riverside School Health Office",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "5725557324",
+        "use": "work"
+      }
+    ]
+  },
+  "organization_affiliation": {
+    "resourceType": "OrganizationAffiliation",
+    "id": "oa.89ceccny",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OrganizationAffiliation: Lakeside Wellness Center supplies Riverside School</p></div>"
+    },
+    "active": true,
+    "organization": {
+      "reference": "Organization/org.a84b7s8c",
+      "display": "Lakeside Wellness Center"
+    },
+    "participatingOrganization": {
+      "reference": "Organization/rorg.v69b4bae",
+      "display": "Riverside School Health Office"
+    },
+    "code": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/organization-role",
+            "code": "supplier",
+            "display": "Supplier"
+          }
+        ],
+        "text": "Supplier"
+      }
+    ]
+  }
+}

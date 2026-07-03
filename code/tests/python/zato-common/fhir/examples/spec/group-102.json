@@ -1,0 +1,55 @@
+{
+  "resourceType": "Group",
+  "id": 102,
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null,
+      "{http://www.w3.org/1999/xhtml}ul": {
+        "{http://www.w3.org/1999/xhtml}li": [
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  "type": "person",
+  "membership": "enumerated",
+  "member": [
+    {
+      "entity": {
+        "reference": "Patient/pat1"
+      },
+      "period": {
+        "start": "2014-10-08"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat2"
+      },
+      "period": {
+        "start": "2015-04-02"
+      },
+      "inactive": true
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat3"
+      },
+      "period": {
+        "start": "2015-08-06"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat4"
+      },
+      "period": {
+        "start": "2015-08-06"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "physical-therapy",
+  "status": "completed",
+  "intent": "order",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 386053000,
+      "display": "Evaluation procedure (procedure)"
+    },
+    "text": "Evaluation"
+  },
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 710830005,
+        "display": "Assessment of passive range of motion (procedure)"
+      },
+      "text": "Assessment of passive range of motion"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2016-09-27",
+  "authoredOn": "2016-09-20",
+  "requester": {
+    "display": "Ollie Ortho, MD"
+  },
+  "performer": {
+    "display": "Paul Therapist, PT"
+  },
+  "reason": {
+    "concept": {
+      "text": "assessment of mobility limitations due to osteoarthritis"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 36701003,
+      "display": "Both knees (body structure)"
+    },
+    "text": "Both knees"
+  }
+}

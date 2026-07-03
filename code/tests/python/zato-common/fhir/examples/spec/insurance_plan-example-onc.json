@@ -1,0 +1,130 @@
+{
+  "resourceType": "InsurancePlan",
+  "id": "example-onc",
+  "type": {
+    "text": "Standard"
+  },
+  "generalCost": {
+    "cost": {
+      "value": 2000,
+      "currency": "USD"
+    }
+  },
+  "specificCost": {
+    "category": {
+      "text": "Medical"
+    },
+    "benefit": [
+      {
+        "type": {
+          "text": "primary care office visit"
+        },
+        "cost": [
+          {
+            "type": {
+              "text": "copay"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "in-network"
+              },
+              "text": "preferred"
+            },
+            "value": {
+              "value": 25,
+              "unit": "USD"
+            }
+          },
+          {
+            "type": {
+              "text": "coinsurance"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "in-network"
+              },
+              "text": "participating"
+            },
+            "value": {
+              "value": 35,
+              "unit": "%"
+            }
+          },
+          {
+            "type": {
+              "text": "coinsurance"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "out-of-network"
+              },
+              "text": "non-participating"
+            },
+            "value": {
+              "value": 35,
+              "unit": "%"
+            }
+          }
+        ]
+      },
+      {
+        "type": {
+          "text": "specialty care office visit"
+        },
+        "cost": [
+          {
+            "type": {
+              "text": "copay"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "in-network"
+              },
+              "text": "preferred"
+            },
+            "value": {
+              "value": 35,
+              "unit": "USD"
+            }
+          },
+          {
+            "type": {
+              "text": "coinsurance"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "in-network"
+              },
+              "text": "participating"
+            },
+            "value": {
+              "value": 35,
+              "unit": "%"
+            }
+          },
+          {
+            "type": {
+              "text": "coinsurance"
+            },
+            "applicability": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/applicability",
+                "code": "out-of-network"
+              },
+              "text": "non-participating"
+            },
+            "value": {
+              "value": 35,
+              "unit": "%"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

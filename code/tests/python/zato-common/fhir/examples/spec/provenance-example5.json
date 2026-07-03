@@ -1,0 +1,25 @@
+{
+  "resourceType": "Provenance",
+  "id": "example5",
+  "target": {
+    "reference": "Procedure/example/_history/1"
+  },
+  "recorded": "2021-12-08T16:54:24+11:00",
+  "agent": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        "code": "AUT"
+      }
+    },
+    "who": {
+      "reference": "Practitioner/f007"
+    }
+  },
+  "entity": {
+    "role": "instantiates",
+    "what": {
+      "reference": "AuditEvent/example-consent-permit-authz"
+    }
+  }
+}

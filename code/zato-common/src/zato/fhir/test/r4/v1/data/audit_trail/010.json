@@ -1,0 +1,385 @@
+{
+  "_meta": {
+    "scenario": "audit_trail",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.gq9h7u89",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Thomas Wells</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4032479"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-6075"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Wells",
+        "given": [
+          "Thomas"
+        ],
+        "text": "Thomas Wells"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "672-332-8464x670",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "ericayoung@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1997-08-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "74223 Alicia Square Suite 703"
+        ],
+        "city": "Moorestad",
+        "state": "FL",
+        "postalCode": "68046",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.qpt2vzrd",
+        "display": "Dr. Gina Smith"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.eatp3cwu",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "audit_event": {
+    "resourceType": "AuditEvent",
+    "id": "ae.hjyt82qu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AuditEvent: Patient record accessed for wellness visit</p></div>"
+    },
+    "type": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": "110110",
+      "display": "Patient Record"
+    },
+    "subtype": [
+      {
+        "system": "http://hl7.org/fhir/restful-interaction",
+        "code": "R",
+        "display": "read"
+      }
+    ],
+    "action": "R",
+    "period": {
+      "start": "2025-06-15T14:30:00+00:00",
+      "end": "2025-06-15T14:30:00+00:00"
+    },
+    "recorded": "2025-06-15T14:30:00+00:00",
+    "outcome": "0",
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+              "code": "humanuser",
+              "display": "human user"
+            }
+          ],
+          "text": "human user"
+        },
+        "who": {
+          "reference": "Practitioner/pr.qpt2vzrd",
+          "display": "Dr. Gina Smith"
+        },
+        "requestor": true
+      }
+    ],
+    "source": {
+      "observer": {
+        "reference": "Organization/org.eatp3cwu",
+        "display": "Sunrise Family Practice"
+      },
+      "type": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+          "code": "4",
+          "display": "Application Server"
+        }
+      ]
+    },
+    "entity": [
+      {
+        "what": {
+          "reference": "Patient/pt.gq9h7u89",
+          "display": "Thomas Wells"
+        },
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+          "code": "1",
+          "display": "Person"
+        },
+        "lifecycle": {
+          "system": "http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle",
+          "code": "6",
+          "display": "Access / Use"
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.xzc3tjvj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.gq9h7u89"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.qpt2vzrd",
+          "display": "Dr. Gina Smith"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.eatp3cwu"
+        }
+      }
+    ]
+  },
+  "linkage": {
+    "resourceType": "Linkage",
+    "id": "link.bvvvqnx4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Linkage: Links patient record across systems</p></div>"
+    },
+    "active": true,
+    "author": {
+      "reference": "Practitioner/pr.qpt2vzrd",
+      "display": "Dr. Gina Smith"
+    },
+    "item": [
+      {
+        "type": "source",
+        "resource": {
+          "reference": "Patient/pt.gq9h7u89",
+          "display": "Thomas Wells"
+        }
+      },
+      {
+        "type": "alternate",
+        "resource": {
+          "reference": "Patient/pt.gq9h7u89",
+          "display": "Thomas Wells"
+        }
+      }
+    ]
+  },
+  "basic": {
+    "resourceType": "Basic",
+    "id": "basic.7rwzrdn9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Basic: Administrative note</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://example.org/basic-type",
+          "code": "adm-note",
+          "display": "Administrative note"
+        }
+      ],
+      "text": "Administrative note"
+    },
+    "subject": {
+      "reference": "Patient/pt.gq9h7u89",
+      "display": "Thomas Wells"
+    },
+    "created": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.qpt2vzrd",
+      "display": "Dr. Gina Smith"
+    }
+  },
+  "binary": {
+    "resourceType": "Binary",
+    "id": "bin.qzk9f89g",
+    "contentType": "text/plain",
+    "data": "QXVkaXQgbG9nIGVudHJ5OiBQYXRpZW50IHJlY29yZCBhY2Nlc3NlZCBmb3Igcm91dGluZSByZXZpZXcu"
+  },
+  "parameters": {
+    "resourceType": "Parameters",
+    "id": "params.zk45mwz8",
+    "parameter": [
+      {
+        "name": "patient",
+        "valueReference": {
+          "reference": "Patient/pt.gq9h7u89",
+          "display": "Thomas Wells"
+        }
+      },
+      {
+        "name": "access-level",
+        "valueString": "read-only"
+      },
+      {
+        "name": "audit-required",
+        "valueBoolean": true
+      }
+    ]
+  },
+  "operation_outcome": {
+    "resourceType": "OperationOutcome",
+    "id": "oo.aspeg3gx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OperationOutcome: Operation completed successfully</p></div>"
+    },
+    "issue": [
+      {
+        "severity": "information",
+        "code": "informational",
+        "diagnostics": "Patient record access logged successfully. No issues detected."
+      }
+    ]
+  }
+}

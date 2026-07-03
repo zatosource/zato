@@ -1,0 +1,56 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "detectedissue-example-medication-class",
+  "extension": [
+    {
+      "valueCode": "cds"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 1
+    }
+  ],
+  "url": "http://hl7.org/fhir/detectedissue-example-medication-class",
+  "version": "6.0.0",
+  "name": "DetectedIssueExampleMedicationClass",
+  "title": "Detected Issue Example Medication Class",
+  "status": "active",
+  "experimental": true,
+  "date": "2021-01-05T10:01:24+11:00",
+  "publisher": "HL7 (FHIR Project)",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Example code system illustrating medication classes.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/detectedissue-example-medication-class",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "analgesics",
+      "display": "Analgesics",
+      "definition": "Analgesics such as lidocaine. Common suffixes include -caine, common roots include -morph, -morphe, -morphic"
+    },
+    {
+      "code": "antacids",
+      "display": "Antacids",
+      "definition": "Antacids such as omeprazole. Common suffixes include -azole, common roots include -tidine"
+    },
+    {
+      "code": "Antibiotics",
+      "display": "Antibiotics",
+      "definition": "Antibiotics such as levofloxacin. Common suffixes include -mycin, -floxacin, common roots include bacter-, vir-, -cidal"
+    }
+  ]
+}

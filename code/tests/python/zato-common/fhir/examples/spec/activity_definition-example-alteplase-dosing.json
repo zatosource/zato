@@ -1,0 +1,100 @@
+{
+  "resourceType": "ActivityDefinition",
+  "id": "example-alteplase-dosing",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "url": "http://example.org/fhir/ActivityDefinition/example-alteplase-dosing",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.19.3"
+  },
+  "name": "AlteplaseDosingForStroke",
+  "title": "Alteplase Dosing for Stroke",
+  "status": "draft",
+  "description": "Alteplase Dosing for Stroke",
+  "kind": "MedicationRequest",
+  "code": {
+    "coding": {
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code": 1155608,
+      "display": "alteplase injectable product"
+    }
+  },
+  "intent": "order",
+  "dosage": [
+    {
+      "sequence": 1,
+      "text": "give 10% of dose over 1 minute",
+      "route": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 47625008,
+          "display": "Intravenous use"
+        }
+      },
+      "doseAndRate": {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+            "code": "calculated",
+            "display": "Calculated"
+          }
+        },
+        "doseQuantity": {
+          "value": 0.9,
+          "system": "http://unitsofmeasure.org",
+          "code": "mg/kg"
+        }
+      },
+      "safety": {
+        "doseLimit": {
+          "valueQuantity": {
+            "value": 90,
+            "system": "http://unitsofmeasure.org",
+            "code": "mg"
+          },
+          "scope": "administration"
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "text": "give remaining 90% of dose over 1 hour",
+      "route": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 47625008,
+          "display": "Intravenous use"
+        }
+      },
+      "doseAndRate": {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+            "code": "calculated",
+            "display": "Calculated"
+          }
+        },
+        "doseQuantity": {
+          "value": 0.9,
+          "system": "http://unitsofmeasure.org",
+          "code": "mg/kg"
+        }
+      },
+      "safety": {
+        "doseLimit": {
+          "valueQuantity": {
+            "value": 90,
+            "system": "http://unitsofmeasure.org",
+            "code": "mg"
+          },
+          "scope": "administration"
+        }
+      }
+    }
+  ]
+}

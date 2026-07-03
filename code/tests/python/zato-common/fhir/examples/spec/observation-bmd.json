@@ -1,0 +1,33 @@
+{
+  "resourceType": "Observation",
+  "id": "bmd",
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "24701-5",
+      "display": "DXA Femur [Mass/Area] Bone density"
+    },
+    "text": "BMD - Left Femur"
+  },
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "performer": {
+    "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f",
+    "display": "Acme Imaging Diagnostics"
+  },
+  "valueQuantity": {
+    "value": 0.887,
+    "unit": "g/cm\u00b2",
+    "system": "http://unitsofmeasure.org",
+    "code": "g/cm-2"
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": "71341001:272741003=7771000"
+    },
+    "text": "Left Femur"
+  }
+}

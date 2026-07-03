@@ -1,0 +1,46 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "HCTcollection-procedure",
+  "productStatus": "completed",
+  "intent": "order",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 77465005,
+      "display": "PBSC extraction"
+    },
+    "text": "PBSC extraction"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 387713003,
+      "display": "Surgical procedure"
+    },
+    "text": "Surgical procedure"
+  },
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "occurrenceDateTime": "2022-03-22",
+  "authoredOn": "2022-03-22",
+  "requester": {
+    "display": "Harry HemeOnc, MD"
+  },
+  "performer": {
+    "display": "Harry HemeOnc, MD"
+  },
+  "reason": {
+    "concept": {
+      "text": "HCT transplant"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 12123001,
+      "display": "Internal jugular vein structure (body structure)"
+    },
+    "text": "Internal jugular vein"
+  }
+}

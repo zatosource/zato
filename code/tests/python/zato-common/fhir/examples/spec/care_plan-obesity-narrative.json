@@ -1,0 +1,16 @@
+{
+  "resourceType": "CarePlan",
+  "id": "obesity-narrative",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "status": "active",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  }
+}

@@ -1,0 +1,1087 @@
+{
+  "_meta": {
+    "scenario": "lipid_profiles",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.hq57epng",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Nicholas Smith</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6843507"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1002"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Smith",
+        "given": [
+          "Nicholas"
+        ],
+        "text": "Nicholas Smith"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "650-627-4884x515",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "ygutierrez@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1961-10-24",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "9878 Christine View Suite 042"
+        ],
+        "city": "East Susan",
+        "state": "UT",
+        "postalCode": "28561",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.havszp9j",
+        "display": "Dr. Evan Gilbert"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.zhajgcc9",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.havszp9j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Evan Gilbert</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4314477174"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Gilbert",
+        "given": [
+          "Evan"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Evan Gilbert"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "315-807-4641x8546",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "421 Rice Flat Apt. 695"
+        ],
+        "city": "West Brianburgh",
+        "state": "NE",
+        "postalCode": "45213",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.wgrukvme",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid screening on 2024-03-11</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid screening"
+            }
+          ],
+          "text": "Lipid screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.hq57epng",
+        "display": "Nicholas Smith"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.havszp9j",
+            "display": "Dr. Evan Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-03-11T10:00:00+00:00",
+        "end": "2024-03-11T10:51:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid screening"
+            }
+          ],
+          "text": "Lipid screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.zhajgcc9",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vurkg7ax",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6vcwjrjz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid follow-up on 2024-10-29</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid follow-up"
+            }
+          ],
+          "text": "Lipid follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.hq57epng",
+        "display": "Nicholas Smith"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.havszp9j",
+            "display": "Dr. Evan Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-10-29T12:15:00+00:00",
+        "end": "2024-10-29T13:03:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid follow-up"
+            }
+          ],
+          "text": "Lipid follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.zhajgcc9",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vurkg7ax",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.kg8w44b5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid results review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid results review"
+            }
+          ],
+          "text": "Lipid results review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.hq57epng",
+        "display": "Nicholas Smith"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.havszp9j",
+            "display": "Dr. Evan Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T09:30:00+00:00",
+        "end": "2025-06-15T10:09:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid results review"
+            }
+          ],
+          "text": "Lipid results review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.zhajgcc9",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vurkg7ax",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.h7ca828z",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wgrukvme"
+      },
+      "effectiveDateTime": "2024-03-11T16:51:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6xw4d8ew"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.vuxjxvue",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 45 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wgrukvme"
+      },
+      "effectiveDateTime": "2024-03-11T15:59:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6xw4d8ew"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.mfpq5uzk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wgrukvme"
+      },
+      "effectiveDateTime": "2024-03-11T16:56:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6xw4d8ew"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ymdamama",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 180 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wgrukvme"
+      },
+      "effectiveDateTime": "2024-03-11T14:19:00+00:00",
+      "valueQuantity": {
+        "value": 180,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6xw4d8ew"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.8uzaarm4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6vcwjrjz"
+      },
+      "effectiveDateTime": "2024-10-29T09:04:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6t2gaer3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.pwcmqgag",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 50 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6vcwjrjz"
+      },
+      "effectiveDateTime": "2024-10-29T16:32:00+00:00",
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6t2gaer3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.dns2xv59",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 125 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6vcwjrjz"
+      },
+      "effectiveDateTime": "2024-10-29T16:10:00+00:00",
+      "valueQuantity": {
+        "value": 125,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6t2gaer3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.wgsdpvzc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 160 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6vcwjrjz"
+      },
+      "effectiveDateTime": "2024-10-29T13:52:00+00:00",
+      "valueQuantity": {
+        "value": 160,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.6t2gaer3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.jjmzcw67",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.kg8w44b5"
+      },
+      "effectiveDateTime": "2025-06-15T08:06:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.tgq5n9s7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.4d7ak7nb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 55 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.kg8w44b5"
+      },
+      "effectiveDateTime": "2025-06-15T12:54:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.tgq5n9s7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ywszmmeu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 110 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.kg8w44b5"
+      },
+      "effectiveDateTime": "2025-06-15T14:05:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.tgq5n9s7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.c3wct6yn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.hq57epng"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.kg8w44b5"
+      },
+      "effectiveDateTime": "2025-06-15T11:17:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.havszp9j"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.tgq5n9s7"
+      }
+    }
+  ]
+}

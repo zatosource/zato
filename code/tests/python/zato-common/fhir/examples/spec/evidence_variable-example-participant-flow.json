@@ -1,0 +1,56 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-participant-flow",
+  "meta": {
+    "versionId": 3,
+    "lastUpdated": "2025-03-10T13:18:16.608Z",
+    "profile": "http://hl7.org/fhir/uv/ebm/StructureDefinition/participant-flow-evidence-variable"
+  },
+  "url": "http://hl7.org/fhir/EvidenceVariable/example-participant-flow",
+  "identifier": {
+    "type": {
+      "text": "FEvIR Object Identifier"
+    },
+    "system": "urn:ietf:rfc:3986",
+    "value": "https://fevir.net/FOI/346779",
+    "assigner": {
+      "display": "Computable Publishing LLC"
+    }
+  },
+  "title": "PARACHUTE Trial Participants that declined randomization - Example EvidenceVariable",
+  "citeAs": "PARACHUTE Trial Participants that declined randomization - Example EvidenceVariable [Database Entry: FHIR EvidenceVariable Resource]. Contributors: Brian S. Alper, MD, MSPH [Authors/Creators]. In: Fast Evidence Interoperability Resources (FEvIR) Platform, FOI 346779. Revised 2025-03-10. Available at: https://fevir.net/resources/EvidenceVariable/346779. Computable resource at: https://fevir.net/resources/EvidenceVariable/346779#json.",
+  "status": "active",
+  "author": {
+    "name": "Brian S. Alper, MD, MSPH"
+  },
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "Example variable definition for the ParticipantFlowEvidenceVariable Profile from the EBMonFHIR IG",
+  "useContext": {
+    "code": {
+      "system": "https://fevir.net/resources/CodeSystem/179423",
+      "code": "evidence-communication",
+      "display": "Evidence Communication"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "https://fevir.net/resources/CodeSystem/179423",
+        "code": "ParticipantFlowEvidenceVariable",
+        "display": "ParticipantFlowEvidenceVariable"
+      }
+    }
+  },
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "actual": true,
+  "definition": {
+    "concept": {
+      "text": "PARACHUTE Trial Participants that declined randomization"
+    }
+  },
+  "handling": "boolean"
+}

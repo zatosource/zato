@@ -1,0 +1,21 @@
+{
+  "resourceType": "Medication",
+  "id": "f203",
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 387517004,
+      "display": "Paracetamol"
+    }
+  },
+  "isBrand": false,
+  "product": {
+    "form": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 385055001,
+        "display": "Tablet"
+      }
+    }
+  }
+}

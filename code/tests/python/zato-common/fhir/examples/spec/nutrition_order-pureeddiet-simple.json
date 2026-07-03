@@ -1,0 +1,87 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "pureeddiet-simple",
+  "identifier": {
+    "system": "http://goodhealthhospital.org/nutrition-requests",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "oralDiet": {
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": 1255825005,
+          "display": "International Dysphagia Diet Standardisation Initiative Framework - Pureed Level 4 food"
+        },
+        {
+          "system": "http://goodhealthhospital.org/diet-type-codes",
+          "code": 1010,
+          "display": "Pureed diet"
+        }
+      ],
+      "text": "Pureed diet"
+    },
+    "schedule": {
+      "timing": {
+        "repeat": {
+          "boundsPeriod": {
+            "start": "2015-02-10"
+          },
+          "frequency": 3,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      }
+    },
+    "texture": {
+      "modifier": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 228055009,
+          "display": "Liquidized food"
+        },
+        "text": "Pureed"
+      }
+    },
+    "fluidConsistencyType": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 439021000124105,
+        "display": "Dietary liquid consistency - nectar thick liquid"
+      },
+      "text": "Nectar thick liquids"
+    }
+  },
+  "supplement": {
+    "type": {
+      "concept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 442971000124100,
+            "display": "Adult high energy formula"
+          },
+          {
+            "system": "http://goodhealthhospital.org/supplement-type-codes",
+            "code": 1040,
+            "display": "Adult high energy pudding"
+          }
+        ],
+        "text": "Adult high energy pudding"
+      }
+    },
+    "productName": "Ensure Pudding 4 oz container",
+    "instruction": "Ensure Pudding at breakfast, lunch, supper"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "resourceType": "SpecimenDefinition",
+  "id": 7,
+  "url": "http://example-lab.com/specdef/123455",
+  "identifier": {
+    "value": 123455
+  },
+  "title": "Venous blood specimen",
+  "status": "active",
+  "experimental": true,
+  "typeCollected": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 122555007
+    },
+    "text": "Venous blood specimen (specimen)"
+  },
+  "patientPreparation": {
+    "text": "no strict fasting"
+  },
+  "typeTested": {
+    "isDerived": true,
+    "type": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 119364003
+      },
+      "text": "Serum specimen (specimen)"
+    },
+    "preference": "preferred",
+    "container": {
+      "material": {
+        "text": "glass"
+      },
+      "type": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 702281005,
+          "display": "Evacuated blood collection tube with thrombin and clot activator and gel separator"
+        }
+      },
+      "cap": {
+        "coding": {
+          "system": "http://terminology.hl7.org/5.1.0/CodeSystem-container-cap.html",
+          "code": "yellow",
+          "display": "yellow cap"
+        }
+      },
+      "minimumVolumeQuantity": {
+        "value": 2,
+        "unit": "ml",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL"
+      }
+    },
+    "handling": {
+      "temperatureQualifier": {
+        "coding": {
+          "code": "room",
+          "display": "room temperature"
+        }
+      },
+      "temperatureRange": {
+        "low": {
+          "value": 15,
+          "unit": "\u00b0C",
+          "system": "http://unitsofmeasure.org",
+          "code": "Cel"
+        },
+        "high": {
+          "value": 25,
+          "unit": "\u00b0C",
+          "system": "http://unitsofmeasure.org",
+          "code": "Cel"
+        }
+      },
+      "maxDuration": {
+        "value": 12,
+        "system": "http://unitsofmeasure.org",
+        "code": "h"
+      }
+    }
+  }
+}

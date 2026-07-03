@@ -1,0 +1,42 @@
+{
+  "resourceType": "RelatedPerson",
+  "id": "f001",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "use": "official",
+    "type": {
+      "text": "BSN"
+    },
+    "system": "urn:oid:2.16.840.1.113883.2.4.6.3"
+  },
+  "patient": {
+    "reference": "Patient/f001"
+  },
+  "relationship": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+      "code": "SIGOTHR"
+    }
+  },
+  "name": {
+    "use": "usual",
+    "family": "Abels",
+    "given": "Sarah"
+  },
+  "telecom": [
+    {
+      "system": "phone",
+      "value": 690383372,
+      "use": "mobile"
+    },
+    {
+      "system": "email",
+      "value": "s.abels@kpn.nl",
+      "use": "home"
+    }
+  ],
+  "gender": "female"
+}

@@ -1,0 +1,67 @@
+{
+  "resourceType": "Group",
+  "id": "example-Stroke-Thrombolysis-Trialists-2014-2016-IPD-MA-Cohort",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "name": "StrokeThrombolysisTrialists20142016IPDMACohort",
+  "title": "Stroke Thrombolysis Trialists\u2019 Collaborators Group collection used for individual patient data meta-analysis",
+  "status": "draft",
+  "description": "Stroke Thrombolysis Trialists\u2019 Collaborators Group collection used for individual patient data meta-analysis",
+  "type": "person",
+  "membership": "enumerated",
+  "member": [
+    {
+      "entity": {
+        "reference": "Group/ECASSIII-Trial-Cohort",
+        "type": "Group",
+        "display": "ECASS III Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/IST3-Trial-Cohort",
+        "type": "Group",
+        "display": "IST3 Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/ECASS-Trial-Cohort",
+        "type": "Group",
+        "display": "ECASS Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/ECASSII-Trial-Cohort",
+        "type": "Group",
+        "display": "ECASSII Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/EPITHET-Trial-Cohort",
+        "type": "Group",
+        "display": "EPITHET Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/ATLANTIS-Trial-Cohort",
+        "type": "Group",
+        "display": "ATLANTIS Trial Cohort"
+      }
+    },
+    {
+      "entity": {
+        "reference": "Group/NINDS-Trial-Cohort",
+        "type": "Group",
+        "display": "NINDS Trial Cohort"
+      }
+    }
+  ]
+}

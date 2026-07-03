@@ -1,0 +1,82 @@
+{
+  "resourceType": "Condition",
+  "id": "f002",
+  "clinicalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+    }
+  },
+  "verificationStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      "code": "confirmed"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 439401001,
+      "display": "diagnosis"
+    }
+  },
+  "severity": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 24484000,
+      "display": "Severe"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 254637007,
+      "display": "NSCLC - Non-small cell lung cancer"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 51185008,
+      "display": "Thorax"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "encounter": {
+    "reference": "Encounter/f002"
+  },
+  "onsetDateTime": "2011-05-05",
+  "recordedDate": "2012-06-03",
+  "asserter": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "stage": {
+    "summary": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 258219007,
+        "display": "stage II"
+      }
+    },
+    "type": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 260998006,
+        "display": "Clinical staging (qualifier value)"
+      }
+    }
+  },
+  "evidence": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 169069000,
+        "display": "CT of thorax"
+      }
+    }
+  }
+}

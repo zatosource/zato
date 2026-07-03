@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+ETHNICITY_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"
+QUESTIONNAIRE_URI_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-extension-questionnaire-uri"
+MEDICATION_ADHERENCE_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medication-adherence"
+USCDI_REQUIREMENT_URL = "http://hl7.org/fhir/us/core/StructureDefinition/uscdi-requirement"
+SEX_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-sex"
+DIRECT_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-direct"
+RACE_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"
+BIRTHSEX_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex"
+GENDER_IDENTITY_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-genderIdentity"
+JURISDICTION_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-jurisdiction"
+AUTHENTICATION_TIME_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-authentication-time"
+TRIBAL_AFFILIATION_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-tribal-affiliation"
+INTERPRETER_NEEDED_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-interpreter-needed"

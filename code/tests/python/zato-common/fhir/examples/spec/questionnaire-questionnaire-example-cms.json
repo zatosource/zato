@@ -1,0 +1,369 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "questionnaire-example-cms",
+  "url": "http://hl7.org/fhir/Questionnaire/questionnaire-example-cms",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.20.3"
+    },
+    {
+      "use": "official",
+      "value": "0938-070"
+    }
+  ],
+  "name": "OACISCAllItemsHomeHealthPatientTrackingSheet",
+  "title": "OACIS-C: All Items - Home Health Patient Tracking Sheet",
+  "status": "active",
+  "date": "2009-08",
+  "publisher": "Centers for Medicare & Medicaid Services",
+  "description": "OACIS-C: All Items - Home Health Patient Tracking Sheet",
+  "item": [
+    {
+      "linkId": "ROOT",
+      "type": "group",
+      "item": [
+        {
+          "extension": {
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://hl7.org/fhir/questionnaire-display-category",
+                "code": "instructions"
+              }
+            }
+          },
+          "linkId": "INSTR",
+          "text": "According to the Paperwork Reduction Act of 1995, no persons are required to respond to a collection of information unless it displays a valid OMB control number. The valid OMB control number for this information collection instrument is 0938-0760. The time required to complete this information collection is estimated to average 0.7 minutes per response, including the time to review instructions, search existing data resources, gather the data needed, and complete and review the information collection. If you have comments concerning this form, please write to: CMS, 7500 Security Boulevard, Attn: PRA Reports Clearance Officer, Baltimore, Maryland 21244-1850.",
+          "type": "display"
+        },
+        {
+          "linkId": "M0010",
+          "text": "CMS Certification Number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "linkId": "M0014",
+          "text": "Branch State",
+          "type": "string",
+          "required": true
+        },
+        {
+          "linkId": "M0018",
+          "text": "National Provider Identifier (N P I) for the attending physician who has signed the plan of care",
+          "type": "string",
+          "item": {
+            "linkId": "M0018.1",
+            "type": "coding",
+            "required": true,
+            "answerOption": {
+              "valueCoding": {
+                "code": "NA",
+                "display": "Not Applicable"
+              }
+            }
+          }
+        },
+        {
+          "linkId": "M0020",
+          "text": "Patient ID Number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "extension": {
+            "valueString": "month / day / year"
+          },
+          "linkId": "M0030",
+          "text": "Start of Care Date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "extension": {
+            "valueString": "month / day / year"
+          },
+          "linkId": "M0031",
+          "text": "Resumption of Care Date",
+          "type": "date",
+          "required": true,
+          "item": {
+            "linkId": "M0030.1",
+            "type": "coding",
+            "required": true,
+            "answerOption": {
+              "valueCoding": {
+                "code": "NA",
+                "display": "Not Applicable"
+              }
+            }
+          }
+        },
+        {
+          "extension": {
+            "valueString": "First  M I  Last  Suffix"
+          },
+          "linkId": "M0040",
+          "text": "Patient Name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "linkId": "M0050",
+          "text": "Patient State of Residence",
+          "type": "string",
+          "required": true
+        },
+        {
+          "extension": {
+            "valueString": "nnnnn-nnnn"
+          },
+          "linkId": "M0060",
+          "text": "Patient Zip Code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "linkId": "M0063",
+          "text": "Medicare Number",
+          "type": "string",
+          "item": {
+            "linkId": "M0063.1",
+            "type": "coding",
+            "required": true,
+            "answerOption": {
+              "valueCoding": {
+                "code": "NA",
+                "display": "No Medicare"
+              }
+            }
+          }
+        },
+        {
+          "extension": {
+            "valueString": "nnn-nn-nnnn"
+          },
+          "linkId": "M0064",
+          "text": "Social Security Number",
+          "type": "string",
+          "item": {
+            "linkId": "M0064.1",
+            "type": "coding",
+            "required": true,
+            "answerOption": {
+              "valueCoding": {
+                "code": "UK",
+                "display": "Unknown or Not Available"
+              }
+            }
+          }
+        },
+        {
+          "linkId": "M0065",
+          "text": "Medicaid Number",
+          "type": "string",
+          "item": {
+            "linkId": "M0065.1",
+            "type": "coding",
+            "required": true,
+            "answerOption": {
+              "valueCoding": {
+                "code": "NA",
+                "display": "No Medicaid"
+              }
+            }
+          }
+        },
+        {
+          "extension": {
+            "valueString": "month / day / year"
+          },
+          "linkId": "M0066",
+          "text": "Birth Date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "linkId": "M0069",
+          "text": "Gender",
+          "type": "coding",
+          "required": true,
+          "answerOption": [
+            {
+              "valueCoding": {
+                "code": 1,
+                "display": "Male"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 2,
+                "display": "Female"
+              }
+            }
+          ]
+        },
+        {
+          "linkId": "M0140",
+          "text": "Race/Ethnicity",
+          "type": "coding",
+          "required": true,
+          "repeats": true,
+          "answerOption": [
+            {
+              "valueCoding": {
+                "code": 1,
+                "display": "American Indian or Alaska Native"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 2,
+                "display": "Asian"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 3,
+                "display": "Black or African-American"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 4,
+                "display": "Hispanic or Latino"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 5,
+                "display": "Native Hawaiian or Pacific Islander"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 6,
+                "display": "White"
+              }
+            }
+          ]
+        },
+        {
+          "linkId": "M0150",
+          "text": "Current Payment Sources for Home Care",
+          "type": "coding",
+          "required": true,
+          "repeats": true,
+          "answerOption": [
+            {
+              "valueCoding": {
+                "code": 0,
+                "display": "None; no charge for current services"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 1,
+                "display": "Medicare (traditional fee-for-service)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 2,
+                "display": "Medicare (HMO/managed care/Advantage plan)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 3,
+                "display": "Medicaid (traditional fee-for-service)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 4,
+                "display": "Medicaid (HMO/managed care)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 5,
+                "display": "Workers' compensation"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 6,
+                "display": "Title programs (e.g. Title III, V, or XX)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 7,
+                "display": "Other government (e.g. TriCare, VA, etc.)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 8,
+                "display": "Private insurance"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 9,
+                "display": "Private HMO/managed care"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 10,
+                "display": "Self-pay"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": 11,
+                "display": "Other (specify)"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": "UK",
+                "display": "Unknown"
+              }
+            }
+          ],
+          "item": {
+            "linkId": "M0140.1",
+            "type": "string",
+            "enableWhen": {
+              "question": "M0150",
+              "operator": "exists",
+              "answerBoolean": true
+            },
+            "required": true
+          }
+        }
+      ]
+    },
+    {
+      "linkId": "timing",
+      "text": "Items to be Used at Specific Time Points",
+      "type": "group",
+      "item": {
+        "extension": {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://hl7.org/fhir/questionnaire-display-category",
+              "code": "instructions"
+            }
+          }
+        },
+        "linkId": "footer",
+        "text": "According to the Paperwork Reduction Act of 1995, no persons are required to respond to a collection of information unless it displays a valid OMB control number. The valid OMB control number for this information collection instrument is 0938-0760. The time required to complete this information collection is estimated to average 0.7 minutes per response, including the time to review instructions, search existing data resources, gather the data needed, and complete and review the information collection. If you have comments concerning this form, please write to: CMS, 7500 Security Boulevard, Attn: PRA Reports Clearance Officer, Baltimore, Maryland 21244-1850.",
+        "type": "display"
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Condition",
+  "id": "HCTpatient-condition",
+  "clinicalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 109989006,
+      "display": "Multiple myeloma"
+    }
+  },
+  "subject": {
+    "reference": "Patient/pat1",
+    "display": "Patient A"
+  },
+  "recordedDate": "2020-05-01"
+}

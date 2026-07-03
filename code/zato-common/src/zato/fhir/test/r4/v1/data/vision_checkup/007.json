@@ -1,0 +1,711 @@
+{
+  "_meta": {
+    "scenario": "vision_checkup",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.q56uf5qj",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Heather Rodriguez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5397624"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4289"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Rodriguez",
+        "given": [
+          "Heather"
+        ],
+        "text": "Heather Rodriguez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-509-620-8681",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "rebeccafletcher@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1954-06-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "91330 Riley Creek Apt. 639"
+        ],
+        "city": "New Jonathanbury",
+        "state": "AL",
+        "postalCode": "76856",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.4kgju5f7",
+        "display": "Dr. Wendy Swanson"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.4u6uap2v",
+      "display": "Clinique du Parc"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.4kgju5f7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Wendy Swanson</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6771496835"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Swanson",
+        "given": [
+          "Wendy"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Wendy Swanson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-554-713-9042x617",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "612 Franklin Dale Apt. 378"
+        ],
+        "city": "Ritterland",
+        "state": "SD",
+        "postalCode": "01301",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.4u6uap2v",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Clinique du Parc</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "7362549646"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Clinique du Parc",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(465)594-0525x152",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "4291 Miller Field Suite 034"
+        ],
+        "city": "Karastad",
+        "state": "NM",
+        "postalCode": "29376",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3wc7tutz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual eye examination on 2024-06-28</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.q56uf5qj",
+        "display": "Heather Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4kgju5f7",
+            "display": "Dr. Wendy Swanson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-28T10:15:00+00:00",
+        "end": "2024-06-28T10:54:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4u6uap2v",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6mndyrsh",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v9fjgkxb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vision follow-up on 2024-11-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.q56uf5qj",
+        "display": "Heather Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4kgju5f7",
+            "display": "Dr. Wendy Swanson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-06T11:45:00+00:00",
+        "end": "2024-11-06T12:32:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4u6uap2v",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6mndyrsh",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.8uy3xzb7",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.q56uf5qj",
+        "display": "Heather Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4kgju5f7",
+            "display": "Dr. Wendy Swanson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:45:00+00:00",
+        "end": "2025-06-15T13:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4u6uap2v",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6mndyrsh",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "vision_prescription": {
+    "resourceType": "VisionPrescription",
+    "id": "vp.apfm3ymk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>VisionPrescription: Mild myopia correction</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "patient": {
+      "reference": "Patient/pt.q56uf5qj",
+      "display": "Heather Rodriguez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8uy3xzb7"
+    },
+    "dateWritten": "2025-06-15",
+    "prescriber": {
+      "reference": "Practitioner/pr.4kgju5f7",
+      "display": "Dr. Wendy Swanson"
+    },
+    "lensSpecification": [
+      {
+        "eye": "right",
+        "sphere": -1.05,
+        "cylinder": -0.25,
+        "axis": 180,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      },
+      {
+        "eye": "left",
+        "sphere": -0.77,
+        "cylinder": -0.25,
+        "axis": 175,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      }
+    ]
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.d4hwvgzu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Phoropter for refraction testing</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "309645004",
+          "display": "Phoropter"
+        }
+      ],
+      "text": "Phoropter"
+    },
+    "owner": {
+      "reference": "Organization/org.4u6uap2v",
+      "display": "Clinique du Parc"
+    },
+    "location": {
+      "reference": "Location/loc.6mndyrsh",
+      "display": "Clinique du Parc - Main Office"
+    }
+  },
+  "device_definition": {
+    "resourceType": "DeviceDefinition",
+    "id": "dd.a3u4gwgs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceDefinition: Phoropter definition</p></div>"
+    },
+    "manufacturerString": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "modelNumber": "RPA-8488"
+  },
+  "device_metric": {
+    "resourceType": "DeviceMetric",
+    "id": "dm.5szhjz7y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceMetric: Visual acuity measurement</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "363983007",
+          "display": "Visual acuity"
+        }
+      ],
+      "text": "Visual acuity"
+    },
+    "source": {
+      "reference": "Device/dev.d4hwvgzu"
+    },
+    "category": "measurement"
+  },
+  "device_request": {
+    "resourceType": "DeviceRequest",
+    "id": "dr.h4r4tkaw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceRequest: Corrective lenses order</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "codeCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "420401007",
+          "display": "Corrective lens"
+        }
+      ],
+      "text": "Corrective lens"
+    },
+    "subject": {
+      "reference": "Patient/pt.q56uf5qj",
+      "display": "Heather Rodriguez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8uy3xzb7"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.4kgju5f7",
+      "display": "Dr. Wendy Swanson"
+    }
+  },
+  "device_use": {
+    "resourceType": "DeviceUseStatement",
+    "id": "du.pahw2ry7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceUseStatement: Patient uses corrective lenses</p></div>"
+    },
+    "status": "active",
+    "subject": {
+      "reference": "Patient/pt.q56uf5qj",
+      "display": "Heather Rodriguez"
+    },
+    "timingPeriod": {
+      "start": "2024-06-28"
+    },
+    "recordedOn": "2025-06-15",
+    "device": {
+      "reference": "Device/dev.d4hwvgzu"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "H52.1",
+            "display": "Myopia, mild"
+          }
+        ],
+        "text": "Myopia, mild"
+      }
+    ]
+  }
+}

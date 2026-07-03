@@ -1,0 +1,23 @@
+{
+  "resourceType": "MedicationKnowledge",
+  "id": "example",
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/sid/ndc",
+      "code": "0409-6531-02",
+      "display": "Vancomycin Hydrochloride, 10 VIAL in 1 TRAY (0409-6531-02) > 1 INJECTION, POWDER, LYOPHILIZED, FOR SOLUTION in 1 VIAL (0409-6531-12) (package)"
+    },
+    "text": "Vancomycin Hydrochloride (VANCOMYCIN HYDROCHLORIDE)"
+  },
+  "status": "active",
+  "name": "Vancomycin Hydrochloride (VANCOMYCIN HYDROCHLORIDE)",
+  "definitional": {
+    "doseForm": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 385268001,
+        "display": "Oral dose form (dose form)"
+      }
+    }
+  }
+}

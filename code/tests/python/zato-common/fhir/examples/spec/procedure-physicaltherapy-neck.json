@@ -1,0 +1,91 @@
+{
+  "resourceType": "Procedure",
+  "id": "physicaltherapy-neck",
+  "status": "completed",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 119600000,
+      "display": "Neck manipulation"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 399010004,
+      "display": "Nonsurgical manipulation of cervical spine (procedure)"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2024-01-12",
+  "performer": {
+    "actor": {
+      "display": "Paul Therapist, PT"
+    }
+  },
+  "location": {
+    "display": "Sawbones Orthopedic Clinic"
+  },
+  "reason": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 298253002,
+        "display": "Cervical facet joint pain (finding)"
+      }
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 410737007,
+      "display": "Joint structure of sixth cervical vertebra (body structure)"
+    },
+    "text": "Cervical spine C6 joint"
+  },
+  "outcome": [
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 298429006,
+          "display": "Normal active range of cervical spine right lateral flexion (finding)"
+        }
+      }
+    },
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 298434005,
+          "display": "Normal passive range of cervical spine right lateral flexion (finding)"
+        }
+      }
+    },
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 298451003,
+          "display": "Normal active range of cervical spine right rotation (finding)"
+        }
+      }
+    },
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 298456008,
+          "display": "Normal passive range of cervical spine right rotation (finding)"
+        }
+      }
+    },
+    {
+      "reference": {
+        "reference": "Observation/example"
+      }
+    }
+  ]
+}

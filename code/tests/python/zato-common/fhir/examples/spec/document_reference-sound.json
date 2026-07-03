@@ -1,0 +1,25 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "sound",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": null,
+      "{http://www.w3.org/1999/xhtml}img": null
+    }
+  },
+  "status": "current",
+  "subject": {
+    "reference": "Patient/xcda"
+  },
+  "author": {
+    "reference": "Practitioner/xcda-author"
+  },
+  "content": {
+    "attachment": {
+      "contentType": "audio/mpeg",
+      "data": "dG9vIGJpZyB0b28gaW5jbHVkZSB0aGUgd2hvbGU=",
+      "duration": 65
+    }
+  }
+}

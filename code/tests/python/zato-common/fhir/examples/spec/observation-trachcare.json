@@ -1,0 +1,28 @@
+{
+  "resourceType": "Observation",
+  "id": "trachcare",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "exam",
+      "display": "Exam"
+    },
+    "text": "Exam"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 410211008,
+      "display": "Tracheostomy care assessment (procedure)"
+    }
+  },
+  "subject": {
+    "reference": "Patient/infant"
+  },
+  "focus": {
+    "reference": "Patient/infant-mom"
+  },
+  "effectiveDateTime": "2018-03-11T16:07:54+00:00",
+  "valueString": "Mother is trained to change her child's tracheostomy tube"
+}

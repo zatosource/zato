@@ -1,0 +1,49 @@
+{
+  "resourceType": "SupplyRequest",
+  "id": "simpleorder",
+  "identifier": {
+    "value": "Order10284"
+  },
+  "status": "active",
+  "intent": "order",
+  "category": {
+    "coding": {
+      "code": "central",
+      "display": "Central Stock Resupply"
+    }
+  },
+  "priority": "asap",
+  "item": {
+    "concept": {
+      "coding": {
+        "code": "BlueTubes",
+        "display": "Blood collect tubes blue cap"
+      }
+    }
+  },
+  "quantity": {
+    "value": 10
+  },
+  "occurrenceDateTime": "2016-12-31",
+  "authoredOn": "2016-12-31",
+  "requester": {
+    "display": "Henry Seven"
+  },
+  "supplier": {
+    "display": "Vendor1"
+  },
+  "reason": {
+    "concept": {
+      "coding": {
+        "code": "stock_low",
+        "display": "Refill due to low stock"
+      }
+    }
+  },
+  "deliverFrom": {
+    "display": "Location 1"
+  },
+  "deliverTo": {
+    "display": "GoodHealth Clinic Receiving"
+  }
+}

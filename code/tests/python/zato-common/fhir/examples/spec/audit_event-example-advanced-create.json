@@ -1,0 +1,116 @@
+{
+  "resourceType": "AuditEvent",
+  "id": "example-advanced-create",
+  "type": {
+    "coding": {
+      "system": "http://hl7.org/fhir/restful-interaction",
+      "code": "create",
+      "display": "create"
+    }
+  },
+  "subtype": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "code": "rest",
+      "display": "Restful Operation"
+    }
+  },
+  "action": "C",
+  "severity": "informational",
+  "occurredDateTime": "2020-04-29T09:49:00.000Z",
+  "recorded": "2020-04-29T09:49:00.000Z",
+  "outcome": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-outcome",
+      "code": 0,
+      "display": "Success"
+    }
+  },
+  "authorization": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+      "code": "TREAT"
+    }
+  },
+  "basedOn": {
+    "reference": "CarePlan/example"
+  },
+  "patient": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/home"
+  },
+  "agent": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://dicom.nema.org/resources/ontology/DCM",
+          "code": 110153,
+          "display": "Source Role ID"
+        }
+      },
+      "who": {
+        "display": "myMachine.example.org"
+      },
+      "requestor": false,
+      "networkUri": "urn:ipv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://dicom.nema.org/resources/ontology/DCM",
+          "code": 110152,
+          "display": "Destination Role ID"
+        }
+      },
+      "who": {
+        "reference": "Device/example"
+      },
+      "requestor": false,
+      "networkUri": "http://server.example.com/fhir"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code": "INF",
+          "display": "Informant"
+        }
+      },
+      "who": {
+        "display": "Betty Jones"
+      },
+      "requestor": true
+    }
+  ],
+  "source": {
+    "site": {
+      "identifier": {
+        "value": "http://server.example.com"
+      }
+    },
+    "observer": {
+      "reference": "Device/example"
+    },
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+        "code": 4,
+        "display": "Application Server"
+      }
+    }
+  },
+  "entity": {
+    "what": {
+      "reference": "List/example"
+    },
+    "role": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/object-role",
+        "code": 4,
+        "display": "Domain Resource"
+      }
+    }
+  }
+}

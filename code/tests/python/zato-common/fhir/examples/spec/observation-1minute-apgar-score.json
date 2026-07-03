@@ -1,0 +1,231 @@
+{
+  "resourceType": "Observation",
+  "id": "1minute-apgar-score",
+  "contained": {
+    "Patient": {
+      "id": "newborn",
+      "identifier": {
+        "system": "http://acmehealthcare/org/mrns",
+        "value": 12345
+      },
+      "active": true,
+      "name": {
+        "family": "Chalmers",
+        "given": [
+          "Peter",
+          "James"
+        ]
+      },
+      "gender": "male",
+      "birthDate": "2016-05-18"
+    }
+  },
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "survey",
+      "display": "Survey"
+    },
+    "text": "Survey"
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "9272-6",
+        "display": "1 minute Apgar Score"
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "code": 169895004,
+        "display": "Apgar at 1 minute"
+      }
+    ],
+    "text": "1 minute Apgar Score"
+  },
+  "subject": {
+    "reference": "#newborn"
+  },
+  "effectiveDateTime": "2016-05-18T22:33:22Z",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "valueQuantity": {
+    "value": 0,
+    "system": "http://unitsofmeasure.org",
+    "code": "{score}"
+  },
+  "component": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32406-1",
+            "display": "1 minute Apgar Color"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249227004,
+            "display": "Apgar color score"
+          }
+        ],
+        "text": "Apgar color score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 0
+            },
+            "system": "http://loinc.org",
+            "code": "LA6722-8",
+            "display": "The baby's whole body is completely bluish-gray or pale"
+          },
+          {
+            "system": "http://acme.ped/apgarcolor",
+            "code": 0
+          }
+        ],
+        "text": "0. The baby's whole body is completely bluish-gray or pale"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32407-9",
+            "display": "1 minute Apgar Heart Rate"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249223000,
+            "display": "Apgar heart rate score"
+          }
+        ],
+        "text": "Apgar heart rate score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 0
+            },
+            "system": "http://loinc.org",
+            "code": "LA6716-0",
+            "display": "No heart rate"
+          },
+          {
+            "system": "http://acme.ped/apgarheartrate",
+            "code": 0
+          }
+        ],
+        "text": "0. No heart rate"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32409-5",
+            "display": "1 minute Apgar Reflex Irritability"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249226008,
+            "display": "Apgar response to stimulus score"
+          }
+        ],
+        "text": "Apgar response to stimulus score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 0
+            },
+            "system": "http://loinc.org",
+            "code": "LA6719-4",
+            "display": "No response to airways being suctioned"
+          },
+          {
+            "system": "http://acme.ped/apgarreflexirritability",
+            "code": 0
+          }
+        ],
+        "text": "0. No response to airways being suctioned"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32408-7",
+            "display": "1 minute Apgar Muscle Tone"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249225007,
+            "display": "Apgar muscle tone score"
+          }
+        ],
+        "text": "Apgar muscle tone score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 0
+            },
+            "system": "http://loinc.org",
+            "code": "LA6713-7",
+            "display": "Limp; no movement"
+          },
+          {
+            "system": "http://acme.ped/apgarmuscletone",
+            "code": 0
+          }
+        ],
+        "text": "0. Limp; no movement"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32410-3",
+            "display": "1 minute Apgar Respiratory effort"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249224006,
+            "display": "Apgar respiratory effort score"
+          }
+        ],
+        "text": "Apgar respiratory effort score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 0
+            },
+            "system": "http://loinc.org",
+            "code": "LA6725-1",
+            "display": "Not breathing"
+          },
+          {
+            "system": "http://acme.ped/apgarrespiratoryeffort",
+            "code": 0
+          }
+        ],
+        "text": "0. Not breathing"
+      }
+    }
+  ]
+}

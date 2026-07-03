@@ -1,0 +1,100 @@
+{
+  "resourceType": "CarePlan",
+  "id": "f203",
+  "contained": [
+    {
+      "CareTeam": {
+        "id": "careteam",
+        "participant": [
+          {
+            "role": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 425268008,
+                "display": "Review of care plan"
+              }
+            },
+            "member": {
+              "reference": "Practitioner/f201",
+              "display": "Dokter Bronsig"
+            }
+          },
+          {
+            "role": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 278110001,
+                "display": "Radiographic imaging"
+              }
+            },
+            "member": {
+              "reference": "Practitioner/f202",
+              "display": "Luigi Maas"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Goal": {
+        "id": "goal",
+        "lifecycleStatus": "cancelled",
+        "description": {
+          "text": "Check whether further treatment of sepsis/pulmonary abcess is required"
+        },
+        "subject": {
+          "reference": "Patient/f201",
+          "display": "Roel"
+        }
+      }
+    },
+    {
+      "ServiceRequest": {
+        "id": "activity",
+        "status": "active",
+        "intent": "order",
+        "doNotPerform": false,
+        "code": {
+          "concept": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 241541005,
+              "display": "High resolution computed tomography of lungs"
+            }
+          }
+        },
+        "subject": {
+          "reference": "Patient/f201",
+          "display": "Roel"
+        }
+      }
+    }
+  ],
+  "status": "completed",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "period": {
+    "start": "2013-04-14",
+    "end": "2013-04-21"
+  },
+  "careTeam": {
+    "reference": "#careteam"
+  },
+  "addresses": {
+    "reference": {
+      "reference": "Condition/f203",
+      "display": "Roel's sepsis"
+    }
+  },
+  "goal": {
+    "reference": "#goal"
+  },
+  "activity": {
+    "plannedActivityReference": {
+      "reference": "#activity"
+    }
+  }
+}

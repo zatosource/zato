@@ -1,0 +1,41 @@
+{
+  "resourceType": "Practitioner",
+  "id": "f203",
+  "identifier": [
+    {
+      "use": "official",
+      "type": {
+        "text": "UZI-nummer"
+      },
+      "system": "urn:oid:2.16.528.1.1007.3.1",
+      "value": 12345678903
+    },
+    {
+      "use": "official",
+      "type": {
+        "text": "BIG-nummer"
+      },
+      "system": "https://www.bigregister.nl/",
+      "value": 12345678903
+    }
+  ],
+  "active": true,
+  "name": {
+    "use": "official",
+    "text": "Juri van Gelder"
+  },
+  "telecom": {
+    "system": "phone",
+    "value": 31715269111,
+    "use": "work"
+  },
+  "gender": "male",
+  "birthDate": "1983-04-20",
+  "address": {
+    "use": "work",
+    "line": "Walvisbaai 3",
+    "city": "Den helder",
+    "postalCode": "2333ZA",
+    "country": "NLD"
+  }
+}

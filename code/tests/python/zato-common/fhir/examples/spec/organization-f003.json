@@ -1,0 +1,44 @@
+{
+  "resourceType": "Organization",
+  "id": "f003",
+  "active": true,
+  "type": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+      "code": "dept",
+      "display": "Hospital Department"
+    }
+  },
+  "name": "Burgers UMC Ear,Nose,Throat unit",
+  "contact": {
+    "purpose": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/contactentity-type",
+        "code": "ADMIN"
+      }
+    },
+    "name": {
+      "text": "mr. F. de Hond"
+    },
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "022-655 7654"
+      },
+      {
+        "system": "email",
+        "value": "KNO@burgersumc.nl"
+      },
+      {
+        "system": "fax",
+        "value": "022-655 0998"
+      }
+    ],
+    "address": {
+      "line": "West Wing, floor 5"
+    }
+  },
+  "partOf": {
+    "reference": "Organization/f001"
+  }
+}

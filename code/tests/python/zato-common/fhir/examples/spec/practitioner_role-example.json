@@ -1,0 +1,117 @@
+{
+  "resourceType": "PractitionerRole",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "identifier": {
+    "system": "http://www.acme.org/practitioners",
+    "value": 23
+  },
+  "active": true,
+  "period": {
+    "start": "2012-01-01",
+    "end": "2012-03-31"
+  },
+  "practitioner": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "organization": {
+    "reference": "Organization/f001"
+  },
+  "code": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v2-0286",
+      "code": "RP"
+    }
+  },
+  "display": "Dr Adam Careful, Referring Practitioner at Burgers University Medical Center",
+  "specialty": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 408443003,
+      "display": "General medical practice"
+    }
+  },
+  "location": {
+    "reference": "Location/1",
+    "display": "South Wing, second floor"
+  },
+  "healthcareService": {
+    "reference": "HealthcareService/example"
+  },
+  "contact": {
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(03) 5555 6473",
+        "use": "work"
+      },
+      {
+        "system": "email",
+        "value": "adam.southern@example.org",
+        "use": "work"
+      }
+    ]
+  },
+  "characteristic": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/service-mode",
+        "code": "in-person",
+        "display": "In Person"
+      },
+      {
+        "system": "http://hl7.org/fhir/service-mode",
+        "code": "videoconference",
+        "display": "Video Conference"
+      }
+    ]
+  },
+  "communication": {
+    "coding": {
+      "system": "urn:ietf:bcp:47",
+      "code": "en"
+    }
+  },
+  "availability": {
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed"
+        ],
+        "availableStartTime": "09:00:00",
+        "availableEndTime": "16:30:00"
+      },
+      {
+        "daysOfWeek": [
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "09:00:00",
+        "availableEndTime": "12:00:00"
+      }
+    ],
+    "notAvailableTime": [
+      {
+        "description": "Adam will be on extended leave during May 2017",
+        "during": {
+          "start": "2017-05-01",
+          "end": "2017-05-20"
+        }
+      },
+      {
+        "description": "Adam is generally unavailable on public holidays and during the Christmas/New Year break"
+      }
+    ]
+  },
+  "endpoint": {
+    "reference": "Endpoint/example"
+  }
+}

@@ -1,0 +1,443 @@
+{
+  "_meta": {
+    "scenario": "messaging",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.8h3ct8jm",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Sharon Pena</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8144508"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4530"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Pena",
+        "given": [
+          "Sharon"
+        ],
+        "text": "Sharon Pena"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(405)407-5717x5509",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "rowen@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1986-01-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "813 Charles Circle Suite 697"
+        ],
+        "city": "Hillborough",
+        "state": "MI",
+        "postalCode": "56299",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.axqupk8e",
+        "display": "Dr. Morgan Walker"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.9zwezmf4",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "message_definition": {
+    "resourceType": "MessageDefinition",
+    "id": "md.aj2ey87g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageDefinition: Patient transfer notification</p></div>"
+    },
+    "url": "http://example.org/MessageDefinition/md.aj2ey87g",
+    "name": "PatientTransferNotification",
+    "title": "Patient Transfer Notification Message",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Harborview Community Clinic",
+    "description": "Definition for a message notifying receiving facility of patient transfer.",
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "category": "notification"
+  },
+  "message_header": {
+    "resourceType": "MessageHeader",
+    "id": "mh.znh44zq4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+    },
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "destination": [
+      {
+        "name": "Receiving Facility",
+        "endpoint": "https://fhir.example.org/receive"
+      }
+    ],
+    "sender": {
+      "reference": "Organization/org.9zwezmf4",
+      "display": "Harborview Community Clinic"
+    },
+    "source": {
+      "name": "Harborview Community Clinic",
+      "endpoint": "https://fhir.example.org/send"
+    },
+    "focus": [
+      {
+        "reference": "Patient/pt.8h3ct8jm",
+        "display": "Sharon Pena"
+      }
+    ],
+    "definition": "MessageDefinition/md.aj2ey87g"
+  },
+  "bundle": {
+    "resourceType": "Bundle",
+    "id": "bnd.ygfce8bb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Bundle: Message bundle for patient transfer</p></div>"
+    },
+    "type": "message",
+    "timestamp": "2025-06-15T10:00:00+00:00",
+    "entry": [
+      {
+        "fullUrl": "MessageHeader/mh.znh44zq4",
+        "resource": {
+          "resourceType": "MessageHeader",
+          "id": "mh.znh44zq4",
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+          },
+          "eventCoding": {
+            "system": "http://example.org/message-events",
+            "code": "admin-notify",
+            "display": "Admin Notification"
+          },
+          "destination": [
+            {
+              "name": "Receiving Facility",
+              "endpoint": "https://fhir.example.org/receive"
+            }
+          ],
+          "sender": {
+            "reference": "Organization/org.9zwezmf4",
+            "display": "Harborview Community Clinic"
+          },
+          "source": {
+            "name": "Harborview Community Clinic",
+            "endpoint": "https://fhir.example.org/send"
+          },
+          "focus": [
+            {
+              "reference": "Patient/pt.8h3ct8jm",
+              "display": "Sharon Pena"
+            }
+          ],
+          "definition": "MessageDefinition/md.aj2ey87g"
+        }
+      },
+      {
+        "fullUrl": "Patient/pt.8h3ct8jm",
+        "resource": {
+          "resourceType": "Patient",
+          "id": "pt.8h3ct8jm",
+          "meta": {
+            "profile": [
+              "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+            ]
+          },
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Sharon Pena</p></div>"
+          },
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2106-3",
+                    "display": "White"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "White"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2186-5",
+                    "display": "Not Hispanic or Latino"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "Not Hispanic or Latino"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+              "valueCode": "F"
+            }
+          ],
+          "identifier": [
+            {
+              "use": "usual",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "MR",
+                    "display": "Medical record number"
+                  }
+                ],
+                "text": "Medical record number"
+              },
+              "system": "http://example.org/mrn",
+              "value": "MRN8144508"
+            },
+            {
+              "use": "official",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "SS",
+                    "display": "Social Security number"
+                  }
+                ],
+                "text": "Social Security number"
+              },
+              "system": "http://hl7.org/fhir/sid/us-ssn",
+              "value": "987-65-4530"
+            }
+          ],
+          "name": [
+            {
+              "use": "official",
+              "family": "Pena",
+              "given": [
+                "Sharon"
+              ],
+              "text": "Sharon Pena"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "value": "(405)407-5717x5509",
+              "use": "home"
+            },
+            {
+              "system": "email",
+              "value": "rowen@yahoo.com",
+              "use": "home"
+            }
+          ],
+          "gender": "female",
+          "birthDate": "1986-01-28",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "813 Charles Circle Suite 697"
+              ],
+              "city": "Hillborough",
+              "state": "MI",
+              "postalCode": "56299",
+              "country": "US"
+            }
+          ],
+          "maritalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+                "code": "M",
+                "display": "Married"
+              }
+            ],
+            "text": "Married"
+          },
+          "communication": [
+            {
+              "language": {
+                "coding": [
+                  {
+                    "system": "urn:ietf:bcp:47",
+                    "code": "en",
+                    "display": "English"
+                  }
+                ],
+                "text": "English"
+              },
+              "preferred": true
+            }
+          ],
+          "generalPractitioner": [
+            {
+              "reference": "Practitioner/pr.axqupk8e",
+              "display": "Dr. Morgan Walker"
+            }
+          ],
+          "managingOrganization": {
+            "reference": "Organization/org.9zwezmf4",
+            "display": "Harborview Community Clinic"
+          }
+        }
+      }
+    ]
+  },
+  "subscription": {
+    "resourceType": "Subscription",
+    "id": "sub.usysw9mg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Subscription: Subscribe to patient transfer notifications</p></div>"
+    },
+    "status": "active",
+    "reason": "Monitor patient transfers for wellness coordination",
+    "criteria": "Patient?_lastUpdated=gt2024-01-01",
+    "channel": {
+      "type": "rest-hook",
+      "endpoint": "https://fhir.example.org/webhook/transfers",
+      "payload": "application/fhir+json"
+    }
+  }
+}

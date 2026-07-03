@@ -1,0 +1,18 @@
+{
+  "resourceType": "OperationOutcome",
+  "id": "searchfail",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "issue": {
+    "severity": "fatal",
+    "code": "code-invalid",
+    "details": {
+      "text": "The \"name\" parameter has the modifier \"exact\" which is not supported by this server"
+    },
+    "location": "http.name:exact"
+  }
+}

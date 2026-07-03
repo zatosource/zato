@@ -1,0 +1,711 @@
+{
+  "_meta": {
+    "scenario": "vision_checkup",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.uwskydjd",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 김 승현</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2951685"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9051"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "김",
+        "given": [
+          "승현"
+        ],
+        "text": "김 승현"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "382.231.3606",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "mitchellrodriguez@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1993-07-20",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "256 Ryan Villages Apt. 797"
+        ],
+        "city": "South Peter",
+        "state": "KS",
+        "postalCode": "92890",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.gbwzxyxd",
+        "display": "김 은서"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.6395eh85",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.gbwzxyxd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 김 은서</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5207708586"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "김",
+        "given": [
+          "은서"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "김 은서"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-892-508-9117x07222",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "2252 Carey Prairie"
+        ],
+        "city": "Lake Jonathanside",
+        "state": "IN",
+        "postalCode": "58270",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.6395eh85",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9393690905"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "874.403.6210",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "76015 Higgins Inlet"
+        ],
+        "city": "Clarkhaven",
+        "state": "NC",
+        "postalCode": "94319",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.7r96guqg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual eye examination on 2024-08-20</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uwskydjd",
+        "display": "김 승현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gbwzxyxd",
+            "display": "김 은서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-20T14:00:00+00:00",
+        "end": "2024-08-20T14:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6395eh85",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ncaxeyy2",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.z8y5qkcx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vision follow-up on 2025-01-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uwskydjd",
+        "display": "김 승현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gbwzxyxd",
+            "display": "김 은서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-21T11:45:00+00:00",
+        "end": "2025-01-21T12:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6395eh85",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ncaxeyy2",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.mkq9pd96",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uwskydjd",
+        "display": "김 승현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gbwzxyxd",
+            "display": "김 은서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:00:00+00:00",
+        "end": "2025-06-15T08:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6395eh85",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ncaxeyy2",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "vision_prescription": {
+    "resourceType": "VisionPrescription",
+    "id": "vp.55x4uzmb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>VisionPrescription: Mild myopia correction</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "patient": {
+      "reference": "Patient/pt.uwskydjd",
+      "display": "김 승현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.mkq9pd96"
+    },
+    "dateWritten": "2025-06-15",
+    "prescriber": {
+      "reference": "Practitioner/pr.gbwzxyxd",
+      "display": "김 은서"
+    },
+    "lensSpecification": [
+      {
+        "eye": "right",
+        "sphere": -1.26,
+        "cylinder": -0.25,
+        "axis": 180,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      },
+      {
+        "eye": "left",
+        "sphere": -0.59,
+        "cylinder": -0.25,
+        "axis": 175,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      }
+    ]
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.r3cesfqz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Phoropter for refraction testing</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "309645004",
+          "display": "Phoropter"
+        }
+      ],
+      "text": "Phoropter"
+    },
+    "owner": {
+      "reference": "Organization/org.6395eh85",
+      "display": "Riverstone Medical Group"
+    },
+    "location": {
+      "reference": "Location/loc.ncaxeyy2",
+      "display": "Riverstone Medical Group - Main Office"
+    }
+  },
+  "device_definition": {
+    "resourceType": "DeviceDefinition",
+    "id": "dd.623f5we6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceDefinition: Phoropter definition</p></div>"
+    },
+    "manufacturerString": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "modelNumber": "RPA-4015"
+  },
+  "device_metric": {
+    "resourceType": "DeviceMetric",
+    "id": "dm.uuk63rcj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceMetric: Visual acuity measurement</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "363983007",
+          "display": "Visual acuity"
+        }
+      ],
+      "text": "Visual acuity"
+    },
+    "source": {
+      "reference": "Device/dev.r3cesfqz"
+    },
+    "category": "measurement"
+  },
+  "device_request": {
+    "resourceType": "DeviceRequest",
+    "id": "dr.aj9wdcbt",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceRequest: Corrective lenses order</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "codeCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "420401007",
+          "display": "Corrective lens"
+        }
+      ],
+      "text": "Corrective lens"
+    },
+    "subject": {
+      "reference": "Patient/pt.uwskydjd",
+      "display": "김 승현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.mkq9pd96"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.gbwzxyxd",
+      "display": "김 은서"
+    }
+  },
+  "device_use": {
+    "resourceType": "DeviceUseStatement",
+    "id": "du.3mnpcu9a",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceUseStatement: Patient uses corrective lenses</p></div>"
+    },
+    "status": "active",
+    "subject": {
+      "reference": "Patient/pt.uwskydjd",
+      "display": "김 승현"
+    },
+    "timingPeriod": {
+      "start": "2024-08-20"
+    },
+    "recordedOn": "2025-06-15",
+    "device": {
+      "reference": "Device/dev.r3cesfqz"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "H52.1",
+            "display": "Myopia, mild"
+          }
+        ],
+        "text": "Myopia, mild"
+      }
+    ]
+  }
+}

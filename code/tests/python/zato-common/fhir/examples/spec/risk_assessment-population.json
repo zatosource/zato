@@ -1,0 +1,21 @@
+{
+  "resourceType": "RiskAssessment",
+  "id": "population",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": {
+    "Group": {
+      "id": "group1",
+      "type": "person",
+      "membership": "enumerated"
+    }
+  },
+  "status": "final",
+  "subject": {
+    "reference": "#group1"
+  }
+}

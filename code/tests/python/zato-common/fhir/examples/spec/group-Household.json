@@ -1,0 +1,58 @@
+{
+  "resourceType": "Group",
+  "id": "Household",
+  "type": "person",
+  "membership": "enumerated",
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/ValueSet/group-code",
+      "code": "household"
+    }
+  },
+  "member": [
+    {
+      "entity": {
+        "reference": "Patient/xcda"
+      },
+      "involvement": {
+        "coding": {
+          "system": "http://hl7.org/fhir/group-involvement",
+          "code": "owner"
+        }
+      }
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat4"
+      },
+      "involvement": {
+        "coding": {
+          "system": "http://hl7.org/fhir/group-involvement",
+          "code": "resident"
+        }
+      }
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat3"
+      },
+      "involvement": {
+        "coding": {
+          "system": "http://hl7.org/fhir/group-involvement",
+          "code": "resident"
+        }
+      }
+    },
+    {
+      "entity": {
+        "reference": "Patient/pat1"
+      },
+      "involvement": {
+        "coding": {
+          "system": "http://hl7.org/fhir/group-involvement",
+          "code": "pet"
+        }
+      }
+    }
+  ]
+}

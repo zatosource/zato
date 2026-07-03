@@ -1,0 +1,23 @@
+{
+  "resourceType": "Linkage",
+  "id": "example",
+  "author": {
+    "reference": "Practitioner/f201"
+  },
+  "item": [
+    {
+      "type": "source",
+      "resource": {
+        "reference": "Condition/example",
+        "display": "Severe burn of left ear (Date: 24-May 2012)"
+      }
+    },
+    {
+      "type": "alternate",
+      "resource": {
+        "reference": "Condition/example-linkage",
+        "display": "Severe burn of left ear (Date: 24-May 2012)"
+      }
+    }
+  ]
+}

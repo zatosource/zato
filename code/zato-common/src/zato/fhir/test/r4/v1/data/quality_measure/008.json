@@ -1,0 +1,201 @@
+{
+  "_meta": {
+    "scenario": "quality_measure",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "measure": {
+    "resourceType": "Measure",
+    "id": "meas.bhtvwzq6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Measure: Preventive wellness visit rate</p></div>"
+    },
+    "url": "http://example.org/Measure/meas.bhtvwzq6",
+    "name": "PreventiveWellnessVisitRate",
+    "title": "Preventive Wellness Visit Rate",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Quality Reporting Organization",
+    "description": "Measures the rate of patients who completed an annual preventive wellness visit.",
+    "library": [
+      "Library/lib.z3c5a5ns"
+    ],
+    "scoring": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+          "code": "proportion",
+          "display": "Proportion"
+        }
+      ],
+      "text": "Proportion"
+    },
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/measure-type",
+            "code": "process",
+            "display": "Process"
+          }
+        ],
+        "text": "Process"
+      }
+    ],
+    "group": [
+      {
+        "population": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "initial-population",
+                  "display": "Initial Population"
+                }
+              ],
+              "text": "Initial Population"
+            },
+            "criteria": {
+              "language": "text/cql",
+              "expression": "Initial Population"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "numerator",
+                  "display": "Numerator"
+                }
+              ],
+              "text": "Numerator"
+            },
+            "criteria": {
+              "language": "text/cql",
+              "expression": "Numerator"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "denominator",
+                  "display": "Denominator"
+                }
+              ],
+              "text": "Denominator"
+            },
+            "criteria": {
+              "language": "text/cql",
+              "expression": "Denominator"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "measure_report": {
+    "resourceType": "MeasureReport",
+    "id": "mr.cnc26hg3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MeasureReport: 92 percent wellness visit completion rate</p></div>"
+    },
+    "status": "complete",
+    "type": "summary",
+    "measure": "Measure/meas.bhtvwzq6",
+    "date": "2025-06-15",
+    "reporter": {
+      "reference": "Organization/org_placeholder.686w7nc8",
+      "display": "Wellness Quality Reporting Organization"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-06-30"
+    },
+    "group": [
+      {
+        "population": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "initial-population",
+                  "display": "Initial Population"
+                }
+              ],
+              "text": "Initial Population"
+            },
+            "count": 1000
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "numerator",
+                  "display": "Numerator"
+                }
+              ],
+              "text": "Numerator"
+            },
+            "count": 920
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                  "code": "denominator",
+                  "display": "Denominator"
+                }
+              ],
+              "text": "Denominator"
+            },
+            "count": 1000
+          }
+        ],
+        "measureScore": {
+          "value": 0.92
+        }
+      }
+    ]
+  },
+  "library": {
+    "resourceType": "Library",
+    "id": "lib.z3c5a5ns",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Library: Wellness quality measure logic</p></div>"
+    },
+    "url": "http://example.org/Library/lib.z3c5a5ns",
+    "name": "WellnessQualityLogic",
+    "title": "Wellness Quality Measure Logic Library",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Quality Reporting Organization",
+    "description": "CQL logic library for the preventive wellness visit quality measure.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/library-type",
+          "code": "logic-library",
+          "display": "Logic Library"
+        }
+      ],
+      "text": "Logic Library"
+    },
+    "content": [
+      {
+        "contentType": "text/cql",
+        "title": "Wellness Quality Logic"
+      }
+    ]
+  }
+}

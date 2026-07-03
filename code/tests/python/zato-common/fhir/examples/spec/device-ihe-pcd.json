@@ -1,0 +1,29 @@
+{
+  "resourceType": "Device",
+  "id": "ihe-pcd",
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "SNO"
+      },
+      "text": "Serial Number"
+    },
+    "value": "AMID-123-456"
+  },
+  "manufacturer": "Acme Devices, Inc",
+  "lotNumber": 12345,
+  "name": {
+    "value": "Acme Patient Monitor",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "user-friendly-name"
+      }
+    }
+  },
+  "modelNumber": "A.1.1",
+  "type": {
+    "text": "Vital Signs Monitor"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "resourceType": "OperationDefinition",
+  "id": "example-query-high-risk",
+  "url": "http://hl7.org/fhir/OperationDefinition/example-query-high-risk",
+  "version": "0.0.1",
+  "name": "ExampleOfHighRiskPatientQuery",
+  "title": "Example of High-Risk Patient Query",
+  "status": "draft",
+  "kind": "query",
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/fiwg/index.cfm"
+      }
+    }
+  ],
+  "description": "Example Named Query of Patients based on risk assessments",
+  "code": "example-query-high-risk",
+  "resource": "Patient",
+  "system": false,
+  "type": true,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "ward",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "Ward filters to apply to patient locations",
+      "type": "string",
+      "searchType": "reference"
+    },
+    {
+      "name": "result",
+      "use": "out",
+      "min": 1,
+      "max": 1,
+      "documentation": "Searchset bundle",
+      "type": "Bundle"
+    }
+  ]
+}

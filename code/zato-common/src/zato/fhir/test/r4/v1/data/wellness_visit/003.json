@@ -1,0 +1,2930 @@
+{
+  "_meta": {
+    "scenario": "wellness_visit",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.9tzcpvdv",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 박 수민</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2722210"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5224"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "수민"
+        ],
+        "text": "박 수민"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-520-319-0830x552",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kglover@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1973-11-09",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "85816 Sullivan Crossing Apt. 121"
+        ],
+        "city": "West Victorport",
+        "state": "AS",
+        "postalCode": "19865",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.nrx2nv3g",
+        "display": "이 아름"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.gfhjnfem",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.nrx2nv3g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 이 아름</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8844413545"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "아름"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "이 아름"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "435-399-9858x319",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "061 Cynthia Lock"
+        ],
+        "city": "New Jennifer",
+        "state": "DE",
+        "postalCode": "12296",
+        "country": "US"
+      }
+    ]
+  },
+  "practitioner_role": {
+    "resourceType": "PractitionerRole",
+    "id": "prl.txygtz5j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PractitionerRole: 이 아름 at Riverstone Medical Group</p></div>"
+    },
+    "active": true,
+    "practitioner": {
+      "reference": "Practitioner/pr.nrx2nv3g",
+      "display": "이 아름"
+    },
+    "organization": {
+      "reference": "Organization/org.gfhjnfem",
+      "display": "Riverstone Medical Group"
+    },
+    "code": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "59058001",
+            "display": "General practitioner"
+          }
+        ],
+        "text": "General practitioner"
+      }
+    ],
+    "specialty": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "394814009",
+            "display": "General practice"
+          }
+        ],
+        "text": "General practice"
+      }
+    ],
+    "location": [
+      {
+        "reference": "Location/loc.w7me5hh7"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.gfhjnfem",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9333373610"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "551.999.4918x8499",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "54989 Kari Shores"
+        ],
+        "city": "Anthonyport",
+        "state": "NY",
+        "postalCode": "31298",
+        "country": "US"
+      }
+    ]
+  },
+  "location": {
+    "resourceType": "Location",
+    "id": "loc.w7me5hh7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Location: Riverstone Medical Group - Main Office</p></div>"
+    },
+    "status": "active",
+    "name": "Riverstone Medical Group - Main Office",
+    "mode": "instance",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+            "code": "OF",
+            "display": "Outpatient facility"
+          }
+        ],
+        "text": "Outpatient facility"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-417-382-2861x6178",
+        "use": "work"
+      }
+    ],
+    "address": {
+      "use": "work",
+      "line": [
+        "87765 Ian Lodge Suite 551"
+      ],
+      "city": "East Suzanne",
+      "state": "LA",
+      "postalCode": "32070",
+      "country": "US"
+    },
+    "physicalType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+          "code": "bu",
+          "display": "Building"
+        }
+      ],
+      "text": "Building"
+    },
+    "managingOrganization": {
+      "reference": "Organization/org.gfhjnfem",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.8fr7ph4b",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual wellness examination on 2024-07-28</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual wellness examination"
+            }
+          ],
+          "text": "Annual wellness examination"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv",
+        "display": "박 수민"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.nrx2nv3g",
+            "display": "이 아름"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-28T12:00:00+00:00",
+        "end": "2024-07-28T12:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual wellness examination"
+            }
+          ],
+          "text": "Annual wellness examination"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gfhjnfem",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.w7me5hh7",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.wrcfgg3r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2024-12-30</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv",
+        "display": "박 수민"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.nrx2nv3g",
+            "display": "이 아름"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-30T09:00:00+00:00",
+        "end": "2024-12-30T09:32:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gfhjnfem",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.w7me5hh7",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.8t2dusw4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine lab follow-up on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine lab follow-up"
+            }
+          ],
+          "text": "Routine lab follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv",
+        "display": "박 수민"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.nrx2nv3g",
+            "display": "이 아름"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T10:48:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine lab follow-up"
+            }
+          ],
+          "text": "Routine lab follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gfhjnfem",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.w7me5hh7",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.n65ua2qh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 103 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T08:33:00+00:00",
+      "valueQuantity": {
+        "value": 103,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.bzcb323z",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 67 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T14:58:00+00:00",
+      "valueQuantity": {
+        "value": 67,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.cq9khveg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 86 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T12:07:00+00:00",
+      "valueQuantity": {
+        "value": 86,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.jxh66hpa",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.5 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T15:25:00+00:00",
+      "valueQuantity": {
+        "value": 36.5,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.heytndvt",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 18 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T15:40:00+00:00",
+      "valueQuantity": {
+        "value": 18,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.t3twhnu9",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 97 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T11:56:00+00:00",
+      "valueQuantity": {
+        "value": 97,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.rbtzdx6u",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 90 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T11:32:00+00:00",
+      "valueQuantity": {
+        "value": 90,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.mgv3ftu3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 186 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T16:11:00+00:00",
+      "valueQuantity": {
+        "value": 186,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ffk6gmx8",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 21.2 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T10:55:00+00:00",
+      "valueQuantity": {
+        "value": 21.2,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.qjaw7xgf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T09:24:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.p6tu75vq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Vitamin D: 18 ng/mL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "1989-3",
+            "display": "Vitamin D"
+          }
+        ],
+        "text": "Vitamin D"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T13:08:00+00:00",
+      "valueQuantity": {
+        "value": 18,
+        "unit": "ng/mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "ng/mL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.mn9dtx54",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Glucose: 95 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2339-0",
+            "display": "Glucose"
+          }
+        ],
+        "text": "Glucose"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8fr7ph4b"
+      },
+      "effectiveDateTime": "2024-07-28T09:55:00+00:00",
+      "valueQuantity": {
+        "value": 95,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.adhm8xhz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 115 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T10:32:00+00:00",
+      "valueQuantity": {
+        "value": 115,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.zbqdhcw2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 69 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T14:03:00+00:00",
+      "valueQuantity": {
+        "value": 69,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.xybyb6v6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 75 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T14:23:00+00:00",
+      "valueQuantity": {
+        "value": 75,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.hp626dww",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.9 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T08:22:00+00:00",
+      "valueQuantity": {
+        "value": 36.9,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.qaeubqfm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 18 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T15:52:00+00:00",
+      "valueQuantity": {
+        "value": 18,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.hny9whqc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 97 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T11:26:00+00:00",
+      "valueQuantity": {
+        "value": 97,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.a8g8wq9e",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 79 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T13:15:00+00:00",
+      "valueQuantity": {
+        "value": 79,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.hkytgj8f",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 167 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T14:56:00+00:00",
+      "valueQuantity": {
+        "value": 167,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.45epp65j",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 24.7 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T09:31:00+00:00",
+      "valueQuantity": {
+        "value": 24.7,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.5tek3f2w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T09:48:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.u468a45v",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Vitamin D: 32 ng/mL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "1989-3",
+            "display": "Vitamin D"
+          }
+        ],
+        "text": "Vitamin D"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T08:38:00+00:00",
+      "valueQuantity": {
+        "value": 32,
+        "unit": "ng/mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "ng/mL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.cpy227d8",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Glucose: 92 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2339-0",
+            "display": "Glucose"
+          }
+        ],
+        "text": "Glucose"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.wrcfgg3r"
+      },
+      "effectiveDateTime": "2024-12-30T13:01:00+00:00",
+      "valueQuantity": {
+        "value": 92,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.gmvngqpc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 111 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T12:29:00+00:00",
+      "valueQuantity": {
+        "value": 111,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.g2erzr3m",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 79 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T09:42:00+00:00",
+      "valueQuantity": {
+        "value": 79,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.xavc3nwz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 67 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T11:21:00+00:00",
+      "valueQuantity": {
+        "value": 67,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.mnhtgmk2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.8 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T08:08:00+00:00",
+      "valueQuantity": {
+        "value": 36.8,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.9ut3822f",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 17 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T12:23:00+00:00",
+      "valueQuantity": {
+        "value": 17,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.tna7www9",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 100 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T14:27:00+00:00",
+      "valueQuantity": {
+        "value": 100,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.9yuk57pv",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 57 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T13:51:00+00:00",
+      "valueQuantity": {
+        "value": 57,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.7krjp8bx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 188 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T15:39:00+00:00",
+      "valueQuantity": {
+        "value": 188,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.6f3hr26j",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 24.1 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T13:49:00+00:00",
+      "valueQuantity": {
+        "value": 24.1,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.f63ru9vq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T10:21:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ubppq5uu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Vitamin D: 45 ng/mL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "1989-3",
+            "display": "Vitamin D"
+          }
+        ],
+        "text": "Vitamin D"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T12:46:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "ng/mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "ng/mL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.e68yrnhr",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Glucose: 88 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2339-0",
+            "display": "Glucose"
+          }
+        ],
+        "text": "Glucose"
+      },
+      "subject": {
+        "reference": "Patient/pt.9tzcpvdv"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.8t2dusw4"
+      },
+      "effectiveDateTime": "2025-06-15T16:40:00+00:00",
+      "valueQuantity": {
+        "value": 88,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.nrx2nv3g"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    }
+  ],
+  "diagnostic_report": {
+    "resourceType": "DiagnosticReport",
+    "id": "dr.huqwvawq",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diagnostic Report: Annual wellness panel - all results within normal limits</p></div>"
+    },
+    "status": "final",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0074",
+            "code": "LAB",
+            "display": "Laboratory"
+          }
+        ],
+        "text": "Laboratory"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "57021-8",
+          "display": "CBC W Auto Differential panel - Blood"
+        }
+      ],
+      "text": "CBC W Auto Differential panel - Blood"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8t2dusw4"
+    },
+    "effectiveDateTime": "2025-06-15T13:57:00+00:00",
+    "performer": [
+      {
+        "reference": "Practitioner/pr.nrx2nv3g",
+        "display": "이 아름"
+      }
+    ],
+    "specimen": [
+      {
+        "reference": "Specimen/spc.stxe5yp7"
+      }
+    ],
+    "result": [
+      {
+        "reference": "Observation/obs.f63ru9vq"
+      },
+      {
+        "reference": "Observation/obs.ubppq5uu"
+      },
+      {
+        "reference": "Observation/obs.e68yrnhr"
+      }
+    ],
+    "conclusion": "All results within normal limits. No abnormal findings."
+  },
+  "specimen": {
+    "resourceType": "Specimen",
+    "id": "spc.stxe5yp7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Specimen: Venous blood sample</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "collection": {
+      "collectedDateTime": "2025-06-15T12:16:00+00:00",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "49852007",
+            "display": "Median cubital vein"
+          }
+        ],
+        "text": "Median cubital vein"
+      }
+    },
+    "request": [
+      {
+        "reference": "ServiceRequest/sr.g8b8znhy"
+      }
+    ]
+  },
+  "procedure": {
+    "resourceType": "Procedure",
+    "id": "prc.g8xph7cb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Procedure: Annual physical examination completed</p></div>"
+    },
+    "status": "completed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "Z00.00",
+          "display": "Annual physical examination"
+        }
+      ],
+      "text": "Annual physical examination"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8t2dusw4"
+    },
+    "performedDateTime": "2025-06-15T11:38:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.nrx2nv3g",
+          "display": "이 아름"
+        }
+      }
+    ]
+  },
+  "service_request": {
+    "resourceType": "ServiceRequest",
+    "id": "sr.g8b8znhy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ServiceRequest: Annual wellness examination order</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "108252007",
+            "display": "Laboratory procedure"
+          }
+        ],
+        "text": "Laboratory procedure"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "Z00.00",
+          "display": "Annual wellness examination"
+        }
+      ],
+      "text": "Annual wellness examination"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8t2dusw4"
+    },
+    "occurrenceDateTime": "2025-06-15T09:00:00+00:00",
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.nrx2nv3g",
+      "display": "이 아름"
+    }
+  },
+  "episode_of_care": {
+    "resourceType": "EpisodeOfCare",
+    "id": "eoc.hcx6x2xj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EpisodeOfCare: Ongoing primary care</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "394802001",
+            "display": "General medicine"
+          }
+        ],
+        "text": "General medicine"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "managingOrganization": {
+      "reference": "Organization/org.gfhjnfem",
+      "display": "Riverstone Medical Group"
+    },
+    "period": {
+      "start": "2024-07-28"
+    }
+  },
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.k3kbgm92",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Annual wellness visit summary for 박 수민</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "34117-2",
+          "display": "History and physical note"
+        }
+      ],
+      "text": "History and physical note"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv",
+      "display": "박 수민"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8t2dusw4"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.nrx2nv3g",
+        "display": "이 아름"
+      }
+    ],
+    "title": "Annual Wellness Visit - 2025-06-15",
+    "custodian": {
+      "reference": "Organization/org.gfhjnfem",
+      "display": "Riverstone Medical Group"
+    },
+    "section": [
+      {
+        "title": "Chief Complaint",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "10154-3",
+              "display": "Chief complaint"
+            }
+          ],
+          "text": "Chief complaint"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for annual wellness examination. No acute complaints.</p></div>"
+        }
+      },
+      {
+        "title": "Vital Signs",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8716-3",
+              "display": "Vital signs"
+            }
+          ],
+          "text": "Vital signs"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>All vital signs within normal limits.</p></div>"
+        },
+        "entry": [
+          {
+            "reference": "Observation/obs.gmvngqpc"
+          },
+          {
+            "reference": "Observation/obs.g2erzr3m"
+          },
+          {
+            "reference": "Observation/obs.xavc3nwz"
+          },
+          {
+            "reference": "Observation/obs.mnhtgmk2"
+          },
+          {
+            "reference": "Observation/obs.9ut3822f"
+          },
+          {
+            "reference": "Observation/obs.tna7www9"
+          }
+        ]
+      },
+      {
+        "title": "Assessment and Plan",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51847-2",
+              "display": "Assessment and plan"
+            }
+          ],
+          "text": "Assessment and plan"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Healthy adult presenting for routine wellness visit. All vital signs and laboratory values within normal limits. Continue current preventive care regimen. Follow up in twelve months for next annual examination.</p></div>"
+        }
+      }
+    ]
+  },
+  "document_ref": {
+    "resourceType": "DocumentReference",
+    "id": "docref.enkkpq75",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DocumentReference: Progress note</p></div>"
+    },
+    "status": "current",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11506-3",
+          "display": "Progress note"
+        }
+      ],
+      "text": "Progress note"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category",
+            "code": "clinical-note",
+            "display": "Clinical Note"
+          }
+        ],
+        "text": "Clinical Note"
+      }
+    ],
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "date": "2025-06-15T16:30:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.nrx2nv3g",
+        "display": "이 아름"
+      }
+    ],
+    "content": [
+      {
+        "attachment": {
+          "contentType": "text/plain",
+          "data": "UGF0aWVudCBwcmVzZW50cyBmb3Igcm91dGluZSBhbm51YWwgd2VsbG5lc3MgdmlzaXQuIFZpdGFscyB3aXRoaW4gbm9ybWFsIGxpbWl0cy4gTm8gYWN1dGUgY29uY2VybnMgcmVwb3J0ZWQuIFBoeXNpY2FsIGV4YW1pbmF0aW9uIHVucmVtYXJrYWJsZS4gRW5jb3VyYWdlZCBjb250aW51ZWQgZGFpbHkgd2Fsa2luZyBhbmQgYmFsYW5jZWQgbnV0cml0aW9uLg==",
+          "title": "Progress Note"
+        }
+      }
+    ],
+    "context": {
+      "encounter": [
+        {
+          "reference": "Encounter/enc.8t2dusw4"
+        }
+      ]
+    }
+  },
+  "list_resource": {
+    "resourceType": "List",
+    "id": "lst.prxdqecn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>List: Wellness visit results</p></div>"
+    },
+    "status": "current",
+    "mode": "working",
+    "title": "Wellness Visit Results",
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/list-example-use-codes",
+          "code": "results",
+          "display": "Results"
+        }
+      ],
+      "text": "Results"
+    },
+    "subject": {
+      "reference": "Patient/pt.9tzcpvdv"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.8t2dusw4"
+    },
+    "date": "2025-06-15",
+    "entry": [
+      {
+        "item": {
+          "reference": "Observation/obs.gmvngqpc"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.g2erzr3m"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.xavc3nwz"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.mnhtgmk2"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.9ut3822f"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.tna7www9"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.9yuk57pv"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.7krjp8bx"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.6f3hr26j"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.f63ru9vq"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.ubppq5uu"
+        }
+      },
+      {
+        "item": {
+          "reference": "Observation/obs.e68yrnhr"
+        }
+      },
+      {
+        "item": {
+          "reference": "DiagnosticReport/dr.huqwvawq"
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.w2mcwycr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.9tzcpvdv"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.nrx2nv3g",
+          "display": "이 아름"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.gfhjnfem"
+        }
+      }
+    ]
+  }
+}

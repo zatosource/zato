@@ -1,0 +1,711 @@
+{
+  "_meta": {
+    "scenario": "vision_checkup",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.fzrwqfwp",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Julian Woods</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9100178"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-6038"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Woods",
+        "given": [
+          "Julian"
+        ],
+        "text": "Julian Woods"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "314-540-6802x1668",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "miranda10@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1950-11-18",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "229 Cory Estates"
+        ],
+        "city": "Lake Jessica",
+        "state": "IL",
+        "postalCode": "25401",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.8s8gdkce",
+        "display": "Dr. Charles Bowers"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.5ak83kye",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.8s8gdkce",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Charles Bowers</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6367775128"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Bowers",
+        "given": [
+          "Charles"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Charles Bowers"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "301-571-7066",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "584 Rush Springs"
+        ],
+        "city": "Rogerside",
+        "state": "MO",
+        "postalCode": "54555",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.5ak83kye",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Sunrise Family Practice</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5088748245"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Sunrise Family Practice",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(730)467-7155x6826",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "51262 Bernard Heights Apt. 331"
+        ],
+        "city": "Yubury",
+        "state": "DE",
+        "postalCode": "72587",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.23pdmc8b",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual eye examination on 2024-05-24</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fzrwqfwp",
+        "display": "Julian Woods"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8s8gdkce",
+            "display": "Dr. Charles Bowers"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-24T16:15:00+00:00",
+        "end": "2024-05-24T17:14:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5ak83kye",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q6rmwffg",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.vm6nhmm3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vision follow-up on 2025-01-05</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fzrwqfwp",
+        "display": "Julian Woods"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8s8gdkce",
+            "display": "Dr. Charles Bowers"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-05T08:15:00+00:00",
+        "end": "2025-01-05T09:10:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5ak83kye",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q6rmwffg",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zycp6ufg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fzrwqfwp",
+        "display": "Julian Woods"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8s8gdkce",
+            "display": "Dr. Charles Bowers"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:00:00+00:00",
+        "end": "2025-06-15T12:49:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5ak83kye",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q6rmwffg",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "vision_prescription": {
+    "resourceType": "VisionPrescription",
+    "id": "vp.2wuuk96m",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>VisionPrescription: Mild myopia correction</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "patient": {
+      "reference": "Patient/pt.fzrwqfwp",
+      "display": "Julian Woods"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.zycp6ufg"
+    },
+    "dateWritten": "2025-06-15",
+    "prescriber": {
+      "reference": "Practitioner/pr.8s8gdkce",
+      "display": "Dr. Charles Bowers"
+    },
+    "lensSpecification": [
+      {
+        "eye": "right",
+        "sphere": -0.57,
+        "cylinder": -0.25,
+        "axis": 180,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      },
+      {
+        "eye": "left",
+        "sphere": -1.46,
+        "cylinder": -0.25,
+        "axis": 175,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      }
+    ]
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.e5z9y9qs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Phoropter for refraction testing</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "309645004",
+          "display": "Phoropter"
+        }
+      ],
+      "text": "Phoropter"
+    },
+    "owner": {
+      "reference": "Organization/org.5ak83kye",
+      "display": "Sunrise Family Practice"
+    },
+    "location": {
+      "reference": "Location/loc.q6rmwffg",
+      "display": "Sunrise Family Practice - Main Office"
+    }
+  },
+  "device_definition": {
+    "resourceType": "DeviceDefinition",
+    "id": "dd.wvsbg43h",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceDefinition: Phoropter definition</p></div>"
+    },
+    "manufacturerString": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "modelNumber": "RPA-2256"
+  },
+  "device_metric": {
+    "resourceType": "DeviceMetric",
+    "id": "dm.3xp7hjjk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceMetric: Visual acuity measurement</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "363983007",
+          "display": "Visual acuity"
+        }
+      ],
+      "text": "Visual acuity"
+    },
+    "source": {
+      "reference": "Device/dev.e5z9y9qs"
+    },
+    "category": "measurement"
+  },
+  "device_request": {
+    "resourceType": "DeviceRequest",
+    "id": "dr.6fzdmekf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceRequest: Corrective lenses order</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "codeCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "420401007",
+          "display": "Corrective lens"
+        }
+      ],
+      "text": "Corrective lens"
+    },
+    "subject": {
+      "reference": "Patient/pt.fzrwqfwp",
+      "display": "Julian Woods"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.zycp6ufg"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.8s8gdkce",
+      "display": "Dr. Charles Bowers"
+    }
+  },
+  "device_use": {
+    "resourceType": "DeviceUseStatement",
+    "id": "du.pnpnq2ae",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceUseStatement: Patient uses corrective lenses</p></div>"
+    },
+    "status": "active",
+    "subject": {
+      "reference": "Patient/pt.fzrwqfwp",
+      "display": "Julian Woods"
+    },
+    "timingPeriod": {
+      "start": "2024-05-24"
+    },
+    "recordedOn": "2025-06-15",
+    "device": {
+      "reference": "Device/dev.e5z9y9qs"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "H52.1",
+            "display": "Myopia, mild"
+          }
+        ],
+        "text": "Myopia, mild"
+      }
+    ]
+  }
+}

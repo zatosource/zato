@@ -1,0 +1,17 @@
+{
+  "resourceType": "AppointmentResponse",
+  "id": "example-loc",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "appointment": {
+    "reference": "Appointment/example",
+    "display": "Brian MRI results discussion"
+  },
+  "actor": {
+    "reference": "Location/1",
+    "display": "South Wing, second floor"
+  },
+  "participantStatus": "accepted"
+}

@@ -1,0 +1,9 @@
+{
+  "resourceType": "ResearchStudy",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active"
+}

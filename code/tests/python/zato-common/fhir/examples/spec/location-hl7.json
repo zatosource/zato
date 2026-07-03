@@ -1,0 +1,56 @@
+{
+  "resourceType": "Location",
+  "id": "hl7",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}a": null
+    }
+  },
+  "status": "active",
+  "name": "Lab A Location",
+  "description": "Physical Location of Example Lab A",
+  "mode": "instance",
+  "contact": [
+    {
+      "telecom": {
+        "system": "phone",
+        "value": "(+1) 334-272-1000"
+      }
+    },
+    {
+      "telecom": {
+        "system": "fax",
+        "value": "(+1) 334-272-1001"
+      }
+    },
+    {
+      "telecom": {
+        "system": "email",
+        "value": "lab@labA.com"
+      }
+    }
+  ],
+  "address": {
+    "line": "100 Main Street",
+    "city": "Anytown",
+    "state": "AL",
+    "postalCode": 36106,
+    "country": "USA"
+  },
+  "form": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+      "code": "bu",
+      "display": "Building"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "resourceType": "CoverageEligibilityResponse",
+  "id": "E2500",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "http://www.BenefitsInc.com/fhir/coverageeligibilityresponse",
+    "value": 881234
+  },
+  "status": "active",
+  "purpose": "validation",
+  "patient": {
+    "reference": "Patient/pat1"
+  },
+  "created": "2014-08-16",
+  "request": {
+    "reference": "http://www.BenefitsInc.com/fhir/coverageeligibilityrequest/225476332402"
+  },
+  "outcome": "complete",
+  "disposition": "Policy is currently in-force.",
+  "insurer": {
+    "reference": "Organization/2"
+  },
+  "insurance": {
+    "coverage": {
+      "reference": "Coverage/9876B1"
+    },
+    "inforce": true
+  }
+}

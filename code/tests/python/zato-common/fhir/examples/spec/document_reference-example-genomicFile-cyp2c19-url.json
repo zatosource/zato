@@ -1,0 +1,68 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-genomicFile-cyp2c19-url",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": {
+            "{http://www.w3.org/1999/xhtml}a": null
+          }
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}div": {
+        "{http://www.w3.org/1999/xhtml}p": null
+      },
+      "{http://www.w3.org/1999/xhtml}blockquote": {
+        "{http://www.w3.org/1999/xhtml}p": {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      }
+    }
+  },
+  "identifier": {
+    "system": "http://www.somesystemabc.net/identifiers/files",
+    "value": 11111
+  },
+  "status": "current",
+  "docStatus": "preliminary",
+  "description": [
+    "A sample Document Reference instance representing a generic genomic file that may ber used as input or output of a genomic analysis pipeline.",
+    "CYP2C19 gene sequence"
+  ],
+  "securityLabel": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "R",
+      "display": "Restricted"
+    }
+  },
+  "content": {
+    "attachment": {
+      "title": "Homo sapiens cytochrome P450 family 2 subfamily C member 19 (CYP2C19), RefSeqGene (LRG_584) on chromosome 10",
+      "contentType": "text/html",
+      "url": "https://www.ncbi.nlm.nih.gov/nuccore/NG_008384"
+    }
+  }
+}

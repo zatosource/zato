@@ -1,0 +1,55 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "audit-entity-detail-type-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/audit-entity-detail-type-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1795"
+  },
+  "version": "6.0.0",
+  "name": "AuditEntityDetailTypeExample",
+  "title": "Example Codes for AuditEvent.entity.detail.type",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "This codeSystem contains examples of codes. These are not known to be used.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/audit-entity-detail-type-example",
+  "content": "example",
+  "concept": [
+    {
+      "code": "orientation",
+      "display": "Orientation",
+      "definition": "The orientation of the entity with respect to the event"
+    },
+    {
+      "code": "spin",
+      "display": "Spin",
+      "definition": "The spin of the entity with respect to the event"
+    }
+  ]
+}

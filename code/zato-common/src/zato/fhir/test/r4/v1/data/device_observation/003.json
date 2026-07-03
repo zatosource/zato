@@ -1,0 +1,306 @@
+{
+  "_meta": {
+    "scenario": "device_observation",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.2utaryrn",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 한 현준</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5234289"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1349"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "한",
+        "given": [
+          "현준"
+        ],
+        "text": "한 현준"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "539.431.0101x94854",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "thomasnicholas@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1995-12-24",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "12236 Tran Estate Suite 264"
+        ],
+        "city": "North Mackenzieview",
+        "state": "VT",
+        "postalCode": "62564",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.zdpbwfre",
+        "display": "김 유진"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.yvqrtq65",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.2gwdwdz7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Pulse oximeter</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Masimo",
+    "deviceName": [
+      {
+        "name": "Rad-97 Pulse Oximeter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "448703006",
+          "display": "Pulse oximeter"
+        }
+      ],
+      "text": "Pulse oximeter"
+    },
+    "owner": {
+      "reference": "Organization/org.yvqrtq65",
+      "display": "Riverstone Medical Group"
+    },
+    "serialNumber": "SN687020"
+  },
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.hz82wub4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 99 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.2utaryrn"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 99,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "device": {
+        "reference": "Device/dev.2gwdwdz7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.jxgw4st2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 60 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.2utaryrn"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 60,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "device": {
+        "reference": "Device/dev.2gwdwdz7"
+      }
+    }
+  ],
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.5nxgxf2m",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Monitored patients group</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Pulse Oximetry Monitoring Group",
+    "quantity": 1,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.2utaryrn",
+          "display": "한 현준"
+        }
+      }
+    ]
+  }
+}

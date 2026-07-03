@@ -1,0 +1,59 @@
+{
+  "resourceType": "CompartmentDefinition",
+  "id": "example",
+  "url": "http://hl7.org/fhir/CompartmentDefinition/example",
+  "name": "EXAMPLE",
+  "title": "EXAMPLE",
+  "status": "draft",
+  "experimental": true,
+  "date": "2017-02-24",
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/fiwg/index.cfm"
+      }
+    }
+  ],
+  "description": "The set of resources associated with a particular Device (example with Communication and CommunicationRequest resourses only).",
+  "useContext": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+      "code": "focus"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "Device"
+      }
+    }
+  },
+  "purpose": "Provides an example of a FHIR compartment definition based on the Device resource type.",
+  "code": "Device",
+  "search": true,
+  "resource": [
+    {
+      "code": "Communication",
+      "param": [
+        "sender",
+        "recipient"
+      ],
+      "documentation": "The device used as the message sender and recipient"
+    },
+    {
+      "code": "CommunicationRequest",
+      "param": [
+        "sender",
+        "recipient"
+      ],
+      "documentation": "The device used as the message sender and recipient"
+    }
+  ]
+}

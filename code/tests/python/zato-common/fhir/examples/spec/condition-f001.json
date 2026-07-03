@@ -1,0 +1,67 @@
+{
+  "resourceType": "Condition",
+  "id": "f001",
+  "clinicalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+    }
+  },
+  "verificationStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      "code": "confirmed"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 439401001,
+      "display": "diagnosis"
+    }
+  },
+  "severity": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 6736007,
+      "display": "Moderate (severity modifier)"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 368009,
+      "display": "Heart valve disorder"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 40768004,
+      "display": "Left thorax"
+    },
+    "text": "heart structure"
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "encounter": {
+    "reference": "Encounter/f001"
+  },
+  "onsetDateTime": "2011-08-05",
+  "recordedDate": "2011-10-05",
+  "asserter": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "evidence": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 426396005,
+        "display": "Cardiac chest pain"
+      }
+    }
+  }
+}

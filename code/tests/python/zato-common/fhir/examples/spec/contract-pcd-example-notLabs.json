@@ -1,0 +1,90 @@
+{
+  "resourceType": "Contract",
+  "id": "pcd-example-notLabs",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null
+      ]
+    }
+  },
+  "issued": "2014-08-17",
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "authority": {
+    "reference": "Organization/3",
+    "display": "Michigan Health"
+  },
+  "domain": {
+    "reference": "Location/ukp",
+    "display": "UK Pharmacies"
+  },
+  "type": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "57016-8"
+    }
+  },
+  "subType": {
+    "coding": {
+      "system": "http://www.infoway-inforoute.ca.org/Consent-subtype-codes",
+      "code": "Opt-In",
+      "display": "Default Authorization with exceptions."
+    }
+  },
+  "term": {
+    "offer": {
+      "text": "sample"
+    },
+    "group": [
+      {
+        "type": {
+          "coding": {
+            "system": "http://example.org/fhir/consent-term-type-codes",
+            "code": "withhold-object-type"
+          }
+        },
+        "subType": {
+          "coding": {
+            "system": "http://hl7.org/fhir/fhir-types",
+            "code": "ServiceRequest"
+          }
+        },
+        "offer": {
+          "text": "Withhold orders from any provider."
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://example.org/fhir/consent-term-type-codes",
+            "code": "withhold-object-type"
+          }
+        },
+        "subType": {
+          "coding": {
+            "system": "http://hl7.org/fhir/fhir-types",
+            "code": "DiagnosticReport"
+          }
+        },
+        "offer": {
+          "text": "Withhold order results from any provider."
+        }
+      }
+    ]
+  },
+  "friendly": {
+    "contentAttachment": {
+      "title": "The terms of the consent in friendly consumer speak."
+    }
+  },
+  "legal": {
+    "contentAttachment": {
+      "title": "The terms of the consent in lawyer speak."
+    }
+  }
+}

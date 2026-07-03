@@ -1,0 +1,5 @@
+{
+  "resourceType": "InsurancePlan",
+  "id": "example",
+  "name": "foo"
+}

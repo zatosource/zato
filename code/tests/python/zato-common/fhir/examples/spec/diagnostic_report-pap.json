@@ -1,0 +1,61 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": "pap",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}br": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}br": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}br": [
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        null
+      ]
+    }
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "47527-7"
+    }
+  },
+  "subject": {
+    "reference": "Patient/b248b1b2-1686-4b94-9936-37d7a5f94b51"
+  },
+  "effectiveDateTime": "2013-02-11T10:33:33+11:00",
+  "issued": "2013-02-13T11:45:33+11:00",
+  "performer": {
+    "reference": "Practitioner/example"
+  }
+}

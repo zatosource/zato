@@ -1,0 +1,1087 @@
+{
+  "_meta": {
+    "scenario": "lipid_profiles",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.9ery8244",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Jesus Moore</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6084385"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5812"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Moore",
+        "given": [
+          "Jesus"
+        ],
+        "text": "Jesus Moore"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-840-516-0679x979",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "josephgreene@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1972-08-15",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "8053 Kurt Rue"
+        ],
+        "city": "New Donna",
+        "state": "AK",
+        "postalCode": "27991",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.ufjv45jh",
+        "display": "Dr. Wanda Gonzales"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.dvv9txup",
+      "display": "Clinique du Parc"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.ufjv45jh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Wanda Gonzales</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1593762176"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Gonzales",
+        "given": [
+          "Wanda"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Wanda Gonzales"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-962-608-0929x468",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "2906 Frank Ramp"
+        ],
+        "city": "West Tiffany",
+        "state": "CO",
+        "postalCode": "70630",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.7xe4nncu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid screening on 2024-06-03</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid screening"
+            }
+          ],
+          "text": "Lipid screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9ery8244",
+        "display": "Jesus Moore"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufjv45jh",
+            "display": "Dr. Wanda Gonzales"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-03T08:45:00+00:00",
+        "end": "2024-06-03T09:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid screening"
+            }
+          ],
+          "text": "Lipid screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.dvv9txup",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n3sbxbs9",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.nfufsmuc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid follow-up on 2024-12-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid follow-up"
+            }
+          ],
+          "text": "Lipid follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9ery8244",
+        "display": "Jesus Moore"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufjv45jh",
+            "display": "Dr. Wanda Gonzales"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-26T13:45:00+00:00",
+        "end": "2024-12-26T14:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid follow-up"
+            }
+          ],
+          "text": "Lipid follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.dvv9txup",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n3sbxbs9",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.pvuqfh6w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lipid results review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lipid results review"
+            }
+          ],
+          "text": "Lipid results review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9ery8244",
+        "display": "Jesus Moore"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufjv45jh",
+            "display": "Dr. Wanda Gonzales"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:45:00+00:00",
+        "end": "2025-06-15T09:35:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lipid results review"
+            }
+          ],
+          "text": "Lipid results review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.dvv9txup",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n3sbxbs9",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.j8bhxmjy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xe4nncu"
+      },
+      "effectiveDateTime": "2024-06-03T09:55:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.s2hpqtrn"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.djp9kfeq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 45 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xe4nncu"
+      },
+      "effectiveDateTime": "2024-06-03T14:44:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.s2hpqtrn"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.7p6yj24g",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xe4nncu"
+      },
+      "effectiveDateTime": "2024-06-03T08:16:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.s2hpqtrn"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.c22792xp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 180 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xe4nncu"
+      },
+      "effectiveDateTime": "2024-06-03T14:03:00+00:00",
+      "valueQuantity": {
+        "value": 180,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.s2hpqtrn"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.q7f7mdgj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.nfufsmuc"
+      },
+      "effectiveDateTime": "2024-12-26T15:32:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gwbtr2g2"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.4mengpd3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 50 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.nfufsmuc"
+      },
+      "effectiveDateTime": "2024-12-26T15:45:00+00:00",
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gwbtr2g2"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.6df69jah",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 125 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.nfufsmuc"
+      },
+      "effectiveDateTime": "2024-12-26T10:35:00+00:00",
+      "valueQuantity": {
+        "value": 125,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gwbtr2g2"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.2apvscth",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 160 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.nfufsmuc"
+      },
+      "effectiveDateTime": "2024-12-26T10:26:00+00:00",
+      "valueQuantity": {
+        "value": 160,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gwbtr2g2"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.x39s69ez",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.pvuqfh6w"
+      },
+      "effectiveDateTime": "2025-06-15T13:43:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ver4ebnd"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.u5bka94v",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 55 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.pvuqfh6w"
+      },
+      "effectiveDateTime": "2025-06-15T08:54:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ver4ebnd"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.p7nwte2f",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 110 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.pvuqfh6w"
+      },
+      "effectiveDateTime": "2025-06-15T12:12:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ver4ebnd"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.amtzyrsb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.9ery8244"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.pvuqfh6w"
+      },
+      "effectiveDateTime": "2025-06-15T13:45:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.ufjv45jh"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ver4ebnd"
+      }
+    }
+  ]
+}

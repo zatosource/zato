@@ -1,0 +1,36 @@
+{
+  "resourceType": "Encounter",
+  "id": "xcda",
+  "identifier": {
+    "use": "official",
+    "system": "http://healthcare.example.org/identifiers/enocunter",
+    "value": 1234213.52345873
+  },
+  "status": "completed",
+  "class": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "AMB",
+      "display": "ambulatory"
+    }
+  },
+  "subject": {
+    "reference": "Patient/xcda"
+  },
+  "participant": {
+    "actor": {
+      "reference": "Practitioner/xcda1"
+    }
+  },
+  "reason": {
+    "value": {
+      "concept": {
+        "coding": {
+          "system": "http://ihe.net/xds/connectathon/eventCodes",
+          "code": "T-D8200",
+          "display": "Arm"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "resourceType": "DeviceDefinition",
+  "id": "example",
+  "identifier": {
+    "value": 0
+  },
+  "status": "active",
+  "experimental": true,
+  "deviceName": {
+    "name": "Example Device Name",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "registered-name"
+      }
+    }
+  },
+  "version": {
+    "value": "1.0.0"
+  },
+  "deviceVersion": {
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-version-type",
+        "code": "hardware"
+      }
+    },
+    "value": "v1.2.3"
+  },
+  "url": "http://hl7.org/fhir/DeviceDefinition/example",
+  "hasPart": {
+    "definitionCanonical": "http://hl7.org/fhir/DeviceDefinition/example-prodspec"
+  },
+  "manufacturer": {
+    "reference": "Organization/example"
+  },
+  "modelNumber": "Model123",
+  "partNumber": "Part456",
+  "publisher": "HL7 International",
+  "conformsTo": {
+    "specification": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 528388,
+        "display": "MDC_DEV_SPEC_PROFILE_PULS_OXIM"
+      }
+    },
+    "version": 3.0,
+    "category": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-specification-category",
+        "code": "exchange"
+      }
+    }
+  }
+}

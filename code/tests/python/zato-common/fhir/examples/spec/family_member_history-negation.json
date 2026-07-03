@@ -1,0 +1,30 @@
+{
+  "resourceType": "FamilyMemberHistory",
+  "id": "negation",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "completed",
+  "patient": {
+    "reference": "Patient/100",
+    "display": "Peter Patient"
+  },
+  "relationship": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+      "code": "MTH",
+      "display": "mother"
+    }
+  },
+  "condition": {
+    "code": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 700146008,
+        "display": "No history of malignant neoplasm of breast"
+      },
+      "text": "No history of malignant tumor of breast"
+    }
+  }
+}

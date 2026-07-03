@@ -1,0 +1,29 @@
+{
+  "resourceType": "BodyStructure",
+  "id": "dicom-includedStructure",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "includedStructure": {
+    "structure": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 74670003,
+        "display": "Wrist joint structure"
+      }
+    },
+    "laterality": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 7771000,
+        "display": "Left"
+      }
+    }
+  },
+  "patient": {
+    "reference": "Patient/dicom"
+  }
+}

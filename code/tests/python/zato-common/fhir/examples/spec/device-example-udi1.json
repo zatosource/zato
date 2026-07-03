@@ -1,0 +1,60 @@
+{
+  "resourceType": "Device",
+  "id": "example-udi1",
+  "identifier": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/devices/pacemakers/octane/serial"
+        }
+      },
+      "value": "1234-5678-90AB-CDEF"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "SNO"
+        }
+      },
+      "value": "10987654d321"
+    }
+  ],
+  "udiCarrier": {
+    "deviceIdentifier": 844588003288,
+    "issuer": "http://hl7.org/fhir/NamingSystem/gs1-di",
+    "jurisdiction": "http://hl7.org/fhir/NamingSystem/us-fda-udi",
+    "carrierAIDC": "XWQyMDExMDg1NzY3NDAwMjAxNzE3MTQxMTIwMTBOWUZVTDAx4oaUMjExOTI4MzfihpQ3MTNBMUIyQzNENEU1RjZH",
+    "carrierHRF": "{01}00844588003288{17}141120{10}7654321D{21}10987654d321",
+    "entryType": "barcode"
+  },
+  "status": "active",
+  "manufacturer": "Acme Devices, Inc",
+  "expirationDate": "2014-11-20",
+  "lotNumber": "7654321D",
+  "name": {
+    "value": "PM/Octane 2014",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "user-friendly-name"
+      }
+    }
+  },
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 468063009,
+      "display": "Coated femoral stem prosthesis, modular"
+    },
+    "text": "Coated femoral stem prosthesis, modular"
+  },
+  "safety": {
+    "coding": {
+      "system": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+      "code": "mr-unsafe",
+      "display": "MR Unsafe"
+    },
+    "text": "MR Unsafe"
+  }
+}

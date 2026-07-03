@@ -1,0 +1,260 @@
+{
+  "resourceType": "Patient",
+  "id": "patient-example-sex-and-gender",
+  "extension": [
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 446141000124107,
+              "display": "Female gender identity"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "2001-05-06"
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001."
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://loinc.org",
+              "code": "LA29519-8",
+              "display": "she/her/her/hers/herself"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "2001-05-06"
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001."
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://hl7.org/fhir/administrative-gender",
+              "code": "male",
+              "display": "Male"
+            }
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://loinc.org",
+              "code": "76689-9",
+              "display": "Sex Assigned At Birth"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "1974-12-25"
+          }
+        },
+        {
+          "valueDateTime": "2005-12-06"
+        },
+        {
+          "valueReference": {
+            "reference": "DocumentReference/1"
+          }
+        },
+        {
+          "valueString": "SEX"
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "https://www.usps.com/",
+              "code": "OH",
+              "display": "Ohio"
+            }
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001, but their birth certificate still indicates male."
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://hl7.org/fhir/administrative-gender",
+              "code": "male",
+              "display": "Male"
+            }
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://local-code-system.org/recorded-sex-or-gender-type",
+              "code": "insurance-card",
+              "display": "Insurance Card"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "2021-05-25"
+          }
+        },
+        {
+          "valueDateTime": "2021-06-06"
+        },
+        {
+          "valueReference": {
+            "reference": "DocumentReference/2"
+          }
+        },
+        {
+          "valueString": "SEX"
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://local-code-system.org/recorded-sex-or-gender-jurisdiction",
+              "code": "ICCA-P",
+              "display": "Indigo Crucifix Cobalt Aegis Payer"
+            }
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001, but her insurance card still indicates male."
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://ohio.example.gov/drivers-license-sex",
+              "code": "M",
+              "display": "Male"
+            }
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://jurisdiction-specific.example.com/document-type-code-system",
+              "code": "drivers-license",
+              "display": "Driver's License"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "1974-12-25"
+          }
+        },
+        {
+          "valueDateTime": "2005-12-06"
+        },
+        {
+          "valueReference": {
+            "reference": "DocumentReference/1"
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "https://www.usps.com/",
+              "code": "OH",
+              "display": "Ohio"
+            }
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001, but their driver's license still indicates male."
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://terminology.hl7.org/CodeSystem/sex-parameter-for-clinical-use",
+              "code": "specified",
+              "display": "Apply specified setting or reference range"
+            }
+          }
+        },
+        {
+          "valuePeriod": {
+            "start": "2002-07-13"
+          }
+        },
+        {
+          "valueString": "Patient transitioned from male to female in 2001."
+        },
+        {
+          "valueReference": {
+            "reference": "Observation/1"
+          }
+        },
+        {
+          "valueReference": {
+            "reference": "MedicationStatement/2"
+          }
+        }
+      ]
+    }
+  ],
+  "identifier": {
+    "use": "usual",
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "MR"
+      }
+    },
+    "system": "urn:oid:1.2.36.146.595.217.0.1",
+    "value": 12345
+  },
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Roth",
+      "given": "Patrick"
+    },
+    {
+      "use": "usual",
+      "family": "Roth",
+      "given": "Patricia"
+    },
+    {
+      "use": "nickname",
+      "given": "Pat"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1974-12-25",
+  "deceasedBoolean": false,
+  "managingOrganization": {
+    "reference": "Organization/1"
+  }
+}

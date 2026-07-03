@@ -1,0 +1,140 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-characteristic-codes",
+  "extension": {
+    "valueCode": "informative"
+  },
+  "url": "http://hl7.org/fhir/ValueSet/example-characteristic-codes",
+  "version": "1.0.0",
+  "name": "ExampleCharacteristicCodes",
+  "title": "Example Characteristic Codes",
+  "status": "active",
+  "experimental": false,
+  "date": "2025-03-03",
+  "publisher": "HL7 FHIR Project",
+  "description": "This value set contains an example set of LOINC codes that might be used to define common characteristics for grouping individuals in FHIR Group resources.",
+  "copyright": "This content from LOINC\u00c2\u00ae is copyright \u00c2\u00a9 1995 Regenstrief Institute, Inc. and the LOINC Committee, and available at no cost under the license at http://loinc.org/terms-of-use.",
+  "compose": {
+    "include": {
+      "system": "http://loinc.org",
+      "concept": [
+        {
+          "code": "76691-5",
+          "display": "Gender identity"
+        },
+        {
+          "code": "76689-9",
+          "display": "Sex assigned at birth"
+        },
+        {
+          "code": "21112-8",
+          "display": "Birth date"
+        },
+        {
+          "code": "46463-6",
+          "display": "Race or ethnicity"
+        },
+        {
+          "code": "45402-5",
+          "display": "Primary language"
+        },
+        {
+          "code": "71802-3",
+          "display": "Housing status"
+        },
+        {
+          "code": "8302-2",
+          "display": "Body height"
+        },
+        {
+          "code": "29463-7",
+          "display": "Body weight"
+        },
+        {
+          "code": "39156-5",
+          "display": "BMI (Body Mass Index)"
+        },
+        {
+          "code": "8480-6",
+          "display": "Systolic blood pressure"
+        },
+        {
+          "code": "8462-4",
+          "display": "Diastolic blood pressure"
+        },
+        {
+          "code": "15074-8",
+          "display": "Glucose [Moles/volume] in Blood"
+        },
+        {
+          "code": "2085-9",
+          "display": "HDL Cholesterol"
+        },
+        {
+          "code": "4548-4",
+          "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+        },
+        {
+          "code": "75323-6",
+          "display": "Condition status"
+        },
+        {
+          "code": "55758-7",
+          "display": "Diabetes status"
+        },
+        {
+          "code": "45701-0",
+          "display": "Smoking status"
+        },
+        {
+          "code": "68518-0",
+          "display": "Pregnancy status"
+        },
+        {
+          "code": "74468-0",
+          "display": "Vaccination status"
+        },
+        {
+          "code": "38208-5",
+          "display": "Risk assessment cardiovascular disease"
+        },
+        {
+          "code": "79423-0",
+          "display": "Cardiovascular disease risk score"
+        },
+        {
+          "code": "75640-3",
+          "display": "Fall risk assessment"
+        },
+        {
+          "code": "10160-0",
+          "display": "Medication use"
+        },
+        {
+          "code": "45260-7",
+          "display": "Medication compliance"
+        },
+        {
+          "code": "68358-1",
+          "display": "Date chronic dialysis began"
+        },
+        {
+          "code": "77301-0",
+          "display": "Activities of daily living assessment"
+        },
+        {
+          "code": "77160-0",
+          "display": "Functional outcome score GOSE"
+        },
+        {
+          "code": "72133-2",
+          "display": "Montreal Cognitive Assessment [MoCA]"
+        },
+        {
+          "code": "95023-8",
+          "display": "FASI v1.0 - Mobility [CMS Assessment]"
+        }
+      ]
+    }
+  }
+}

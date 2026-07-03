@@ -1,0 +1,25 @@
+{
+  "resourceType": "Subscription",
+  "id": "example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:uuid:97e5aa1e-5916-4512-a36e-24eef784e3cc"
+  },
+  "name": "Example",
+  "status": "active",
+  "topic": "http://example.org/R5/SubscriptionTopic/example",
+  "contact": {
+    "system": "phone",
+    "value": "(555) 555-1212",
+    "use": "work"
+  },
+  "reason": "Example subscription for example topic",
+  "filterBy": {
+    "resource": "http://hl7.org/fhir/StructureDefinition/Encounter",
+    "filterParameter": "patient",
+    "value": "Patient/123"
+  },
+  "channelType": {
+    "code": "rest-hook"
+  }
+}

@@ -1,0 +1,794 @@
+{
+  "_meta": {
+    "scenario": "physical_therapy",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.8n3nzesc",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Laurie Martinez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2224717"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9536"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Martinez",
+        "given": [
+          "Laurie"
+        ],
+        "text": "Laurie Martinez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-306-510-2952x6846",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "brownkimberly@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1990-01-19",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "4270 Weaver Points Suite 620"
+        ],
+        "city": "Port Jesseburgh",
+        "state": "MA",
+        "postalCode": "15322",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.uefb6npx",
+        "display": "Dr. Richard Jackson"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.3ukghrsj",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.uefb6npx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Richard Jackson</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9020553880"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Jackson",
+        "given": [
+          "Richard"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Richard Jackson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "354.854.0514",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "0097 Perez Path Suite 643"
+        ],
+        "city": "South Meganland",
+        "state": "OK",
+        "postalCode": "66561",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.3ukghrsj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Harborview Community Clinic</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1891165068"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Harborview Community Clinic",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-525-779-0659x6201",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "676 Stephanie Mall Suite 442"
+        ],
+        "city": "West Marymouth",
+        "state": "MA",
+        "postalCode": "46093",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3rma8skt",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Physical therapy initial evaluation on 2024-09-13</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Physical therapy initial evaluation"
+            }
+          ],
+          "text": "Physical therapy initial evaluation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8n3nzesc",
+        "display": "Laurie Martinez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.uefb6npx",
+            "display": "Dr. Richard Jackson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-13T16:00:00+00:00",
+        "end": "2024-09-13T16:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Physical therapy initial evaluation"
+            }
+          ],
+          "text": "Physical therapy initial evaluation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.3ukghrsj",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.s28g5db6",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.pdzafb5w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: PT progress check on 2025-02-02</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "PT progress check"
+            }
+          ],
+          "text": "PT progress check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8n3nzesc",
+        "display": "Laurie Martinez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.uefb6npx",
+            "display": "Dr. Richard Jackson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-02T10:15:00+00:00",
+        "end": "2025-02-02T10:55:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "PT progress check"
+            }
+          ],
+          "text": "PT progress check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.3ukghrsj",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.s28g5db6",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.x7vds2vy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: PT discharge evaluation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "PT discharge evaluation"
+            }
+          ],
+          "text": "PT discharge evaluation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8n3nzesc",
+        "display": "Laurie Martinez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.uefb6npx",
+            "display": "Dr. Richard Jackson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:00:00+00:00",
+        "end": "2025-06-15T14:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "PT discharge evaluation"
+            }
+          ],
+          "text": "PT discharge evaluation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.3ukghrsj",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.s28g5db6",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "procedure": {
+    "resourceType": "Procedure",
+    "id": "prc.ygkefsm5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Procedure: Physical therapy session completed</p></div>"
+    },
+    "status": "completed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "91251008",
+          "display": "Physical therapy procedure"
+        }
+      ],
+      "text": "Physical therapy procedure"
+    },
+    "subject": {
+      "reference": "Patient/pt.8n3nzesc",
+      "display": "Laurie Martinez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.x7vds2vy"
+    },
+    "performedDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.uefb6npx",
+          "display": "Dr. Richard Jackson"
+        }
+      }
+    ],
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "S93.40",
+            "display": "Sprain of ankle, healing"
+          }
+        ],
+        "text": "Sprain of ankle, healing"
+      }
+    ]
+  },
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.4f79qkpf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Physical therapy recovery plan for Laurie Martinez</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Ankle Recovery - Laurie Martinez",
+    "subject": {
+      "reference": "Patient/pt.8n3nzesc",
+      "display": "Laurie Martinez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.x7vds2vy"
+    },
+    "period": {
+      "start": "2024-09-13"
+    },
+    "author": {
+      "reference": "Practitioner/pr.uefb6npx",
+      "display": "Dr. Richard Jackson"
+    },
+    "goal": [
+      {
+        "reference": "Goal/goal.uj9hz8yp"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "91251008",
+                "display": "Physical therapy procedure"
+              }
+            ],
+            "text": "Physical therapy procedure"
+          },
+          "description": "Ankle strengthening and range-of-motion exercises, three times per week"
+        }
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.uj9hz8yp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Complete physical therapy program</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "improving",
+          "display": "Improving"
+        }
+      ],
+      "text": "Improving"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "physiotherapy",
+            "display": "Physiotherapy"
+          }
+        ],
+        "text": "Physiotherapy"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "91251008",
+          "display": "Complete physical therapy program"
+        }
+      ],
+      "text": "Complete physical therapy program"
+    },
+    "subject": {
+      "reference": "Patient/pt.8n3nzesc",
+      "display": "Laurie Martinez"
+    },
+    "startDate": "2024-09-13",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "79190-3",
+              "display": "Ankle range of motion"
+            }
+          ],
+          "text": "Ankle range of motion"
+        },
+        "detailRange": {
+          "low": {
+            "value": 40,
+            "unit": "degrees"
+          },
+          "high": {
+            "value": 50,
+            "unit": "degrees"
+          }
+        },
+        "dueDate": "2025-12-31"
+      }
+    ]
+  },
+  "questionnaire": {
+    "resourceType": "Questionnaire",
+    "id": "q.fm3pdgzn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Questionnaire: Physical therapy progress assessment</p></div>"
+    },
+    "url": "http://example.org/Questionnaire/q.fm3pdgzn",
+    "name": "PTProgressAssessment",
+    "title": "Physical Therapy Progress Assessment",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Harborview Community Clinic",
+    "description": "Assessment form for tracking physical therapy progress after ankle sprain.",
+    "item": [
+      {
+        "linkId": "pain-level",
+        "text": "Current pain level on a scale of 0 to 10",
+        "type": "integer"
+      },
+      {
+        "linkId": "rom-improvement",
+        "text": "Has range of motion improved since last visit?",
+        "type": "boolean"
+      },
+      {
+        "linkId": "daily-activities",
+        "text": "Can you perform daily activities without difficulty?",
+        "type": "boolean"
+      },
+      {
+        "linkId": "progress-notes",
+        "text": "Additional notes on progress",
+        "type": "text"
+      }
+    ]
+  },
+  "questionnaire_response": {
+    "resourceType": "QuestionnaireResponse",
+    "id": "qr.cjgd8khs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>QuestionnaireResponse: PT progress assessment completed</p></div>"
+    },
+    "questionnaire": "Questionnaire/q.fm3pdgzn",
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.8n3nzesc",
+      "display": "Laurie Martinez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.x7vds2vy"
+    },
+    "authored": "2025-06-15T11:00:00+00:00",
+    "author": {
+      "reference": "Practitioner/pr.uefb6npx",
+      "display": "Dr. Richard Jackson"
+    },
+    "item": [
+      {
+        "linkId": "pain-level",
+        "text": "Current pain level on a scale of 0 to 10",
+        "answer": [
+          {
+            "valueInteger": 0
+          }
+        ]
+      },
+      {
+        "linkId": "rom-improvement",
+        "text": "Has range of motion improved since last visit?",
+        "answer": [
+          {
+            "valueBoolean": true
+          }
+        ]
+      },
+      {
+        "linkId": "daily-activities",
+        "text": "Can you perform daily activities without difficulty?",
+        "answer": [
+          {
+            "valueBoolean": true
+          }
+        ]
+      },
+      {
+        "linkId": "progress-notes",
+        "text": "Additional notes on progress",
+        "answer": [
+          {
+            "valueString": "Strength exercises progressing well. Patient completed all prescribed repetitions without discomfort. Balance exercises showing improvement."
+          }
+        ]
+      }
+    ]
+  }
+}

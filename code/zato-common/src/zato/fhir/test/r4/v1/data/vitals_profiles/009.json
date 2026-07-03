@@ -1,0 +1,1933 @@
+{
+  "_meta": {
+    "scenario": "vitals_profiles",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.g454nee8",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 장 영수</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2122609"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2692"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "장",
+        "given": [
+          "영수"
+        ],
+        "text": "장 영수"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "237-720-7165",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "bartlettsarah@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1979-08-17",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "859 William Tunnel Suite 079"
+        ],
+        "city": "North Joelmouth",
+        "state": "IA",
+        "postalCode": "95689",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.rsy6rxpk",
+        "display": "박 민재"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.jguf7s3y",
+      "display": "Cabinet Medical Soleil"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.rsy6rxpk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 박 민재</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1649692205"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "민재"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "박 민재"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(964)457-0556x250",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "47399 Stephenson Roads Apt. 487"
+        ],
+        "city": "Tamaraville",
+        "state": "AL",
+        "postalCode": "95500",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.7xbk7fyd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vitals assessment on 2024-08-08</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vitals assessment"
+            }
+          ],
+          "text": "Vitals assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.g454nee8",
+        "display": "장 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rsy6rxpk",
+            "display": "박 민재"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-08T08:45:00+00:00",
+        "end": "2024-08-08T09:38:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vitals assessment"
+            }
+          ],
+          "text": "Vitals assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.jguf7s3y",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8fedtxd3",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v5zh5zst",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vitals follow-up on 2024-12-17</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vitals follow-up"
+            }
+          ],
+          "text": "Vitals follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.g454nee8",
+        "display": "장 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rsy6rxpk",
+            "display": "박 민재"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-17T11:30:00+00:00",
+        "end": "2024-12-17T12:04:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vitals follow-up"
+            }
+          ],
+          "text": "Vitals follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.jguf7s3y",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8fedtxd3",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3a42gsjf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vitals review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vitals review"
+            }
+          ],
+          "text": "Vitals review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.g454nee8",
+        "display": "장 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rsy6rxpk",
+            "display": "박 민재"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T13:15:00+00:00",
+        "end": "2025-06-15T13:46:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vitals review"
+            }
+          ],
+          "text": "Vitals review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.jguf7s3y",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8fedtxd3",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.q3sz9y33",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 110 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T10:53:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.qqj6dgca",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 74 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T12:17:00+00:00",
+      "valueQuantity": {
+        "value": 74,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.af6ehmbx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 55 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T10:38:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.jtcu4jev",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.5 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T13:16:00+00:00",
+      "valueQuantity": {
+        "value": 36.5,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.yk7mu247",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 14 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T13:20:00+00:00",
+      "valueQuantity": {
+        "value": 14,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.nr6udh62",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 98 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T10:30:00+00:00",
+      "valueQuantity": {
+        "value": 98,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.f3btdj3n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 78 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T09:32:00+00:00",
+      "valueQuantity": {
+        "value": 78,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.k6hjfm9p",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 172 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T16:23:00+00:00",
+      "valueQuantity": {
+        "value": 172,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.a7vn7r4c",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 20.2 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T09:51:00+00:00",
+      "valueQuantity": {
+        "value": 20.2,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.brgu3s5a",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Head circumference: 57 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9843-4",
+            "display": "Head circumference"
+          }
+        ],
+        "text": "Head circumference"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.7xbk7fyd"
+      },
+      "effectiveDateTime": "2024-08-08T12:01:00+00:00",
+      "valueQuantity": {
+        "value": 57,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.nnz3tzgf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 123 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T08:42:00+00:00",
+      "valueQuantity": {
+        "value": 123,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ghatdw47",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 61 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T14:13:00+00:00",
+      "valueQuantity": {
+        "value": 61,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.kjarcsqb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 73 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T15:03:00+00:00",
+      "valueQuantity": {
+        "value": 73,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.5z4gvvad",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.8 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T08:28:00+00:00",
+      "valueQuantity": {
+        "value": 36.8,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.pbycwh4r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 18 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T14:27:00+00:00",
+      "valueQuantity": {
+        "value": 18,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.4wx5twry",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 98 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T15:42:00+00:00",
+      "valueQuantity": {
+        "value": 98,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.sj68daxw",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 63 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T12:08:00+00:00",
+      "valueQuantity": {
+        "value": 63,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.y8zr4zxp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 156 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T08:25:00+00:00",
+      "valueQuantity": {
+        "value": 156,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.nx3nqwvm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 23.0 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T11:22:00+00:00",
+      "valueQuantity": {
+        "value": 23.0,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.kstqy2ya",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Head circumference: 53 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9843-4",
+            "display": "Head circumference"
+          }
+        ],
+        "text": "Head circumference"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.v5zh5zst"
+      },
+      "effectiveDateTime": "2024-12-17T09:58:00+00:00",
+      "valueQuantity": {
+        "value": 53,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.db6fatyc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Systolic blood pressure: 126 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ],
+        "text": "Systolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T13:29:00+00:00",
+      "valueQuantity": {
+        "value": 126,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.tb6eknmf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Diastolic blood pressure: 78 mmHg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ],
+        "text": "Diastolic blood pressure"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T16:04:00+00:00",
+      "valueQuantity": {
+        "value": 78,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmHg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.znbbapep",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 89 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T09:17:00+00:00",
+      "valueQuantity": {
+        "value": 89,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.vqnd3xcq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body temperature: 36.4 Cel</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Body temperature"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T14:01:00+00:00",
+      "valueQuantity": {
+        "value": 36.4,
+        "unit": "Cel",
+        "system": "http://unitsofmeasure.org",
+        "code": "Cel"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.fmg7s73r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Respiratory rate: 15 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9279-1",
+            "display": "Respiratory rate"
+          }
+        ],
+        "text": "Respiratory rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T10:37:00+00:00",
+      "valueQuantity": {
+        "value": 15,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.ge92kd9g",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 96 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T16:30:00+00:00",
+      "valueQuantity": {
+        "value": 96,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.5ch5e4c5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body weight: 58 kg</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "29463-7",
+            "display": "Body weight"
+          }
+        ],
+        "text": "Body weight"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T08:30:00+00:00",
+      "valueQuantity": {
+        "value": 58,
+        "unit": "kg",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.nre9f6dz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body height: 169 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8302-2",
+            "display": "Body height"
+          }
+        ],
+        "text": "Body height"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T08:31:00+00:00",
+      "valueQuantity": {
+        "value": 169,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.4pe83r7p",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Body mass index: 24.2 kg/m2</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "39156-5",
+            "display": "Body mass index"
+          }
+        ],
+        "text": "Body mass index"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T11:13:00+00:00",
+      "valueQuantity": {
+        "value": 24.2,
+        "unit": "kg/m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "kg/m2"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.u262rrfz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Head circumference: 59 cm</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "9843-4",
+            "display": "Head circumference"
+          }
+        ],
+        "text": "Head circumference"
+      },
+      "subject": {
+        "reference": "Patient/pt.g454nee8"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3a42gsjf"
+      },
+      "effectiveDateTime": "2025-06-15T11:46:00+00:00",
+      "valueQuantity": {
+        "value": 59,
+        "unit": "cm",
+        "system": "http://unitsofmeasure.org",
+        "code": "cm"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.rsy6rxpk"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": 102,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}h2": null,
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null
+              ]
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}h3": null,
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}ul": {
+        "{http://www.w3.org/1999/xhtml}li": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "{http://www.w3.org/1999/xhtml}pre": null
+    }
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "38269-7"
+    },
+    "text": "DXA BONE DENSITOMETRY"
+  },
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "effectiveDateTime": "2008-06-17",
+  "issued": "2008-06-18T09:23:00+10:00",
+  "performer": {
+    "reference": "Practitioner/3ad0687e-f477-468c-afd5-fcc2bf897809",
+    "display": "Dr Henry Seven"
+  },
+  "result": {
+    "reference": "Observation/bmd"
+  },
+  "conclusionCode": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 391040000,
+      "display": "At risk of osteoporotic fracture"
+    }
+  }
+}

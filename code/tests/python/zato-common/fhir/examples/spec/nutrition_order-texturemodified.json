@@ -1,0 +1,66 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "texturemodified",
+  "identifier": {
+    "system": "http://goodhealthhospital.org/nutrition-requests",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "oralDiet": {
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": 435801000124108,
+          "display": "Texture modified diet"
+        },
+        {
+          "system": "http://goodhealthhospital.org/diet-type-codes",
+          "code": 1010,
+          "display": "Texture modified diet"
+        }
+      ],
+      "text": "Texture modified diet"
+    },
+    "schedule": {
+      "timing": {
+        "repeat": {
+          "boundsPeriod": {
+            "start": "2015-02-10"
+          },
+          "frequency": 3,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      }
+    },
+    "texture": {
+      "modifier": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 228049004,
+          "display": "Chopped food"
+        },
+        "text": "Regular, Chopped Meat"
+      },
+      "foodType": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 28647000,
+          "display": "Meat"
+        },
+        "text": "Regular, Chopped Meat"
+      }
+    }
+  }
+}

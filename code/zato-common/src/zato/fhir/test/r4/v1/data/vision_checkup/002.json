@@ -1,0 +1,711 @@
+{
+  "_meta": {
+    "scenario": "vision_checkup",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.s6uyuxna",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Margaud Marie</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8981555"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7355"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Marie",
+        "given": [
+          "Margaud"
+        ],
+        "text": "Margaud Marie"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-992-830-9128x23442",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "megan47@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1971-06-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "06774 Jerome Estates"
+        ],
+        "city": "Taylorhaven",
+        "state": "ID",
+        "postalCode": "82378",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.wtgak36u",
+        "display": "Dr. Christiane Pineau"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.4muwp8x8",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.wtgak36u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Christiane Pineau</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4333242794"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Pineau",
+        "given": [
+          "Christiane"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Christiane Pineau"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-565-447-6606x3892",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "8501 Wood Well Apt. 060"
+        ],
+        "city": "Garciaville",
+        "state": "GA",
+        "postalCode": "27626",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.4muwp8x8",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9898034344"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(453)760-7654x82213",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "514 Dawn Stravenue"
+        ],
+        "city": "Mcdanielville",
+        "state": "MI",
+        "postalCode": "81559",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.kk4q56w5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual eye examination on 2024-06-27</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s6uyuxna",
+        "display": "Margaud Marie"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wtgak36u",
+            "display": "Dr. Christiane Pineau"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-27T15:45:00+00:00",
+        "end": "2024-06-27T16:18:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual eye examination"
+            }
+          ],
+          "text": "Annual eye examination"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4muwp8x8",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.pbdhb2ay",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zpxexvmv",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Vision follow-up on 2024-12-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s6uyuxna",
+        "display": "Margaud Marie"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wtgak36u",
+            "display": "Dr. Christiane Pineau"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-06T12:30:00+00:00",
+        "end": "2024-12-06T13:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Vision follow-up"
+            }
+          ],
+          "text": "Vision follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4muwp8x8",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.pbdhb2ay",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zhkzsghw",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s6uyuxna",
+        "display": "Margaud Marie"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wtgak36u",
+            "display": "Dr. Christiane Pineau"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:00:00+00:00",
+        "end": "2025-06-15T14:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription update"
+            }
+          ],
+          "text": "Prescription update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4muwp8x8",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.pbdhb2ay",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "vision_prescription": {
+    "resourceType": "VisionPrescription",
+    "id": "vp.7mk57kft",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>VisionPrescription: Mild myopia correction</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "patient": {
+      "reference": "Patient/pt.s6uyuxna",
+      "display": "Margaud Marie"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.zhkzsghw"
+    },
+    "dateWritten": "2025-06-15",
+    "prescriber": {
+      "reference": "Practitioner/pr.wtgak36u",
+      "display": "Dr. Christiane Pineau"
+    },
+    "lensSpecification": [
+      {
+        "eye": "right",
+        "sphere": -1.88,
+        "cylinder": -0.25,
+        "axis": 180,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      },
+      {
+        "eye": "left",
+        "sphere": -1.65,
+        "cylinder": -0.25,
+        "axis": 175,
+        "product": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct",
+              "code": "lens",
+              "display": "Lens"
+            }
+          ],
+          "text": "Lens"
+        }
+      }
+    ]
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.d5b76chx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Phoropter for refraction testing</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "309645004",
+          "display": "Phoropter"
+        }
+      ],
+      "text": "Phoropter"
+    },
+    "owner": {
+      "reference": "Organization/org.4muwp8x8",
+      "display": "Lakeside Wellness Center"
+    },
+    "location": {
+      "reference": "Location/loc.pbdhb2ay",
+      "display": "Lakeside Wellness Center - Main Office"
+    }
+  },
+  "device_definition": {
+    "resourceType": "DeviceDefinition",
+    "id": "dd.77z8nnw5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceDefinition: Phoropter definition</p></div>"
+    },
+    "manufacturerString": "Reichert Technologies",
+    "deviceName": [
+      {
+        "name": "Phoropter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "modelNumber": "RPA-7544"
+  },
+  "device_metric": {
+    "resourceType": "DeviceMetric",
+    "id": "dm.gv84yded",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceMetric: Visual acuity measurement</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "363983007",
+          "display": "Visual acuity"
+        }
+      ],
+      "text": "Visual acuity"
+    },
+    "source": {
+      "reference": "Device/dev.d5b76chx"
+    },
+    "category": "measurement"
+  },
+  "device_request": {
+    "resourceType": "DeviceRequest",
+    "id": "dr.r5pxsq4p",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceRequest: Corrective lenses order</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "codeCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "420401007",
+          "display": "Corrective lens"
+        }
+      ],
+      "text": "Corrective lens"
+    },
+    "subject": {
+      "reference": "Patient/pt.s6uyuxna",
+      "display": "Margaud Marie"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.zhkzsghw"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.wtgak36u",
+      "display": "Dr. Christiane Pineau"
+    }
+  },
+  "device_use": {
+    "resourceType": "DeviceUseStatement",
+    "id": "du.egqkh6ph",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DeviceUseStatement: Patient uses corrective lenses</p></div>"
+    },
+    "status": "active",
+    "subject": {
+      "reference": "Patient/pt.s6uyuxna",
+      "display": "Margaud Marie"
+    },
+    "timingPeriod": {
+      "start": "2024-06-27"
+    },
+    "recordedOn": "2025-06-15",
+    "device": {
+      "reference": "Device/dev.d5b76chx"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "H52.1",
+            "display": "Myopia, mild"
+          }
+        ],
+        "text": "Myopia, mild"
+      }
+    ]
+  }
+}

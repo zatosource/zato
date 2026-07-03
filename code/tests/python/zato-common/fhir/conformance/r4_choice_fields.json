@@ -1,0 +1,620 @@
+{
+  "ActivityDefinition": {
+    "product": [
+      "productReference",
+      "productCodeableConcept"
+    ],
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ],
+    "timing": [
+      "timingTiming",
+      "timingDateTime",
+      "timingAge",
+      "timingPeriod",
+      "timingRange",
+      "timingDuration"
+    ]
+  },
+  "AllergyIntolerance": {
+    "onset": [
+      "onsetDateTime",
+      "onsetAge",
+      "onsetPeriod",
+      "onsetRange",
+      "onsetString"
+    ]
+  },
+  "ChargeItem": {
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod",
+      "occurrenceTiming"
+    ],
+    "product": [
+      "productReference",
+      "productCodeableConcept"
+    ]
+  },
+  "ClinicalImpression": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ]
+  },
+  "CommunicationRequest": {
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod"
+    ]
+  },
+  "ConceptMap": {
+    "source": [
+      "sourceUri",
+      "sourceCanonical"
+    ],
+    "target": [
+      "targetUri",
+      "targetCanonical"
+    ]
+  },
+  "Condition": {
+    "abatement": [
+      "abatementDateTime",
+      "abatementAge",
+      "abatementPeriod",
+      "abatementRange",
+      "abatementString"
+    ],
+    "onset": [
+      "onsetDateTime",
+      "onsetAge",
+      "onsetPeriod",
+      "onsetRange",
+      "onsetString"
+    ]
+  },
+  "Consent": {
+    "source": [
+      "sourceAttachment",
+      "sourceReference"
+    ]
+  },
+  "Contract": {
+    "legallyBinding": [
+      "legallyBindingAttachment",
+      "legallyBindingReference"
+    ],
+    "topic": [
+      "topicCodeableConcept",
+      "topicReference"
+    ]
+  },
+  "CoverageEligibilityRequest": {
+    "serviced": [
+      "servicedDate",
+      "servicedPeriod"
+    ]
+  },
+  "CoverageEligibilityResponse": {
+    "serviced": [
+      "servicedDate",
+      "servicedPeriod"
+    ]
+  },
+  "DetectedIssue": {
+    "identified": [
+      "identifiedDateTime",
+      "identifiedPeriod"
+    ]
+  },
+  "DeviceDefinition": {
+    "manufacturer": [
+      "manufacturerString",
+      "manufacturerReference"
+    ]
+  },
+  "DeviceRequest": {
+    "code": [
+      "codeReference",
+      "codeCodeableConcept"
+    ],
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod",
+      "occurrenceTiming"
+    ]
+  },
+  "DeviceUseStatement": {
+    "timing": [
+      "timingTiming",
+      "timingPeriod",
+      "timingDateTime"
+    ]
+  },
+  "DiagnosticReport": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ]
+  },
+  "EventDefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "FamilyMemberHistory": {
+    "age": [
+      "ageAge",
+      "ageRange",
+      "ageString"
+    ],
+    "born": [
+      "bornPeriod",
+      "bornDate",
+      "bornString"
+    ],
+    "deceased": [
+      "deceasedBoolean",
+      "deceasedAge",
+      "deceasedRange",
+      "deceasedDate",
+      "deceasedString"
+    ]
+  },
+  "Goal": {
+    "start": [
+      "startDate",
+      "startCodeableConcept"
+    ]
+  },
+  "GuidanceResponse": {
+    "module": [
+      "moduleUri",
+      "moduleCanonical",
+      "moduleCodeableConcept"
+    ]
+  },
+  "Immunization": {
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrenceString"
+    ]
+  },
+  "ImmunizationEvaluation": {
+    "doseNumber": [
+      "doseNumberPositiveInt",
+      "doseNumberString"
+    ],
+    "seriesDoses": [
+      "seriesDosesPositiveInt",
+      "seriesDosesString"
+    ]
+  },
+  "Library": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "Measure": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "Media": {
+    "created": [
+      "createdDateTime",
+      "createdPeriod"
+    ]
+  },
+  "MedicationAdministration": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "medication": [
+      "medicationCodeableConcept",
+      "medicationReference"
+    ]
+  },
+  "MedicationDispense": {
+    "medication": [
+      "medicationCodeableConcept",
+      "medicationReference"
+    ],
+    "statusReason": [
+      "statusReasonCodeableConcept",
+      "statusReasonReference"
+    ]
+  },
+  "MedicationRequest": {
+    "medication": [
+      "medicationCodeableConcept",
+      "medicationReference"
+    ],
+    "reported": [
+      "reportedBoolean",
+      "reportedReference"
+    ]
+  },
+  "MedicationStatement": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "medication": [
+      "medicationCodeableConcept",
+      "medicationReference"
+    ]
+  },
+  "MessageDefinition": {
+    "event": [
+      "eventCoding",
+      "eventUri"
+    ]
+  },
+  "MessageHeader": {
+    "event": [
+      "eventCoding",
+      "eventUri"
+    ]
+  },
+  "Observation": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod",
+      "effectiveTiming",
+      "effectiveInstant"
+    ],
+    "value": [
+      "valueQuantity",
+      "valueCodeableConcept",
+      "valueString",
+      "valueBoolean",
+      "valueInteger",
+      "valueRange",
+      "valueRatio",
+      "valueSampledData",
+      "valueTime",
+      "valueDateTime",
+      "valuePeriod"
+    ]
+  },
+  "Patient": {
+    "deceased": [
+      "deceasedBoolean",
+      "deceasedDateTime"
+    ],
+    "multipleBirth": [
+      "multipleBirthBoolean",
+      "multipleBirthInteger"
+    ]
+  },
+  "PlanDefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "Procedure": {
+    "performed": [
+      "performedDateTime",
+      "performedPeriod",
+      "performedString",
+      "performedAge",
+      "performedRange"
+    ]
+  },
+  "Provenance": {
+    "occurred": [
+      "occurredPeriod",
+      "occurredDateTime"
+    ]
+  },
+  "ResearchDefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "ResearchElementDefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "RiskAssessment": {
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod"
+    ]
+  },
+  "ServiceRequest": {
+    "asNeeded": [
+      "asNeededBoolean",
+      "asNeededCodeableConcept"
+    ],
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod",
+      "occurrenceTiming"
+    ],
+    "quantity": [
+      "quantityQuantity",
+      "quantityRatio",
+      "quantityRange"
+    ]
+  },
+  "SupplyDelivery": {
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod",
+      "occurrenceTiming"
+    ]
+  },
+  "SupplyRequest": {
+    "item": [
+      "itemCodeableConcept",
+      "itemReference"
+    ],
+    "occurrence": [
+      "occurrenceDateTime",
+      "occurrencePeriod",
+      "occurrenceTiming"
+    ]
+  },
+  "bmi": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "bodyheight": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "bodytemp": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "bodyweight": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "bp": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "cdshooksguidanceresponse": {
+    "module": [
+      "moduleUri"
+    ]
+  },
+  "cdshooksserviceplandefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "cholesterol": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod",
+      "effectiveTiming",
+      "effectiveInstant"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "computableplandefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "cqllibrary": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "devicemetricobservation": {
+    "effective": [
+      "effectiveDateTime"
+    ],
+    "value": [
+      "valueQuantity",
+      "valueCodeableConcept",
+      "valueString",
+      "valueRange",
+      "valueRatio",
+      "valueSampledData",
+      "valueTime",
+      "valueDateTime",
+      "valuePeriod"
+    ]
+  },
+  "hdlcholesterol": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod",
+      "effectiveTiming",
+      "effectiveInstant"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "headcircum": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "heartrate": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "hlaresult": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ]
+  },
+  "ldlcholesterol": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod",
+      "effectiveTiming",
+      "effectiveInstant"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "lipidprofile": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ]
+  },
+  "oxygensat": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "resprate": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "shareableactivitydefinition": {
+    "product": [
+      "productReference",
+      "productCodeableConcept"
+    ],
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ],
+    "timing": [
+      "timingTiming",
+      "timingDateTime",
+      "timingAge",
+      "timingPeriod",
+      "timingRange",
+      "timingDuration"
+    ]
+  },
+  "shareablelibrary": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "shareablemeasure": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "shareableplandefinition": {
+    "subject": [
+      "subjectCodeableConcept",
+      "subjectReference"
+    ]
+  },
+  "triglyceride": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod",
+      "effectiveTiming",
+      "effectiveInstant"
+    ],
+    "value": [
+      "valueQuantity"
+    ]
+  },
+  "vitalsigns": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity",
+      "valueCodeableConcept",
+      "valueString",
+      "valueBoolean",
+      "valueInteger",
+      "valueRange",
+      "valueRatio",
+      "valueSampledData",
+      "valueTime",
+      "valueDateTime",
+      "valuePeriod"
+    ]
+  },
+  "vitalspanel": {
+    "effective": [
+      "effectiveDateTime",
+      "effectivePeriod"
+    ],
+    "value": [
+      "valueQuantity",
+      "valueCodeableConcept",
+      "valueString",
+      "valueBoolean",
+      "valueInteger",
+      "valueRange",
+      "valueRatio",
+      "valueSampledData",
+      "valueTime",
+      "valueDateTime",
+      "valuePeriod"
+    ]
+  }
+}

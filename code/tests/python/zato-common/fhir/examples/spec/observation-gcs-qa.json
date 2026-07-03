@@ -1,0 +1,64 @@
+{
+  "resourceType": "Observation",
+  "id": "gcs-qa",
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "9269-2",
+      "display": "Glasgow coma score total"
+    },
+    "text": "Glasgow Coma Scale , (GCS)"
+  },
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  },
+  "effectiveDateTime": "2014-12-11T04:44:16Z",
+  "valueQuantity": {
+    "value": 13,
+    "system": "http://unitsofmeasure.org",
+    "code": "{score}"
+  },
+  "referenceRange": [
+    {
+      "high": {
+        "value": 8,
+        "system": "http://unitsofmeasure.org",
+        "code": "{score}"
+      },
+      "type": {
+        "text": "Severe TBI"
+      }
+    },
+    {
+      "low": {
+        "value": 9,
+        "system": "http://unitsofmeasure.org",
+        "code": "{score}"
+      },
+      "high": {
+        "value": 12,
+        "system": "http://unitsofmeasure.org",
+        "code": "{score}"
+      },
+      "type": {
+        "text": "Moderate TBI"
+      }
+    },
+    {
+      "low": {
+        "value": 13,
+        "system": "http://unitsofmeasure.org",
+        "code": "{score}"
+      },
+      "type": {
+        "text": "Mild TBI"
+      }
+    }
+  ],
+  "derivedFrom": {
+    "reference": "QuestionnaireResponse/gcs",
+    "display": "GCS form results"
+  }
+}

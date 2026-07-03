@@ -1,0 +1,164 @@
+{
+  "_meta": {
+    "scenario": "terminology_setup",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "code_system": {
+    "resourceType": "CodeSystem",
+    "id": "cs.e63pfs25",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CodeSystem: Wellness visit categories</p></div>"
+    },
+    "url": "http://example.org/CodeSystem/cs.e63pfs25",
+    "name": "WellnessVisitCategories",
+    "title": "Wellness Visit Categories",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Standards Organization",
+    "description": "Categories for classifying wellness visit types in preventive care.",
+    "content": "complete",
+    "count": 4,
+    "concept": [
+      {
+        "code": "annual-checkup",
+        "display": "Annual Checkup",
+        "definition": "Routine annual wellness examination"
+      },
+      {
+        "code": "follow-up",
+        "display": "Follow-up Visit",
+        "definition": "Follow-up to previous wellness visit"
+      },
+      {
+        "code": "screening",
+        "display": "Screening Visit",
+        "definition": "Preventive screening examination"
+      },
+      {
+        "code": "immunization",
+        "display": "Immunization Visit",
+        "definition": "Visit for routine immunizations"
+      }
+    ]
+  },
+  "value_set": {
+    "resourceType": "ValueSet",
+    "id": "vs.krsqt6de",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ValueSet: Active wellness visit types</p></div>"
+    },
+    "url": "http://example.org/ValueSet/vs.krsqt6de",
+    "name": "ActiveWellnessVisitTypes",
+    "title": "Active Wellness Visit Types",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Standards Organization",
+    "description": "Value set containing the active wellness visit category codes.",
+    "compose": {
+      "include": [
+        {
+          "system": "http://example.org/CodeSystem/cs.e63pfs25"
+        }
+      ]
+    }
+  },
+  "concept_map": {
+    "resourceType": "ConceptMap",
+    "id": "cm.7zpug596",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ConceptMap: Map wellness categories to SNOMED</p></div>"
+    },
+    "url": "http://example.org/ConceptMap/cm.7zpug596",
+    "name": "WellnessToSNOMED",
+    "title": "Wellness Categories to SNOMED CT Mapping",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Standards Organization",
+    "description": "Maps local wellness visit category codes to SNOMED CT concepts.",
+    "sourceUri": "http://example.org/ValueSet/vs.krsqt6de",
+    "targetUri": "http://snomed.info/sct",
+    "group": [
+      {
+        "source": "http://example.org/CodeSystem/cs.e63pfs25",
+        "target": "http://snomed.info/sct",
+        "element": [
+          {
+            "code": "annual-checkup",
+            "display": "Annual Checkup",
+            "target": [
+              {
+                "code": "185349003",
+                "display": "Encounter for check up",
+                "equivalence": "equivalent"
+              }
+            ]
+          },
+          {
+            "code": "immunization",
+            "display": "Immunization Visit",
+            "target": [
+              {
+                "code": "33879002",
+                "display": "Administration of vaccine",
+                "equivalence": "equivalent"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "naming_system": {
+    "resourceType": "NamingSystem",
+    "id": "ns.wh2r9gj3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>NamingSystem: Wellness visit identifier system</p></div>"
+    },
+    "name": "WellnessVisitIdentifiers",
+    "status": "active",
+    "kind": "identifier",
+    "date": "2025-06-15",
+    "publisher": "Wellness Standards Organization",
+    "responsible": "Wellness Standards Organization",
+    "description": "Naming system for wellness visit identifiers across the organization.",
+    "uniqueId": [
+      {
+        "type": "uri",
+        "value": "http://example.org/wellness-visit-id",
+        "preferred": true
+      }
+    ]
+  },
+  "terminology_capabilities": {
+    "resourceType": "TerminologyCapabilities",
+    "id": "tc.6yg4bjqy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>TerminologyCapabilities: Server terminology support</p></div>"
+    },
+    "url": "http://example.org/TerminologyCapabilities/tc.6yg4bjqy",
+    "name": "WellnessServerTerminology",
+    "title": "Wellness Server Terminology Capabilities",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Standards Organization",
+    "description": "Describes the terminology capabilities of the wellness data server.",
+    "kind": "instance",
+    "codeSystem": [
+      {
+        "uri": "http://example.org/CodeSystem/cs.e63pfs25",
+        "version": [
+          {
+            "code": "1.0"
+          }
+        ]
+      }
+    ]
+  }
+}

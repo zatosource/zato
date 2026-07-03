@@ -1,0 +1,93 @@
+{
+  "resourceType": "OperationDefinition",
+  "id": "example",
+  "url": "http://hl7.org/fhir/OperationDefinition/example",
+  "version": "B",
+  "name": "PopulateQuestionnaire",
+  "title": "Populate Questionnaire",
+  "status": "draft",
+  "kind": "operation",
+  "date": "2015-08-04",
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/fiwg/index.cfm"
+      }
+    }
+  ],
+  "description": "Limited implementation of the Populate Questionnaire implementation",
+  "useContext": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+      "code": "venue",
+      "display": "Clinical Venue"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "IMP",
+        "display": "inpatient encounter"
+      }
+    }
+  },
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "GB",
+      "display": "United Kingdom of Great Britain and Northern Ireland"
+    }
+  },
+  "code": "populate",
+  "comment": "Only implemented for Labs and Medications so far",
+  "base": "http://hl7.org/fhir/OperationDefinition/Questionnaire-populate",
+  "resource": "Questionnaire",
+  "system": false,
+  "type": false,
+  "instance": true,
+  "parameter": [
+    {
+      "name": "subject",
+      "use": "in",
+      "min": 1,
+      "max": 1,
+      "documentation": "The resource that is to be the *QuestionnaireResponse.subject*. The [[[QuestionnaireResponse]]]      instance will reference the provided subject.  In addition, if the *local* parameter is      set to true, server information about the specified subject will be used to populate the      instance.",
+      "type": "Reference"
+    },
+    {
+      "name": "local",
+      "use": "in",
+      "min": 0,
+      "max": 1,
+      "documentation": "If the *local* parameter is set to true, server information about the specified subject will be used to populate the instance.",
+      "type": "Reference"
+    },
+    {
+      "name": "return",
+      "use": "out",
+      "min": 1,
+      "max": 1,
+      "documentation": "The partially (or fully)-populated set of answers for the specified Questionnaire",
+      "type": "QuestionnaireResponse"
+    }
+  ],
+  "overload": [
+    {
+      "parameterName": [
+        "subject",
+        "local"
+      ]
+    },
+    {
+      "parameterName": "subject",
+      "comment": "local defaults to false when not passed as a parameter"
+    }
+  ]
+}

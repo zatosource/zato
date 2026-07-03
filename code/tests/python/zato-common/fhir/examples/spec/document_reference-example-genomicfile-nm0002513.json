@@ -1,0 +1,25 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-genomicfile-nm0002513",
+  "identifier": {
+    "system": "http://www.somesystemabc.net/identifiers/files",
+    "value": 11111
+  },
+  "status": "current",
+  "docStatus": "preliminary",
+  "description": "A sample Document Reference instance representing Homo sapiens mutS homolog 2 (MSH2), transcript variant 1, mRNA.",
+  "securityLabel": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "R",
+      "display": "Restricted"
+    }
+  },
+  "content": {
+    "attachment": {
+      "contentType": "text/html",
+      "url": "https://www.ncbi.nlm.nih.gov/nuccore/NM_000251.3?report=fasta",
+      "title": "Homo sapiens mutS homolog 2 (MSH2), transcript variant 1, mRNA"
+    }
+  }
+}

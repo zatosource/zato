@@ -1,0 +1,823 @@
+{
+  "_meta": {
+    "scenario": "allergy_record",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ubrb5per",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 박 진호</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN3585972"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3584"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "진호"
+        ],
+        "text": "박 진호"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "448.387.1839",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "pwilliams@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1960-04-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "70794 Ramirez Divide Apt. 948"
+        ],
+        "city": "West Jason",
+        "state": "FL",
+        "postalCode": "05897",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.s26pwq99",
+        "display": "강 은영"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.2vmm4w3p",
+      "display": "Cabinet Medical Soleil"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.s26pwq99",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 강 은영</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2909246858"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "강",
+        "given": [
+          "은영"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "강 은영"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "516-408-1011x88408",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "5185 Joseph Garden Suite 029"
+        ],
+        "city": "Nicholasside",
+        "state": "AS",
+        "postalCode": "81022",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.2vmm4w3p",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Cabinet Medical Soleil</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5531370492"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Cabinet Medical Soleil",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(901)842-7878x0984",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "8187 Jose Land Suite 391"
+        ],
+        "city": "Patrickville",
+        "state": "AZ",
+        "postalCode": "17519",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.b6z7v8w3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy assessment on 2024-06-17</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ubrb5per",
+        "display": "박 진호"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.s26pwq99",
+            "display": "강 은영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-17T13:45:00+00:00",
+        "end": "2024-06-17T14:41:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2vmm4w3p",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.v5et5us2",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6wgm7rq2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy follow-up on 2024-12-27</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ubrb5per",
+        "display": "박 진호"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.s26pwq99",
+            "display": "강 은영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-27T10:15:00+00:00",
+        "end": "2024-12-27T10:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2vmm4w3p",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.v5et5us2",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.kz97d7wk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Seasonal review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ubrb5per",
+        "display": "박 진호"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.s26pwq99",
+            "display": "강 은영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:45:00+00:00",
+        "end": "2025-06-15T13:36:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2vmm4w3p",
+        "display": "Cabinet Medical Soleil"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.v5et5us2",
+            "display": "Cabinet Medical Soleil - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "allergy_intolerance": {
+    "resourceType": "AllergyIntolerance",
+    "id": "ai.fs5mr6sd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AllergyIntolerance: Mild seasonal pollen allergy</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "type": "allergy",
+    "category": [
+      "environment"
+    ],
+    "criticality": "low",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "256259004",
+          "display": "Pollen"
+        }
+      ],
+      "text": "Pollen"
+    },
+    "patient": {
+      "reference": "Patient/pt.ubrb5per",
+      "display": "박 진호"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.kz97d7wk"
+    },
+    "recordedDate": "2025-06-15",
+    "recorder": {
+      "reference": "Practitioner/pr.s26pwq99",
+      "display": "강 은영"
+    },
+    "reaction": [
+      {
+        "substance": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "256259004",
+              "display": "Pollen"
+            }
+          ],
+          "text": "Pollen"
+        },
+        "manifestation": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "267036007",
+                "display": "Sneezing"
+              }
+            ],
+            "text": "Sneezing"
+          }
+        ],
+        "severity": "mild"
+      }
+    ],
+    "note": [
+      {
+        "text": "Mild seasonal symptoms managed with over-the-counter antihistamine. No history of severe reactions."
+      }
+    ]
+  },
+  "clinical_impression": {
+    "resourceType": "ClinicalImpression",
+    "id": "ci.5cdjsb4e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClinicalImpression: Mild seasonal allergies, well controlled</p></div>"
+    },
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.ubrb5per",
+      "display": "박 진호"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.kz97d7wk"
+    },
+    "effectiveDateTime": "2025-06-15T10:00:00+00:00",
+    "date": "2025-06-15T10:00:00+00:00",
+    "assessor": {
+      "reference": "Practitioner/pr.s26pwq99",
+      "display": "강 은영"
+    },
+    "summary": "Patient presents with mild seasonal allergic rhinitis. Symptoms are well controlled with cetirizine 10 mg daily during pollen season. No escalation needed.",
+    "finding": [
+      {
+        "itemCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J30.1",
+              "display": "Allergic rhinitis due to pollen"
+            }
+          ],
+          "text": "Allergic rhinitis due to pollen"
+        }
+      }
+    ]
+  },
+  "risk_assessment": {
+    "resourceType": "RiskAssessment",
+    "id": "ra.yqmtjbzv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskAssessment: Low risk for severe allergic reaction</p></div>"
+    },
+    "status": "final",
+    "subject": {
+      "reference": "Patient/pt.ubrb5per",
+      "display": "박 진호"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.kz97d7wk"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "condition": {
+      "reference": "AllergyIntolerance/ai.fs5mr6sd"
+    },
+    "performer": {
+      "reference": "Practitioner/pr.s26pwq99",
+      "display": "강 은영"
+    },
+    "prediction": [
+      {
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "39579001",
+              "display": "Anaphylaxis"
+            }
+          ],
+          "text": "Anaphylaxis"
+        },
+        "probabilityDecimal": 0.01,
+        "qualitativeRisk": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
+              "code": "low",
+              "display": "Low likelihood"
+            }
+          ],
+          "text": "Low likelihood"
+        },
+        "rationale": "History of mild seasonal symptoms only. No prior anaphylaxis. Low-risk allergen."
+      }
+    ]
+  },
+  "condition": {
+    "resourceType": "Condition",
+    "id": "cond.hmxxms4k",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Condition: Allergic rhinitis due to pollen</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+            "code": "encounter-diagnosis",
+            "display": "Encounter Diagnosis"
+          }
+        ],
+        "text": "Encounter Diagnosis"
+      }
+    ],
+    "severity": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "255604002",
+          "display": "Mild"
+        }
+      ],
+      "text": "Mild"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "J30.1",
+          "display": "Allergic rhinitis due to pollen"
+        }
+      ],
+      "text": "Allergic rhinitis due to pollen"
+    },
+    "subject": {
+      "reference": "Patient/pt.ubrb5per",
+      "display": "박 진호"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.kz97d7wk"
+    },
+    "onsetDateTime": "2024-06-17",
+    "recorder": {
+      "reference": "Practitioner/pr.s26pwq99",
+      "display": "강 은영"
+    }
+  },
+  "consent": {
+    "resourceType": "Consent",
+    "id": "cons.m2hpt55e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Consent: Patient consent to share allergy information</p></div>"
+    },
+    "status": "active",
+    "scope": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+          "code": "patient-privacy",
+          "display": "Privacy Consent"
+        }
+      ],
+      "text": "Privacy Consent"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "59284-0",
+            "display": "Patient Consent"
+          }
+        ],
+        "text": "Patient Consent"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.ubrb5per",
+      "display": "박 진호"
+    },
+    "dateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "reference": "Patient/pt.ubrb5per",
+        "display": "박 진호"
+      }
+    ],
+    "organization": [
+      {
+        "reference": "Organization/org.2vmm4w3p",
+        "display": "Cabinet Medical Soleil"
+      }
+    ],
+    "policyRule": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "OPTIN",
+          "display": "opt-in"
+        }
+      ],
+      "text": "opt-in"
+    }
+  }
+}

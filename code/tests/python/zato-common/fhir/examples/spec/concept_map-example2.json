@@ -1,0 +1,63 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "example2",
+  "url": "http://hl7.org/fhir/ConceptMap/example2",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.14.8"
+  },
+  "name": "FHIRexanple2",
+  "title": "FHIR Example 2",
+  "status": "draft",
+  "experimental": true,
+  "date": "2012-06-13",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "An example mapping",
+  "purpose": "To illustrate mapping features",
+  "additionalAttribute": {
+    "code": "ex3",
+    "uri": "http://example.org/fhir/property-value/example",
+    "type": "Coding"
+  },
+  "sourceScopeUri": "http://example.org/fhir/example1",
+  "targetScopeUri": "http://example.org/fhir/example2",
+  "group": {
+    "source": "http://example.org/fhir/example1",
+    "target": "http://example.org/fhir/example2",
+    "element": {
+      "code": "code",
+      "display": "Example Code",
+      "target": {
+        "code": "code2",
+        "display": "Some Example Code",
+        "relationship": "equivalent",
+        "dependsOn": {
+          "attribute": "ex3",
+          "valueCoding": {
+            "system": "http://example.org/fhir/example3",
+            "code": "some-code",
+            "display": "Something Coded"
+          }
+        }
+      }
+    },
+    "unmapped": {
+      "mode": "other-map",
+      "otherMap": "http://example.org/fhir/ConceptMap/map2"
+    }
+  }
+}

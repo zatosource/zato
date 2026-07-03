@@ -1,0 +1,57 @@
+{
+  "resourceType": "StructureMap",
+  "id": "example",
+  "url": "http://hl7.org/fhir/StructureMap/example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.13.2"
+  },
+  "version": 0.1,
+  "name": "ExampleMap",
+  "title": "Example Map",
+  "status": "draft",
+  "date": "2017-03-09",
+  "publisher": "HL7 FHIR Standard",
+  "contact": {
+    "telecom": {
+      "system": "url",
+      "value": "http://hl7.org/fhir"
+    }
+  },
+  "description": "Example Structure Map",
+  "jurisdiction": {
+    "coding": {
+      "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code": 9,
+      "display": "Oceania"
+    }
+  },
+  "group": {
+    "name": "Examples",
+    "documentation": "test -> testValue",
+    "input": [
+      {
+        "name": "testSrc",
+        "mode": "source"
+      },
+      {
+        "name": "testTgt",
+        "mode": "target"
+      }
+    ],
+    "rule": {
+      "name": "rule1",
+      "source": {
+        "context": "testSrc",
+        "type": "SourceClassA",
+        "element": "test",
+        "variable": "t"
+      },
+      "target": {
+        "context": "testTgt",
+        "element": "testValue",
+        "transform": "copy"
+      }
+    }
+  }
+}

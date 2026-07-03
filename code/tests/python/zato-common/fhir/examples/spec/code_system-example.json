@@ -1,0 +1,132 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "example",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}table": {
+        "{http://www.w3.org/1999/xhtml}tr": [
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "url": "http://hl7.org/fhir/CodeSystem/example",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.4.1827"
+    },
+    {
+      "system": "http://acme.com/identifiers/codesystems",
+      "value": "internal-cholesterol-inl"
+    }
+  ],
+  "version": 20160128,
+  "name": "ACMECholCodesBlood",
+  "title": "ACME Codes for Cholesterol in Serum/Plasma",
+  "status": "draft",
+  "experimental": true,
+  "date": "2016-01-28",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "This is an example code system that includes all the ACME codes for serum/plasma cholesterol from v2.36.",
+  "caseSensitive": true,
+  "content": "complete",
+  "filter": {
+    "code": "acme-plasma",
+    "description": "An internal filter used to select codes that are only used with plasma",
+    "operator": "=",
+    "value": "the value of this filter is either 'true' or 'false'"
+  },
+  "concept": [
+    {
+      "code": "chol-mmol",
+      "display": "SChol (mmol/L)",
+      "definition": "Serum Cholesterol, in mmol/L",
+      "designation": {
+        "use": {
+          "system": "http://acme.com/config/fhir/codesystems/internal",
+          "code": "internal-label"
+        },
+        "value": "From ACME POC Testing"
+      }
+    },
+    {
+      "code": "chol-mass",
+      "display": "SChol (mg/L)",
+      "definition": "Serum Cholesterol, in mg/L",
+      "designation": {
+        "use": {
+          "system": "http://acme.com/config/fhir/codesystems/internal",
+          "code": "internal-label"
+        },
+        "value": "From Paragon Labs"
+      }
+    },
+    {
+      "code": "chol",
+      "display": "SChol",
+      "definition": "Serum Cholesterol",
+      "designation": {
+        "use": {
+          "system": "http://acme.com/config/fhir/codesystems/internal",
+          "code": "internal-label"
+        },
+        "value": "Obdurate Labs uses this with both kinds of units..."
+      }
+    }
+  ]
+}

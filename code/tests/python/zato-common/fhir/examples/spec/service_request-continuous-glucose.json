@@ -1,0 +1,20 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "continuous-glucose",
+  "status": "active",
+  "intent": "original-order",
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "occurrenceDateTime": "2013-05-08T09:33:27+07:00",
+  "asNeeded": true,
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "reason": {
+    "concept": {
+      "text": "Continuous glucose monitoring"
+    }
+  }
+}

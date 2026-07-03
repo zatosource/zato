@@ -1,0 +1,25 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-genomicfile-cyp2c19-accession",
+  "identifier": {
+    "system": "https://www.ncbi.nlm.nih.gov/nuccore",
+    "value": "NG_008384.3"
+  },
+  "status": "current",
+  "docStatus": "preliminary",
+  "description": "CYP2C19 gene sequence",
+  "securityLabel": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "R",
+      "display": "Restricted"
+    }
+  },
+  "content": {
+    "attachment": {
+      "contentType": "text/html",
+      "url": "https://www.ncbi.nlm.nih.gov/nuccore/NG_008384",
+      "title": "Homo sapiens cytochrome P450 family 2 subfamily C member 19 (CYP2C19), RefSeqGene (LRG_584) on chromosome 10"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "resourceType": "InsurancePlan",
+  "id": "example1",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "type": {
+    "text": "Silver"
+  },
+  "generalCost": {
+    "cost": {
+      "value": 2000,
+      "currency": "USD"
+    }
+  }
+}

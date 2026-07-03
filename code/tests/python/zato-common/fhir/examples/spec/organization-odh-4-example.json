@@ -1,0 +1,22 @@
+{
+  "resourceType": "Organization",
+  "id": "odh-4-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": [
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "name": "Smilin' Sue's Station",
+  "address": {
+    "line": "369 Beauty Blvd.",
+    "city": "Anytown",
+    "state": "OH",
+    "postalCode": 56789,
+    "country": "USA"
+  }
+}

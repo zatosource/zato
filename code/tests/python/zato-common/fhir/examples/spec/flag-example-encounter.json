@@ -1,0 +1,30 @@
+{
+  "resourceType": "Flag",
+  "id": "example-encounter",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://example.org/local",
+      "code": "infection",
+      "display": "Infection Control Level"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://example.org/local/if1",
+      "code": "l3",
+      "display": "Follow Level 3 Protocol"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Patient"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  }
+}

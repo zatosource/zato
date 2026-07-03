@@ -1,0 +1,118 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "fiberrestricteddiet",
+  "identifier": {
+    "system": "http://goodhealthhospital.org/nutrition-requests",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Inpatient"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "allergyIntolerance": {
+    "reference": "AllergyIntolerance/example",
+    "display": "Cashew Nuts"
+  },
+  "foodPreferenceModifier": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/diet",
+      "code": "dairy-free"
+    }
+  },
+  "excludeFoodModifier": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 227493005,
+      "display": "Cashew Nut"
+    }
+  },
+  "oralDiet": {
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 1156444001,
+            "display": "Decreased plant fiber diet (regime/therapy)"
+          },
+          {
+            "system": "http://goodhealthhospital.org/diet-type-codes",
+            "code": 1000,
+            "display": "Fiber restricted"
+          }
+        ],
+        "text": "Fiber restricted diet"
+      },
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 1055207008,
+            "display": "Decreased fat and oil diet (regime/therapy)"
+          },
+          {
+            "system": "http://goodhealthhospital.org/diet-type-codes",
+            "code": 1100,
+            "display": "Low Fat"
+          }
+        ],
+        "text": "Low fat diet"
+      }
+    ],
+    "schedule": {
+      "timing": {
+        "repeat": {
+          "boundsPeriod": {
+            "start": "2015-02-10"
+          },
+          "frequency": 3,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      }
+    },
+    "nutrient": [
+      {
+        "modifier": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 68992005,
+            "display": "Cellulose"
+          }
+        },
+        "amount": {
+          "value": 13,
+          "unit": "grams/day",
+          "system": "http://unitsofmeasure.org",
+          "code": "g/d"
+        }
+      },
+      {
+        "modifier": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 226887002,
+            "display": "Fat and oil"
+          }
+        },
+        "amount": {
+          "value": 50,
+          "unit": "grams/day",
+          "system": "http://unitsofmeasure.org",
+          "code": "g/d"
+        }
+      }
+    ]
+  }
+}

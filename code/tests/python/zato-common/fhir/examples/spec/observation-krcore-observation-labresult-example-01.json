@@ -1,0 +1,46 @@
+{
+  "resourceType": "Observation",
+  "id": "krcore-observation-labresult-example-01",
+  "meta": {
+    "profile": "https://example.org/fhir/krcore/StructureDefinition/krcore-observation-labresult"
+  },
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "laboratory",
+      "display": "Laboratory"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "https://hira.or.kr/CodeSystem/lab-result-code",
+      "code": "FZ811",
+      "display": "\uc5f0\uc18d\ud608\ub2f9\uce21\uc815\uac80\uc0ac"
+    },
+    "text": "\uc5f0\uc18d\ud608\ub2f9\uce21\uc815\uac80\uc0ac"
+  },
+  "subject": {
+    "reference": "Patient/ch-example"
+  },
+  "effectiveDateTime": "2021-01-01",
+  "valueQuantity": {
+    "value": 76.0,
+    "unit": "mg/dL",
+    "system": "http://unitsofmeasure.org"
+  },
+  "referenceRange": {
+    "low": {
+      "value": 40.0,
+      "unit": "mg/dL",
+      "system": "http://unitsofmeasure.org",
+      "code": "mg/dL"
+    },
+    "high": {
+      "value": 109.0,
+      "unit": "mg/dL",
+      "system": "http://unitsofmeasure.org",
+      "code": "mg/dL"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "resourceType": "Observation",
+  "id": "clinical-gender",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "social-history",
+      "display": "Social History"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "76691-5",
+      "display": "Gender identity"
+    },
+    "text": "Gender identity"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  },
+  "effectiveDateTime": "2018-02-01",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "valueCodeableConcept": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 191788006,
+      "display": "Feminism in boy (finding)"
+    },
+    "text": "Feminism in boy"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "resourceType": "Procedure",
+  "id": "biopsy",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "completed",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 103693007,
+      "display": "Diagnostic procedure (procedure)"
+    },
+    "text": "Diagnostic procedure"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 90105005,
+      "display": "Biopsy of soft tissue of forearm, superficial"
+    },
+    "text": "Biopsy of suspected melanoma L) arm"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2014-02-03",
+  "recorded": "2014-02-03",
+  "performer": {
+    "actor": {
+      "reference": "Practitioner/example",
+      "display": "Dr Bert Biopser"
+    }
+  },
+  "reason": {
+    "concept": {
+      "text": "Dark lesion l) forearm. getting darker last 3 months."
+    }
+  },
+  "bodyStructure": {
+    "reference": "BodyStructure/skin-patch"
+  },
+  "complication": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 67750007,
+        "display": "Ineffective airway clearance (finding)"
+      },
+      "text": "Ineffective airway clearance"
+    }
+  },
+  "followUp": {
+    "concept": {
+      "text": "Review in clinic"
+    }
+  },
+  "note": {
+    "text": "Standard Biopsy"
+  },
+  "used": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 79068005,
+        "display": "Needle, device (physical object)"
+      },
+      "text": "30-guage needle"
+    }
+  }
+}

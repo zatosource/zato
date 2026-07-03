@@ -1,0 +1,81 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "ambulatory-outpatient",
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Ambulatory/Outpatient"
+  },
+  "dateTime": "2024-10-23T00:00:00Z",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": " Physician"
+  },
+  "oralDiet": {
+    "type": [
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 1255823003,
+          "display": "International Dysphagia Diet Standardisation Initiative Framework - Minced and Moist Level 5 food"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 1255822008,
+          "display": "International Dysphagia Diet Standardisation Initiative Framework - Mildly Thick Level 2 drinks"
+        }
+      }
+    ]
+  },
+  "enteralFormula": {
+    "type": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 443111000124101,
+          "display": "High protein formula"
+        }
+      }
+    },
+    "caloricDensity": {
+      "value": 750,
+      "unit": "kcal",
+      "system": "http://unitsofmeasure.org",
+      "code": "kcal"
+    },
+    "routeOfAdministration": {
+      "coding": {
+        "system": "https://terminology.hl7.org/",
+        "code": "GT",
+        "display": "Instillation, gastrostomy feeding"
+      }
+    },
+    "baseFormulaType": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 442991000124104,
+        "display": "Adult high protein formula"
+      }
+    },
+    "administration": {
+      "schedule": {
+        "repeat": {
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "d",
+          "timeOfDay": "19:00"
+        }
+      },
+      "quantity": {
+        "value": 750,
+        "unit": "mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL"
+      }
+    },
+    "administrationInstruction": "750 mL of high-protein formula via bolus at 7:00 pm at 100ml/hr."
+  }
+}

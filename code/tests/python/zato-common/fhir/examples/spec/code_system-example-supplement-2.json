@@ -1,0 +1,134 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "example-supplement-2",
+  "url": "http://hl7.org/fhir/bundle-type-de",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1822"
+  },
+  "name": "BundleTypeGerman",
+  "title": "Bundle Type German",
+  "status": "draft",
+  "experimental": true,
+  "date": "2017-12-21T16:40:38+11:00",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "German Translations for Bundle Type",
+  "copyright": "Creative Commons 0",
+  "content": "supplement",
+  "supplements": "http://hl7.org/fhir/bundle-type",
+  "concept": [
+    {
+      "code": "document",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Dokument"
+      }
+    },
+    {
+      "code": "message",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Nachricht"
+      }
+    },
+    {
+      "code": "transaction",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Transaktion"
+      }
+    },
+    {
+      "code": "transaction-response",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Transaktionsantwort"
+      }
+    },
+    {
+      "code": "batch",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Stapel"
+      }
+    },
+    {
+      "code": "batch-response",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Batch-Antwort"
+      }
+    },
+    {
+      "code": "history",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Verlaufsliste"
+      }
+    },
+    {
+      "code": "searchset",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Suchergebnisse"
+      }
+    },
+    {
+      "code": "collection",
+      "designation": {
+        "language": "de",
+        "use": {
+          "system": "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+          "code": "preferredForLanguage"
+        },
+        "value": "Sammlung"
+      }
+    }
+  ]
+}

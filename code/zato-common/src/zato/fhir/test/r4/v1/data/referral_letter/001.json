@@ -1,0 +1,721 @@
+{
+  "_meta": {
+    "scenario": "referral_letter",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.fh4mg9mh",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Keith Carrillo</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7100369"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8245"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Carrillo",
+        "given": [
+          "Keith"
+        ],
+        "text": "Keith Carrillo"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "565.508.9177x131",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "romeroherbert@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1983-03-22",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "989 Christopher Islands"
+        ],
+        "city": "Desireeview",
+        "state": "AL",
+        "postalCode": "81832",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.vb3p6zfy",
+        "display": "Dr. Christopher Thomas"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.cz5hc4tu",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.vb3p6zfy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Christopher Thomas</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2026687315"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Thomas",
+        "given": [
+          "Christopher"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Christopher Thomas"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(313)653-7756x243",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "57390 Morgan Plains"
+        ],
+        "city": "North Cesar",
+        "state": "AS",
+        "postalCode": "53572",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.cz5hc4tu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Green Valley Pharmacy</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2063667608"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Green Valley Pharmacy",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-417-563-7140",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "736 Brown Shores Apt. 573"
+        ],
+        "city": "New Kimberly",
+        "state": "TX",
+        "postalCode": "21517",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.e67g2ncv",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Initial consultation on 2024-03-20</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Initial consultation"
+            }
+          ],
+          "text": "Initial consultation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fh4mg9mh",
+        "display": "Keith Carrillo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.vb3p6zfy",
+            "display": "Dr. Christopher Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-03-20T15:45:00+00:00",
+        "end": "2024-03-20T16:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Initial consultation"
+            }
+          ],
+          "text": "Initial consultation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cz5hc4tu",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv53979p",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rgfucxn6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Referral discussion on 2024-10-25</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Referral discussion"
+            }
+          ],
+          "text": "Referral discussion"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fh4mg9mh",
+        "display": "Keith Carrillo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.vb3p6zfy",
+            "display": "Dr. Christopher Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-10-25T15:15:00+00:00",
+        "end": "2024-10-25T15:53:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Referral discussion"
+            }
+          ],
+          "text": "Referral discussion"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cz5hc4tu",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv53979p",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.t6dw6b3h",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Referral follow-up on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Referral follow-up"
+            }
+          ],
+          "text": "Referral follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.fh4mg9mh",
+        "display": "Keith Carrillo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.vb3p6zfy",
+            "display": "Dr. Christopher Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:00:00+00:00",
+        "end": "2025-06-15T16:33:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Referral follow-up"
+            }
+          ],
+          "text": "Referral follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cz5hc4tu",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv53979p",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "communication": {
+    "resourceType": "Communication",
+    "id": "comm.h6c3jefp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Communication: Referral letter to physiotherapist</p></div>"
+    },
+    "status": "completed",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/communication-category",
+            "code": "notification",
+            "display": "Notification"
+          }
+        ],
+        "text": "Notification"
+      }
+    ],
+    "subject": {
+      "reference": "Patient/pt.fh4mg9mh",
+      "display": "Keith Carrillo"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.t6dw6b3h"
+    },
+    "sent": "2025-06-15T10:00:00+00:00",
+    "received": "2025-06-15T10:00:00+00:00",
+    "sender": {
+      "reference": "Practitioner/pr.vb3p6zfy",
+      "display": "Dr. Christopher Thomas"
+    },
+    "payload": [
+      {
+        "contentString": "Referring patient for physical therapy evaluation following mild ankle sprain during recreational activity. Patient is otherwise healthy with no significant medical history. Goal is full recovery and return to normal activity within six weeks."
+      }
+    ]
+  },
+  "communication_request": {
+    "resourceType": "CommunicationRequest",
+    "id": "cr.u8753zd5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CommunicationRequest: Request to send referral letter</p></div>"
+    },
+    "status": "completed",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/communication-category",
+            "code": "notification",
+            "display": "Notification"
+          }
+        ],
+        "text": "Notification"
+      }
+    ],
+    "subject": {
+      "reference": "Patient/pt.fh4mg9mh",
+      "display": "Keith Carrillo"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.t6dw6b3h"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "authoredOn": "2025-06-15T10:00:00+00:00",
+    "requester": {
+      "reference": "Practitioner/pr.vb3p6zfy",
+      "display": "Dr. Christopher Thomas"
+    },
+    "sender": {
+      "reference": "Practitioner/pr.vb3p6zfy",
+      "display": "Dr. Christopher Thomas"
+    }
+  },
+  "document_manifest": {
+    "resourceType": "DocumentManifest",
+    "id": "dm.cwzc7ar9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DocumentManifest: Referral package</p></div>"
+    },
+    "masterIdentifier": {
+      "system": "http://example.org/documents",
+      "value": "REF-32810"
+    },
+    "status": "current",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.fh4mg9mh",
+      "display": "Keith Carrillo"
+    },
+    "created": "2025-06-15T10:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.vb3p6zfy",
+        "display": "Dr. Christopher Thomas"
+      }
+    ],
+    "description": "Referral package for Keith Carrillo - physiotherapy consultation",
+    "content": [
+      {
+        "reference": "Communication/comm.h6c3jefp"
+      }
+    ]
+  },
+  "task": {
+    "resourceType": "Task",
+    "id": "task.5mwzpqkj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Task: Process referral letter</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/CodeSystem/task-code",
+          "code": "fulfill",
+          "display": "Fulfill the focal request"
+        }
+      ],
+      "text": "Fulfill the focal request"
+    },
+    "focus": {
+      "reference": "CommunicationRequest/cr.u8753zd5"
+    },
+    "for": {
+      "reference": "Patient/pt.fh4mg9mh",
+      "display": "Keith Carrillo"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.t6dw6b3h"
+    },
+    "authoredOn": "2025-06-15T10:00:00+00:00",
+    "lastModified": "2025-06-15T10:00:00+00:00",
+    "requester": {
+      "reference": "Practitioner/pr.vb3p6zfy",
+      "display": "Dr. Christopher Thomas"
+    },
+    "owner": {
+      "reference": "Organization/org.cz5hc4tu",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "flag": {
+    "resourceType": "Flag",
+    "id": "flag.mt4uwep6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Flag: Pending referral follow-up</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/flag-category",
+            "code": "admin",
+            "display": "Administrative"
+          }
+        ],
+        "text": "Administrative"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://example.org/flag-codes",
+          "code": "referral-pending",
+          "display": "Referral pending follow-up"
+        }
+      ],
+      "text": "Referral pending follow-up"
+    },
+    "subject": {
+      "reference": "Patient/pt.fh4mg9mh",
+      "display": "Keith Carrillo"
+    },
+    "period": {
+      "start": "2025-06-15"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.t6dw6b3h"
+    },
+    "author": {
+      "reference": "Practitioner/pr.vb3p6zfy",
+      "display": "Dr. Christopher Thomas"
+    }
+  }
+}

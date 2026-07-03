@@ -1,0 +1,256 @@
+{
+  "resourceType": "Library",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}span": {
+                  "{http://www.w3.org/1999/xhtml}span": {
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}span": {
+                  "{http://www.w3.org/1999/xhtml}b": null,
+                  "{http://www.w3.org/1999/xhtml}span": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}span": {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}span": null
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}div": {
+                  "{http://www.w3.org/1999/xhtml}p": [
+                    {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null
+                    },
+                    {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}br": [
+                        null,
+                        null
+                      ],
+                      "{http://www.w3.org/1999/xhtml}span": [
+                        {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}span": null
+                        },
+                        {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}span": null
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "identifier": {
+    "use": "official",
+    "value": "ChlamydiaScreening_Common"
+  },
+  "version": "2.0.0",
+  "name": "ChlamydiaScreeningCommonLibrary",
+  "title": "Chlamydia Screening Common Library",
+  "status": "draft",
+  "type": {
+    "coding": {
+      "code": "logic-library"
+    }
+  },
+  "date": "2015-07-22",
+  "description": "Common Logic for adherence to Chlamydia Screening guidelines",
+  "topic": {
+    "text": "Chlamydia Screening"
+  },
+  "relatedArtifact": {
+    "type": "depends-on",
+    "resource": "http://hl7.org/fhir/Library/library-quick-model-definition"
+  },
+  "dataRequirement": {
+    "type": "Condition",
+    "codeFilter": {
+      "path": "code",
+      "valueSet": "urn:oid:2.16.840.1.113883.3.464.1003.111.12.1006"
+    }
+  },
+  "content": {
+    "contentType": "text/cql",
+    "data": "bGlicmFyeSBDaGxhbXlkaWFTY3JlZW5pbmdfQ29tbW9uIHZlcnNpb24gJzInCgp1c2luZyBRVUlDSwoKdmFsdWVzZXQgIkZlbWFsZSBBZG1pbmlzdHJhdGl2ZSBTZXgiOiAnMi4xNi44NDAuMS4xMTM4ODMuMy41NjAuMTAwLjInCnZhbHVlc2V0ICJPdGhlciBGZW1hbGUgUmVwcm9kdWN0aXZlIENvbmRpdGlvbnMiOiAnMi4xNi44NDAuMS4xMTM4ODMuMy40NjQuMTAwMy4xMTEuMTIuMTAwNicKdmFsdWVzZXQgIkdlbml0YWwgSGVycGVzIjogJzIuMTYuODQwLjEuMTEzODgzLjMuNDY0LjEwMDMuMTEwLjEyLjEwNDknCnZhbHVlc2V0ICJHZW5vY29jY2FsIEluZmVjdGlvbnMgYW5kIFZlbmVyZWFsIERpc2Vhc2VzIjogJzIuMTYuODQwLjEuMTEzODgzLjMuNDY0LjEwMDMuMTEyLjEyLjEwMDEnCnZhbHVlc2V0ICJJbmZsYW1tYXRvcnkgRGlzZWFzZXMgb2YgRmVtYWxlIFJlcHJvZHVjdGl2ZSBPcmdhbnMiOiAnMi4xNi44NDAuMS4xMTM4ODMuMy40NjQuMTAwMy4xMTIuMTIuMTAwNCcKdmFsdWVzZXQgIkNobGFteWRpYSI6ICcyLjE2Ljg0MC4xLjExMzg4My4zLjQ2NC4xMDAzLjExMi4xMi4xMDAzJwp2YWx1ZXNldCAiSElWIjogJzIuMTYuODQwLjEuMTEzODgzLjMuNDY0LjEwMDMuMTIwLjEyLjEwMDMnCnZhbHVlc2V0ICJTeXBoaWxpcyI6ICcyLjE2Ljg0MC4xLjExMzg4My4zLjQ2NC4xMDAzLjExMi4xMi4xMDAyJwp2YWx1ZXNldCAiQ29tcGxpY2F0aW9ucyBvZiBQcmVnbmFuY3ksIENoaWxkYmlydGggYW5kIHRoZSBQdWVycGVyaXVtIjogJzIuMTYuODQwLjEuMTEzODgzLjMuNDY0LjEwMDMuMTExLjEyLjEwMTInCnZhbHVlc2V0ICJQcmVnbmFuY3kgVGVzdCI6ICcyLjE2Ljg0MC4xLjExMzg4My4zLjQ2NC4xMDAzLjExMS4xMi4xMDExJwp2YWx1ZXNldCAiUGFwIFRlc3QiOiAnMi4xNi44NDAuMS4xMTM4ODMuMy40NjQuMTAwMy4xMDguMTIuMTAxNycKdmFsdWVzZXQgIkxhYiBUZXN0cyBEdXJpbmcgUHJlZ25hbmN5IjogJzIuMTYuODQwLjEuMTEzODgzLjMuNDY0LjEwMDMuMTExLjEyLjEwMDcnCnZhbHVlc2V0ICJMYWIgVGVzdHMgZm9yIFNleHVhbGx5IFRyYW5zbWl0dGVkIEluZmVjdGlvbnMiOiAnMi4xNi44NDAuMS4xMTM4ODMuMy40NjQuMTAwMy4xMTAuMTIuMTA1MScKdmFsdWVzZXQgIkNobGFteWRpYSBTY3JlZW5pbmciOiAnMi4xNi44NDAuMS4xMTM4ODMuMy40NjQuMTAwMy4xMTAuMTIuMTA1MicKCmNvbnRleHQgUGF0aWVudAoKZGVmaW5lICJDb25kaXRpb25zIEluZGljYXRpbmcgU2V4dWFsIEFjdGl2aXR5IjoKCVsiQ29uZGl0aW9uIjogIk90aGVyIEZlbWFsZSBSZXByb2R1Y3RpdmUgQ29uZGl0aW9ucyJdCgl1bmlvbiBbIkNvbmRpdGlvbiI6ICJHZW5pdGFsIEhlcnBlcyJdCiAgICB1bmlvbiBbIkNvbmRpdGlvbiI6ICJHZW5vY29jY2FsIEluZmVjdGlvbnMgYW5kIFZlbmVyZWFsIERpc2Vhc2VzIl0KICAgIHVuaW9uIFsiQ29uZGl0aW9uIjogIkluZmxhbW1hdG9yeSBEaXNlYXNlcyBvZiBGZW1hbGUgUmVwcm9kdWN0aXZlIE9yZ2FucyJdCiAgICB1bmlvbiBbIkNvbmRpdGlvbiI6ICJDaGxhbXlkaWEiXQogICAgdW5pb24gWyJDb25kaXRpb24iOiAiSElWIl0KICAgIHVuaW9uIFsiQ29uZGl0aW9uIjogIlN5cGhpbGlzIl0KICAgIHVuaW9uIFsiQ29uZGl0aW9uIjogIkNvbXBsaWNhdGlvbnMgb2YgUHJlZ25hbmN5LCBDaGlsZGJpcnRoIGFuZCB0aGUgUHVlcnBlcml1bSJdCgpkZWZpbmUgIkxhYm9yYXRvcnkgVGVzdHMgSW5kaWNhdGluZyBTZXh1YWwgQWN0aXZpdHkiOgogICAgWyJEaWFnbm9zdGljT3JkZXIiOiAiUHJlZ25hbmN5IFRlc3QiXQogICAgdW5pb24gWyJEaWFnbm9zdGljT3JkZXIiOiAiUGFwIFRlc3QiXQogICAgdW5pb24gWyJEaWFnbm9zdGljT3JkZXIiOiAiTGFiIFRlc3RzIER1cmluZyBQcmVnbmFuY3kiXQoJdW5pb24gWyJEaWFnbm9zdGljT3JkZXIiOiAiTGFiIFRlc3RzIGZvciBTZXh1YWxseSBUcmFuc21pdHRlZCBJbmZlY3Rpb25zIl0KCmRlZmluZSAiVGVzdHMgUGVyZm9ybWVkIEZvciBDaGxhbXlkaWEiOgoJWyJEaWFnbm9zdGljUmVwb3J0IjogIkNobGFteWRpYSBTY3JlZW5pbmciXQoKZGVmaW5lICJSZXN1bHRzIFByZXNlbnQgRm9yIENobGFteWRpYSBTY3JlZW5pbmciOgogICAgWyJEaWFnbm9zdGljUmVwb3J0IjogIkNobGFteWRpYSBTY3JlZW5pbmciXSBSIHdoZXJlIFIuInJlc3VsdCIgaXMgbm90IG51bGwK"
+  }
+}

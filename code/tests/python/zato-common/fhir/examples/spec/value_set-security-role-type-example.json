@@ -1,0 +1,43 @@
+{
+  "resourceType": "ValueSet",
+  "id": "security-role-type-example",
+  "extension": [
+    {
+      "valueBoolean": true
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/security-role-type-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.978"
+  },
+  "version": "6.0.0",
+  "name": "SecurityRoleTypeExamples",
+  "title": "Example Security Role Type",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "This value set contains example structural roles. In general, two types of roles can be distinguished: structural roles and functional roles. Structural Roles reflect human or organizational categories (hierarchies), and describe prerequisites, feasibilities, or competences for actions. Functional roles are bound to the realization or performance of actions.",
+  "copyright": "This is an example FHIR value set with sample codes derived from ISO-21298 - Functional and Structural Roles.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/security-structural-roles-example"
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "resourceType": "Device",
+  "id": "KinsaThermometer",
+  "identifier": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaDeviceIdentifiers",
+          "code": "SYSID",
+          "display": "System Identifier"
+        }
+      },
+      "system": "urn:oid:1.2.840.10004.1.1.1.0.0.1.0.0.1.2680",
+      "value": "00-00-52-49-20-45-4C-42"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaDeviceIdentifiers",
+          "code": "BTMAC",
+          "display": "Bluetooth Address"
+        }
+      },
+      "system": "http://hl7.org/fhir/sid/eui-48",
+      "value": "10-CE-A9-80-14-66"
+    }
+  ],
+  "udiCarrier": {
+    "deviceIdentifier": 18479793050726,
+    "issuer": "http://hl7.org/fhir/NamingSystem/gs1-di",
+    "jurisdiction": "http://hl7.org/fhir/NamingSystem/fda-udi",
+    "carrierHRF": "(01)18479793050726(21)1i9JfKh",
+    "entryType": "unknown"
+  },
+  "manufacturer": "Kinsa",
+  "serialNumber": "1i9JfKh",
+  "name": {
+    "value": "KS_1i9JfKh",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "user-friendly-name"
+      }
+    }
+  },
+  "modelNumber": "KS_1i9JfKh",
+  "type": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 65573,
+      "display": "MDC_MOC_VMS_MDS_SIMP"
+    },
+    "text": "MDC_MOC_VMS_MDS_SIMP: Personal Health Device"
+  },
+  "deviceVersion": [
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 531976
+        },
+        "text": "MDC_ID_PROD_SPEC_FW: Firmware revision"
+      },
+      "value": 1.0
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 531975
+        },
+        "text": "MDC_ID_PROD_SPEC_SW: Software revision"
+      },
+      "value": "V2.19"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 531974
+        },
+        "text": "MDC_ID_PROD_SPEC_SW: Hardware revision"
+      },
+      "value": 1.0
+    }
+  ],
+  "conformsTo": {
+    "specification": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 528392
+      },
+      "text": "MDC_DEV_SPEC_PROFILE_TEMP: Thermometer"
+    },
+    "version": 1
+  },
+  "property": {
+    "type": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 68220
+      },
+      "text": "MDC_TIME_SYNC_PROTOCOL: Time synchronization protocol"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 532224
+      },
+      "text": "MDC_TIME_SYNC_NONE: No time synchronization"
+    }
+  }
+}

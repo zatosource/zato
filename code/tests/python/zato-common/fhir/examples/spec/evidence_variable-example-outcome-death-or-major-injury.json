@@ -1,0 +1,83 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-outcome-death-or-major-injury",
+  "url": "http://hl7.org/fhir/EvidenceVariable/example-outcome-death-or-major-injury",
+  "identifier": {
+    "type": {
+      "text": "FEvIR Object Identifier"
+    },
+    "system": "urn:ietf:rfc:3986",
+    "value": "https://fevir.net/FOI/297743",
+    "assigner": {
+      "display": "Computable Publishing LLC"
+    }
+  },
+  "title": "Outcome: Death or Major Traumatic Injury on Impact",
+  "shortTitle": "Death or Major Traumatic Injury on Impact",
+  "citeAs": "Outcome: Death or Major Traumatic Injury on Impact [Database Entry: FHIR EvidenceVariable Resource]. Contributors: Joanne Dehnbostel [Authors/Creators]. In: Fast Evidence Interoperability Resources (FEvIR) Platform, FOI 297743. Revised 2025-02-15. Available at: https://fevir.net/resources/EvidenceVariable/297743. Computable resource at: https://fevir.net/resources/EvidenceVariable/297743#json.",
+  "status": "active",
+  "author": {
+    "name": "Joanne Dehnbostel"
+  },
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "Example of VariableDefinition for EBMonFHIR IG",
+  "useContext": {
+    "code": {
+      "system": "https://fevir.net/resources/CodeSystem/179423",
+      "code": "evidence-communication",
+      "display": "Evidence Communication"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "https://fevir.net/resources/CodeSystem/179423",
+        "code": "VariableDefinition",
+        "display": "VariableDefinition"
+      }
+    }
+  },
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "actual": true,
+  "definition": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 417746004,
+        "display": "Traumatic injury"
+      },
+      "text": "Death or Major Traumatic Injury"
+    }
+  },
+  "definitionModifier": {
+    "code": {
+      "coding": {
+        "system": "http://snomed.info/ct",
+        "code": 246112005,
+        "display": "Severity"
+      }
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 371924009,
+        "display": "Moderate to severe"
+      },
+      "text": "Major or Fatal (in the context of severity of traumatic injury)"
+    }
+  },
+  "handling": "boolean",
+  "timing": {
+    "contextCode": {
+      "text": "impact"
+    },
+    "offsetDuration": {
+      "value": 0
+    },
+    "text": "on impact"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "example",
+  "contained": {
+    "Medication": {
+      "id": "med0320",
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 324252006,
+          "display": "Azithromycin (as azithromycin dihydrate) 250 mg oral capsule"
+        }
+      }
+    }
+  },
+  "status": "active",
+  "intent": "order",
+  "medicationReference": {
+    "reference": "#med0320"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "requester": {
+    "reference": "Practitioner/f007",
+    "display": "Patrick Pump"
+  },
+  "dosageInstruction": {
+    "simple": {
+      "text": "5ml three times daily",
+      "additionalInstruction": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 311504000,
+          "display": "With or after food"
+        }
+      },
+      "timing": {
+        "repeat": {
+          "frequency": 3,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      },
+      "route": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 394899003,
+          "display": "oral administration of treatment"
+        }
+      },
+      "doseAndRate": {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+            "code": "ordered",
+            "display": "Ordered"
+          }
+        },
+        "doseQuantity": {
+          "value": 5,
+          "unit": "ml",
+          "system": "http://unitsofmeasure.org",
+          "code": "ml"
+        }
+      }
+    }
+  },
+  "dispenseRequest": {
+    "quantity": {
+      "value": 100,
+      "unit": "ml",
+      "system": "http://unitsofmeasure.org",
+      "code": "ml"
+    }
+  }
+}

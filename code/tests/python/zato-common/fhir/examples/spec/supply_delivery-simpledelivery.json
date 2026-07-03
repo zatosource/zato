@@ -1,0 +1,46 @@
+{
+  "resourceType": "SupplyDelivery",
+  "id": "simpledelivery",
+  "identifier": {
+    "value": "Order10284"
+  },
+  "basedOn": {
+    "reference": "SupplyRequest/simpleorder"
+  },
+  "partOf": {
+    "display": "Central Supply Restock"
+  },
+  "status": "completed",
+  "type": {
+    "coding": {
+      "system": "http://hl7.org/fhir/supplydelivery-supplyitemtype",
+      "code": "device"
+    },
+    "text": "Blood collect tubes blue cap"
+  },
+  "stage": {
+    "coding": {
+      "system": "http://hl7.org/fhir/supplydelivery-stage",
+      "code": "dispatch",
+      "display": "Dispatch"
+    }
+  },
+  "suppliedItem": {
+    "quantity": {
+      "value": 10
+    },
+    "itemCodeableConcept": {
+      "coding": {
+        "code": "BlueTubes",
+        "display": "Blood collect tubes blue cap"
+      }
+    }
+  },
+  "occurrenceDateTime": "2016-12-31",
+  "supplier": {
+    "display": "Vendor1"
+  },
+  "destination": {
+    "display": "Location 1"
+  }
+}

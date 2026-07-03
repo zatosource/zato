@@ -1,0 +1,189 @@
+{
+  "resourceType": "Observation",
+  "id": "2minute-apgar-score",
+  "contained": {
+    "Patient": {
+      "id": "newborn",
+      "identifier": {
+        "system": "http://acmehealthcare/org/mrns",
+        "value": 12345
+      },
+      "active": true,
+      "name": {
+        "family": "Chalmers",
+        "given": [
+          "Peter",
+          "James"
+        ]
+      },
+      "gender": "male",
+      "birthDate": "2016-05-18"
+    }
+  },
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "survey",
+      "display": "Survey"
+    },
+    "text": "Survey"
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "9273-4",
+      "display": "2 minute Apgar Score"
+    },
+    "text": "2 minute Apgar Score"
+  },
+  "subject": {
+    "reference": "#newborn"
+  },
+  "effectiveDateTime": "2016-05-18T22:33:22Z",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "valueQuantity": {
+    "value": 5,
+    "system": "http://unitsofmeasure.org",
+    "code": "{score}"
+  },
+  "component": [
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 249227004,
+          "display": "Apgar color score"
+        },
+        "text": "Apgar color score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 1
+            },
+            "system": "http://loinc.org",
+            "code": "LA6723-6",
+            "display": "Good color in body with bluish hands or feet"
+          },
+          {
+            "system": "http://acme.ped/apgarcolor",
+            "code": 1
+          }
+        ],
+        "text": "1. Good color in body with bluish hands or feet"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 249223000,
+          "display": "Apgar heart rate score"
+        },
+        "text": "Apgar heart rate score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 1
+            },
+            "system": "http://loinc.org",
+            "code": "LA6717-8",
+            "display": "Fewer than 100 beats per minute"
+          },
+          {
+            "system": "http://acme.ped/apgarheartrate",
+            "code": 1
+          }
+        ],
+        "text": "1. Fewer than 100 beats per minute"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 249226008,
+          "display": "Apgar response to stimulus score"
+        },
+        "text": "Apgar response to stimulus score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 1
+            },
+            "system": "http://loinc.org",
+            "code": "LA6721-0",
+            "display": "Grimace and pulling away, cough, or sneeze during suctioning"
+          },
+          {
+            "system": "http://acme.ped/apgarreflexirritability",
+            "code": 1
+          }
+        ],
+        "text": "1. Grimace during suctioning"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 249225007,
+          "display": "Apgar muscle tone score"
+        },
+        "text": "Apgar muscle tone score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 1
+            },
+            "system": "http://loinc.org",
+            "code": "LA6714-5",
+            "display": "Some flexion of arms and legs"
+          },
+          {
+            "system": "http://acme.ped/apgarmuscletone",
+            "code": 1
+          }
+        ],
+        "text": "1. Some flexion of arms and legs"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 249224006,
+          "display": "Apgar respiratory effort score"
+        },
+        "text": "Apgar respiratory effort score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 1
+            },
+            "system": "http://loinc.org",
+            "code": "LA6726-9",
+            "display": "Weak cry; may sound like whimpering, slow or irregular breathing"
+          },
+          {
+            "system": "http://acme.ped/apgarrespiratoryeffort",
+            "code": 1
+          }
+        ],
+        "text": "1. Weak cry; may sound like whimpering, slow or irregular breathing"
+      }
+    }
+  ]
+}

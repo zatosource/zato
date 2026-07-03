@@ -1,0 +1,49 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "measurereport-stratifier-value-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/measurereport-stratifier-value-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1947"
+  },
+  "version": "6.0.0",
+  "name": "MeasureReportStratifierValueExample",
+  "title": "Measure Report Stratifier Value Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Example Region Value Measure Groups for the Measure Resource.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "northwest",
+      "display": "Northwest",
+      "definition": "Northwest region stratification."
+    },
+    {
+      "code": "northeast",
+      "display": "Northeast",
+      "definition": "Northeast region stratification."
+    },
+    {
+      "code": "southwest",
+      "display": "Soutwest",
+      "definition": "Soutwest region stratification."
+    },
+    {
+      "code": "southeast",
+      "display": "Southeast",
+      "definition": "Southeast region stratification."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "resourceType": "Observation",
+  "id": 656,
+  "identifier": {
+    "value": "patientId-urn:oid:1.2.4~0000000000000000~152584~20170503155426~820"
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 152584,
+      "display": "MDC_FLOW_AWAY_EXP_FORCED_PEAK"
+    }
+  },
+  "subject": {
+    "reference": "Patient/PatientId-patientId"
+  },
+  "effectiveDateTime": "2017-05-03T15:54:26-04:00",
+  "performer": {
+    "reference": "Patient/PatientId-patientId"
+  },
+  "valueQuantity": {
+    "value": 820,
+    "unit": "cL/s",
+    "system": "urn:iso:std:iso:11073:10101",
+    "code": 265201
+  }
+}

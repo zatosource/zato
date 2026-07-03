@@ -1,0 +1,101 @@
+{
+  "resourceType": "BiologicallyDerivedProduct",
+  "id": "autologousHCT",
+  "productCategory": {
+    "coding": {
+      "code": "cells"
+    }
+  },
+  "productCode": {
+    "coding": {
+      "code": "S1128"
+    }
+  },
+  "request": {
+    "reference": "ServiceRequest/example",
+    "display": "Service Request for HCT Collection"
+  },
+  "identifier": {
+    "system": "https://www.isbt128.org/uri/SingleEuropeanCode",
+    "value": "PL001499Z549917123456 A00T041600320171231"
+  },
+  "biologicalSourceEvent": {
+    "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+    "value": "W000022000687"
+  },
+  "processingFacility": {
+    "reference": "Organization/example"
+  },
+  "division": "A00000",
+  "productStatus": {
+    "code": "available"
+  },
+  "expirationDate": "2028-08-02T23:59:00-05:00",
+  "collection": {
+    "sourcePatient": {
+      "reference": "Patient/pat1",
+      "display": "HCT Collection"
+    }
+  },
+  "storageTempRequirements": {
+    "high": {
+      "value": -120,
+      "unit": "degrees C",
+      "system": "http://unitsofmeasure.org"
+    }
+  },
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "code": "ABORhD"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/ABORhD",
+          "code": 62,
+          "display": "A RhD Positive"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "CollectionType"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/CollectionType",
+          "code": 1,
+          "display": "For Autologous Use Only"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "BagVolume"
+        }
+      },
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mL",
+        "system": "http://unitsofmeasure.org"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "74838-4"
+        }
+      },
+      "valueQuantity": {
+        "value": 2.6,
+        "unit": "10*6/mL",
+        "system": "https://ucum.org/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "resourceType": "Measure",
+  "id": "composite-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "name": "BehavioralAssessmentCompositeMeasure",
+  "title": "Behavioral Assessment Composite Measure",
+  "status": "draft",
+  "description": "Behavioral Assessment Composite Measure",
+  "relatedArtifact": [
+    {
+      "type": "composed-of",
+      "resource": "http://example.org/fhir/Measure/component-a-example"
+    },
+    {
+      "type": "composed-of",
+      "resource": "http://example.org/fhir/Measure/component-b-example"
+    }
+  ],
+  "scoring": {
+    "coding": {
+      "code": "proportion"
+    }
+  },
+  "compositeScoring": {
+    "coding": {
+      "code": "opportunity"
+    }
+  }
+}

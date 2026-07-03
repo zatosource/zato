@@ -1,0 +1,37 @@
+{
+  "resourceType": "ClinicalImpression",
+  "id": "example",
+  "identifier": {
+    "value": 12345
+  },
+  "status": "completed",
+  "description": "This 26 yo male patient is brought into ER by ambulance after being involved in a motor vehicle accident",
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  },
+  "effectivePeriod": {
+    "start": "2014-12-06T20:00:00+11:00",
+    "end": "2014-12-06T22:33:00+11:00"
+  },
+  "date": "2014-12-06T22:33:00+11:00",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "problem": {
+    "display": "MVA"
+  },
+  "summary": "provisional diagnoses of laceration of head and traumatic brain injury (TBI)",
+  "finding": {
+    "item": {
+      "concept": {
+        "coding": {
+          "system": "http://hl7.org/fhir/sid/icd-9",
+          "code": 850.0
+        }
+      }
+    }
+  }
+}

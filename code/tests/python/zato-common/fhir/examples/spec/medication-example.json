@@ -1,0 +1,29 @@
+{
+  "resourceType": "Medication",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": 323418000,
+        "display": "Penicillin V (as penicillin V potassium) 25 mg/mL oral solution"
+      },
+      {
+        "system": "http://nehta.gov.au/amt/v2",
+        "code": 22571011000036102,
+        "display": "phenoxymethylpenicillin 125 mg / 5 mL oral liquid, 5 mL measure"
+      }
+    ]
+  },
+  "form": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 37595005,
+      "display": "Suspension"
+    }
+  }
+}

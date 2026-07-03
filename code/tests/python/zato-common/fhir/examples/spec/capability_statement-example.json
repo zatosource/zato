@@ -1,0 +1,175 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}a": null
+        }
+      ]
+    }
+  },
+  "url": "urn:uuid:68d043b5-9ecf-4559-a57a-396e0d452311",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.34.2"
+  },
+  "version": 20130510,
+  "name": "ACMEEHR",
+  "title": "ACME EHR capability statement",
+  "status": "draft",
+  "experimental": true,
+  "date": "2012-01-04",
+  "publisher": "ACME Corporation",
+  "contact": {
+    "name": "System Administrator",
+    "telecom": {
+      "system": "email",
+      "value": "wile@acme.org"
+    }
+  },
+  "description": "This is the FHIR capability statement for the main EHR at ACME for the private interface - it does not describe the public interface",
+  "useContext": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+      "code": "focus"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/variant-state",
+        "code": "positive"
+      }
+    }
+  },
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "US",
+      "display": "United States of America"
+    }
+  },
+  "purpose": "Main EHR capability statement, published for contracting and operational support",
+  "copyright": "Copyright \u00a9 Acme Healthcare and GoodCorp EHR Systems",
+  "kind": "instance",
+  "instantiates": "http://ihe.org/fhir/CapabilityStatement/pixm-client",
+  "software": {
+    "name": "EHR",
+    "version": "0.00.020.2134",
+    "releaseDate": "2012-01-04"
+  },
+  "implementation": {
+    "description": "main EHR at ACME",
+    "url": "http://10.2.3.4/fhir"
+  },
+  "fhirVersion": "6.0.0",
+  "format": [
+    "xml",
+    "json"
+  ],
+  "patchFormat": [
+    "application/xml-patch+xml",
+    "application/json-patch+json"
+  ],
+  "acceptLanguage": [
+    "en",
+    "es"
+  ],
+  "implementationGuide": "http://example.org/fhir/us/lab",
+  "rest": {
+    "mode": "server",
+    "documentation": "Main FHIR endpoint for ACME health",
+    "security": {
+      "cors": true,
+      "service": {
+        "coding": {
+          "system": "http://hl7.org/fhir/restful-security-service",
+          "code": "SMART-on-FHIR"
+        }
+      },
+      "description": "See Smart on FHIR documentation"
+    },
+    "resource": {
+      "type": "Patient",
+      "profile": "http://registry.fhir.org/r5/StructureDefinition/7896271d-57f6-4231-89dc-dcc91eab2416",
+      "supportedProfile": "http://registry.fhir.org/r5/StructureDefinition/00ab9e7a-06c7-4f77-9234-4154ca1e3347",
+      "documentation": "This server does not let the clients create identities.",
+      "interaction": [
+        {
+          "code": "read"
+        },
+        {
+          "code": "vread",
+          "documentation": "Only supported for patient records since 12-Dec 2012"
+        },
+        {
+          "code": "update"
+        },
+        {
+          "code": "history-instance"
+        },
+        {
+          "code": "create"
+        },
+        {
+          "code": "history-type"
+        }
+      ],
+      "versioning": "versioned-update",
+      "readHistory": true,
+      "updateCreate": false,
+      "conditionalCreate": true,
+      "conditionalRead": "full-support",
+      "conditionalUpdate": false,
+      "conditionalPatch": false,
+      "conditionalDelete": "not-supported",
+      "searchInclude": "Patient:organization",
+      "searchRevInclude": "Person:patient",
+      "searchParam": [
+        {
+          "name": "identifier",
+          "definition": "http://hl7.org/fhir/SearchParameter/Patient-identifier",
+          "type": "token",
+          "documentation": "Only supports search by institution MRN"
+        },
+        {
+          "name": "general-practitioner",
+          "definition": "http://hl7.org/fhir/SearchParameter/Patient-general-practitioner",
+          "type": "reference"
+        }
+      ]
+    },
+    "interaction": [
+      {
+        "code": "transaction"
+      },
+      {
+        "code": "history-system"
+      }
+    ],
+    "compartment": "http://hl7.org/fhir/CompartmentDefinition/patient"
+  },
+  "messaging": {
+    "endpoint": {
+      "protocol": {
+        "system": "http://hl7.org/fhir/message-transport",
+        "code": "mllp"
+      },
+      "address": "mllp:10.1.1.10:9234"
+    },
+    "reliableCache": 30,
+    "documentation": "ADT A08 equivalent for external system notifications",
+    "supportedMessage": {
+      "mode": "receiver",
+      "definition": "http://hl7.org/fhir/MessageDefinition/example"
+    }
+  },
+  "document": {
+    "mode": "consumer",
+    "documentation": "Basic rules for all documents in the EHR system",
+    "profile": "http://fhir.hl7.org/base/Profilebc054d23-75e1-4dc6-aca5-838b6b1ac81d/_history/b5fdd9fc-b021-4ea1-911a-721a60663796"
+  }
+}

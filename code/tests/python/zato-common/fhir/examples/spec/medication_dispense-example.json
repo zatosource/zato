@@ -1,0 +1,49 @@
+{
+  "resourceType": "MedicationDispense",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "status": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/medicationdispense-status",
+      "code": "completed",
+      "display": "Completed"
+    }
+  },
+  "medicationReference": {
+    "reference": "Medication/example"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "performer": {
+    "actor": {
+      "reference": "Practitioner/f006"
+    }
+  },
+  "authorizingPrescription": {
+    "reference": "MedicationRequest/medicationrequest-example"
+  },
+  "quantity": {
+    "value": 10,
+    "unit": "ml",
+    "system": "http://unitsofmeasure.org",
+    "code": "ml"
+  },
+  "whenPrepared": "2012-05-30T16:20:00+00:00",
+  "whenHandedOver": "2012-05-31T10:20:00+00:00",
+  "substitution": {
+    "wasSubstituted": false
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "resourceType": "Organization",
+  "id": 3,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "identifier": {
+    "system": "http://michigan.gov/state-dept-ids",
+    "value": 25
+  },
+  "name": "Michigan Health",
+  "alias": "Michigan State Department of Health"
+}

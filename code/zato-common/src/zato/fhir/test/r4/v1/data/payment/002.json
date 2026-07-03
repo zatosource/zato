@@ -1,0 +1,372 @@
+{
+  "_meta": {
+    "scenario": "payment",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.8feqh6p7",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Christelle Humbert</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6786497"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2403"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Humbert",
+        "given": [
+          "Christelle"
+        ],
+        "text": "Christelle Humbert"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "934.697.6631",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "davisamy@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1978-11-17",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "6992 Laura Courts"
+        ],
+        "city": "Wardside",
+        "state": "MN",
+        "postalCode": "45729",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.eqsu8bkd",
+        "display": "Dr. Théodore Barre"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.bg8trcfz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5828692366"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "4667729064",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "77562 Bradford Light"
+        ],
+        "city": "North Abigailstad",
+        "state": "WA",
+        "postalCode": "26163",
+        "country": "US"
+      }
+    ]
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.mh6wxz8c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Copay payment received</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.94gxzawt"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    },
+    "amount": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.94gxzawt",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Copay reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-15",
+      "end": "2025-06-15"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "detail": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/payment-type",
+              "code": "payment",
+              "display": "Payment"
+            }
+          ],
+          "text": "Payment"
+        },
+        "amount": {
+          "value": 20,
+          "currency": "USD"
+        },
+        "date": "2025-06-15"
+      }
+    ]
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.u4xyx5jc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Copay invoice for wellness visit</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "copay-invoice",
+          "display": "Copay Invoice"
+        }
+      ],
+      "text": "Copay Invoice"
+    },
+    "subject": {
+      "reference": "Patient/pt.8feqh6p7",
+      "display": "Christelle Humbert"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    },
+    "account": {
+      "reference": "Account/acct.vjrmub3e"
+    },
+    "totalNet": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 20,
+      "currency": "USD"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.vjrmub3e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for Christelle Humbert</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - Christelle Humbert",
+    "subject": [
+      {
+        "reference": "Patient/pt.8feqh6p7",
+        "display": "Christelle Humbert"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.bg8trcfz",
+      "display": "Lakeside Wellness Center"
+    }
+  }
+}

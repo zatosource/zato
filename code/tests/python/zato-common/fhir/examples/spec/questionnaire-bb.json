@@ -1,0 +1,140 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "bb",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}pre": {
+        "{http://www.w3.org/1999/xhtml}b": null
+      }
+    }
+  },
+  "url": "http://hl7.org/fhir/Questionnaire/bb",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.20.4"
+  },
+  "name": "NSWGovernmentMyPersonalHealthRecord",
+  "title": "NSW Government My Personal Health Record",
+  "status": "draft",
+  "subjectType": "Patient",
+  "date": "2013-02-19",
+  "publisher": "New South Wales Department of Health",
+  "description": "NSW Government My Personal Health Record",
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "AU"
+    }
+  },
+  "item": {
+    "linkId": "birthDetails",
+    "text": "Birth details - To be completed by health professional",
+    "type": "group",
+    "item": [
+      {
+        "linkId": "group",
+        "type": "group",
+        "item": [
+          {
+            "linkId": "nameOfChild",
+            "text": "Name of child",
+            "type": "string"
+          },
+          {
+            "linkId": "sex",
+            "text": "Sex",
+            "type": "coding",
+            "answerOption": [
+              {
+                "valueCoding": {
+                  "code": "F"
+                }
+              },
+              {
+                "valueCoding": {
+                  "code": "M"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "linkId": "neonatalInformation",
+        "text": "Neonatal Information",
+        "type": "group",
+        "item": [
+          {
+            "linkId": "birthWeight",
+            "text": "Birth weight (kg)",
+            "type": "decimal"
+          },
+          {
+            "linkId": "birthLength",
+            "text": "Birth length (cm)",
+            "type": "decimal"
+          },
+          {
+            "linkId": "vitaminKgiven",
+            "text": "Vitamin K given",
+            "type": "coding",
+            "answerOption": [
+              {
+                "valueCoding": {
+                  "code": "INJECTION"
+                }
+              },
+              {
+                "valueCoding": {
+                  "code": "INTRAVENOUS"
+                }
+              },
+              {
+                "valueCoding": {
+                  "code": "ORAL"
+                }
+              }
+            ],
+            "item": {
+              "linkId": "vitaminKgivenDoses",
+              "type": "group",
+              "enableWhen": {
+                "question": "vitaminKgiven",
+                "operator": "exists",
+                "answerBoolean": true
+              },
+              "item": [
+                {
+                  "linkId": "vitaminKDose1",
+                  "text": "1st dose",
+                  "type": "dateTime"
+                },
+                {
+                  "linkId": "vitaminKDose2",
+                  "text": "2nd dose",
+                  "type": "dateTime"
+                }
+              ]
+            }
+          },
+          {
+            "linkId": "hepBgiven",
+            "text": "Hep B given y / n",
+            "type": "boolean",
+            "item": {
+              "linkId": "hepBgivenDate",
+              "text": "Date given",
+              "type": "date"
+            }
+          },
+          {
+            "linkId": "abnormalitiesAtBirth",
+            "text": "Abnormalities noted at birth",
+            "type": "string"
+          }
+        ]
+      }
+    ]
+  }
+}

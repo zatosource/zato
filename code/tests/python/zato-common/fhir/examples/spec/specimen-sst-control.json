@@ -1,0 +1,35 @@
+{
+  "resourceType": "Specimen",
+  "id": "sst-control",
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "ACSN",
+        "display": "Accession"
+      }
+    },
+    "system": "http://acme.com/labs/accession-ids",
+    "value": "20150816-00124-qc"
+  },
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 119364003,
+      "display": "Serum sample"
+    }
+  },
+  "role": {
+    "coding": {
+      "code": "q",
+      "display": "Control specimen"
+    }
+  },
+  "container": {
+    "device": {
+      "reference": {
+        "reference": "Device/device-example-specimen-container-example-sst-vacutainer"
+      }
+    }
+  }
+}

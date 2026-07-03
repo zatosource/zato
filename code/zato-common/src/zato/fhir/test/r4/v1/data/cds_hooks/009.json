@@ -1,0 +1,271 @@
+{
+  "_meta": {
+    "scenario": "cds_hooks",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.fvyxcqr7",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 황 동현</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4074259"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8649"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "황",
+        "given": [
+          "동현"
+        ],
+        "text": "황 동현"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "987.447.6801x7308",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "patrick72@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1965-04-25",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "864 Thompson Key Suite 515"
+        ],
+        "city": "South Angelafurt",
+        "state": "NJ",
+        "postalCode": "79827",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.dp4qur69",
+        "display": "김 민수"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.s3a3kr4p",
+      "display": "Cabinet Medical Soleil"
+    }
+  },
+  "guidance_response": {
+    "resourceType": "GuidanceResponse",
+    "id": "gr.b3uut2j6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GuidanceResponse: Recommend scheduling wellness visit</p></div>"
+    },
+    "requestIdentifier": {
+      "system": "http://example.org/cds-hooks",
+      "value": "req-23981"
+    },
+    "moduleCanonical": "PlanDefinition/pd.7adbw9py",
+    "status": "success",
+    "subject": {
+      "reference": "Patient/pt.fvyxcqr7",
+      "display": "황 동현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc_placeholder.xqxz65ay"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": {
+      "reference": "Practitioner/pr.dp4qur69",
+      "display": "김 민수"
+    },
+    "outputParameters": {
+      "reference": "Parameters/params_placeholder.ukpg7t5h"
+    },
+    "result": {
+      "reference": "RequestGroup/rg.wrzsg2up"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.wrzsg2up",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit recommendation actions</p></div>"
+    },
+    "status": "active",
+    "intent": "proposal",
+    "subject": {
+      "reference": "Patient/pt.fvyxcqr7",
+      "display": "황 동현"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.dp4qur69",
+      "display": "김 민수"
+    },
+    "action": [
+      {
+        "title": "Schedule annual wellness visit",
+        "description": "Patient is due for annual wellness visit. Consider scheduling an appointment.",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/action-type",
+              "code": "create",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.7adbw9py",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: CDS Hooks wellness reminder service</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.7adbw9py",
+    "name": "WellnessReminderService",
+    "title": "Wellness Visit Reminder CDS Service",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Cabinet Medical Soleil",
+    "description": "A CDS Hooks service that reminds providers when a patient is due for an annual wellness visit.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "eca-rule",
+          "display": "ECA Rule"
+        }
+      ],
+      "text": "ECA Rule"
+    },
+    "action": [
+      {
+        "title": "Check wellness visit due date",
+        "description": "Evaluate whether patient is overdue for annual wellness visit",
+        "condition": [
+          {
+            "kind": "applicability",
+            "expression": {
+              "language": "text/cql",
+              "expression": "IsWellnessVisitOverdue"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

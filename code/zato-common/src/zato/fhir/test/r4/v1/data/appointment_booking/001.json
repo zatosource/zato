@@ -1,0 +1,811 @@
+{
+  "_meta": {
+    "scenario": "appointment_booking",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ht7s5ybr",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Jacqueline Stafford</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN3863221"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9197"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Stafford",
+        "given": [
+          "Jacqueline"
+        ],
+        "text": "Jacqueline Stafford"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(963)687-7038x893",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kmartin@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1998-06-18",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "78186 Johns Islands"
+        ],
+        "city": "Port Jonathanchester",
+        "state": "OK",
+        "postalCode": "70602",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.7ccpmxxu",
+        "display": "Dr. Paula Williams"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.99z4dqmk",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.7ccpmxxu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Paula Williams</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9011561510"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Williams",
+        "given": [
+          "Paula"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Paula Williams"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "759-201-0171",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "414 Amber Knolls"
+        ],
+        "city": "Port Laura",
+        "state": "AK",
+        "postalCode": "42374",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.99z4dqmk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Green Valley Pharmacy</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1711602459"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Green Valley Pharmacy",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "9187257823",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "38058 Thomas Light"
+        ],
+        "city": "East Jonathan",
+        "state": "AR",
+        "postalCode": "63489",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ggemk9d3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual checkup on 2024-08-02</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ht7s5ybr",
+        "display": "Jacqueline Stafford"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.7ccpmxxu",
+            "display": "Dr. Paula Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-02T10:45:00+00:00",
+        "end": "2024-08-02T11:20:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.99z4dqmk",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t76gwzsm",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.bv89e244",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2024-12-16</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ht7s5ybr",
+        "display": "Jacqueline Stafford"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.7ccpmxxu",
+            "display": "Dr. Paula Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-16T09:45:00+00:00",
+        "end": "2024-12-16T10:21:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.99z4dqmk",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t76gwzsm",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4556kp23",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Wellness screening on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ht7s5ybr",
+        "display": "Jacqueline Stafford"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.7ccpmxxu",
+            "display": "Dr. Paula Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T13:00:00+00:00",
+        "end": "2025-06-15T13:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.99z4dqmk",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t76gwzsm",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "appointment": {
+    "resourceType": "Appointment",
+    "id": "appt.epjsrupy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Appointment: Follow-up wellness visit</p></div>"
+    },
+    "status": "booked",
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "appointmentType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+          "code": "FOLLOWUP",
+          "display": "A follow up visit"
+        }
+      ],
+      "text": "A follow up visit"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "Z00.00",
+            "display": "Annual wellness follow-up"
+          }
+        ],
+        "text": "Annual wellness follow-up"
+      }
+    ],
+    "start": "2025-12-09T11:00:00+00:00",
+    "end": "2025-12-09T11:30:00+00:00",
+    "minutesDuration": 30,
+    "slot": [
+      {
+        "reference": "Slot/slot.pcgxch39"
+      }
+    ],
+    "created": "2025-06-15",
+    "participant": [
+      {
+        "actor": {
+          "reference": "Patient/pt.ht7s5ybr",
+          "display": "Jacqueline Stafford"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Practitioner/pr.7ccpmxxu",
+          "display": "Dr. Paula Williams"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Location/loc.t76gwzsm",
+          "display": "Green Valley Pharmacy - Main Office"
+        },
+        "required": "required",
+        "status": "accepted"
+      }
+    ]
+  },
+  "appointment_response": {
+    "resourceType": "AppointmentResponse",
+    "id": "ar.kw59eemq",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AppointmentResponse: Patient accepted</p></div>"
+    },
+    "appointment": {
+      "reference": "Appointment/appt.epjsrupy"
+    },
+    "start": "2025-12-09T11:00:00+00:00",
+    "end": "2025-12-09T11:30:00+00:00",
+    "participantType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "ATND",
+            "display": "attender"
+          }
+        ],
+        "text": "attender"
+      }
+    ],
+    "actor": {
+      "reference": "Patient/pt.ht7s5ybr",
+      "display": "Jacqueline Stafford"
+    },
+    "participantStatus": "accepted"
+  },
+  "schedule": {
+    "resourceType": "Schedule",
+    "id": "sched.zy42djyg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Schedule: Dr. Dr. Paula Williams availability</p></div>"
+    },
+    "active": true,
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "actor": [
+      {
+        "reference": "Practitioner/pr.7ccpmxxu",
+        "display": "Dr. Paula Williams"
+      },
+      {
+        "reference": "Location/loc.t76gwzsm",
+        "display": "Green Valley Pharmacy - Main Office"
+      },
+      {
+        "reference": "HealthcareService/hs.tjsq3xdn"
+      }
+    ],
+    "planningHorizon": {
+      "start": "2025-06-15",
+      "end": "2026-12-31"
+    }
+  },
+  "slot": {
+    "resourceType": "Slot",
+    "id": "slot.pcgxch39",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Slot: Available appointment slot</p></div>"
+    },
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "schedule": {
+      "reference": "Schedule/sched.zy42djyg"
+    },
+    "status": "busy",
+    "start": "2025-12-09T11:00:00+00:00",
+    "end": "2025-12-09T11:30:00+00:00"
+  },
+  "healthcare_service": {
+    "resourceType": "HealthcareService",
+    "id": "hs.tjsq3xdn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HealthcareService: General wellness services at Green Valley Pharmacy</p></div>"
+    },
+    "active": true,
+    "providedBy": {
+      "reference": "Organization/org.99z4dqmk",
+      "display": "Green Valley Pharmacy"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "name": "General Wellness - Green Valley Pharmacy",
+    "appointmentRequired": true,
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "08:00:00",
+        "availableEndTime": "17:00:00"
+      }
+    ]
+  },
+  "endpoint": {
+    "resourceType": "Endpoint",
+    "id": "ep.hadsupyz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Endpoint: FHIR endpoint for Green Valley Pharmacy</p></div>"
+    },
+    "status": "active",
+    "connectionType": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest",
+      "display": "HL7 FHIR"
+    },
+    "name": "Green Valley Pharmacy FHIR Endpoint",
+    "managingOrganization": {
+      "reference": "Organization/org.99z4dqmk",
+      "display": "Green Valley Pharmacy"
+    },
+    "payloadType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-payload-type",
+            "code": "any",
+            "display": "Any"
+          }
+        ],
+        "text": "Any"
+      }
+    ],
+    "address": "https://fhir.example.org/org.99z4dqmk"
+  }
+}

@@ -1,0 +1,843 @@
+{
+  "_meta": {
+    "scenario": "care_plan",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.yka3dth6",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Denis Guilbert</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7287638"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5569"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Guilbert",
+        "given": [
+          "Denis"
+        ],
+        "text": "Denis Guilbert"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-592-228-4068x377",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "ijohnson@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1991-09-10",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "1455 Escobar Parkway"
+        ],
+        "city": "East Rachel",
+        "state": "MH",
+        "postalCode": "35837",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.9mx34yzx",
+        "display": "Dr. Danielle Richard"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.chx98qp7",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.9mx34yzx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Danielle Richard</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4839749576"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Richard",
+        "given": [
+          "Danielle"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Danielle Richard"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "923-471-6909",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "37129 Mccormick Pine Suite 754"
+        ],
+        "city": "Port David",
+        "state": "FM",
+        "postalCode": "23631",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.chx98qp7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Centre de Bien-Etre Lumiere</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8988989702"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Centre de Bien-Etre Lumiere",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(407)338-2897",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "52830 Pollard Run Apt. 212"
+        ],
+        "city": "Richardland",
+        "state": "NH",
+        "postalCode": "80522",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.2gf36g4j",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care planning session on 2024-07-09</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yka3dth6",
+        "display": "Denis Guilbert"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.9mx34yzx",
+            "display": "Dr. Danielle Richard"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-09T12:45:00+00:00",
+        "end": "2024-07-09T13:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.chx98qp7",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.mrxbe39v",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.w2bwmggd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care plan review on 2025-01-16</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yka3dth6",
+        "display": "Denis Guilbert"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.9mx34yzx",
+            "display": "Dr. Danielle Richard"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-16T08:30:00+00:00",
+        "end": "2025-01-16T09:28:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.chx98qp7",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.mrxbe39v",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4fb9knf3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Goal assessment on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yka3dth6",
+        "display": "Denis Guilbert"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.9mx34yzx",
+            "display": "Dr. Danielle Richard"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:00:00+00:00",
+        "end": "2025-06-15T11:52:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.chx98qp7",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.mrxbe39v",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.v6a4a99m",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Wellness improvement plan for Denis Guilbert</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Wellness Improvement Plan - Denis Guilbert",
+    "subject": {
+      "reference": "Patient/pt.yka3dth6",
+      "display": "Denis Guilbert"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.4fb9knf3"
+    },
+    "period": {
+      "start": "2024-07-09"
+    },
+    "author": {
+      "reference": "Practitioner/pr.9mx34yzx",
+      "display": "Dr. Danielle Richard"
+    },
+    "careTeam": [
+      {
+        "reference": "CareTeam/ct.k88kfm5b"
+      }
+    ],
+    "goal": [
+      {
+        "reference": "Goal/goal.7c94m45d"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "226029000",
+                "display": "Exercises"
+              }
+            ],
+            "text": "Exercises"
+          },
+          "description": "Daily walking program, 30 minutes per day"
+        }
+      },
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11816003",
+                "display": "Diet education"
+              }
+            ],
+            "text": "Diet education"
+          },
+          "description": "Heart-healthy diet counseling"
+        }
+      }
+    ]
+  },
+  "care_team": {
+    "resourceType": "CareTeam",
+    "id": "ct.k88kfm5b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CareTeam: Wellness team for Denis Guilbert</p></div>"
+    },
+    "status": "active",
+    "name": "Wellness Care Team - Denis Guilbert",
+    "subject": {
+      "reference": "Patient/pt.yka3dth6",
+      "display": "Denis Guilbert"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.4fb9knf3"
+    },
+    "participant": [
+      {
+        "role": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND",
+                "display": "attender"
+              }
+            ],
+            "text": "attender"
+          }
+        ],
+        "member": {
+          "reference": "Practitioner/pr.9mx34yzx",
+          "display": "Dr. Danielle Richard"
+        }
+      }
+    ],
+    "managingOrganization": [
+      {
+        "reference": "Organization/org.chx98qp7",
+        "display": "Centre de Bien-Etre Lumiere"
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.7c94m45d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Increase daily steps to 10,000</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "in-progress",
+          "display": "In Progress"
+        }
+      ],
+      "text": "In Progress"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "dietary",
+            "display": "Dietary"
+          }
+        ],
+        "text": "Dietary"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "408580007",
+          "display": "Increase daily steps to 10,000"
+        }
+      ],
+      "text": "Increase daily steps to 10,000"
+    },
+    "subject": {
+      "reference": "Patient/pt.yka3dth6",
+      "display": "Denis Guilbert"
+    },
+    "startDate": "2024-07-09",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index"
+            }
+          ],
+          "text": "Body mass index"
+        },
+        "detailRange": {
+          "low": {
+            "value": 18.5,
+            "unit": "kg/m2"
+          },
+          "high": {
+            "value": 24.9,
+            "unit": "kg/m2"
+          }
+        },
+        "dueDate": "2026-01-01"
+      }
+    ],
+    "expressedBy": {
+      "reference": "Patient/pt.yka3dth6",
+      "display": "Denis Guilbert"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.kbvvp8rp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit action group</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "subject": {
+      "reference": "Patient/pt.yka3dth6",
+      "display": "Denis Guilbert"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.4fb9knf3"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.9mx34yzx",
+      "display": "Dr. Danielle Richard"
+    },
+    "instantiatesCanonical": [
+      "PlanDefinition/pd.v4qc6m7e"
+    ],
+    "action": [
+      {
+        "title": "Start exercise program",
+        "resource": {
+          "reference": "CarePlan/cp.v6a4a99m"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.v4qc6m7e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Wellness improvement protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.v4qc6m7e",
+    "name": "WellnessImprovementProtocol",
+    "title": "Wellness Improvement Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "description": "A structured protocol for improving overall wellness through exercise, nutrition counseling, and regular follow-up visits.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    },
+    "goal": [
+      {
+        "description": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "408580007",
+              "display": "Increase daily steps to 10,000"
+            }
+          ],
+          "text": "Increase daily steps to 10,000"
+        },
+        "addresses": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "Z00.00",
+                "display": "General adult medical examination"
+              }
+            ],
+            "text": "General adult medical examination"
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "title": "Exercise Program",
+        "definitionCanonical": "ActivityDefinition/ad.8bx9j2yz"
+      }
+    ]
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.8bx9j2yz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Daily walking exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.8bx9j2yz",
+    "name": "DailyWalkingProgram",
+    "title": "Daily Walking Exercise Program",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "description": "A structured daily walking program to improve cardiovascular fitness. Start with 15 minutes and increase to 30 minutes over four weeks.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    },
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 1,
+        "periodUnit": "d",
+        "duration": 30,
+        "durationUnit": "min"
+      }
+    }
+  }
+}

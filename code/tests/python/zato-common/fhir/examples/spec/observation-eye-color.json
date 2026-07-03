@@ -1,0 +1,13 @@
+{
+  "resourceType": "Observation",
+  "id": "eye-color",
+  "status": "final",
+  "code": {
+    "text": "eye color"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "effectiveDateTime": "2016-05-18",
+  "valueString": "blue"
+}

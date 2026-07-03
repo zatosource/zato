@@ -1,0 +1,46 @@
+{
+  "resourceType": "DeviceMetric",
+  "id": "example",
+  "identifier": {
+    "system": "http://goodcare.org/devicemetric/id",
+    "value": 345675
+  },
+  "type": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 150456,
+      "display": "MDC_PULS_OXIM_SAT_O2"
+    }
+  },
+  "unit": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 262688,
+      "display": "MDC_DIM_PERCENT"
+    }
+  },
+  "device": {
+    "reference": "Device/dev1"
+  },
+  "status": "active",
+  "operationalStatus": "on",
+  "color": "blue",
+  "category": {
+    "coding": {
+      "system": "http://hl7.org/fhir/metric-category",
+      "code": "measurement",
+      "display": "Measurement"
+    }
+  },
+  "measurementFrequency": {
+    "value": 1,
+    "unit": "Hertz",
+    "system": "http://unitsofmeasure.org",
+    "code": "Hz"
+  },
+  "calibration": {
+    "type": "two-point",
+    "state": "calibrated",
+    "time": "2016-12-28T09:03:04-05:00"
+  }
+}

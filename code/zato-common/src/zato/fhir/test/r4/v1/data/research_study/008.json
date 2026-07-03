@@ -1,0 +1,630 @@
+{
+  "_meta": {
+    "scenario": "research_study",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.mch9qh6k",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Corinne Diallo</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8398854"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7900"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Diallo",
+        "given": [
+          "Corinne"
+        ],
+        "text": "Corinne Diallo"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-249-598-4583x49898",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "troyevans@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1990-04-08",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "693 Johnson Tunnel Apt. 657"
+        ],
+        "city": "East Evan",
+        "state": "IL",
+        "postalCode": "09640",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.8r4pn85e",
+        "display": "Dr. Jeannine Weber"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.vwfmyx2h",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.vwfmyx2h",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Centre de Bien-Etre Lumiere</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3568351915"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Centre de Bien-Etre Lumiere",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-575-360-6530x001",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "21812 Justin Gateway Suite 897"
+        ],
+        "city": "South Kylehaven",
+        "state": "GU",
+        "postalCode": "43778",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.f8qkkan5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study enrollment on 2024-07-01</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study enrollment"
+            }
+          ],
+          "text": "Study enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.mch9qh6k",
+        "display": "Corinne Diallo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8r4pn85e",
+            "display": "Dr. Jeannine Weber"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-01T08:15:00+00:00",
+        "end": "2024-07-01T08:54:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study enrollment"
+            }
+          ],
+          "text": "Study enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vwfmyx2h",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.b8xt28qb",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.pxps3k4b",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study follow-up on 2024-12-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study follow-up"
+            }
+          ],
+          "text": "Study follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.mch9qh6k",
+        "display": "Corinne Diallo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8r4pn85e",
+            "display": "Dr. Jeannine Weber"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-06T08:30:00+00:00",
+        "end": "2024-12-06T09:14:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study follow-up"
+            }
+          ],
+          "text": "Study follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vwfmyx2h",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.b8xt28qb",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.d2wptnep",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study completion on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study completion"
+            }
+          ],
+          "text": "Study completion"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.mch9qh6k",
+        "display": "Corinne Diallo"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8r4pn85e",
+            "display": "Dr. Jeannine Weber"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T13:15:00+00:00",
+        "end": "2025-06-15T13:57:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study completion"
+            }
+          ],
+          "text": "Study completion"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vwfmyx2h",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.b8xt28qb",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "research_study": {
+    "resourceType": "ResearchStudy",
+    "id": "rs.uvynp57e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchStudy: Effect of Vitamin D Supplementation on Healthy Adults</p></div>"
+    },
+    "status": "active",
+    "title": "Effect of Vitamin D Supplementation on Healthy Adults",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/research-study-category",
+            "code": "interventional",
+            "display": "Interventional"
+          }
+        ],
+        "text": "Interventional"
+      }
+    ],
+    "condition": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "E55.9",
+            "display": "Vitamin D deficiency"
+          }
+        ],
+        "text": "Vitamin D deficiency"
+      }
+    ],
+    "description": "A randomized controlled trial examining the effect of daily vitamin D3 supplementation on serum levels in healthy adults over 12 months. All participants showed improvement.",
+    "period": {
+      "start": "2024-07-01",
+      "end": "2026-06-30"
+    },
+    "sponsor": {
+      "reference": "Organization/org.vwfmyx2h",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "principalInvestigator": {
+      "reference": "Practitioner/pr.8r4pn85e",
+      "display": "Dr. Jeannine Weber"
+    },
+    "enrollment": [
+      {
+        "reference": "Group/grp_placeholder.6uuuyngs"
+      }
+    ]
+  },
+  "research_subject": {
+    "resourceType": "ResearchSubject",
+    "id": "rsub.y8f9sgsv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchSubject: Corinne Diallo enrolled in vitamin D study</p></div>"
+    },
+    "status": "on-study",
+    "study": {
+      "reference": "ResearchStudy/rs.uvynp57e"
+    },
+    "individual": {
+      "reference": "Patient/pt.mch9qh6k",
+      "display": "Corinne Diallo"
+    },
+    "period": {
+      "start": "2024-07-01"
+    },
+    "assignedArm": "Treatment arm - Vitamin D3 1000 IU daily",
+    "actualArm": "Treatment arm - Vitamin D3 1000 IU daily"
+  },
+  "research_definition": {
+    "resourceType": "ResearchDefinition",
+    "id": "rd.j4txw64y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchDefinition: Vitamin D supplementation study design</p></div>"
+    },
+    "url": "http://example.org/ResearchDefinition/rd.j4txw64y",
+    "name": "VitaminDSupplementationStudy",
+    "title": "Effect of Vitamin D Supplementation on Healthy Adults",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "description": "Study definition for evaluating vitamin D supplementation in healthy adults.",
+    "population": {
+      "reference": "ResearchElementDefinition/red.vuv5y3uw"
+    }
+  },
+  "research_element_definition": {
+    "resourceType": "ResearchElementDefinition",
+    "id": "red.vuv5y3uw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchElementDefinition: Study population criteria</p></div>"
+    },
+    "url": "http://example.org/ResearchElementDefinition/red.vuv5y3uw",
+    "name": "VitaminDStudyPopulation",
+    "title": "Vitamin D Study Population",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "type": "population",
+    "characteristic": [
+      {
+        "definitionCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Healthy adult"
+            }
+          ],
+          "text": "Healthy adult"
+        },
+        "exclude": false
+      }
+    ]
+  },
+  "evidence": {
+    "resourceType": "Evidence",
+    "id": "ev.a8d63yae",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Evidence: Vitamin D supplementation improves serum levels</p></div>"
+    },
+    "url": "http://example.org/Evidence/ev.a8d63yae",
+    "name": "VitaminDEvidence",
+    "title": "Evidence for Vitamin D Supplementation Efficacy",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "description": "Evidence showing that daily vitamin D3 1000 IU supplementation improves serum 25-hydroxyvitamin D levels from deficient to sufficient range within 6-12 months in healthy adults.",
+    "exposureBackground": {
+      "reference": "EvidenceVariable/evv.tq38wseu"
+    }
+  },
+  "evidence_variable": {
+    "resourceType": "EvidenceVariable",
+    "id": "evv.tq38wseu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EvidenceVariable: Serum vitamin D level</p></div>"
+    },
+    "url": "http://example.org/EvidenceVariable/evv.tq38wseu",
+    "name": "SerumVitaminDLevel",
+    "title": "Serum 25-Hydroxyvitamin D Level",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Centre de Bien-Etre Lumiere",
+    "type": "continuous",
+    "characteristic": [
+      {
+        "definitionCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "1989-3",
+              "display": "Vitamin D"
+            }
+          ],
+          "text": "Vitamin D"
+        },
+        "exclude": false
+      }
+    ]
+  }
+}

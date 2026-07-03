@@ -1,0 +1,17 @@
+{
+  "resourceType": "Practitioner",
+  "id": "xcda1",
+  "identifier": {
+    "use": "official",
+    "system": "http://healthcare.example.org/identifiers/staff",
+    "value": "D234123"
+  },
+  "name": {
+    "family": "Dopplemeyer",
+    "given": "Sherry"
+  },
+  "telecom": {
+    "system": "email",
+    "value": "john.doe@healthcare.example.org"
+  }
+}

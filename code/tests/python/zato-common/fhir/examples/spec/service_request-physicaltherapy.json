@@ -1,0 +1,37 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "physicaltherapy",
+  "identifier": {
+    "value": 12345
+  },
+  "status": "completed",
+  "intent": "order",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 722138006,
+        "display": "Physical therapy"
+      },
+      "text": "Physical therapy"
+    }
+  },
+  "quantityRatio": {
+    "numerator": {
+      "value": 20,
+      "unit": "treatment"
+    },
+    "denominator": {
+      "value": 1,
+      "unit": "month"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "authoredOn": "2017-03-05",
+  "requester": {
+    "reference": "Practitioner/3ad0687e-f477-468c-afd5-fcc2bf897809",
+    "display": "Dr. Beverly Crusher"
+  }
+}

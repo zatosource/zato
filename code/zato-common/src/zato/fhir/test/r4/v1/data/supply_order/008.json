@@ -1,0 +1,629 @@
+{
+  "_meta": {
+    "scenario": "supply_order",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.j2cuupyf",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Luce Fabre</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7422385"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3130"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Fabre",
+        "given": [
+          "Luce"
+        ],
+        "text": "Luce Fabre"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "222-366-1549x75435",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "anthonyowens@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1988-05-07",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "703 Kelly Curve Suite 178"
+        ],
+        "city": "West Andre",
+        "state": "CT",
+        "postalCode": "78699",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.cz3x7fzq",
+        "display": "Dr. Anaïs Bourgeois"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.4t58dcmr",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.4t58dcmr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Centre de Bien-Etre Lumiere</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5309768219"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Centre de Bien-Etre Lumiere",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(998)776-5283x118",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "12649 Adams Pass"
+        ],
+        "city": "West Ryan",
+        "state": "PA",
+        "postalCode": "96908",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.sxcxm6pb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply request on 2024-07-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.j2cuupyf",
+        "display": "Luce Fabre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cz3x7fzq",
+            "display": "Dr. Anaïs Bourgeois"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-21T13:45:00+00:00",
+        "end": "2024-07-21T14:18:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4t58dcmr",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bxae2xhv",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.agx9umzm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply follow-up on 2025-02-11</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.j2cuupyf",
+        "display": "Luce Fabre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cz3x7fzq",
+            "display": "Dr. Anaïs Bourgeois"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-11T16:15:00+00:00",
+        "end": "2025-02-11T17:08:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4t58dcmr",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bxae2xhv",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4dh94eee",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply confirmation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.j2cuupyf",
+        "display": "Luce Fabre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cz3x7fzq",
+            "display": "Dr. Anaïs Bourgeois"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:30:00+00:00",
+        "end": "2025-06-15T12:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4t58dcmr",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.bxae2xhv",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "supply_request": {
+    "resourceType": "SupplyRequest",
+    "id": "sr.f5kxdf72",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyRequest: Adhesive bandages for school clinic</p></div>"
+    },
+    "status": "completed",
+    "category": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supplyrequest-kind",
+          "code": "nonstock",
+          "display": "Non-Stock"
+        }
+      ],
+      "text": "Non-Stock"
+    },
+    "itemCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "412020006",
+          "display": "Adhesive bandage"
+        }
+      ],
+      "text": "Adhesive bandage"
+    },
+    "quantity": {
+      "value": 200,
+      "unit": "unit",
+      "system": "http://unitsofmeasure.org",
+      "code": "{each}"
+    },
+    "occurrenceDateTime": "2025-06-15T09:00:00+00:00",
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Organization/rorg.bpk8hhyf",
+      "display": "Riverside School Health Office"
+    },
+    "supplier": [
+      {
+        "reference": "Organization/org.4t58dcmr",
+        "display": "Centre de Bien-Etre Lumiere"
+      }
+    ],
+    "deliverFrom": {
+      "reference": "Organization/org.4t58dcmr",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "deliverTo": {
+      "reference": "Organization/rorg.bpk8hhyf",
+      "display": "Riverside School Health Office"
+    }
+  },
+  "supply_delivery": {
+    "resourceType": "SupplyDelivery",
+    "id": "sd.wcna8dns",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyDelivery: Bandages delivered to school clinic</p></div>"
+    },
+    "status": "completed",
+    "basedOn": [
+      {
+        "reference": "SupplyRequest/sr.f5kxdf72"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.j2cuupyf",
+      "display": "Luce Fabre"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supply-item-type",
+          "code": "device",
+          "display": "Device"
+        }
+      ],
+      "text": "Device"
+    },
+    "suppliedItem": {
+      "quantity": {
+        "value": 200,
+        "unit": "unit",
+        "system": "http://unitsofmeasure.org",
+        "code": "{each}"
+      },
+      "itemCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "412020006",
+            "display": "Adhesive bandage"
+          }
+        ],
+        "text": "Adhesive bandage"
+      }
+    },
+    "occurrenceDateTime": "2025-06-21T14:00:00+00:00",
+    "supplier": {
+      "reference": "Organization/org.4t58dcmr",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "destination": {
+      "reference": "Location/loc.bxae2xhv",
+      "display": "Centre de Bien-Etre Lumiere - Main Office"
+    }
+  },
+  "receiving_organization": {
+    "resourceType": "Organization",
+    "id": "rorg.bpk8hhyf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverside School Health Office</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "edu",
+            "display": "Educational Institute"
+          }
+        ],
+        "text": "Educational Institute"
+      }
+    ],
+    "name": "Riverside School Health Office",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(562)243-5263x779",
+        "use": "work"
+      }
+    ]
+  },
+  "organization_affiliation": {
+    "resourceType": "OrganizationAffiliation",
+    "id": "oa.un4cj7v4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OrganizationAffiliation: Centre de Bien-Etre Lumiere supplies Riverside School</p></div>"
+    },
+    "active": true,
+    "organization": {
+      "reference": "Organization/org.4t58dcmr",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "participatingOrganization": {
+      "reference": "Organization/rorg.bpk8hhyf",
+      "display": "Riverside School Health Office"
+    },
+    "code": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/organization-role",
+            "code": "supplier",
+            "display": "Supplier"
+          }
+        ],
+        "text": "Supplier"
+      }
+    ]
+  }
+}

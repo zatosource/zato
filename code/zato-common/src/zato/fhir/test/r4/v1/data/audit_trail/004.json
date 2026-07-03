@@ -1,0 +1,385 @@
+{
+  "_meta": {
+    "scenario": "audit_trail",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ups32nbm",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Seth Robertson</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2211035"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8301"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Robertson",
+        "given": [
+          "Seth"
+        ],
+        "text": "Seth Robertson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-638-710-7367",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "comptonmolly@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1991-03-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "15722 Smith Dam"
+        ],
+        "city": "North Brenda",
+        "state": "NM",
+        "postalCode": "77746",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.5ttvpxet",
+        "display": "Dr. Ian Joyce"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.xag6bsk6",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "audit_event": {
+    "resourceType": "AuditEvent",
+    "id": "ae.4b9bwkyc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AuditEvent: Patient record accessed for wellness visit</p></div>"
+    },
+    "type": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": "110110",
+      "display": "Patient Record"
+    },
+    "subtype": [
+      {
+        "system": "http://hl7.org/fhir/restful-interaction",
+        "code": "R",
+        "display": "read"
+      }
+    ],
+    "action": "R",
+    "period": {
+      "start": "2025-06-15T14:30:00+00:00",
+      "end": "2025-06-15T14:30:00+00:00"
+    },
+    "recorded": "2025-06-15T14:30:00+00:00",
+    "outcome": "0",
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+              "code": "humanuser",
+              "display": "human user"
+            }
+          ],
+          "text": "human user"
+        },
+        "who": {
+          "reference": "Practitioner/pr.5ttvpxet",
+          "display": "Dr. Ian Joyce"
+        },
+        "requestor": true
+      }
+    ],
+    "source": {
+      "observer": {
+        "reference": "Organization/org.xag6bsk6",
+        "display": "Harborview Community Clinic"
+      },
+      "type": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+          "code": "4",
+          "display": "Application Server"
+        }
+      ]
+    },
+    "entity": [
+      {
+        "what": {
+          "reference": "Patient/pt.ups32nbm",
+          "display": "Seth Robertson"
+        },
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+          "code": "1",
+          "display": "Person"
+        },
+        "lifecycle": {
+          "system": "http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle",
+          "code": "6",
+          "display": "Access / Use"
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.a5m6zwck",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.ups32nbm"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.5ttvpxet",
+          "display": "Dr. Ian Joyce"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.xag6bsk6"
+        }
+      }
+    ]
+  },
+  "linkage": {
+    "resourceType": "Linkage",
+    "id": "link.ufbw3ydh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Linkage: Links patient record across systems</p></div>"
+    },
+    "active": true,
+    "author": {
+      "reference": "Practitioner/pr.5ttvpxet",
+      "display": "Dr. Ian Joyce"
+    },
+    "item": [
+      {
+        "type": "source",
+        "resource": {
+          "reference": "Patient/pt.ups32nbm",
+          "display": "Seth Robertson"
+        }
+      },
+      {
+        "type": "alternate",
+        "resource": {
+          "reference": "Patient/pt.ups32nbm",
+          "display": "Seth Robertson"
+        }
+      }
+    ]
+  },
+  "basic": {
+    "resourceType": "Basic",
+    "id": "basic.2sjrbnwa",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Basic: Administrative note</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://example.org/basic-type",
+          "code": "adm-note",
+          "display": "Administrative note"
+        }
+      ],
+      "text": "Administrative note"
+    },
+    "subject": {
+      "reference": "Patient/pt.ups32nbm",
+      "display": "Seth Robertson"
+    },
+    "created": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.5ttvpxet",
+      "display": "Dr. Ian Joyce"
+    }
+  },
+  "binary": {
+    "resourceType": "Binary",
+    "id": "bin.ssq4f72c",
+    "contentType": "text/plain",
+    "data": "QXVkaXQgbG9nIGVudHJ5OiBQYXRpZW50IHJlY29yZCBhY2Nlc3NlZCBmb3Igcm91dGluZSByZXZpZXcu"
+  },
+  "parameters": {
+    "resourceType": "Parameters",
+    "id": "params.pbpwjvv6",
+    "parameter": [
+      {
+        "name": "patient",
+        "valueReference": {
+          "reference": "Patient/pt.ups32nbm",
+          "display": "Seth Robertson"
+        }
+      },
+      {
+        "name": "access-level",
+        "valueString": "read-only"
+      },
+      {
+        "name": "audit-required",
+        "valueBoolean": true
+      }
+    ]
+  },
+  "operation_outcome": {
+    "resourceType": "OperationOutcome",
+    "id": "oo.bw7ehr8r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OperationOutcome: Operation completed successfully</p></div>"
+    },
+    "issue": [
+      {
+        "severity": "information",
+        "code": "informational",
+        "diagnostics": "Patient record access logged successfully. No issues detected."
+      }
+    ]
+  }
+}

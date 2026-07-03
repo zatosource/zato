@@ -1,0 +1,39 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "measure-definition-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/measure-definition-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.2043"
+  },
+  "version": "6.0.0",
+  "name": "MeasureDefinitionExample",
+  "title": "Measure Definition Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Example Measure Definitions for the Measure Resource.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/measure-definition-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "screening",
+      "display": "Screening",
+      "definition": "Completion of a clinical or diagnostic tool used to identify people at risk of developing or having a certain disease or condition, even in the absence of symptoms."
+    },
+    {
+      "code": "standardized-depression-screening-tool",
+      "display": "Standardized Depression Screening Tool",
+      "definition": "A normalized and validated depression screening tool developed for the patient population in which it is being utilized."
+    }
+  ]
+}

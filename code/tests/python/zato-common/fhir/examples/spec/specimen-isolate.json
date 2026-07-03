@@ -1,0 +1,118 @@
+{
+  "resourceType": "Specimen",
+  "id": "isolate",
+  "contained": {
+    "Specimen": {
+      "id": "stool",
+      "identifier": [
+        {
+          "type": {
+            "coding": {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "ACSN",
+              "display": "Accession ID"
+            }
+          },
+          "system": "http://lab.acme.org/specimens/2015",
+          "value": "X352356"
+        },
+        {
+          "type": {
+            "coding": {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "ACSN",
+              "display": "Accession ID"
+            }
+          },
+          "system": "http://lab.acme.org/specimens/2015",
+          "value": "X352356"
+        }
+      ],
+      "status": "unavailable",
+      "type": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 119339001,
+          "display": "Stool specimen"
+        }
+      },
+      "subject": {
+        "reference": "Patient/example"
+      },
+      "receivedTime": "2015-08-16T07:03:00Z",
+      "collection": {
+        "collector": {
+          "display": "Patient"
+        },
+        "collectedDateTime": "2011-08-16T06:15:00Z",
+        "method": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0488",
+            "code": "LNV"
+          }
+        }
+      }
+    }
+  },
+  "identifier": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "ACSN",
+          "display": "Accession ID"
+        }
+      },
+      "system": "http://lab.acme.org/specimens/2011",
+      "value": "X352356-ISO1"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "ACSN",
+          "display": "Accession ID"
+        }
+      },
+      "system": "http://lab.acme.org/specimens/2011",
+      "value": "X352356-ISO1"
+    }
+  ],
+  "status": "available",
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 119303007,
+      "display": "Microbial isolate specimen"
+    },
+    "text": "Bacterial isolate specimen"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "receivedTime": "2015-08-18T07:03:00Z",
+  "parent": {
+    "reference": "#stool"
+  },
+  "role": {
+    "coding": {
+      "code": "p",
+      "display": "Patient"
+    }
+  },
+  "collection": {
+    "collector": {
+      "reference": "Practitioner/f202"
+    },
+    "collectedDateTime": "2015-08-16T07:03:00Z",
+    "method": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0488",
+        "code": "BAP"
+      }
+    }
+  },
+  "note": {
+    "text": "Patient dropped off specimen"
+  }
+}

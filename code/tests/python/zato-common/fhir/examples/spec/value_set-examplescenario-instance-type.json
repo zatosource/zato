@@ -1,0 +1,42 @@
+{
+  "resourceType": "ValueSet",
+  "id": "examplescenario-instance-type",
+  "meta": {
+    "lastUpdated": "2020-12-28T16:55:11.085+11:00"
+  },
+  "extension": [
+    {
+      "valueCode": "fhir"
+    },
+    {
+      "valueCode": "normative"
+    },
+    {
+      "valueInteger": 1
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/examplescenario-instance-type",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3006"
+  },
+  "version": "6.0.0",
+  "name": "ExampleScenarioResourceType",
+  "title": "Example Scenario Resource Type",
+  "status": "active",
+  "experimental": false,
+  "date": "2020-12-28T16:55:11+11:00",
+  "publisher": "HL7 FHIR Infrastructure WG",
+  "description": "Types of resource structures that can be passed in or out of exchange operations.  Not necessarily FHIR.",
+  "immutable": true,
+  "compose": {
+    "include": [
+      {
+        "valueSet": "http://hl7.org/fhir/ValueSet/resource-types"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0354"
+      }
+    ]
+  }
+}

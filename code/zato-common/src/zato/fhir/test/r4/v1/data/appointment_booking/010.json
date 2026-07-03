@@ -1,0 +1,811 @@
+{
+  "_meta": {
+    "scenario": "appointment_booking",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.h2uk6vb9",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Roger Marquez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9734517"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4893"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Marquez",
+        "given": [
+          "Roger"
+        ],
+        "text": "Roger Marquez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-444-733-0409x94723",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "tadams@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1956-01-23",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "30332 Deborah Lodge Apt. 313"
+        ],
+        "city": "East Carlview",
+        "state": "SD",
+        "postalCode": "26704",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.cedb778g",
+        "display": "Dr. Helen Williams"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.eh35f39u",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.cedb778g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Helen Williams</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5018307523"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Williams",
+        "given": [
+          "Helen"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Helen Williams"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(879)798-4226x758",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "469 Johnston Avenue Suite 321"
+        ],
+        "city": "Hickmanburgh",
+        "state": "IA",
+        "postalCode": "42298",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.eh35f39u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Sunrise Family Practice</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9191388713"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Sunrise Family Practice",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "6708806884",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "11001 Jessica Valleys Apt. 617"
+        ],
+        "city": "Apriltown",
+        "state": "NY",
+        "postalCode": "42756",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.n7un3khx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual checkup on 2024-06-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.h2uk6vb9",
+        "display": "Roger Marquez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cedb778g",
+            "display": "Dr. Helen Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-26T09:45:00+00:00",
+        "end": "2024-06-26T10:27:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.eh35f39u",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9j6a4dwv",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.575xvqt7",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2024-10-25</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.h2uk6vb9",
+        "display": "Roger Marquez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cedb778g",
+            "display": "Dr. Helen Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-10-25T15:15:00+00:00",
+        "end": "2024-10-25T15:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.eh35f39u",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9j6a4dwv",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.t8fmvkdd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Wellness screening on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.h2uk6vb9",
+        "display": "Roger Marquez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.cedb778g",
+            "display": "Dr. Helen Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:15:00+00:00",
+        "end": "2025-06-15T15:47:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.eh35f39u",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9j6a4dwv",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "appointment": {
+    "resourceType": "Appointment",
+    "id": "appt.sncg64k7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Appointment: Follow-up wellness visit</p></div>"
+    },
+    "status": "booked",
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "appointmentType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+          "code": "FOLLOWUP",
+          "display": "A follow up visit"
+        }
+      ],
+      "text": "A follow up visit"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "Z00.00",
+            "display": "Annual wellness follow-up"
+          }
+        ],
+        "text": "Annual wellness follow-up"
+      }
+    ],
+    "start": "2025-12-30T12:00:00+00:00",
+    "end": "2025-12-30T12:30:00+00:00",
+    "minutesDuration": 30,
+    "slot": [
+      {
+        "reference": "Slot/slot.ehk3xkhh"
+      }
+    ],
+    "created": "2025-06-15",
+    "participant": [
+      {
+        "actor": {
+          "reference": "Patient/pt.h2uk6vb9",
+          "display": "Roger Marquez"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Practitioner/pr.cedb778g",
+          "display": "Dr. Helen Williams"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Location/loc.9j6a4dwv",
+          "display": "Sunrise Family Practice - Main Office"
+        },
+        "required": "required",
+        "status": "accepted"
+      }
+    ]
+  },
+  "appointment_response": {
+    "resourceType": "AppointmentResponse",
+    "id": "ar.ey3wh2qk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AppointmentResponse: Patient accepted</p></div>"
+    },
+    "appointment": {
+      "reference": "Appointment/appt.sncg64k7"
+    },
+    "start": "2025-12-30T12:00:00+00:00",
+    "end": "2025-12-30T12:30:00+00:00",
+    "participantType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "ATND",
+            "display": "attender"
+          }
+        ],
+        "text": "attender"
+      }
+    ],
+    "actor": {
+      "reference": "Patient/pt.h2uk6vb9",
+      "display": "Roger Marquez"
+    },
+    "participantStatus": "accepted"
+  },
+  "schedule": {
+    "resourceType": "Schedule",
+    "id": "sched.zk7f8p2g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Schedule: Dr. Dr. Helen Williams availability</p></div>"
+    },
+    "active": true,
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "actor": [
+      {
+        "reference": "Practitioner/pr.cedb778g",
+        "display": "Dr. Helen Williams"
+      },
+      {
+        "reference": "Location/loc.9j6a4dwv",
+        "display": "Sunrise Family Practice - Main Office"
+      },
+      {
+        "reference": "HealthcareService/hs.p7dju52j"
+      }
+    ],
+    "planningHorizon": {
+      "start": "2025-06-15",
+      "end": "2026-12-31"
+    }
+  },
+  "slot": {
+    "resourceType": "Slot",
+    "id": "slot.ehk3xkhh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Slot: Available appointment slot</p></div>"
+    },
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "schedule": {
+      "reference": "Schedule/sched.zk7f8p2g"
+    },
+    "status": "busy",
+    "start": "2025-12-30T12:00:00+00:00",
+    "end": "2025-12-30T12:30:00+00:00"
+  },
+  "healthcare_service": {
+    "resourceType": "HealthcareService",
+    "id": "hs.p7dju52j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HealthcareService: General wellness services at Sunrise Family Practice</p></div>"
+    },
+    "active": true,
+    "providedBy": {
+      "reference": "Organization/org.eh35f39u",
+      "display": "Sunrise Family Practice"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "name": "General Wellness - Sunrise Family Practice",
+    "appointmentRequired": true,
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "08:00:00",
+        "availableEndTime": "17:00:00"
+      }
+    ]
+  },
+  "endpoint": {
+    "resourceType": "Endpoint",
+    "id": "ep.4u5v64u4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Endpoint: FHIR endpoint for Sunrise Family Practice</p></div>"
+    },
+    "status": "active",
+    "connectionType": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest",
+      "display": "HL7 FHIR"
+    },
+    "name": "Sunrise Family Practice FHIR Endpoint",
+    "managingOrganization": {
+      "reference": "Organization/org.eh35f39u",
+      "display": "Sunrise Family Practice"
+    },
+    "payloadType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-payload-type",
+            "code": "any",
+            "display": "Any"
+          }
+        ],
+        "text": "Any"
+      }
+    ],
+    "address": "https://fhir.example.org/org.eh35f39u"
+  }
+}

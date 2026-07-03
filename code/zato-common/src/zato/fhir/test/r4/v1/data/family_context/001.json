@@ -1,0 +1,595 @@
+{
+  "_meta": {
+    "scenario": "family_context",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.gwng5p8v",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Edward Quinn</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8787583"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1286"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Quinn",
+        "given": [
+          "Edward"
+        ],
+        "text": "Edward Quinn"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(353)393-7027x74252",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "williamskelly@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1961-05-25",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "89392 Alison Camp"
+        ],
+        "city": "Bradleyhaven",
+        "state": "OR",
+        "postalCode": "96412",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.2bnrmwbn",
+        "display": "Dr. Jason Morton"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.wxyummyv",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ygbh5s6w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Family history review on 2024-09-24</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gwng5p8v",
+        "display": "Edward Quinn"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2bnrmwbn",
+            "display": "Dr. Jason Morton"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-24T10:15:00+00:00",
+        "end": "2024-09-24T10:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wxyummyv",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ancyu3ru",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.uympcavk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Contact update on 2025-02-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gwng5p8v",
+        "display": "Edward Quinn"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2bnrmwbn",
+            "display": "Dr. Jason Morton"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-06T13:15:00+00:00",
+        "end": "2025-02-06T14:12:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wxyummyv",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ancyu3ru",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.jdsb69hq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gwng5p8v",
+        "display": "Edward Quinn"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2bnrmwbn",
+            "display": "Dr. Jason Morton"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:30:00+00:00",
+        "end": "2025-06-15T09:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wxyummyv",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ancyu3ru",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "related_person": {
+    "resourceType": "RelatedPerson",
+    "id": "rp.w6wexqjd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RelatedPerson: Brandon Mcdonald (spouse and emergency contact)</p></div>"
+    },
+    "active": true,
+    "patient": {
+      "reference": "Patient/pt.gwng5p8v",
+      "display": "Edward Quinn"
+    },
+    "relationship": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+            "code": "SPS",
+            "display": "Spouse"
+          }
+        ],
+        "text": "Spouse"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Mcdonald",
+        "given": [
+          "Brandon"
+        ],
+        "text": "Brandon Mcdonald"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "6005530417",
+        "use": "mobile"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1983-12-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "09914 Freeman Ford Suite 023"
+        ],
+        "city": "East Gabrielside",
+        "state": "RI",
+        "postalCode": "76745",
+        "country": "US"
+      }
+    ]
+  },
+  "family_member_history": {
+    "resourceType": "FamilyMemberHistory",
+    "id": "fmh.jb4fwyet",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>FamilyMemberHistory: Parent with well-controlled hypertension</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.gwng5p8v",
+      "display": "Edward Quinn"
+    },
+    "date": "2025-06-15",
+    "name": "Cheryl Wood",
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "FTH",
+          "display": "father"
+        }
+      ],
+      "text": "father"
+    },
+    "sex": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/administrative-gender",
+          "code": "male",
+          "display": "Male"
+        }
+      ],
+      "text": "Male"
+    },
+    "bornDate": "1960-06-27",
+    "condition": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension"
+        },
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "370996005",
+              "display": "Patient condition well controlled"
+            }
+          ],
+          "text": "Patient condition well controlled"
+        },
+        "note": [
+          {
+            "text": "Father has essential hypertension, well controlled with medication. Active lifestyle."
+          }
+        ]
+      }
+    ]
+  },
+  "person": {
+    "resourceType": "Person",
+    "id": "person.xtpsst9u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Person: Edward Quinn</p></div>"
+    },
+    "name": [
+      {
+        "use": "official",
+        "text": "Edward Quinn"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(363)874-4635x0887",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1961-05-25",
+    "address": [
+      {
+        "use": "home",
+        "city": "Samanthastad",
+        "state": "MD",
+        "country": "US"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.wxyummyv",
+      "display": "Green Valley Pharmacy"
+    },
+    "link": [
+      {
+        "target": {
+          "reference": "Patient/pt.gwng5p8v",
+          "display": "Edward Quinn"
+        },
+        "assurance": "level4"
+      }
+    ]
+  },
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.md2p6js6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Family of Edward Quinn</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Edward Quinn Family Group",
+    "quantity": 2,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.gwng5p8v",
+          "display": "Edward Quinn"
+        }
+      },
+      {
+        "entity": {
+          "reference": "RelatedPerson/rp.w6wexqjd",
+          "display": "Brandon Mcdonald"
+        }
+      }
+    ]
+  }
+}

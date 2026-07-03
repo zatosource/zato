@@ -1,0 +1,63 @@
+{
+  "resourceType": "GuidanceResponse",
+  "id": "example",
+  "contained": {
+    "Parameters": {
+      "id": "outputParameters1",
+      "parameter": [
+        {
+          "name": "score",
+          "valueDecimal": 7
+        },
+        {
+          "name": "item-assessed",
+          "valueCodeableConcept": {
+            "coding": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": 70450,
+              "display": "Computed tomography, head or brain; without contrast material"
+            }
+          }
+        },
+        {
+          "name": "device",
+          "valueReference": {
+            "reference": "Device/software"
+          }
+        },
+        {
+          "name": "guideline-followed",
+          "valueUri": "http://someguidelineprovider.org/radiology-appropriateness-guidelines.html"
+        }
+      ]
+    }
+  },
+  "requestIdentifier": {
+    "system": "http://example.org",
+    "value": "guidanceRequest1"
+  },
+  "identifier": {
+    "system": "http://example.org",
+    "value": "guidanceResponse1"
+  },
+  "moduleUri": "http://someguidelineprovider.org/radiology-appropriateness-guidelines.html",
+  "status": "success",
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  },
+  "occurrenceDateTime": "2017-03-10T16:02:00Z",
+  "performer": {
+    "reference": "Device/software"
+  },
+  "reason": {
+    "concept": {
+      "text": "Guideline Appropriate Ordering Assessment"
+    }
+  },
+  "outputParameters": {
+    "reference": "#outputParameters1"
+  }
+}

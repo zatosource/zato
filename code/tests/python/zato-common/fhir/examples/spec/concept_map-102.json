@@ -1,0 +1,2348 @@
+{
+  "resourceType": "ConceptMap",
+  "id": 102,
+  "url": "http://hl7.org/fhir/ConceptMap/102",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.14.3"
+  },
+  "version": 20130725,
+  "name": "SpecimenMappingFromV2Table0487ToSNOMEDCT",
+  "title": "Specimen mapping from v2 table 0487 to SNOMED CT",
+  "status": "draft",
+  "experimental": false,
+  "date": "2013-07-25",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "Specimen mapping from v2 table 0487 to SNOMED CT",
+  "additionalAttribute": [
+    {
+      "code": "type-mod",
+      "uri": "TypeModifier",
+      "type": "code",
+      "system": "http://snomed.info/sct"
+    },
+    {
+      "code": "coll-method",
+      "uri": "http://snomed.info/id/246380002",
+      "description": "Method of collection",
+      "type": "code",
+      "system": "http://snomed.info/sct"
+    },
+    {
+      "code": "spec-src",
+      "uri": "http://snomed.info/id/3006873018",
+      "description": "Specimen source",
+      "type": "code",
+      "system": "http://snomed.info/sct"
+    }
+  ],
+  "sourceScopeCanonical": "http://terminology.hl7.org/ValueSet/v2-0487",
+  "targetScopeCanonical": "http://snomed.info/sct?fhir_vs",
+  "group": {
+    "source": "http://terminology.hl7.org/CodeSystem/v2-0487",
+    "target": "http://snomed.info/sct",
+    "element": [
+      {
+        "code": "ACNE",
+        "target": {
+          "code": 309068002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ACNFLD",
+        "target": {
+          "code": 119323008,
+          "relationship": "equivalent",
+          "comment": "HL7 term is a historical term. mapped to Pus",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 47002008
+          }
+        }
+      },
+      {
+        "code": "AIRS",
+        "target": {
+          "code": 446302006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ALL",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 7970006
+          }
+        }
+      },
+      {
+        "code": "AMP",
+        "target": {
+          "code": 408654003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 81723002
+          }
+        }
+      },
+      {
+        "code": "ANGI",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "ARTC",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "ASERU",
+        "noMap": true
+      },
+      {
+        "code": "ASP",
+        "target": {
+          "code": 119295008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 14766002
+          }
+        }
+      },
+      {
+        "code": "ATTE",
+        "noMap": true
+      },
+      {
+        "code": "AUTOC",
+        "noMap": true
+      },
+      {
+        "code": "AUTP",
+        "noMap": true
+      },
+      {
+        "code": "BBL",
+        "target": {
+          "code": 119304001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "BCYST",
+        "noMap": true
+      },
+      {
+        "code": "BITE",
+        "noMap": true
+      },
+      {
+        "code": "BLEB",
+        "target": {
+          "code": 309049000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 339008
+          }
+        }
+      },
+      {
+        "code": "BLIST",
+        "target": {
+          "code": 309049000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 339008
+          }
+        }
+      },
+      {
+        "code": "BOIL",
+        "target": {
+          "code": 119295008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 59843005
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            }
+          ]
+        }
+      },
+      {
+        "code": "BON",
+        "target": {
+          "code": 430268003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "BOWL",
+        "noMap": true
+      },
+      {
+        "code": "BPU",
+        "target": {
+          "code": 119300005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "BRN",
+        "target": {
+          "code": 119367005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "BRSH",
+        "target": {
+          "code": 258415003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 439336003
+          }
+        }
+      },
+      {
+        "code": "BRTH",
+        "target": {
+          "code": 119336008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "BRUS",
+        "target": {
+          "code": 309176002,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 80657008
+          }
+        }
+      },
+      {
+        "code": "BUB",
+        "target": {
+          "code": 302795002,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 11585000
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            }
+          ]
+        }
+      },
+      {
+        "code": "BULLA",
+        "target": {
+          "code": 258482009,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 339008
+          }
+        }
+      },
+      {
+        "code": "BX",
+        "target": {
+          "code": 258415003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 86273004
+          }
+        }
+      },
+      {
+        "code": "CALC",
+        "target": {
+          "code": 119350003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CARBU",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 41570003
+          }
+        }
+      },
+      {
+        "code": "CAT",
+        "target": {
+          "code": 119311002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CBITE",
+        "noMap": true
+      },
+      {
+        "code": "CLIPP",
+        "target": {
+          "code": 119327009,
+          "relationship": "equivalent",
+          "comment": "Be more specific use either: 119326000^hair specimen or 119327009^nail specimen"
+        }
+      },
+      {
+        "code": "CNJT",
+        "target": {
+          "code": 119401005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CNJT",
+        "target": {
+          "code": 128160006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CNJT",
+        "target": {
+          "code": 258498002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "COL",
+        "target": {
+          "code": 119329007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CONE",
+        "target": {
+          "code": 399713008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 54535009
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 71252005
+            }
+          ]
+        }
+      },
+      {
+        "code": "CSCR",
+        "noMap": true
+      },
+      {
+        "code": "CSERU",
+        "noMap": true
+      },
+      {
+        "code": "CSITE",
+        "target": {
+          "code": 258507003,
+          "relationship": "equivalent",
+          "comment": "Prefer to have aspirate of the pus oozing out from cleaned insertion site - if swab is all that can be obtained, then swab after cleaning, otherwise you may get a contaminated specimen and a falsely identified infected central line. Do not just swab the reddened area - that will just collect skin flora",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 386144009
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 285570007
+            }
+          ]
+        }
+      },
+      {
+        "code": "CSMY",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CST",
+        "target": {
+          "code": 258453008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CSVR",
+        "noMap": true
+      },
+      {
+        "code": "CTP",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "CVPS",
+        "target": {
+          "code": 258507003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "CVPT",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 445085009
+          }
+        }
+      },
+      {
+        "code": "CYN",
+        "target": {
+          "code": 119368000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 27925004
+          }
+        }
+      },
+      {
+        "code": "CYST",
+        "target": {
+          "code": 119368000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DBITE",
+        "noMap": true
+      },
+      {
+        "code": "DCS",
+        "target": {
+          "code": 119335007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DEC",
+        "target": {
+          "code": 258505006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DEION",
+        "noMap": true
+      },
+      {
+        "code": "DIA",
+        "target": {
+          "code": 119360007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DISCHG",
+        "target": {
+          "code": 258439008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DIV",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 31113003
+          }
+        }
+      },
+      {
+        "code": "DRN",
+        "target": {
+          "code": 119306004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "DRNG",
+        "target": {
+          "code": 258455001,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead: not an acceptable specimen for micro - not specific enough term",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 122462000
+          }
+        }
+      },
+      {
+        "code": "DRNGP",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 122462000
+          }
+        }
+      },
+      {
+        "code": "EARW",
+        "target": {
+          "code": 122580007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "EBRUSH",
+        "target": {
+          "code": 309210009,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 36213007
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 32849002
+            }
+          ]
+        }
+      },
+      {
+        "code": "EEYE",
+        "noMap": true
+      },
+      {
+        "code": "EFF",
+        "noMap": true
+      },
+      {
+        "code": "EFFUS",
+        "target": {
+          "code": 258440005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "EFOD",
+        "target": {
+          "code": 119320006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "EISO",
+        "target": {
+          "code": 258536003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ELT",
+        "target": {
+          "code": 119314005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ENVIR",
+        "target": {
+          "code": 119324002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "EOTH",
+        "noMap": true
+      },
+      {
+        "code": "ESOI",
+        "noMap": true
+      },
+      {
+        "code": "ESOS",
+        "noMap": true
+      },
+      {
+        "code": "ETA",
+        "target": {
+          "code": 119307008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 321667001
+            }
+          ]
+        }
+      },
+      {
+        "code": "ETTP",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "ETTUB",
+        "target": {
+          "code": 119307008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 321667001
+            }
+          ]
+        }
+      },
+      {
+        "code": "EWHI",
+        "noMap": true
+      },
+      {
+        "code": "EXG",
+        "target": {
+          "code": 119336008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "EXS",
+        "noMap": true
+      },
+      {
+        "code": "EXUDTE",
+        "target": {
+          "code": 258441009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "FAW",
+        "noMap": true
+      },
+      {
+        "code": "FBLOOD",
+        "target": {
+          "code": 119297000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 303112003
+          }
+        }
+      },
+      {
+        "code": "FGA",
+        "target": {
+          "code": 168139001,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 83670000
+          }
+        }
+      },
+      {
+        "code": "FIST",
+        "target": {
+          "code": 119370009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "FLD",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "FLT",
+        "noMap": true
+      },
+      {
+        "code": "FLU",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "FLUID",
+        "target": {
+          "code": 258442002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "FOLEY",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "FRS",
+        "target": {
+          "code": 258442002,
+          "relationship": "equivalent",
+          "comment": "this term is not specific enough, choose from terms that more accurately describe the specimen",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 272626006
+          }
+        }
+      },
+      {
+        "code": "FSCLP",
+        "target": {
+          "code": 309502007,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 41695006
+          }
+        }
+      },
+      {
+        "code": "FUR",
+        "target": {
+          "code": 119295008,
+          "relationship": "equivalent",
+          "comment": "Further describe the sample as tissue or pus. or by the collection method. The term boil is not specific to a body site - need to indicate source site (spm.8). preferred term is Aspirate_Boil",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 59843005
+          }
+        }
+      },
+      {
+        "code": "GAS",
+        "target": {
+          "code": 119317003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "GASA",
+        "target": {
+          "code": 168137004,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "GASAN",
+        "target": {
+          "code": 119379005,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 66051006
+          }
+        }
+      },
+      {
+        "code": "GASBR",
+        "target": {
+          "code": 309213006,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 235157009
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "GASD",
+        "target": {
+          "code": 258459007,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "GAST",
+        "target": {
+          "code": 258459007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "GENV",
+        "target": {
+          "code": 119394009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "GRAFT",
+        "target": {
+          "code": 440493002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "GRANU",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 45647009
+          }
+        }
+      },
+      {
+        "code": "GROSH",
+        "target": {
+          "code": 119311002,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "GSOL",
+        "noMap": true
+      },
+      {
+        "code": "GSPEC",
+        "target": {
+          "code": 309211008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 79121003
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "GT",
+        "noMap": true
+      },
+      {
+        "code": "GTUBE",
+        "target": {
+          "code": 258459007,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 127490009
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "HBITE",
+        "noMap": true
+      },
+      {
+        "code": "HBLUD",
+        "target": {
+          "code": 119297000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 303113008
+          }
+        }
+      },
+      {
+        "code": "HEMAQ",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "HEMO",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "HERNI",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "HEV",
+        "target": {
+          "code": 119306004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "HIC",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 445085009
+          }
+        }
+      },
+      {
+        "code": "HYDC",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 55434001
+          }
+        }
+      },
+      {
+        "code": "IBITE",
+        "noMap": true
+      },
+      {
+        "code": "ICYST",
+        "target": {
+          "code": 309075001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "IDC",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "IHG",
+        "target": {
+          "code": 119337004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ILEO",
+        "target": {
+          "code": 258455001,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead: stool is what is expected, should use stool sample",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 419954003
+          }
+        }
+      },
+      {
+        "code": "ILLEG",
+        "noMap": true
+      },
+      {
+        "code": "IMP",
+        "target": {
+          "code": 439961009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "INCI",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "INFIL",
+        "noMap": true
+      },
+      {
+        "code": "INS",
+        "target": {
+          "code": 258614005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "INTRD",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "IT",
+        "target": {
+          "code": 119307008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "IUD",
+        "noMap": true
+      },
+      {
+        "code": "IVCAT",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 255560000
+          }
+        }
+      },
+      {
+        "code": "IVFLD",
+        "target": {
+          "code": 258649003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "IVTIP",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "JEJU",
+        "target": {
+          "code": 258463000,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead: stool is what is expected, should use stool sample",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 21306003
+            }
+          ]
+        }
+      },
+      {
+        "code": "JNTFLD",
+        "target": {
+          "code": 119332005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "JP",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 122462000
+          }
+        }
+      },
+      {
+        "code": "KELOI",
+        "target": {
+          "code": 440674008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 67889009
+          }
+        }
+      },
+      {
+        "code": "KIDFLD",
+        "target": {
+          "code": 309051001,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 64033007
+          }
+        }
+      },
+      {
+        "code": "LAVG",
+        "target": {
+          "code": 258607008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 397394009
+          }
+        }
+      },
+      {
+        "code": "LAVGG",
+        "target": {
+          "code": 168138009,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 173830003
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "LAVGP",
+        "target": {
+          "code": 440137008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "LAVPG",
+        "target": {
+          "code": 440674008,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 67889009
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 44567001
+            }
+          ]
+        }
+      },
+      {
+        "code": "LENS1",
+        "target": {
+          "code": 440473005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "LENS2",
+        "noMap": true
+      },
+      {
+        "code": "LESN",
+        "target": {
+          "code": 309049000,
+          "relationship": "equivalent",
+          "comment": "should be more specific what kind of lesion is observed - be more specific is it a wound, abscess, mass - specify! Ask SNOMED CT to mark it as a grouper term only (309049000)"
+        }
+      },
+      {
+        "code": "LIQ",
+        "target": {
+          "code": 258442002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "LIQO",
+        "noMap": true
+      },
+      {
+        "code": "LSAC",
+        "target": {
+          "code": 258450006,
+          "relationship": "equivalent",
+          "comment": "The HL7 term is a historical term Mapped to CSF obtained by lumbar puncture",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 303949008
+          }
+        }
+      },
+      {
+        "code": "MAHUR",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "MASS",
+        "target": {
+          "code": 420548004,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 4147007
+          }
+        }
+      },
+      {
+        "code": "MBLD",
+        "target": {
+          "code": 119345009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "MUCOS",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 414781009
+          }
+        }
+      },
+      {
+        "code": "MUCUS",
+        "target": {
+          "code": 258483004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "NASDR",
+        "target": {
+          "code": 258474009,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 2095001
+            }
+          ]
+        }
+      },
+      {
+        "code": "NEDL",
+        "noMap": true
+      },
+      {
+        "code": "NEPH",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "NGASP",
+        "target": {
+          "code": 302794003,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 6853008
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "NGAST",
+        "target": {
+          "code": 258459007,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 127492001
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 69695003
+            }
+          ]
+        }
+      },
+      {
+        "code": "NGS",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "NODUL",
+        "noMap": true
+      },
+      {
+        "code": "NSECR",
+        "target": {
+          "code": 168141000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ORH",
+        "target": {
+          "code": 123038009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "ORL",
+        "noMap": true
+      },
+      {
+        "code": "OTH",
+        "target": {
+          "code": 123038009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PACEM",
+        "noMap": true
+      },
+      {
+        "code": "PCFL",
+        "target": {
+          "code": 122571007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PDSIT",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PDTS",
+        "noMap": true
+      },
+      {
+        "code": "PELVA",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 12921003
+          }
+        }
+      },
+      {
+        "code": "PENIL",
+        "noMap": true
+      },
+      {
+        "code": "PERIA",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 397158004
+          }
+        }
+      },
+      {
+        "code": "PILOC",
+        "target": {
+          "code": 119368000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PINS",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PIS",
+        "target": {
+          "code": 258507003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PLAN",
+        "target": {
+          "code": 119301009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PLAS",
+        "target": {
+          "code": 119361006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PLB",
+        "target": {
+          "code": 119305000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PLEVS",
+        "target": {
+          "code": 119364003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 255587001
+          }
+        }
+      },
+      {
+        "code": "PND",
+        "target": {
+          "code": 258439008,
+          "relationship": "equivalent",
+          "comment": "Historical term -though in this case more often used for discharge",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 13648007
+            }
+          ]
+        }
+      },
+      {
+        "code": "POL",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 41329004
+          }
+        }
+      },
+      {
+        "code": "POPGS",
+        "target": {
+          "code": 440493002,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 6902008
+          }
+        }
+      },
+      {
+        "code": "POPLG",
+        "target": {
+          "code": 440493002,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 6902008
+          }
+        }
+      },
+      {
+        "code": "POPLV",
+        "noMap": true
+      },
+      {
+        "code": "PORTA",
+        "target": {
+          "code": 119311002,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "PPP",
+        "target": {
+          "code": 119362004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PROST",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PRP",
+        "target": {
+          "code": 119363009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PSC",
+        "target": {
+          "code": 119368000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PUNCT",
+        "target": {
+          "code": 119365002,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 129300006
+          }
+        }
+      },
+      {
+        "code": "PUS",
+        "target": {
+          "code": 119323008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "PUSFR",
+        "target": {
+          "code": 119323008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 47002008
+          }
+        }
+      },
+      {
+        "code": "PUST",
+        "target": {
+          "code": 119323008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 47002008
+          }
+        }
+      },
+      {
+        "code": "QC3",
+        "noMap": true
+      },
+      {
+        "code": "RANDU",
+        "target": {
+          "code": 278020009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "RBITE",
+        "noMap": true
+      },
+      {
+        "code": "RECT",
+        "target": {
+          "code": 119339001,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead: stool is what is expected, should use stool sample",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 122462000
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 34402009
+            }
+          ]
+        }
+      },
+      {
+        "code": "RECTA",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 34402009
+          }
+        }
+      },
+      {
+        "code": "RENALC",
+        "target": {
+          "code": 258420003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 64033007
+          }
+        }
+      },
+      {
+        "code": "RENC",
+        "target": {
+          "code": 258453008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 64033007
+          }
+        }
+      },
+      {
+        "code": "RES",
+        "target": {
+          "code": 258603007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SAL",
+        "target": {
+          "code": 119342007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SCAR",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SCLV",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 9454009
+          }
+        }
+      },
+      {
+        "code": "SCROA",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 20233005
+          }
+        }
+      },
+      {
+        "code": "SECRE",
+        "target": {
+          "code": 432825001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SER",
+        "target": {
+          "code": 119364003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SHU",
+        "target": {
+          "code": 119295008,
+          "relationship": "equivalent",
+          "comment": "Preferred is aspiration with sterile syringe from inflamed area. Specify body location of shunt site",
+          "product": [
+            {
+              "attribute": "type-mod",
+              "valueCode": 257351008
+            },
+            {
+              "attribute": "coll-method",
+              "valueCode": 14766002
+            }
+          ]
+        }
+      },
+      {
+        "code": "SHUNF",
+        "target": {
+          "code": 446861007,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 446860008
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 279107003
+            }
+          ]
+        }
+      },
+      {
+        "code": "SHUNT",
+        "noMap": true
+      },
+      {
+        "code": "SITE",
+        "noMap": true
+      },
+      {
+        "code": "SKBP",
+        "target": {
+          "code": 309066003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 240977001
+          }
+        }
+      },
+      {
+        "code": "SKN",
+        "target": {
+          "code": 119325001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SMM",
+        "target": {
+          "code": 420548004,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 4147007
+          }
+        }
+      },
+      {
+        "code": "SNV",
+        "target": {
+          "code": 119332005,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPRM",
+        "target": {
+          "code": 119349003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPRP",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "SPRPB",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "SPS",
+        "noMap": true
+      },
+      {
+        "code": "SPT",
+        "target": {
+          "code": 119334006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPTC",
+        "target": {
+          "code": 119335007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPTT",
+        "target": {
+          "code": 258609006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPUT1",
+        "noMap": true
+      },
+      {
+        "code": "SPUTIN",
+        "target": {
+          "code": 258610001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "SPUTSP",
+        "target": {
+          "code": 119335007,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "STER",
+        "noMap": true
+      },
+      {
+        "code": "STL",
+        "target": {
+          "code": 119339001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "STONE",
+        "target": {
+          "code": 119350003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 64033007
+          }
+        }
+      },
+      {
+        "code": "SUBMA",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 5713008
+          }
+        }
+      },
+      {
+        "code": "SUBMX",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 4335006
+          }
+        }
+      },
+      {
+        "code": "SUMP",
+        "target": {
+          "code": 446562005,
+          "relationship": "equivalent",
+          "comment": "Historical term - consider what is being drained and indicate that in SPM-4 instead",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 122462000
+          }
+        }
+      },
+      {
+        "code": "SUP",
+        "target": {
+          "code": 122575003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 58088002
+          }
+        }
+      },
+      {
+        "code": "SUTUR",
+        "noMap": true
+      },
+      {
+        "code": "SWGZ",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "TASP",
+        "target": {
+          "code": 122877000,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 129112001
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 44567001
+            }
+          ]
+        }
+      },
+      {
+        "code": "TISS",
+        "target": {
+          "code": 119376003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TISU",
+        "target": {
+          "code": 122593002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TLC",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "TRAC",
+        "target": {
+          "code": 438660002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TRANS",
+        "target": {
+          "code": 258538002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TSERU",
+        "target": {
+          "code": 119364003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "type-mod",
+            "valueCode": 255588006
+          }
+        }
+      },
+      {
+        "code": "TSTES",
+        "target": {
+          "code": 119371008,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "spec-src",
+            "valueCode": 279572002
+          }
+        }
+      },
+      {
+        "code": "TTRA",
+        "target": {
+          "code": 258480001,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 129112001
+          }
+        }
+      },
+      {
+        "code": "TUBES",
+        "target": {
+          "code": 119310001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TUMOR",
+        "target": {
+          "code": 258435002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "TZANC",
+        "noMap": true
+      },
+      {
+        "code": "UDENT",
+        "target": {
+          "code": 123038009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "UR",
+        "target": {
+          "code": 122575003,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "URC",
+        "target": {
+          "code": 122880004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "URINB",
+        "target": {
+          "code": 122575003,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 78533007
+          }
+        }
+      },
+      {
+        "code": "URINC",
+        "target": {
+          "code": 446846006,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "URINM",
+        "target": {
+          "code": 258574006,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 225271002
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 431938005
+            }
+          ]
+        }
+      },
+      {
+        "code": "URINN",
+        "target": {
+          "code": 446277003,
+          "relationship": "equivalent",
+          "product": [
+            {
+              "attribute": "coll-method",
+              "valueCode": 225109005
+            },
+            {
+              "attribute": "spec-src",
+              "valueCode": 25990002
+            }
+          ]
+        }
+      },
+      {
+        "code": "URINP",
+        "noMap": true
+      },
+      {
+        "code": "URT",
+        "target": {
+          "code": 122565001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "USCOP",
+        "noMap": true
+      },
+      {
+        "code": "USPEC",
+        "target": {
+          "code": 123038009,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "VASTIP",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "VENT",
+        "target": {
+          "code": 119312009,
+          "relationship": "equivalent",
+          "comment": "TBD in detail"
+        }
+      },
+      {
+        "code": "VITF",
+        "target": {
+          "code": 258438000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "VOM",
+        "target": {
+          "code": 122572000,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WASH",
+        "target": {
+          "code": 440674008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WASI",
+        "target": {
+          "code": 122609004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WAT",
+        "target": {
+          "code": 119318008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WB",
+        "noMap": true
+      },
+      {
+        "code": "WEN",
+        "target": {
+          "code": 309075001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WICK",
+        "noMap": true
+      },
+      {
+        "code": "WND",
+        "target": {
+          "code": 119365002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WNDA",
+        "target": {
+          "code": 119366001,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WNDD",
+        "target": {
+          "code": 122566000,
+          "relationship": "equivalent",
+          "product": {
+            "attribute": "coll-method",
+            "valueCode": 122462000
+          }
+        }
+      },
+      {
+        "code": "WNDE",
+        "target": {
+          "code": 122568004,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WORM",
+        "target": {
+          "code": 258618008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WRT",
+        "target": {
+          "code": 309068002,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WWA",
+        "target": {
+          "code": 119318008,
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "WWO",
+        "noMap": true
+      },
+      {
+        "code": "WWT",
+        "noMap": true
+      },
+      {
+        "code": "CSITE",
+        "noMap": true
+      },
+      {
+        "code": "CLIPP",
+        "noMap": true
+      },
+      {
+        "code": "SHU",
+        "noMap": true
+      }
+    ]
+  }
+}

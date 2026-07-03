@@ -1,0 +1,137 @@
+{
+  "_meta": {
+    "scenario": "effect_evidence",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "effect_evidence_synthesis": {
+    "resourceType": "EffectEvidenceSynthesis",
+    "id": "ees.g4f7792a",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EffectEvidenceSynthesis: Vitamin D supplementation effect on serum levels</p></div>"
+    },
+    "url": "http://example.org/EffectEvidenceSynthesis/ees.g4f7792a",
+    "name": "VitaminDEffect",
+    "title": "Effect of Vitamin D3 Supplementation on Serum 25-Hydroxyvitamin D Levels",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "National Institute of Wellness Research",
+    "description": "Meta-analysis showing that vitamin D3 1000 IU daily supplementation increases serum 25-hydroxyvitamin D by an average of 15-25 ng/mL over 6-12 months in deficient adults.",
+    "population": {
+      "reference": "EvidenceVariable/pop.6hdpj6mj"
+    },
+    "exposure": {
+      "reference": "EvidenceVariable/exp.zsuk7bq3"
+    },
+    "outcome": {
+      "reference": "EvidenceVariable/out.u58bmtz7"
+    },
+    "effectEstimate": [
+      {
+        "description": "Mean increase in serum 25-hydroxyvitamin D",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/effect-estimate-type",
+              "code": "mean-diff",
+              "display": "Mean Difference"
+            }
+          ],
+          "text": "Mean Difference"
+        },
+        "value": 20.0,
+        "unitOfMeasure": {
+          "coding": [
+            {
+              "system": "http://unitsofmeasure.org",
+              "code": "ng/mL",
+              "display": "ng/mL"
+            }
+          ],
+          "text": "ng/mL"
+        },
+        "precisionEstimate": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/precision-estimate-type",
+                  "code": "CI",
+                  "display": "confidence interval"
+                }
+              ],
+              "text": "confidence interval"
+            },
+            "level": 0.95,
+            "from_": 15.0,
+            "to": 25.0
+          }
+        ]
+      }
+    ]
+  },
+  "risk_evidence_synthesis": {
+    "resourceType": "RiskEvidenceSynthesis",
+    "id": "res.jja6873b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskEvidenceSynthesis: Risk of vitamin D insufficiency without supplementation</p></div>"
+    },
+    "url": "http://example.org/RiskEvidenceSynthesis/res.jja6873b",
+    "name": "VitaminDInsufficiencyRisk",
+    "title": "Risk of Persistent Vitamin D Insufficiency Without Supplementation",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "National Institute of Wellness Research",
+    "description": "Synthesis showing that adults with initial vitamin D deficiency who do not receive supplementation have a 70-80 percent probability of remaining deficient after 12 months.",
+    "population": {
+      "reference": "EvidenceVariable/pop2.tnz2dvqz"
+    },
+    "outcome": {
+      "reference": "EvidenceVariable/out2.3tqr3dyc"
+    },
+    "riskEstimate": {
+      "description": "Probability of persistent vitamin D insufficiency",
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/risk-estimate-type",
+            "code": "proportion",
+            "display": "proportion"
+          }
+        ],
+        "text": "proportion"
+      },
+      "value": 0.75,
+      "unitOfMeasure": {
+        "coding": [
+          {
+            "system": "http://unitsofmeasure.org",
+            "code": "1",
+            "display": "unitless"
+          }
+        ],
+        "text": "unitless"
+      },
+      "precisionEstimate": [
+        {
+          "type": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/precision-estimate-type",
+                "code": "CI",
+                "display": "confidence interval"
+              }
+            ],
+            "text": "confidence interval"
+          },
+          "level": 0.95,
+          "from_": 0.7,
+          "to": 0.8
+        }
+      ]
+    }
+  }
+}

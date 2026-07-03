@@ -1,0 +1,42 @@
+{
+  "resourceType": "TerminologyCapabilities",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}a": null
+        }
+      ]
+    }
+  },
+  "url": "urn:uuid:620878ef-e693-4290-a45e-16f5c7b06a56",
+  "version": 20130510,
+  "name": "ACMEEHR",
+  "title": "ACME EHR capability statement",
+  "status": "draft",
+  "experimental": true,
+  "date": "2012-01-04",
+  "publisher": "ACME Corporation",
+  "contact": {
+    "name": "System Administrator",
+    "telecom": {
+      "system": "email",
+      "value": "wile@acme.org"
+    }
+  },
+  "description": "This is the FHIR capability statement for the main EHR at ACME for the private interface - it does not describe the public interface",
+  "kind": "instance",
+  "software": {
+    "name": "TxServer",
+    "version": "0.1.2"
+  },
+  "implementation": {
+    "description": "Acme Terminology Server",
+    "url": "http://example.org/tx"
+  },
+  "codeSearch": "in-compose-or-expansion"
+}

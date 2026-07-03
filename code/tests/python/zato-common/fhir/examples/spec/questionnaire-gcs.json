@@ -1,0 +1,168 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "gcs",
+  "contained": [
+    {
+      "ValueSet": {
+        "id": "motor",
+        "identifier": {
+          "system": "http://loinc.org",
+          "value": "http://loinc.org/ValueSet/LL357-5"
+        },
+        "name": "GCS Motor Value Set",
+        "status": "active",
+        "description": "LOINC ANSWER LIST    (LL357-5)",
+        "compose": {
+          "include": {
+            "system": "http://loinc.org",
+            "concept": [
+              {
+                "code": "LA6562-8",
+                "display": "No motor response"
+              },
+              {
+                "code": "LA6563-6",
+                "display": "Extension to pain"
+              },
+              {
+                "code": "LA6564-4",
+                "display": "Flexion to pain"
+              },
+              {
+                "code": "LA6565-1",
+                "display": "Withdrawl from pain"
+              },
+              {
+                "code": "LA6566-9",
+                "display": "Localizing pain"
+              },
+              {
+                "code": "LA6567-7",
+                "display": "Obeys commands"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "ValueSet": {
+        "id": "verbal",
+        "identifier": {
+          "system": "http://loinc.org",
+          "value": "http://loinc.org/ValueSet/LL356-7"
+        },
+        "name": "GCS Verbal Value Set",
+        "status": "active",
+        "description": "LOINC ANSWER LIST    (LL356-7)",
+        "compose": {
+          "include": {
+            "system": "http://loinc.org",
+            "concept": [
+              {
+                "code": "LA6557-8",
+                "display": "No verbal response (>2yrs); no vocal response (<=2yrs)"
+              },
+              {
+                "code": "LA6558-6",
+                "display": "Incomprehensible sounds"
+              },
+              {
+                "code": "LA6559-4",
+                "display": "Inappropriate words"
+              },
+              {
+                "code": "LA6560-2",
+                "display": "Confused"
+              },
+              {
+                "code": "LA6561-0",
+                "display": "Oriented"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "ValueSet": {
+        "id": "eye",
+        "identifier": {
+          "system": "http://loinc.org",
+          "value": "http://loinc.org/ValueSet/LL355-9"
+        },
+        "name": "GCS Eye Value Set",
+        "status": "active",
+        "description": "LOINC ANSWER LIST    (LL355-9)",
+        "compose": {
+          "include": {
+            "system": "http://loinc.org",
+            "concept": [
+              {
+                "code": "LA6553-7",
+                "display": "No eye opening"
+              },
+              {
+                "code": "LA6554-5",
+                "display": "Eye opening to pain"
+              },
+              {
+                "code": "LA6555-2",
+                "display": "Eye opening to verbal command"
+              },
+              {
+                "code": "LA6556-0",
+                "display": "Eyes open spontaneously"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "url": "http://hl7.org/fhir/Questionnaire/gcs",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.20.5"
+  },
+  "name": "GlasgowComaScore",
+  "title": "Glasgow Coma Score",
+  "status": "draft",
+  "subjectType": "Patient",
+  "date": "2015-08-03",
+  "publisher": "FHIR Project team",
+  "description": "Glasgow Coma Score",
+  "code": {
+    "system": "http://loinc.org",
+    "code": "9269-2"
+  },
+  "item": [
+    {
+      "linkId": 1.1,
+      "code": {
+        "system": "http://loinc.org",
+        "code": "9270-0"
+      },
+      "type": "coding",
+      "answerValueSet": "#verbal"
+    },
+    {
+      "linkId": 1.2,
+      "code": {
+        "system": "http://loinc.org",
+        "code": "9268-4"
+      },
+      "type": "coding",
+      "answerValueSet": "#motor"
+    },
+    {
+      "linkId": 1.3,
+      "code": {
+        "system": "http://loinc.org",
+        "code": "9267-6"
+      },
+      "type": "coding",
+      "answerValueSet": "#eye"
+    }
+  ]
+}

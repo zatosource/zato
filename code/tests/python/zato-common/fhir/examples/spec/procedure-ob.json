@@ -1,0 +1,47 @@
+{
+  "resourceType": "Procedure",
+  "id": "ob",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "completed",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 386637004,
+      "display": "Obstetric procedure (procedure)"
+    },
+    "text": "OB"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 22633006,
+      "display": "Vaginal delivery, medical personnel present (procedure)"
+    },
+    "text": "Vaginal delivery"
+  },
+  "subject": {
+    "display": "Jane Doe"
+  },
+  "occurrenceDateTime": "2012-06-02",
+  "performer": {
+    "actor": {
+      "display": "Martha Midwife, RNP"
+    }
+  },
+  "location": {
+    "display": "Women\u2019s Hospital"
+  },
+  "reason": {
+    "concept": {
+      "text": "term pregnancy, active labor"
+    }
+  },
+  "outcome": {
+    "concept": {
+      "text": "delivery of healthy male infant"
+    }
+  }
+}

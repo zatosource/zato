@@ -1,0 +1,30 @@
+{
+  "resourceType": "Immunization",
+  "id": "notGiven",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "date": "2013-01-10",
+  "vaccineType": {
+    "coding": {
+      "system": "http://hl7.org/fhir/sid/cvx",
+      "code": 1,
+      "display": "DTP"
+    }
+  },
+  "patient": {
+    "reference": "Patient/example"
+  },
+  "wasNotGiven": true,
+  "isRecordOfRequest": false,
+  "explanation": {
+    "reasonNotGiven": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "code": "MEDPREC",
+        "display": "medical precaution"
+      }
+    }
+  }
+}

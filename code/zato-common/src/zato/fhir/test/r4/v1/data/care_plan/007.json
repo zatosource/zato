@@ -1,0 +1,843 @@
+{
+  "_meta": {
+    "scenario": "care_plan",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.4yremq78",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Ralph Young</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2941902"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5467"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Young",
+        "given": [
+          "Ralph"
+        ],
+        "text": "Ralph Young"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(236)580-7663x2935",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "alvaradomark@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1963-09-25",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "88846 Andrea Alley Suite 707"
+        ],
+        "city": "Chloeton",
+        "state": "PW",
+        "postalCode": "88848",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.ph8pwr65",
+        "display": "Dr. Darrell Delacruz"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.v3t89yac",
+      "display": "Clinique du Parc"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.ph8pwr65",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Darrell Delacruz</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8990857042"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Delacruz",
+        "given": [
+          "Darrell"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Darrell Delacruz"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "569.608.9043",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "43749 Whitney Ports"
+        ],
+        "city": "Youngton",
+        "state": "DE",
+        "postalCode": "75376",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.v3t89yac",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Clinique du Parc</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6671562516"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Clinique du Parc",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-212-841-8978",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "88917 Campbell Camp Suite 196"
+        ],
+        "city": "Janicebury",
+        "state": "AR",
+        "postalCode": "26912",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.s2gpgpgc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care planning session on 2024-07-18</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4yremq78",
+        "display": "Ralph Young"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ph8pwr65",
+            "display": "Dr. Darrell Delacruz"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-18T12:00:00+00:00",
+        "end": "2024-07-18T12:35:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v3t89yac",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.x3ueduut",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v54jmsrq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care plan review on 2024-12-16</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4yremq78",
+        "display": "Ralph Young"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ph8pwr65",
+            "display": "Dr. Darrell Delacruz"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-16T08:15:00+00:00",
+        "end": "2024-12-16T08:51:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v3t89yac",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.x3ueduut",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.e9nepb2g",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Goal assessment on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4yremq78",
+        "display": "Ralph Young"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ph8pwr65",
+            "display": "Dr. Darrell Delacruz"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T10:50:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v3t89yac",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.x3ueduut",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.zcxn2het",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Wellness improvement plan for Ralph Young</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Wellness Improvement Plan - Ralph Young",
+    "subject": {
+      "reference": "Patient/pt.4yremq78",
+      "display": "Ralph Young"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.e9nepb2g"
+    },
+    "period": {
+      "start": "2024-07-18"
+    },
+    "author": {
+      "reference": "Practitioner/pr.ph8pwr65",
+      "display": "Dr. Darrell Delacruz"
+    },
+    "careTeam": [
+      {
+        "reference": "CareTeam/ct.4q7gmb2e"
+      }
+    ],
+    "goal": [
+      {
+        "reference": "Goal/goal.ut5uzvk6"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "226029000",
+                "display": "Exercises"
+              }
+            ],
+            "text": "Exercises"
+          },
+          "description": "Daily walking program, 30 minutes per day"
+        }
+      },
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11816003",
+                "display": "Diet education"
+              }
+            ],
+            "text": "Diet education"
+          },
+          "description": "Heart-healthy diet counseling"
+        }
+      }
+    ]
+  },
+  "care_team": {
+    "resourceType": "CareTeam",
+    "id": "ct.4q7gmb2e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CareTeam: Wellness team for Ralph Young</p></div>"
+    },
+    "status": "active",
+    "name": "Wellness Care Team - Ralph Young",
+    "subject": {
+      "reference": "Patient/pt.4yremq78",
+      "display": "Ralph Young"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.e9nepb2g"
+    },
+    "participant": [
+      {
+        "role": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND",
+                "display": "attender"
+              }
+            ],
+            "text": "attender"
+          }
+        ],
+        "member": {
+          "reference": "Practitioner/pr.ph8pwr65",
+          "display": "Dr. Darrell Delacruz"
+        }
+      }
+    ],
+    "managingOrganization": [
+      {
+        "reference": "Organization/org.v3t89yac",
+        "display": "Clinique du Parc"
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.ut5uzvk6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Complete annual wellness examination</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "in-progress",
+          "display": "In Progress"
+        }
+      ],
+      "text": "In Progress"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "dietary",
+            "display": "Dietary"
+          }
+        ],
+        "text": "Dietary"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "408580007",
+          "display": "Complete annual wellness examination"
+        }
+      ],
+      "text": "Complete annual wellness examination"
+    },
+    "subject": {
+      "reference": "Patient/pt.4yremq78",
+      "display": "Ralph Young"
+    },
+    "startDate": "2024-07-18",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index"
+            }
+          ],
+          "text": "Body mass index"
+        },
+        "detailRange": {
+          "low": {
+            "value": 18.5,
+            "unit": "kg/m2"
+          },
+          "high": {
+            "value": 24.9,
+            "unit": "kg/m2"
+          }
+        },
+        "dueDate": "2026-01-01"
+      }
+    ],
+    "expressedBy": {
+      "reference": "Patient/pt.4yremq78",
+      "display": "Ralph Young"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.pd54nwfv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit action group</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "subject": {
+      "reference": "Patient/pt.4yremq78",
+      "display": "Ralph Young"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.e9nepb2g"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.ph8pwr65",
+      "display": "Dr. Darrell Delacruz"
+    },
+    "instantiatesCanonical": [
+      "PlanDefinition/pd.b6jwz37r"
+    ],
+    "action": [
+      {
+        "title": "Start exercise program",
+        "resource": {
+          "reference": "CarePlan/cp.zcxn2het"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.b6jwz37r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Wellness improvement protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.b6jwz37r",
+    "name": "WellnessImprovementProtocol",
+    "title": "Wellness Improvement Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Clinique du Parc",
+    "description": "A structured protocol for improving overall wellness through exercise, nutrition counseling, and regular follow-up visits.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    },
+    "goal": [
+      {
+        "description": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "408580007",
+              "display": "Complete annual wellness examination"
+            }
+          ],
+          "text": "Complete annual wellness examination"
+        },
+        "addresses": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "Z00.00",
+                "display": "General adult medical examination"
+              }
+            ],
+            "text": "General adult medical examination"
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "title": "Exercise Program",
+        "definitionCanonical": "ActivityDefinition/ad.3f36srs3"
+      }
+    ]
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.3f36srs3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Daily walking exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.3f36srs3",
+    "name": "DailyWalkingProgram",
+    "title": "Daily Walking Exercise Program",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Clinique du Parc",
+    "description": "A structured daily walking program to improve cardiovascular fitness. Start with 15 minutes and increase to 30 minutes over four weeks.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    },
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 1,
+        "periodUnit": "d",
+        "duration": 30,
+        "durationUnit": "min"
+      }
+    }
+  }
+}

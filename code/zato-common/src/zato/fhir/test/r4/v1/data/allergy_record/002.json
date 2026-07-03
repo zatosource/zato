@@ -1,0 +1,823 @@
+{
+  "_meta": {
+    "scenario": "allergy_record",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ujfbymeh",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Patrick Delaunay</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN3088456"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4035"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Delaunay",
+        "given": [
+          "Patrick"
+        ],
+        "text": "Patrick Delaunay"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-955-591-2369",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "elizabethramirez@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1968-08-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "629 Michelle Cove Suite 742"
+        ],
+        "city": "West Richardville",
+        "state": "MI",
+        "postalCode": "21417",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.p73xk3yn",
+        "display": "Dr. Gérard Charrier"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.cst7erqy",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.p73xk3yn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Gérard Charrier</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9631503536"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Charrier",
+        "given": [
+          "Gérard"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Gérard Charrier"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-455-213-1447x21624",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "063 Barr Islands"
+        ],
+        "city": "Stewartton",
+        "state": "TN",
+        "postalCode": "09417",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.cst7erqy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2856899919"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-689-993-1189x4899",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "600 Acosta Drives"
+        ],
+        "city": "South Jill",
+        "state": "AZ",
+        "postalCode": "14332",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.2shrjnn2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy assessment on 2024-05-08</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ujfbymeh",
+        "display": "Patrick Delaunay"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.p73xk3yn",
+            "display": "Dr. Gérard Charrier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-08T15:00:00+00:00",
+        "end": "2024-05-08T15:30:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cst7erqy",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.haecz8yk",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.p35pzzy4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy follow-up on 2024-11-17</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ujfbymeh",
+        "display": "Patrick Delaunay"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.p73xk3yn",
+            "display": "Dr. Gérard Charrier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-17T13:00:00+00:00",
+        "end": "2024-11-17T13:59:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cst7erqy",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.haecz8yk",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.sxjr8t6g",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Seasonal review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ujfbymeh",
+        "display": "Patrick Delaunay"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.p73xk3yn",
+            "display": "Dr. Gérard Charrier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:30:00+00:00",
+        "end": "2025-06-15T11:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.cst7erqy",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.haecz8yk",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "allergy_intolerance": {
+    "resourceType": "AllergyIntolerance",
+    "id": "ai.5tg73j9d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AllergyIntolerance: Mild seasonal pollen allergy</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "type": "allergy",
+    "category": [
+      "environment"
+    ],
+    "criticality": "low",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "256259004",
+          "display": "Pollen"
+        }
+      ],
+      "text": "Pollen"
+    },
+    "patient": {
+      "reference": "Patient/pt.ujfbymeh",
+      "display": "Patrick Delaunay"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.sxjr8t6g"
+    },
+    "recordedDate": "2025-06-15",
+    "recorder": {
+      "reference": "Practitioner/pr.p73xk3yn",
+      "display": "Dr. Gérard Charrier"
+    },
+    "reaction": [
+      {
+        "substance": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "256259004",
+              "display": "Pollen"
+            }
+          ],
+          "text": "Pollen"
+        },
+        "manifestation": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "267036007",
+                "display": "Sneezing"
+              }
+            ],
+            "text": "Sneezing"
+          }
+        ],
+        "severity": "mild"
+      }
+    ],
+    "note": [
+      {
+        "text": "Mild seasonal symptoms managed with over-the-counter antihistamine. No history of severe reactions."
+      }
+    ]
+  },
+  "clinical_impression": {
+    "resourceType": "ClinicalImpression",
+    "id": "ci.c52g9hsb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClinicalImpression: Mild seasonal allergies, well controlled</p></div>"
+    },
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.ujfbymeh",
+      "display": "Patrick Delaunay"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.sxjr8t6g"
+    },
+    "effectiveDateTime": "2025-06-15T10:00:00+00:00",
+    "date": "2025-06-15T10:00:00+00:00",
+    "assessor": {
+      "reference": "Practitioner/pr.p73xk3yn",
+      "display": "Dr. Gérard Charrier"
+    },
+    "summary": "Patient presents with mild seasonal allergic rhinitis. Symptoms are well controlled with cetirizine 10 mg daily during pollen season. No escalation needed.",
+    "finding": [
+      {
+        "itemCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J30.1",
+              "display": "Allergic rhinitis due to pollen"
+            }
+          ],
+          "text": "Allergic rhinitis due to pollen"
+        }
+      }
+    ]
+  },
+  "risk_assessment": {
+    "resourceType": "RiskAssessment",
+    "id": "ra.kz8db5bw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskAssessment: Low risk for severe allergic reaction</p></div>"
+    },
+    "status": "final",
+    "subject": {
+      "reference": "Patient/pt.ujfbymeh",
+      "display": "Patrick Delaunay"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.sxjr8t6g"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "condition": {
+      "reference": "AllergyIntolerance/ai.5tg73j9d"
+    },
+    "performer": {
+      "reference": "Practitioner/pr.p73xk3yn",
+      "display": "Dr. Gérard Charrier"
+    },
+    "prediction": [
+      {
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "39579001",
+              "display": "Anaphylaxis"
+            }
+          ],
+          "text": "Anaphylaxis"
+        },
+        "probabilityDecimal": 0.01,
+        "qualitativeRisk": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
+              "code": "low",
+              "display": "Low likelihood"
+            }
+          ],
+          "text": "Low likelihood"
+        },
+        "rationale": "History of mild seasonal symptoms only. No prior anaphylaxis. Low-risk allergen."
+      }
+    ]
+  },
+  "condition": {
+    "resourceType": "Condition",
+    "id": "cond.pcu3pabv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Condition: Allergic rhinitis due to pollen</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+            "code": "encounter-diagnosis",
+            "display": "Encounter Diagnosis"
+          }
+        ],
+        "text": "Encounter Diagnosis"
+      }
+    ],
+    "severity": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "255604002",
+          "display": "Mild"
+        }
+      ],
+      "text": "Mild"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "J30.1",
+          "display": "Allergic rhinitis due to pollen"
+        }
+      ],
+      "text": "Allergic rhinitis due to pollen"
+    },
+    "subject": {
+      "reference": "Patient/pt.ujfbymeh",
+      "display": "Patrick Delaunay"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.sxjr8t6g"
+    },
+    "onsetDateTime": "2024-05-08",
+    "recorder": {
+      "reference": "Practitioner/pr.p73xk3yn",
+      "display": "Dr. Gérard Charrier"
+    }
+  },
+  "consent": {
+    "resourceType": "Consent",
+    "id": "cons.m75gs47y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Consent: Patient consent to share allergy information</p></div>"
+    },
+    "status": "active",
+    "scope": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+          "code": "patient-privacy",
+          "display": "Privacy Consent"
+        }
+      ],
+      "text": "Privacy Consent"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "59284-0",
+            "display": "Patient Consent"
+          }
+        ],
+        "text": "Patient Consent"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.ujfbymeh",
+      "display": "Patrick Delaunay"
+    },
+    "dateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "reference": "Patient/pt.ujfbymeh",
+        "display": "Patrick Delaunay"
+      }
+    ],
+    "organization": [
+      {
+        "reference": "Organization/org.cst7erqy",
+        "display": "Lakeside Wellness Center"
+      }
+    ],
+    "policyRule": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "OPTIN",
+          "display": "opt-in"
+        }
+      ],
+      "text": "opt-in"
+    }
+  }
+}

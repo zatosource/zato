@@ -1,0 +1,721 @@
+{
+  "_meta": {
+    "scenario": "referral_letter",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.xuydrkpk",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 한 준혁</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1775859"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4408"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "한",
+        "given": [
+          "준혁"
+        ],
+        "text": "한 준혁"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(324)781-6682",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "brianswanson@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1990-12-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "294 Samantha Curve"
+        ],
+        "city": "Wrightview",
+        "state": "KY",
+        "postalCode": "74732",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.gf87svh7",
+        "display": "최 민서"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.js3b8uss",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.gf87svh7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 최 민서</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5293324295"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "최",
+        "given": [
+          "민서"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "최 민서"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-287-784-0349x42665",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "3649 Teresa Prairie"
+        ],
+        "city": "East Ginafort",
+        "state": "OR",
+        "postalCode": "32639",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.js3b8uss",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3679074726"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "617-777-5019x3213",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "247 Allison Groves"
+        ],
+        "city": "Stevensonville",
+        "state": "RI",
+        "postalCode": "33626",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.revgr78z",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Initial consultation on 2024-06-22</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Initial consultation"
+            }
+          ],
+          "text": "Initial consultation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xuydrkpk",
+        "display": "한 준혁"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gf87svh7",
+            "display": "최 민서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-22T12:00:00+00:00",
+        "end": "2024-06-22T13:00:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Initial consultation"
+            }
+          ],
+          "text": "Initial consultation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.js3b8uss",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e7cs5x58",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.49tkfypy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Referral discussion on 2025-02-04</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Referral discussion"
+            }
+          ],
+          "text": "Referral discussion"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xuydrkpk",
+        "display": "한 준혁"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gf87svh7",
+            "display": "최 민서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-04T09:15:00+00:00",
+        "end": "2025-02-04T09:48:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Referral discussion"
+            }
+          ],
+          "text": "Referral discussion"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.js3b8uss",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e7cs5x58",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.fqm6kk7x",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Referral follow-up on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Referral follow-up"
+            }
+          ],
+          "text": "Referral follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xuydrkpk",
+        "display": "한 준혁"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gf87svh7",
+            "display": "최 민서"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T09:00:00+00:00",
+        "end": "2025-06-15T09:47:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Referral follow-up"
+            }
+          ],
+          "text": "Referral follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.js3b8uss",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e7cs5x58",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "communication": {
+    "resourceType": "Communication",
+    "id": "comm.uw8zv9fy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Communication: Referral letter to physiotherapist</p></div>"
+    },
+    "status": "completed",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/communication-category",
+            "code": "notification",
+            "display": "Notification"
+          }
+        ],
+        "text": "Notification"
+      }
+    ],
+    "subject": {
+      "reference": "Patient/pt.xuydrkpk",
+      "display": "한 준혁"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.fqm6kk7x"
+    },
+    "sent": "2025-06-15T10:00:00+00:00",
+    "received": "2025-06-15T10:00:00+00:00",
+    "sender": {
+      "reference": "Practitioner/pr.gf87svh7",
+      "display": "최 민서"
+    },
+    "payload": [
+      {
+        "contentString": "Referring patient for physical therapy evaluation following mild ankle sprain during recreational activity. Patient is otherwise healthy with no significant medical history. Goal is full recovery and return to normal activity within six weeks."
+      }
+    ]
+  },
+  "communication_request": {
+    "resourceType": "CommunicationRequest",
+    "id": "cr.32cdnash",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CommunicationRequest: Request to send referral letter</p></div>"
+    },
+    "status": "completed",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/communication-category",
+            "code": "notification",
+            "display": "Notification"
+          }
+        ],
+        "text": "Notification"
+      }
+    ],
+    "subject": {
+      "reference": "Patient/pt.xuydrkpk",
+      "display": "한 준혁"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.fqm6kk7x"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "authoredOn": "2025-06-15T10:00:00+00:00",
+    "requester": {
+      "reference": "Practitioner/pr.gf87svh7",
+      "display": "최 민서"
+    },
+    "sender": {
+      "reference": "Practitioner/pr.gf87svh7",
+      "display": "최 민서"
+    }
+  },
+  "document_manifest": {
+    "resourceType": "DocumentManifest",
+    "id": "dm.vbpbc9rk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DocumentManifest: Referral package</p></div>"
+    },
+    "masterIdentifier": {
+      "system": "http://example.org/documents",
+      "value": "REF-89681"
+    },
+    "status": "current",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.xuydrkpk",
+      "display": "한 준혁"
+    },
+    "created": "2025-06-15T10:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.gf87svh7",
+        "display": "최 민서"
+      }
+    ],
+    "description": "Referral package for 한 준혁 - physiotherapy consultation",
+    "content": [
+      {
+        "reference": "Communication/comm.uw8zv9fy"
+      }
+    ]
+  },
+  "task": {
+    "resourceType": "Task",
+    "id": "task.da5jgfqc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Task: Process referral letter</p></div>"
+    },
+    "status": "completed",
+    "intent": "order",
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/CodeSystem/task-code",
+          "code": "fulfill",
+          "display": "Fulfill the focal request"
+        }
+      ],
+      "text": "Fulfill the focal request"
+    },
+    "focus": {
+      "reference": "CommunicationRequest/cr.32cdnash"
+    },
+    "for": {
+      "reference": "Patient/pt.xuydrkpk",
+      "display": "한 준혁"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.fqm6kk7x"
+    },
+    "authoredOn": "2025-06-15T10:00:00+00:00",
+    "lastModified": "2025-06-15T10:00:00+00:00",
+    "requester": {
+      "reference": "Practitioner/pr.gf87svh7",
+      "display": "최 민서"
+    },
+    "owner": {
+      "reference": "Organization/org.js3b8uss",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "flag": {
+    "resourceType": "Flag",
+    "id": "flag.uzwxw729",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Flag: Pending referral follow-up</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/flag-category",
+            "code": "admin",
+            "display": "Administrative"
+          }
+        ],
+        "text": "Administrative"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://example.org/flag-codes",
+          "code": "referral-pending",
+          "display": "Referral pending follow-up"
+        }
+      ],
+      "text": "Referral pending follow-up"
+    },
+    "subject": {
+      "reference": "Patient/pt.xuydrkpk",
+      "display": "한 준혁"
+    },
+    "period": {
+      "start": "2025-06-15"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.fqm6kk7x"
+    },
+    "author": {
+      "reference": "Practitioner/pr.gf87svh7",
+      "display": "최 민서"
+    }
+  }
+}

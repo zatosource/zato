@@ -1,0 +1,25 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-placebo",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "name": "Placebo",
+  "title": "Placebo",
+  "status": "draft",
+  "description": "Placebo",
+  "actual": true,
+  "definition": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 182886004,
+        "display": "Placebo given (situation)"
+      }
+    }
+  },
+  "handling": "dichotomous"
+}

@@ -1,0 +1,48 @@
+{
+  "resourceType": "Observation",
+  "id": "f206",
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://acmelabs.org",
+        "code": 104177,
+        "display": "Blood culture"
+      },
+      {
+        "system": "http://loinc.org",
+        "code": "600-7",
+        "display": "Bacteria identified in Blood by Culture"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "issued": "2013-03-11T10:28:00+01:00",
+  "performer": {
+    "reference": "Practitioner/f202",
+    "display": "Luigi Maas"
+  },
+  "valueCodeableConcept": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 3092008,
+      "display": "Staphylococcus aureus"
+    }
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "POS"
+    }
+  },
+  "method": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 104177005,
+      "display": "Blood culture for bacteria, including anaerobic screen"
+    }
+  }
+}

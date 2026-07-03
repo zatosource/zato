@@ -1,0 +1,67 @@
+{
+  "resourceType": "BiologicallyDerivedProduct",
+  "id": "example",
+  "productCode": {
+    "coding": {
+      "code": "E0398"
+    }
+  },
+  "identifier": {
+    "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+    "value": "A9999E0398A999921123456A00000"
+  },
+  "biologicalSourceEvent": {
+    "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+    "value": "A999921123456"
+  },
+  "processingFacility": {
+    "reference": "Organization/example"
+  },
+  "division": "A00000",
+  "productStatus": {
+    "code": "available"
+  },
+  "expirationDate": "2021-08-02T23:59:00-05:00",
+  "storageTempRequirements": {
+    "low": {
+      "value": 1,
+      "unit": "degrees C",
+      "system": "http://unitsofmeasure.org"
+    },
+    "high": {
+      "value": 6,
+      "unit": "degrees C",
+      "system": "http://unitsofmeasure.org"
+    }
+  },
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "code": "ABORhD"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/ABORhD",
+          "code": 62,
+          "display": "A RhD Positive"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "Donor"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/CollectionType",
+          "code": "V",
+          "display": "Volunteer"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "resourceType": "ValueSet",
+  "id": "measure-stratifier-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/measure-stratifier-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3187"
+  },
+  "version": "6.0.0",
+  "name": "MeasureStratifierExample",
+  "title": "Measure Stratifier Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Identifier subgroups in a population for measuring purposes.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/measure-stratifier-example"
+    }
+  }
+}

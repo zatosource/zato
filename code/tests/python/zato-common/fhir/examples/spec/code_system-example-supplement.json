@@ -1,0 +1,101 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "example-supplement",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": {
+        "{http://www.w3.org/1999/xhtml}code": null
+      },
+      "{http://www.w3.org/1999/xhtml}table": {
+        "{http://www.w3.org/1999/xhtml}tr": [
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "url": "http://hl7.org/fhir/CodeSystem/example-supplement",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1820"
+  },
+  "version": 201801103,
+  "name": "CholCodeLegacyStatus",
+  "title": "Cholesterol Code Legacy Status",
+  "status": "draft",
+  "experimental": true,
+  "date": "2016-01-28",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "CholCodeLegacyStatus",
+  "content": "supplement",
+  "supplements": "http://hl7.org/fhir/CodeSystem/example",
+  "property": {
+    "code": "legacy",
+    "description": "hether the test is currently performed",
+    "type": "boolean"
+  },
+  "concept": [
+    {
+      "code": "chol-mmol",
+      "property": {
+        "code": "legacy",
+        "valueBoolean": false
+      }
+    },
+    {
+      "code": "chol-mass",
+      "property": {
+        "code": "legacy",
+        "valueBoolean": true
+      }
+    },
+    {
+      "code": "chol",
+      "property": {
+        "code": "legacy",
+        "valueBoolean": true
+      }
+    }
+  ]
+}

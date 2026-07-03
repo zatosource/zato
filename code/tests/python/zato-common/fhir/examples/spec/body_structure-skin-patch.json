@@ -1,0 +1,62 @@
+{
+  "resourceType": "BodyStructure",
+  "id": "skin-patch",
+  "identifier": {
+    "system": "http://goodhealth.org/bodystructure/identifiers",
+    "value": 12345
+  },
+  "active": false,
+  "morphology": {
+    "text": "Skin patch"
+  },
+  "includedStructure": {
+    "structure": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 14975008,
+        "display": "Forearm"
+      },
+      "text": "Forearm"
+    },
+    "laterality": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 419161000,
+        "display": "Unilateral left"
+      },
+      "text": "Left"
+    },
+    "bodyLandmarkOrientation": {
+      "landmarkDescription": {
+        "text": "heart tattoo"
+      },
+      "distanceFromLandmark": {
+        "value": {
+          "value": 2.0,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "surfaceOrientation": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 46053002,
+          "display": "distal"
+        }
+      }
+    },
+    "qualifier": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 263929005,
+        "display": "Volar"
+      },
+      "text": "Volar"
+    }
+  },
+  "description": "inner surface (volar) of the left forearm",
+  "patient": {
+    "reference": "Patient/example"
+  }
+}

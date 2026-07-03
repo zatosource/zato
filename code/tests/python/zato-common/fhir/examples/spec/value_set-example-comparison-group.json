@@ -1,0 +1,42 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-comparison-group",
+  "extension": [
+    {
+      "valueCode": "brr"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 0
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/example-comparison-group",
+  "version": "6.0.0-ballot4",
+  "name": "ExampleComparisonGroup",
+  "title": "Example Comparison Group",
+  "status": "active",
+  "experimental": false,
+  "date": "2025-10-23T16:55:11+11:00",
+  "publisher": "HL7 (FHIR Project)",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Example values for defining comparison groups.",
+  "immutable": true,
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/example-comparison-group"
+    }
+  }
+}

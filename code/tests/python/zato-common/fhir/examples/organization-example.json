@@ -1,0 +1,84 @@
+{
+  "resourceType": "Organization",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Acme Healthcare</div>"
+  },
+  "identifier": [
+    {
+      "use": "official",
+      "system": "urn:oid:2.16.528.1",
+      "value": "91654"
+    },
+    {
+      "use": "usual",
+      "system": "urn:oid:2.16.840.1.113883.2.4.6.1",
+      "value": "17-0112278"
+    }
+  ],
+  "active": true,
+  "type": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+          "code": "prov",
+          "display": "Healthcare Provider"
+        }
+      ]
+    }
+  ],
+  "name": "Acme Healthcare",
+  "alias": ["ACME"],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(03) 5555 0000",
+      "use": "work"
+    },
+    {
+      "system": "fax",
+      "value": "(03) 5555 0001",
+      "use": "work"
+    },
+    {
+      "system": "email",
+      "value": "info@acme-healthcare.org",
+      "use": "work"
+    }
+  ],
+  "address": [
+    {
+      "use": "work",
+      "type": "both",
+      "line": ["100 Main Street"],
+      "city": "PleasantVille",
+      "state": "Vic",
+      "postalCode": "3999",
+      "country": "Australia"
+    }
+  ],
+  "contact": [
+    {
+      "purpose": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/contactentity-type",
+            "code": "ADMIN"
+          }
+        ]
+      },
+      "name": {
+        "text": "Administrator"
+      },
+      "telecom": [
+        {
+          "system": "phone",
+          "value": "(03) 5555 0002",
+          "use": "work"
+        }
+      ]
+    }
+  ]
+}

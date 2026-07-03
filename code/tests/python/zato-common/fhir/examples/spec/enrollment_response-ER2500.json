@@ -1,0 +1,25 @@
+{
+  "resourceType": "EnrollmentResponse",
+  "id": "ER2500",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "http://www.BenefitsInc.com/fhir/enrollmentresponse",
+    "value": 781234
+  },
+  "status": "active",
+  "request": {
+    "reference": "http://www.BenefitsInc.com/fhir/eligibility/225476332402"
+  },
+  "outcome": "complete",
+  "disposition": "Dependant added to policy.",
+  "created": "2014-08-16",
+  "organization": {
+    "reference": "Organization/2"
+  },
+  "requestProvider": {
+    "reference": "Organization/1"
+  }
+}

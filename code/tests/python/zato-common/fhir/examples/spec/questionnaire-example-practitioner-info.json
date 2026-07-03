@@ -1,0 +1,84 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "example-practitioner-info",
+  "status": "draft",
+  "item": [
+    {
+      "linkId": "core-props",
+      "type": "group",
+      "repeats": false,
+      "item": [
+        {
+          "linkId": "Practitioner.active",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.active",
+          "text": "Active",
+          "type": "boolean"
+        },
+        {
+          "linkId": "Practitioner.gender",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.gender",
+          "text": "Gender",
+          "type": "coding"
+        },
+        {
+          "linkId": "Practitioner.birthDate",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.birthDate",
+          "text": "Birth Date",
+          "type": "date"
+        },
+        {
+          "linkId": "Practitioner.name.text",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.name.text",
+          "text": "Name",
+          "type": "string"
+        },
+        {
+          "linkId": "Practitioner.address.line",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.address.line",
+          "text": "Address",
+          "type": "string",
+          "repeats": true
+        },
+        {
+          "linkId": "Practitioner.address.postalCode",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.address.postalCode",
+          "text": "Post Code",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "linkId": "Practitioner.qualification",
+      "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.qualification",
+      "text": "Qualifications",
+      "type": "group",
+      "repeats": true,
+      "item": [
+        {
+          "linkId": "Practitioner.qualification.code.coding.code",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.qualification.code.coding.code",
+          "text": "Code",
+          "type": "string"
+        },
+        {
+          "linkId": "Practitioner.qualification.code.coding.display",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.qualification.code.coding.display",
+          "text": "Display",
+          "type": "string"
+        },
+        {
+          "linkId": "Practitioner.qualification.period.end",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.qualification.period.end",
+          "text": "Completion Year",
+          "type": "dateTime"
+        },
+        {
+          "linkId": "Practitioner.qualification.issuer.display",
+          "definition": "http://hl7.org/fhir/StructureDefinition/Practitioner#Practitioner.qualification.issuer.display",
+          "text": "Issued by",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}

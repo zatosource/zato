@@ -1,0 +1,801 @@
+{
+  "_meta": {
+    "scenario": "medication_refill",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.8grtzkga",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 이 영수</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2215877"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8379"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "영수"
+        ],
+        "text": "이 영수"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-506-228-5238x261",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "eddie54@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1996-08-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "22575 Ryan Avenue"
+        ],
+        "city": "Port Andrew",
+        "state": "VT",
+        "postalCode": "58985",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.sxj6nnq6",
+        "display": "박 영식"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.t22nh44a",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.sxj6nnq6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 박 영식</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4572231161"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "영식"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "박 영식"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "797-864-5417x082",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "097 John Drive Suite 074"
+        ],
+        "city": "New Brittany",
+        "state": "NH",
+        "postalCode": "67989",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.t22nh44a",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1629073800"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-705-935-9001x15814",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "5459 Martin Groves"
+        ],
+        "city": "Taylorton",
+        "state": "UT",
+        "postalCode": "83572",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.knkvk9hg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription review on 2024-07-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8grtzkga",
+        "display": "이 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.sxj6nnq6",
+            "display": "박 영식"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-26T13:45:00+00:00",
+        "end": "2024-07-26T14:17:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t22nh44a",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.25zzsmrk",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.nzsfrn9w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Medication follow-up on 2024-11-29</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8grtzkga",
+        "display": "이 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.sxj6nnq6",
+            "display": "박 영식"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-29T13:15:00+00:00",
+        "end": "2024-11-29T13:52:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t22nh44a",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.25zzsmrk",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ugp6tf6n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Refill visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8grtzkga",
+        "display": "이 영수"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.sxj6nnq6",
+            "display": "박 영식"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:00:00+00:00",
+        "end": "2025-06-15T11:31:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t22nh44a",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.25zzsmrk",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "medication_request": {
+    "resourceType": "MedicationRequest",
+    "id": "mr.yw337uwz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationRequest: Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.8grtzkga",
+      "display": "이 영수"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.ugp6tf6n"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.sxj6nnq6",
+      "display": "박 영식"
+    },
+    "dosageInstruction": [
+      {
+        "text": "Take one tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        },
+        "doseAndRate": [
+          {
+            "doseQuantity": {
+              "value": 1,
+              "unit": "tablet",
+              "system": "http://unitsofmeasure.org",
+              "code": "{tbl}"
+            }
+          }
+        ]
+      }
+    ],
+    "dispenseRequest": {
+      "numberOfRepeatsAllowed": 3,
+      "quantity": {
+        "value": 90,
+        "unit": "tablet",
+        "system": "http://unitsofmeasure.org",
+        "code": "{tbl}"
+      },
+      "expectedSupplyDuration": {
+        "value": 90,
+        "unit": "days",
+        "system": "http://unitsofmeasure.org",
+        "code": "d"
+      }
+    }
+  },
+  "medication_dispense": {
+    "resourceType": "MedicationDispense",
+    "id": "md.rbwgynte",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationDispense: Vitamin D3 1000 IU oral tablet dispensed</p></div>"
+    },
+    "status": "completed",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.8grtzkga",
+      "display": "이 영수"
+    },
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.sxj6nnq6",
+          "display": "박 영식"
+        }
+      }
+    ],
+    "authorizingPrescription": [
+      {
+        "reference": "MedicationRequest/mr.yw337uwz"
+      }
+    ],
+    "quantity": {
+      "value": 90,
+      "unit": "tablet",
+      "system": "http://unitsofmeasure.org",
+      "code": "{tbl}"
+    },
+    "daysSupply": {
+      "value": 90,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "whenHandedOver": "2025-06-15T14:00:00+00:00"
+  },
+  "medication_statement": {
+    "resourceType": "MedicationStatement",
+    "id": "ms.j26w5fah",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationStatement: Patient taking Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.8grtzkga",
+      "display": "이 영수"
+    },
+    "effectivePeriod": {
+      "start": "2024-07-26"
+    },
+    "dateAsserted": "2025-06-15",
+    "informationSource": {
+      "reference": "Patient/pt.8grtzkga",
+      "display": "이 영수"
+    },
+    "dosage": [
+      {
+        "text": "One tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        }
+      }
+    ]
+  },
+  "medication_knowledge": {
+    "resourceType": "MedicationKnowledge",
+    "id": "mk.acdzadhp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationKnowledge: Vitamin D3 1000 IU oral tablet</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "status": "active",
+    "doseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "amount": {
+      "value": 1000,
+      "unit": "IU",
+      "system": "http://unitsofmeasure.org",
+      "code": "[iU]"
+    },
+    "synonym": [
+      "Vitamin D3 1000 IU oral tablet"
+    ]
+  },
+  "substance": {
+    "resourceType": "Substance",
+    "id": "sub.fykmuj7y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Substance: Cholecalciferol (Vitamin D3)</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+            "code": "drug",
+            "display": "Drug or Medicament"
+          }
+        ],
+        "text": "Drug or Medicament"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "18414002",
+          "display": "Cholecalciferol"
+        }
+      ],
+      "text": "Cholecalciferol"
+    },
+    "description": "Cholecalciferol (Vitamin D3), used as a dietary supplement"
+  },
+  "detected_issue": {
+    "resourceType": "DetectedIssue",
+    "id": "di.8j6xku3y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DetectedIssue: No drug interactions found</p></div>"
+    },
+    "status": "final",
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "DACT",
+          "display": "drug action detected issue"
+        }
+      ],
+      "text": "drug action detected issue"
+    },
+    "severity": "low",
+    "patient": {
+      "reference": "Patient/pt.8grtzkga",
+      "display": "이 영수"
+    },
+    "identifiedDateTime": "2025-06-15",
+    "implicated": [
+      {
+        "reference": "MedicationRequest/mr.yw337uwz"
+      }
+    ],
+    "detail": "Automated screening completed. No drug-drug interactions detected for current medication regimen."
+  }
+}

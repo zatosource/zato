@@ -1,0 +1,61 @@
+{
+  "resourceType": "Procedure",
+  "id": "example-implant",
+  "contained": {
+    "Device": {
+      "id": "example-pacemaker",
+      "manufacturer": "Acme Devices, Inc",
+      "lotNumber": "1234-5678",
+      "type": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 14106009,
+          "display": "Cardiac pacemaker, device (physical object)"
+        }
+      }
+    }
+  },
+  "status": "completed",
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 25267002,
+      "display": "Insertion of intracardiac pacemaker (procedure)"
+    },
+    "text": "Implant Pacemaker"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2015-04-05",
+  "performer": {
+    "actor": {
+      "reference": "Practitioner/example",
+      "display": "Dr Cecil Surgeon"
+    }
+  },
+  "reason": {
+    "concept": {
+      "text": "Bradycardia"
+    }
+  },
+  "followUp": {
+    "concept": {
+      "text": "ROS 5 days  - 2013-04-10"
+    }
+  },
+  "note": {
+    "text": "Routine Appendectomy. Appendix was inflamed and in retro-caecal position"
+  },
+  "focalDevice": {
+    "action": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-action",
+        "code": "implanted"
+      }
+    },
+    "manipulated": {
+      "reference": "#example-pacemaker"
+    }
+  }
+}

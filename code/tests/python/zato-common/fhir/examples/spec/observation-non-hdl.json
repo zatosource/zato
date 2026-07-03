@@ -1,0 +1,99 @@
+{
+  "resourceType": "Observation",
+  "id": "non-hdl",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}a": [
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "status": "final",
+  "category": [
+    {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+      },
+      "text": "Laboratory"
+    },
+    {
+      "coding": {
+        "system": "urn:oid:1.2.840.114350.1.13.177.2.7.10.798268.30",
+        "code": "Lab",
+        "display": "Lab"
+      },
+      "text": "Lab"
+    }
+  ],
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "43396-1",
+      "display": "Cholesterol non HDL [Mass/volume] in Serum or Plasma"
+    },
+    "text": "Non HDL Cholesterol"
+  },
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "effectiveDateTime": "2015-08-16T06:40:17Z",
+  "issued": "2015-08-16T08:40:17Z",
+  "valueQuantity": {
+    "value": 191,
+    "unit": "mg/dL",
+    "system": "http://unitsofmeasure.org",
+    "code": "mg/dL"
+  },
+  "note": {
+    "text": "Calculated non-HDL Cholesterol (non-HDL-C) indirectly measures LDL-C, Lp(a), \r\nIDL-C, and VLDL-C. It is a surrogate marker for Apoprotein B. Goal should be\r\n less than 130 mg/dL.\r\n"
+  },
+  "specimen": {
+    "reference": "Specimen/sst",
+    "display": "Serum sample"
+  }
+}

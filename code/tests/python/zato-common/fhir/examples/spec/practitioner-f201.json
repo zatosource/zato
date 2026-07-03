@@ -1,0 +1,46 @@
+{
+  "resourceType": "Practitioner",
+  "id": "f201",
+  "identifier": {
+    "use": "official",
+    "type": {
+      "text": "UZI-nummer"
+    },
+    "system": "urn:oid:2.16.528.1.1007.3.1",
+    "value": 12345678901
+  },
+  "active": true,
+  "name": {
+    "use": "official",
+    "text": "Dokter Bronsig",
+    "family": "Bronsig",
+    "given": "Arend",
+    "prefix": "Dr."
+  },
+  "telecom": {
+    "system": "phone",
+    "value": 31715269111,
+    "use": "work"
+  },
+  "gender": "male",
+  "birthDate": "1956-12-24",
+  "address": {
+    "use": "work",
+    "line": [
+      "Walvisbaai 3",
+      "C4 - Automatisering"
+    ],
+    "city": "Den helder",
+    "postalCode": "2333ZA",
+    "country": "NLD"
+  },
+  "qualification": {
+    "code": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 41672002,
+        "display": "Pulmonologist"
+      }
+    }
+  }
+}

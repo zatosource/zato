@@ -1,0 +1,1385 @@
+{
+  "_meta": {
+    "scenario": "lab_panel",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ybvq4n2h",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: André Vaillant</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN3869982"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9303"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Vaillant",
+        "given": [
+          "André"
+        ],
+        "text": "André Vaillant"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-892-887-6041",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "barkersteven@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1997-09-08",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "573 Lloyd Lodge Apt. 400"
+        ],
+        "city": "Robertville",
+        "state": "MO",
+        "postalCode": "91201",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.tkfgzynp",
+        "display": "Dr. Laetitia Mathieu"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.27df2hr7",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.tkfgzynp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Laetitia Mathieu</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2681212178"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Mathieu",
+        "given": [
+          "Laetitia"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Laetitia Mathieu"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "571-226-9016x67419",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "568 Webster Lodge"
+        ],
+        "city": "South Brianview",
+        "state": "MT",
+        "postalCode": "96087",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.27df2hr7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1524375079"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(773)997-9177x864",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "7254 Emily Ferry"
+        ],
+        "city": "Port Keithland",
+        "state": "ND",
+        "postalCode": "08891",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.r53hszdr",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab panel order on 2024-07-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h",
+        "display": "André Vaillant"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tkfgzynp",
+            "display": "Dr. Laetitia Mathieu"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-26T08:45:00+00:00",
+        "end": "2024-07-26T09:39:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.27df2hr7",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rr4b32am",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.k3mz73rg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab follow-up on 2024-12-31</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h",
+        "display": "André Vaillant"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tkfgzynp",
+            "display": "Dr. Laetitia Mathieu"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-31T09:45:00+00:00",
+        "end": "2024-12-31T10:45:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.27df2hr7",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rr4b32am",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.696bxz3n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab results review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h",
+        "display": "André Vaillant"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tkfgzynp",
+            "display": "Dr. Laetitia Mathieu"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:15:00+00:00",
+        "end": "2025-06-15T15:52:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.27df2hr7",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rr4b32am",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.yp5zv7ej",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.r53hszdr"
+      },
+      "effectiveDateTime": "2024-07-26T12:19:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ue6yst96"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.2hdrd8xt",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 45 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.r53hszdr"
+      },
+      "effectiveDateTime": "2024-07-26T12:05:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ue6yst96"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.aksenj8x",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.r53hszdr"
+      },
+      "effectiveDateTime": "2024-07-26T16:06:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ue6yst96"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.pvh9v76m",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 180 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.r53hszdr"
+      },
+      "effectiveDateTime": "2024-07-26T10:19:00+00:00",
+      "valueQuantity": {
+        "value": 180,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.ue6yst96"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.dfnpjver",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.k3mz73rg"
+      },
+      "effectiveDateTime": "2024-12-31T11:32:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.vhtqzycx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.46jn5tp2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 50 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.k3mz73rg"
+      },
+      "effectiveDateTime": "2024-12-31T10:02:00+00:00",
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.vhtqzycx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.974tbphf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 125 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.k3mz73rg"
+      },
+      "effectiveDateTime": "2024-12-31T16:34:00+00:00",
+      "valueQuantity": {
+        "value": 125,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.vhtqzycx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.fcfemux2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 160 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.k3mz73rg"
+      },
+      "effectiveDateTime": "2024-12-31T12:54:00+00:00",
+      "valueQuantity": {
+        "value": 160,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.vhtqzycx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.b3zp9qdx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.696bxz3n"
+      },
+      "effectiveDateTime": "2025-06-15T12:48:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.g62rfkq3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.mzrx4gq2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 55 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.696bxz3n"
+      },
+      "effectiveDateTime": "2025-06-15T13:46:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.g62rfkq3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.m9kzzz6r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 110 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.696bxz3n"
+      },
+      "effectiveDateTime": "2025-06-15T16:30:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.g62rfkq3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.3fnh377p",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.ybvq4n2h"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.696bxz3n"
+      },
+      "effectiveDateTime": "2025-06-15T16:18:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.tkfgzynp"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.g62rfkq3"
+      }
+    }
+  ],
+  "observation_definition": {
+    "resourceType": "ObservationDefinition",
+    "id": "od.8j3fnnat",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ObservationDefinition: Lipid panel observation template</p></div>"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+            "code": "laboratory",
+            "display": "Laboratory"
+          }
+        ],
+        "text": "Laboratory"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "57698-3",
+          "display": "Lipid panel with direct LDL"
+        }
+      ],
+      "text": "Lipid panel with direct LDL"
+    },
+    "permittedDataType": [
+      "Quantity"
+    ],
+    "multipleResultsAllowed": false,
+    "preferredReportName": "Lipid Panel"
+  },
+  "media": {
+    "resourceType": "Media",
+    "id": "media.v5w3kfn4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Media: Lab report scan</p></div>"
+    },
+    "status": "completed",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/media-type",
+          "code": "image",
+          "display": "Image"
+        }
+      ],
+      "text": "Image"
+    },
+    "subject": {
+      "reference": "Patient/pt.ybvq4n2h",
+      "display": "André Vaillant"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.696bxz3n"
+    },
+    "createdDateTime": "2025-06-15T15:00:00+00:00",
+    "operator": {
+      "reference": "Practitioner/pr.tkfgzynp",
+      "display": "Dr. Laetitia Mathieu"
+    },
+    "content": {
+      "contentType": "image/png",
+      "data": "UE5HX1BMQUNFSE9MREVSX0xBQl9SRVBPUlRfU0NBTg==",
+      "title": "Lab Report Scan"
+    }
+  },
+  "specimen": {
+    "resourceType": "Specimen",
+    "id": "spc.ue6yst96",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Specimen: Venous blood sample</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "subject": {
+      "reference": "Patient/pt.ybvq4n2h"
+    },
+    "collection": {
+      "collectedDateTime": "2024-07-26T09:50:00+00:00",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "49852007",
+            "display": "Median cubital vein"
+          }
+        ],
+        "text": "Median cubital vein"
+      }
+    }
+  },
+  "specimen_definition": {
+    "resourceType": "SpecimenDefinition",
+    "id": "sd.75jve2gx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SpecimenDefinition: Venous blood collection protocol</p></div>"
+    },
+    "typeCollected": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "collection": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "129300006",
+            "display": "Puncture - Loss"
+          }
+        ],
+        "text": "Puncture - Loss"
+      }
+    ],
+    "typeTested": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "119297000",
+              "display": "Blood specimen"
+            }
+          ],
+          "text": "Blood specimen"
+        },
+        "preference": "preferred",
+        "container": {
+          "material": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "32039001",
+                "display": "Glass"
+              }
+            ],
+            "text": "Glass"
+          },
+          "type": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "767387006",
+                "display": "Vacuum blood collection tube"
+              }
+            ],
+            "text": "Vacuum blood collection tube"
+          },
+          "cap": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/container-cap",
+                "code": "red",
+                "display": "red cap"
+              }
+            ],
+            "text": "red cap"
+          },
+          "description": "Red-top tube for serum collection"
+        },
+        "handling": [
+          {
+            "temperatureQualifier": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/handling-condition",
+                  "code": "room",
+                  "display": "room temperature"
+                }
+              ],
+              "text": "room temperature"
+            },
+            "maxDuration": {
+              "value": 60,
+              "unit": "min",
+              "system": "http://unitsofmeasure.org",
+              "code": "min"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "nutrition_order": {
+    "resourceType": "NutritionOrder",
+    "id": "no.3y7x5quj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>NutritionOrder: 12-hour fasting instructions for lipid panel</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "patient": {
+      "reference": "Patient/pt.ybvq4n2h",
+      "display": "André Vaillant"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.696bxz3n"
+    },
+    "dateTime": "2025-06-15T08:00:00+00:00",
+    "orderer": {
+      "reference": "Practitioner/pr.tkfgzynp",
+      "display": "Dr. Laetitia Mathieu"
+    },
+    "oralDiet": {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "160674004",
+              "display": "Fasting diet"
+            }
+          ],
+          "text": "Fasting diet"
+        }
+      ],
+      "instruction": "Patient to fast for 12 hours before lipid panel blood draw. Water is permitted."
+    }
+  }
+}

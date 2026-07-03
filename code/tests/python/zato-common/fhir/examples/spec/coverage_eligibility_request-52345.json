@@ -1,0 +1,35 @@
+{
+  "resourceType": "CoverageEligibilityRequest",
+  "id": 52345,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "http://happyvalley.com/coverageelegibilityrequest",
+    "value": 52345
+  },
+  "status": "active",
+  "priority": {
+    "coding": {
+      "code": "normal"
+    }
+  },
+  "purpose": "validation",
+  "patient": {
+    "reference": "Patient/pat1"
+  },
+  "created": "2014-08-16",
+  "provider": {
+    "reference": "Organization/1"
+  },
+  "insurer": {
+    "reference": "Organization/2"
+  },
+  "insurance": {
+    "focal": true,
+    "coverage": {
+      "reference": "Coverage/9876B1"
+    }
+  }
+}

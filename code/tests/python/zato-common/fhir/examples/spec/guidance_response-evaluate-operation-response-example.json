@@ -1,0 +1,74 @@
+{
+  "resourceType": "GuidanceResponse",
+  "contained": {
+    "Parameters": {
+      "id": "outputParameters1",
+      "parameter": [
+        {
+          "name": "order",
+          "valueReference": {
+            "reference": "#order1"
+          }
+        },
+        {
+          "name": "result",
+          "resource": {
+            "Basic": {
+              "id": "result1",
+              "meta": null,
+              "extension": [
+                {
+                  "valueDecimal": 7
+                },
+                {
+                  "extension": {
+                    "valueCodeableConcept": {
+                      "coding": {
+                        "system": "http://www.ama-assn.org/go/cpt",
+                        "code": 70450,
+                        "display": "Computed tomography, head or brain; without contrast material"
+                      }
+                    }
+                  }
+                },
+                {
+                  "valueUri": "http://someguidelineprovider.org/radiology-appropriateness-guidelines.html"
+                },
+                {
+                  "valueReference": {
+                    "reference": "#device1"
+                  }
+                },
+                {
+                  "valueIdentifier": {
+                    "value": "exampleNPI"
+                  }
+                }
+              ],
+              "identifier": {
+                "value": "result1"
+              },
+              "code": {
+                "coding": {
+                  "code": "within",
+                  "display": "Order is within identified guidelines"
+                }
+              },
+              "subject": {
+                "reference": "#order1"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "requestId": "guidanceRequest1",
+  "module": {
+    "reference": "ServiceDefinition/example"
+  },
+  "status": "success",
+  "outputParameters": {
+    "reference": "#outputParameters1"
+  }
+}

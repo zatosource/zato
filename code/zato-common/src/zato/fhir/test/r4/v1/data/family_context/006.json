@@ -1,0 +1,595 @@
+{
+  "_meta": {
+    "scenario": "family_context",
+    "instance": 6,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.z756jybj",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 김 선영</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7542482"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7782"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "김",
+        "given": [
+          "선영"
+        ],
+        "text": "김 선영"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "740.923.0913x6964",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "christophermalone@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1956-04-09",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "28009 Paul Parks"
+        ],
+        "city": "West Robertberg",
+        "state": "FL",
+        "postalCode": "81422",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.8ephf8q6",
+        "display": "한 정자"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.2hufsv7d",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v6vhnpca",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Family history review on 2024-07-13</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.z756jybj",
+        "display": "김 선영"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8ephf8q6",
+            "display": "한 정자"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-13T08:45:00+00:00",
+        "end": "2024-07-13T09:33:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2hufsv7d",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ph62hn72",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.jw7ya7py",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Contact update on 2024-11-13</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.z756jybj",
+        "display": "김 선영"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8ephf8q6",
+            "display": "한 정자"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-13T08:45:00+00:00",
+        "end": "2024-11-13T09:39:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2hufsv7d",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ph62hn72",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.uguasas9",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.z756jybj",
+        "display": "김 선영"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8ephf8q6",
+            "display": "한 정자"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:30:00+00:00",
+        "end": "2025-06-15T12:14:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.2hufsv7d",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ph62hn72",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "related_person": {
+    "resourceType": "RelatedPerson",
+    "id": "rp.t9u5muak",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RelatedPerson: 허 영일 (spouse and emergency contact)</p></div>"
+    },
+    "active": true,
+    "patient": {
+      "reference": "Patient/pt.z756jybj",
+      "display": "김 선영"
+    },
+    "relationship": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+            "code": "SPS",
+            "display": "Spouse"
+          }
+        ],
+        "text": "Spouse"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "허",
+        "given": [
+          "영일"
+        ],
+        "text": "허 영일"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-622-454-8046x647",
+        "use": "mobile"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1965-05-09",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "43321 Murray Spur"
+        ],
+        "city": "South Thomas",
+        "state": "MT",
+        "postalCode": "38158",
+        "country": "US"
+      }
+    ]
+  },
+  "family_member_history": {
+    "resourceType": "FamilyMemberHistory",
+    "id": "fmh.f4juqmzm",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>FamilyMemberHistory: Parent with well-controlled hypertension</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.z756jybj",
+      "display": "김 선영"
+    },
+    "date": "2025-06-15",
+    "name": "지민 강",
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "FTH",
+          "display": "father"
+        }
+      ],
+      "text": "father"
+    },
+    "sex": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/administrative-gender",
+          "code": "male",
+          "display": "Male"
+        }
+      ],
+      "text": "Male"
+    },
+    "bornDate": "1952-05-27",
+    "condition": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension"
+        },
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "370996005",
+              "display": "Patient condition well controlled"
+            }
+          ],
+          "text": "Patient condition well controlled"
+        },
+        "note": [
+          {
+            "text": "Father has essential hypertension, well controlled with medication. Active lifestyle."
+          }
+        ]
+      }
+    ]
+  },
+  "person": {
+    "resourceType": "Person",
+    "id": "person.d9s8yhxh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Person: 김 선영</p></div>"
+    },
+    "name": [
+      {
+        "use": "official",
+        "text": "김 선영"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-460-780-5271x39363",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1956-04-09",
+    "address": [
+      {
+        "use": "home",
+        "city": "Ambermouth",
+        "state": "ID",
+        "country": "US"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.2hufsv7d",
+      "display": "Oakwood Family Medicine"
+    },
+    "link": [
+      {
+        "target": {
+          "reference": "Patient/pt.z756jybj",
+          "display": "김 선영"
+        },
+        "assurance": "level4"
+      }
+    ]
+  },
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.6y6urqcq",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Family of 김 선영</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "김 선영 Family Group",
+    "quantity": 2,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.z756jybj",
+          "display": "김 선영"
+        }
+      },
+      {
+        "entity": {
+          "reference": "RelatedPerson/rp.t9u5muak",
+          "display": "허 영일"
+        }
+      }
+    ]
+  }
+}

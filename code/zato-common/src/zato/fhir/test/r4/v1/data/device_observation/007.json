@@ -1,0 +1,306 @@
+{
+  "_meta": {
+    "scenario": "device_observation",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.p7aw5gqp",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: David Saunders</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5027388"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2479"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Saunders",
+        "given": [
+          "David"
+        ],
+        "text": "David Saunders"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(742)596-0460x966",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "danderson@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1992-04-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "80479 Joshua Stream Apt. 281"
+        ],
+        "city": "East Lauriemouth",
+        "state": "MI",
+        "postalCode": "29099",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.3ga6gc4y",
+        "display": "Dr. Christy Richard"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.vv5shucw",
+      "display": "Clinique du Parc"
+    }
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.ykcstue7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Pulse oximeter</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Masimo",
+    "deviceName": [
+      {
+        "name": "Rad-97 Pulse Oximeter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "448703006",
+          "display": "Pulse oximeter"
+        }
+      ],
+      "text": "Pulse oximeter"
+    },
+    "owner": {
+      "reference": "Organization/org.vv5shucw",
+      "display": "Clinique du Parc"
+    },
+    "serialNumber": "SN860569"
+  },
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.tuas6f7j",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 96 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.p7aw5gqp"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 96,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "device": {
+        "reference": "Device/dev.ykcstue7"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.dh4daav4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 73 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.p7aw5gqp"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 73,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "device": {
+        "reference": "Device/dev.ykcstue7"
+      }
+    }
+  ],
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.mwtb3d7c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Monitored patients group</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Pulse Oximetry Monitoring Group",
+    "quantity": 1,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.p7aw5gqp",
+          "display": "David Saunders"
+        }
+      }
+    ]
+  }
+}

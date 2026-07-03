@@ -1,0 +1,31 @@
+{
+  "resourceType": "Organization",
+  "id": 1,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": {
+        "{http://www.w3.org/1999/xhtml}a": null
+      }
+    }
+  },
+  "identifier": {
+    "system": "http://www.acme.org.au/units",
+    "value": "Gastro"
+  },
+  "name": "Gastroenterology",
+  "contact": {
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1 555 234 3523",
+        "use": "mobile"
+      },
+      {
+        "system": "email",
+        "value": "gastro@acme.org",
+        "use": "work"
+      }
+    ]
+  }
+}

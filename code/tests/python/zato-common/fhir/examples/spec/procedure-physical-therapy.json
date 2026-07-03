@@ -1,0 +1,54 @@
+{
+  "resourceType": "Procedure",
+  "id": "physical-therapy",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "basedOn": {
+    "reference": "ServiceRequest/physical-therapy",
+    "display": "Order for the assessment of passive range of motion"
+  },
+  "status": "completed",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 386053000,
+      "display": "Evaluation procedure (procedure)"
+    },
+    "text": "Evaluation"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 710830005,
+      "display": "Assessment of passive range of motion (procedure)"
+    },
+    "text": "Assessment of passive range of motion"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2016-09-27",
+  "performer": {
+    "actor": {
+      "display": "Paul Therapist, PT"
+    }
+  },
+  "location": {
+    "display": "Sawbones Orthopedic Clinic"
+  },
+  "reason": {
+    "concept": {
+      "text": "assessment of mobility limitations due to osteoarthritis"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 36701003,
+      "display": "Both knees (body structure)"
+    },
+    "text": "Both knees"
+  }
+}

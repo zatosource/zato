@@ -1,0 +1,249 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-stroke-0-3-alteplase-vs-no-alteplase-mRS3-6",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "url": "http://hl7.org/fhir/Evidence/example-stroke-0-3-alteplase-vs-no-alteplase-mRS3-6",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.10.5"
+  },
+  "name": "EffectOfAlteplaseVsNoAlteplaseOnMRS36At90DaysInStroke03HoursPrior",
+  "title": "Effect of Alteplase vs No alteplase on mRS 3-6 at 90 days in Stroke 0-3 hours prior",
+  "status": "draft",
+  "relatesTo": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+        "code": "cites",
+        "display": "Cites"
+      }
+    },
+    "targetMarkdown": "Analysis 1.16 from Wardlaw 2014 <b>Citation:</b> Wardlaw JM, Murray V, Berge E, del Zoppo GJ. Thrombolysis for acute ischaemic stroke. Cochrane Database Syst Rev. 2014 Jul 29(7):CD000213. PMID 25072528 <b>URL:</b> https://doi.org/10.1002/14651858.CD000213.pub3"
+  },
+  "description": "mRS 3-6 at 90 days Odds Ratio 0.65 for Alteplase vs. No Alteplase in patients with acute ischemic stroke 0-3 hours prior",
+  "variableDefinition": [
+    {
+      "variableRole": "population",
+      "observed": {
+        "reference": "EvidenceVariable/Wardlaw2014Analysis1.16.3EvidenceSet",
+        "type": "EvidenceVariable",
+        "display": "Wardlaw 2014 Analysis 1.16.3 Evidence set"
+      },
+      "intended": {
+        "reference": "Group/AcuteIschemicStroke0-3Hours",
+        "type": "Group",
+        "display": "stroke at 0-3 hours"
+      }
+    },
+    {
+      "variableRole": "outcome",
+      "observed": {
+        "reference": "EvidenceVariable/example-mRS3-6-at-90days",
+        "type": "EvidenceVariable",
+        "display": "mRS 3-6 at 90 days"
+      },
+      "intended": {
+        "reference": "EvidenceVariable/example-dead-or-dependent-90day",
+        "type": "EvidenceVariable",
+        "display": "Dead or functionally dependent at 90 days"
+      }
+    },
+    {
+      "variableRole": "exposure",
+      "comparatorCategory": "No Alteplase",
+      "observed": {
+        "reference": "EvidenceVariable/example-group-assignment-alteplase-for-stroke-vs-no-alteplase",
+        "type": "EvidenceVariable",
+        "display": "Group Assignment: Alteplase for Stroke vs No Alteplase"
+      }
+    }
+  ],
+  "synthesisType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/synthesis-type",
+      "code": "std-MA",
+      "display": "summary data meta-analysis"
+    }
+  },
+  "studyDesign": {
+    "coding": {
+      "system": "https://fevir.net/sevco",
+      "code": "SEVCO:01003",
+      "display": "randomized assignment"
+    }
+  },
+  "statistic": {
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/sevco",
+        "code": "STATO:0000182",
+        "display": "odds ratio"
+      }
+    },
+    "quantity": {
+      "value": 0.65
+    },
+    "numberOfEvents": 1137,
+    "sampleSize": {
+      "numberOfStudies": 6,
+      "numberOfParticipants": 1779
+    },
+    "attributeEstimate": [
+      {
+        "description": "95% CI 0.54 to 0.80",
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/attribute-estimate-type",
+            "code": "C53324",
+            "display": "Confidence interval"
+          }
+        },
+        "level": 0.95,
+        "range": {
+          "low": {
+            "value": 0.54
+          },
+          "high": {
+            "value": 0.8
+          }
+        }
+      },
+      {
+        "description": "P-value = 0.000023",
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/attribute-estimate-type",
+            "code": "C44185",
+            "display": "P-value"
+          }
+        },
+        "quantity": {
+          "value": 2.3e-05
+        }
+      },
+      {
+        "description": "Heterogeneity I-sq = 0.0%",
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/attribute-estimate-type",
+            "code": 420,
+            "display": "I-squared"
+          }
+        },
+        "quantity": {
+          "value": 0,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    ]
+  },
+  "certainty": {
+    "description": "Moderate certainty due to risk of bias",
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+        "code": "Overall",
+        "display": "Overall certainty"
+      }
+    },
+    "rating": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+        "code": "moderate",
+        "display": "Moderate quality"
+      }
+    },
+    "subcomponent": [
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "PublicationBias",
+            "display": "Publication bias"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Inconsistency",
+            "display": "Inconsistency"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Imprecision",
+            "display": "Imprecision"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Indirectness",
+            "display": "Indirectness"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "note": {
+          "text": "results largely influenced by IST-3 trial which was unblinded and NINDS trial which had allocation concealment not stated and baseline imbalances"
+        },
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "RiskOfBias",
+            "display": "Risk of bias"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "serious-concern",
+            "display": "serious concern"
+          }
+        }
+      }
+    ]
+  }
+}

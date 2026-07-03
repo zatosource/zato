@@ -1,0 +1,271 @@
+{
+  "_meta": {
+    "scenario": "cds_hooks",
+    "instance": 5,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.bq4qmp5e",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Véronique Marques</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2240309"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4505"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Marques",
+        "given": [
+          "Véronique"
+        ],
+        "text": "Véronique Marques"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "593.455.2067",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "jeffreyyates@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1989-10-26",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "97968 Shirley Lake Suite 660"
+        ],
+        "city": "East Crystalshire",
+        "state": "GU",
+        "postalCode": "77928",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.s74mm2jd",
+        "display": "Dr. Capucine Roger"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.e7bbwzzv",
+      "display": "Meadowbrook Health Center"
+    }
+  },
+  "guidance_response": {
+    "resourceType": "GuidanceResponse",
+    "id": "gr.bsra24ty",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GuidanceResponse: Recommend scheduling wellness visit</p></div>"
+    },
+    "requestIdentifier": {
+      "system": "http://example.org/cds-hooks",
+      "value": "req-77648"
+    },
+    "moduleCanonical": "PlanDefinition/pd.8n7sef3z",
+    "status": "success",
+    "subject": {
+      "reference": "Patient/pt.bq4qmp5e",
+      "display": "Véronique Marques"
+    },
+    "encounter": {
+      "reference": "Encounter/enc_placeholder.hetmzmyw"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": {
+      "reference": "Practitioner/pr.s74mm2jd",
+      "display": "Dr. Capucine Roger"
+    },
+    "outputParameters": {
+      "reference": "Parameters/params_placeholder.w9ajkeve"
+    },
+    "result": {
+      "reference": "RequestGroup/rg.czduxen7"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.czduxen7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit recommendation actions</p></div>"
+    },
+    "status": "active",
+    "intent": "proposal",
+    "subject": {
+      "reference": "Patient/pt.bq4qmp5e",
+      "display": "Véronique Marques"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.s74mm2jd",
+      "display": "Dr. Capucine Roger"
+    },
+    "action": [
+      {
+        "title": "Schedule annual wellness visit",
+        "description": "Patient is due for annual wellness visit. Consider scheduling an appointment.",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/action-type",
+              "code": "create",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.8n7sef3z",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: CDS Hooks wellness reminder service</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.8n7sef3z",
+    "name": "WellnessReminderService",
+    "title": "Wellness Visit Reminder CDS Service",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Meadowbrook Health Center",
+    "description": "A CDS Hooks service that reminds providers when a patient is due for an annual wellness visit.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "eca-rule",
+          "display": "ECA Rule"
+        }
+      ],
+      "text": "ECA Rule"
+    },
+    "action": [
+      {
+        "title": "Check wellness visit due date",
+        "description": "Evaluate whether patient is overdue for annual wellness visit",
+        "condition": [
+          {
+            "kind": "applicability",
+            "expression": {
+              "language": "text/cql",
+              "expression": "IsWellnessVisitOverdue"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

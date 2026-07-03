@@ -1,0 +1,443 @@
+{
+  "_meta": {
+    "scenario": "messaging",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.wahwf4ph",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Michelle Wood</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4348435"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7321"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Wood",
+        "given": [
+          "Michelle"
+        ],
+        "text": "Michelle Wood"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(635)772-9941x1785",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "john39@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1995-07-02",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "12366 Johnny River Suite 543"
+        ],
+        "city": "Geraldtown",
+        "state": "VT",
+        "postalCode": "37142",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.2rnfjft4",
+        "display": "Dr. Joshua Bennett"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.sy6ur2xa",
+      "display": "Clinique du Parc"
+    }
+  },
+  "message_definition": {
+    "resourceType": "MessageDefinition",
+    "id": "md.hpqzx8k3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageDefinition: Patient transfer notification</p></div>"
+    },
+    "url": "http://example.org/MessageDefinition/md.hpqzx8k3",
+    "name": "PatientTransferNotification",
+    "title": "Patient Transfer Notification Message",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Clinique du Parc",
+    "description": "Definition for a message notifying receiving facility of patient transfer.",
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "category": "notification"
+  },
+  "message_header": {
+    "resourceType": "MessageHeader",
+    "id": "mh.pfv6r34j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+    },
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "destination": [
+      {
+        "name": "Receiving Facility",
+        "endpoint": "https://fhir.example.org/receive"
+      }
+    ],
+    "sender": {
+      "reference": "Organization/org.sy6ur2xa",
+      "display": "Clinique du Parc"
+    },
+    "source": {
+      "name": "Clinique du Parc",
+      "endpoint": "https://fhir.example.org/send"
+    },
+    "focus": [
+      {
+        "reference": "Patient/pt.wahwf4ph",
+        "display": "Michelle Wood"
+      }
+    ],
+    "definition": "MessageDefinition/md.hpqzx8k3"
+  },
+  "bundle": {
+    "resourceType": "Bundle",
+    "id": "bnd.qx4prp3x",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Bundle: Message bundle for patient transfer</p></div>"
+    },
+    "type": "message",
+    "timestamp": "2025-06-15T10:00:00+00:00",
+    "entry": [
+      {
+        "fullUrl": "MessageHeader/mh.pfv6r34j",
+        "resource": {
+          "resourceType": "MessageHeader",
+          "id": "mh.pfv6r34j",
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+          },
+          "eventCoding": {
+            "system": "http://example.org/message-events",
+            "code": "admin-notify",
+            "display": "Admin Notification"
+          },
+          "destination": [
+            {
+              "name": "Receiving Facility",
+              "endpoint": "https://fhir.example.org/receive"
+            }
+          ],
+          "sender": {
+            "reference": "Organization/org.sy6ur2xa",
+            "display": "Clinique du Parc"
+          },
+          "source": {
+            "name": "Clinique du Parc",
+            "endpoint": "https://fhir.example.org/send"
+          },
+          "focus": [
+            {
+              "reference": "Patient/pt.wahwf4ph",
+              "display": "Michelle Wood"
+            }
+          ],
+          "definition": "MessageDefinition/md.hpqzx8k3"
+        }
+      },
+      {
+        "fullUrl": "Patient/pt.wahwf4ph",
+        "resource": {
+          "resourceType": "Patient",
+          "id": "pt.wahwf4ph",
+          "meta": {
+            "profile": [
+              "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+            ]
+          },
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Michelle Wood</p></div>"
+          },
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2028-9",
+                    "display": "Asian"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "Asian"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2186-5",
+                    "display": "Not Hispanic or Latino"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "Not Hispanic or Latino"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+              "valueCode": "F"
+            }
+          ],
+          "identifier": [
+            {
+              "use": "usual",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "MR",
+                    "display": "Medical record number"
+                  }
+                ],
+                "text": "Medical record number"
+              },
+              "system": "http://example.org/mrn",
+              "value": "MRN4348435"
+            },
+            {
+              "use": "official",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "SS",
+                    "display": "Social Security number"
+                  }
+                ],
+                "text": "Social Security number"
+              },
+              "system": "http://hl7.org/fhir/sid/us-ssn",
+              "value": "987-65-7321"
+            }
+          ],
+          "name": [
+            {
+              "use": "official",
+              "family": "Wood",
+              "given": [
+                "Michelle"
+              ],
+              "text": "Michelle Wood"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "value": "(635)772-9941x1785",
+              "use": "home"
+            },
+            {
+              "system": "email",
+              "value": "john39@hotmail.com",
+              "use": "home"
+            }
+          ],
+          "gender": "female",
+          "birthDate": "1995-07-02",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "12366 Johnny River Suite 543"
+              ],
+              "city": "Geraldtown",
+              "state": "VT",
+              "postalCode": "37142",
+              "country": "US"
+            }
+          ],
+          "maritalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+                "code": "M",
+                "display": "Married"
+              }
+            ],
+            "text": "Married"
+          },
+          "communication": [
+            {
+              "language": {
+                "coding": [
+                  {
+                    "system": "urn:ietf:bcp:47",
+                    "code": "en",
+                    "display": "English"
+                  }
+                ],
+                "text": "English"
+              },
+              "preferred": true
+            }
+          ],
+          "generalPractitioner": [
+            {
+              "reference": "Practitioner/pr.2rnfjft4",
+              "display": "Dr. Joshua Bennett"
+            }
+          ],
+          "managingOrganization": {
+            "reference": "Organization/org.sy6ur2xa",
+            "display": "Clinique du Parc"
+          }
+        }
+      }
+    ]
+  },
+  "subscription": {
+    "resourceType": "Subscription",
+    "id": "sub.kba3dhys",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Subscription: Subscribe to patient transfer notifications</p></div>"
+    },
+    "status": "active",
+    "reason": "Monitor patient transfers for wellness coordination",
+    "criteria": "Patient?_lastUpdated=gt2024-01-01",
+    "channel": {
+      "type": "rest-hook",
+      "endpoint": "https://fhir.example.org/webhook/transfers",
+      "payload": "application/fhir+json"
+    }
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "resourceType": "Task",
+  "id": "example1",
+  "contained": {
+    "Provenance": {
+      "id": "signature",
+      "target": {
+        "reference": "ServiceRequest/physiotherapy/_history/1"
+      },
+      "recorded": "2016-10-31T08:25:05+10:00",
+      "agent": {
+        "role": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "AUT"
+          }
+        },
+        "who": {
+          "reference": "Practitioner/f202",
+          "display": "Luigi Maas"
+        }
+      },
+      "signature": {
+        "type": {
+          "system": "urn:iso-astm:E1762-95:2013",
+          "code": "1.2.840.10065.1.12.1.1",
+          "display": "Author's Signature"
+        },
+        "when": "2016-10-31T08:25:05+10:00",
+        "who": {
+          "reference": "Practitioner/example",
+          "display": "Dr Adam Careful"
+        },
+        "targetFormat": "application/fhir+xml",
+        "sigFormat": "application/signature+xml",
+        "data": "dGhpcyBibG9iIGlzIHNuaXBwZWQ="
+      }
+    }
+  },
+  "identifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/identifiers",
+    "value": "20170201-001"
+  },
+  "basedOn": {
+    "display": "General Wellness Careplan"
+  },
+  "groupIdentifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/accession/identifiers",
+    "value": "G20170201-001"
+  },
+  "status": "in-progress",
+  "businessStatus": {
+    "text": "waiting for specimen"
+  },
+  "intent": "order",
+  "priority": "routine",
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/CodeSystem/task-code",
+      "code": "fulfill"
+    }
+  },
+  "description": "Create order for getting specimen, Set up inhouse testing,  generate order for any sendouts and submit with specimen",
+  "focus": {
+    "valueReference": {
+      "reference": "ServiceRequest/lipid",
+      "display": "Lipid Panel Request"
+    }
+  },
+  "for": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Example In-Patient Encounter"
+  },
+  "executionPeriod": {
+    "start": "2016-10-31T08:25:05+10:00"
+  },
+  "authoredOn": "2016-10-31T08:25:05+10:00",
+  "lastModified": "2016-10-31T09:45:05+10:00",
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "requestedPerformer": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 18850004,
+        "display": "Laboratory hematologist"
+      },
+      "text": "Performer"
+    }
+  },
+  "owner": {
+    "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f",
+    "display": "Clinical Laboratory @ Acme Hospital"
+  },
+  "reason": {
+    "concept": {
+      "text": "The Task.reason should only be included if there is no Task.focus or if it differs from the reason indicated on the focus"
+    }
+  },
+  "note": {
+    "text": "This is an example to demonstrate using task for actioning a servicerequest and to illustrate how to populate many of the task elements - this is the parent task that will be broken into subtask to grab the specimen and a sendout lab test"
+  },
+  "relevantHistory": {
+    "reference": "#signature",
+    "display": "Author's Signature"
+  },
+  "restriction": {
+    "repetitions": 1,
+    "period": {
+      "end": "2016-11-02T09:45:05+10:00"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "resourceType": "Patient",
+  "id": "mom",
+  "meta": {
+    "lastUpdated": "2012-05-29T23:45:32Z"
+  },
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "SS"
+      }
+    },
+    "system": "http://hl7.org/fhir/sid/us-ssn",
+    "value": 444222222
+  },
+  "active": true,
+  "name": {
+    "use": "official",
+    "family": "Everywoman",
+    "given": "Eve"
+  },
+  "telecom": {
+    "system": "phone",
+    "value": "555-555-2003",
+    "use": "work"
+  },
+  "gender": "female",
+  "birthDate": "1973-05-31",
+  "address": {
+    "use": "home",
+    "line": "2222 Home Street"
+  },
+  "managingOrganization": {
+    "reference": "Organization/hl7"
+  },
+  "link": {
+    "other": {
+      "reference": "RelatedPerson/newborn-mom"
+    },
+    "type": "seealso"
+  }
+}

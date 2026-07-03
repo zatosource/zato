@@ -1,0 +1,64 @@
+{
+  "resourceType": "Task",
+  "id": "example2",
+  "identifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/identifiers",
+    "value": "20170201-002"
+  },
+  "groupIdentifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/accession/identifiers",
+    "value": "G20170201-001"
+  },
+  "partOf": {
+    "reference": "Task/example1",
+    "display": "Lipid Panel"
+  },
+  "status": "accepted",
+  "businessStatus": {
+    "text": "waiting for patient"
+  },
+  "intent": "filler-order",
+  "priority": "routine",
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/CodeSystem/task-code",
+      "code": "fulfill"
+    }
+  },
+  "focus": {
+    "valueCanonical": "http://hl7.org/fhir/ServiceRequest/BloodDrawf201"
+  },
+  "for": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Example In-Patient Encounter"
+  },
+  "executionPeriod": {
+    "start": "2016-10-31T08:45:05+10:00"
+  },
+  "authoredOn": "2016-10-31T08:45:05+10:00",
+  "lastModified": "2016-10-31T09:45:05+10:00",
+  "requester": {
+    "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f",
+    "display": "Clinical Laboratory @ Acme Hospital"
+  },
+  "requestedPerformer": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 18850004,
+        "display": "Laboratory hematologist"
+      },
+      "text": "Performer"
+    }
+  },
+  "owner": {
+    "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f",
+    "display": "Clinical Laboratory @ Acme Hospital"
+  }
+}

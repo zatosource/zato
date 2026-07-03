@@ -1,0 +1,687 @@
+{
+  "resourceType": "Group",
+  "id": "example-eligibility-criteria-ada-rec-bariatric",
+  "contained": [
+    {
+      "Group": {
+        "id": "BMI-Based-Criteria",
+        "title": "CohortDefinition: BMI-based Criteria",
+        "membership": "conceptual",
+        "characteristic": {
+          "code": {
+            "coding": {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index (BMI) [Ratio]"
+            }
+          },
+          "valueQuantity": {
+            "value": 40,
+            "comparator": ">=",
+            "unit": "kg/m2",
+            "system": "http://unitsofmeasure.org",
+            "code": "kg/m2"
+          },
+          "exclude": false,
+          "description": "Body Mass Index (BMI) \u2265 40.0 kg/m2"
+        }
+      }
+    },
+    {
+      "Group": {
+        "id": "BMI-Asian-Americans",
+        "title": "CohortDefinition: BMI \u2265 37.5 kg/m2 in Asian Americans",
+        "membership": "conceptual",
+        "combinationMethod": "all-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://loinc.org",
+                "code": "39156-5",
+                "display": "Body mass index (BMI) [Ratio]"
+              }
+            },
+            "valueQuantity": {
+              "value": 37.5,
+              "comparator": ">=",
+              "unit": "kilogram per square meter (kg/m2)",
+              "system": "http://unitsofmeasure.org",
+              "code": "kg/m2"
+            },
+            "exclude": false,
+            "description": "BMI \u2265 37.5 kg/m2"
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 103579009,
+                "display": "Race"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": 103579009
+                },
+                {
+                  "system": "urn:oid:2.16.840.1.113883.6.238",
+                  "code": "2028-9",
+                  "display": "Asian"
+                }
+              ],
+              "text": "Asian American"
+            },
+            "exclude": false,
+            "description": "Asian American. The evidence and guideline panel decision to modify the BMI threshold for Asian Americans is based on data mostly from Asian Americans not generally including Native Hawaiians and other Pacific Islanders, so it is not explicit whether the modified thresholds apply to Native Hawaiians and other Pacific Islanders. See https://diabetesjournals.org/care/article/38/1/150/37769/BMI-Cut-Points-to-Identify-At-Risk-Asian-Americans for details"
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "BMI-35-to-less-than-40",
+        "title": "BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods",
+        "description": "BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods.",
+        "membership": "conceptual",
+        "combinationMethod": "all-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://loinc.org",
+                "code": "39156-5",
+                "display": "Body mass index (BMI) [Ratio]"
+              }
+            },
+            "valueRange": {
+              "low": {
+                "value": 35,
+                "unit": "kilogram per square meter (kg/m2)",
+                "system": "http://unitsofmeasure.org",
+                "code": "kg/m2"
+              },
+              "high": {
+                "value": 39.9,
+                "unit": "kilogram per square meter (kg/m2)",
+                "system": "http://unitsofmeasure.org",
+                "code": "kg/m2"
+              }
+            },
+            "exclude": false,
+            "description": "BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2"
+          },
+          {
+            "code": {
+              "text": "Defined by CodeableConcept"
+            },
+            "valueCodeableConcept": {
+              "text": "achieving durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods"
+            },
+            "exclude": true,
+            "description": "who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods."
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "BMI-32.5-to-less-than-37.5",
+        "title": "BMI \u2265 32.5 kg/m2 and \u2264 37.4 kg/m2 in Asian Americans who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods",
+        "description": "BMI \u2265 32.5 kg/m2 and \u2264 37.4 kg/m2 in Asian Americans who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods.",
+        "membership": "conceptual",
+        "combinationMethod": "all-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://loinc.org",
+                "code": "39156-5",
+                "display": "Body mass index (BMI) [Ratio]"
+              }
+            },
+            "valueRange": {
+              "low": {
+                "value": 32.5,
+                "unit": "kilogram per square meter (kg/m2)",
+                "system": "http://unitsofmeasure.org",
+                "code": "kg/m2"
+              },
+              "high": {
+                "value": 37.4,
+                "unit": "kilogram per square meter (kg/m2)",
+                "system": "http://unitsofmeasure.org",
+                "code": "kg/m2"
+              }
+            },
+            "exclude": false,
+            "description": "BMI \u2265 32.5 kg/m2 and \u2264 37.4 kg/m2"
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 103579009,
+                "display": "Race"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": 103579009
+                },
+                {
+                  "system": "urn:oid:2.16.840.1.113883.6.238",
+                  "code": "2028-9",
+                  "display": "Asian"
+                }
+              ],
+              "text": "Asian American"
+            },
+            "exclude": false,
+            "description": "Asian American. The evidence and guideline panel decision to modify the BMI threshold for Asian Americans is based on data mostly from Asian Americans not generally including Native Hawaiians and other Pacific Islanders, so it is not explicit whether the modified thresholds apply to Native Hawaiians and other Pacific Islanders. See https://diabetesjournals.org/care/article/38/1/150/37769/BMI-Cut-Points-to-Identify-At-Risk-Asian-Americans for details"
+          },
+          {
+            "code": {
+              "text": "Defined by CodeableConcept"
+            },
+            "valueCodeableConcept": {
+              "text": "achieving durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods"
+            },
+            "exclude": true,
+            "description": "who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods."
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "BMI-Qualifying-Group",
+        "title": "Body Mass Index (BMI) \u2265 40.0 kg/m2 (BMI \u2265 37.5 kg/m2 in Asian Americans), or BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 (BMI 32.5-37.4 kg/m2 in Asian Americans) who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods",
+        "description": "Body Mass Index (BMI) \u2265 40.0 kg/m2 (BMI \u2265 37.5 kg/m2 in Asian Americans), or BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 (BMI 32.5-37.4 kg/m2 in Asian Americans) who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods.",
+        "membership": "conceptual",
+        "combinationMethod": "any-of",
+        "characteristic": [
+          {
+            "code": {
+              "text": "Defined by Reference"
+            },
+            "valueReference": {
+              "reference": "#BMI-Based-Criteria",
+              "type": "Group",
+              "display": "CohortDefinition: BMI-based Criteria"
+            },
+            "exclude": false
+          },
+          {
+            "code": {
+              "text": "Defined by Reference"
+            },
+            "valueReference": {
+              "reference": "#BMI-Asian-Americans",
+              "type": "Group",
+              "display": "CohortDefinition: BMI \u2265 37.5 kg/m2 in Asian Americans"
+            },
+            "exclude": false
+          },
+          {
+            "code": {
+              "text": "Defined by Reference"
+            },
+            "valueReference": {
+              "reference": "#BMI-35-to-less-than-40",
+              "type": "Group",
+              "display": "BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods"
+            },
+            "exclude": false
+          },
+          {
+            "code": {
+              "text": "Defined by Reference"
+            },
+            "valueReference": {
+              "reference": "#BMI-32.5-to-less-than-37.5",
+              "type": "Group",
+              "display": "BMI \u2265 32.5 kg/m2 and \u2264 37.4 kg/m2 in Asian Americans who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods"
+            },
+            "exclude": false
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "Certain-Cardiovascular-Events",
+        "title": "Cardiovascular event (any of: myocardial infarction, acute coronary syndrome, coronary artery angioplasty or bypass, stroke)",
+        "description": "Cardiovascular event (any of: myocardial infarction, acute coronary syndrome, coronary artery angioplasty or bypass, stroke). Placeholder for now to represent 'screened surgical candidate'.",
+        "membership": "conceptual",
+        "combinationMethod": "any-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 64572001,
+                "display": "Disease (disorder)"
+              }
+            },
+            "valueReference": {
+              "reference": "ValueSet/Acute-Coronary-Heart-Disease-Value-Set",
+              "type": "ValueSet",
+              "display": "Acute Coronary Heart Disease Value Set"
+            },
+            "exclude": false,
+            "description": "acute coronary heart disease (a value set covering many forms)"
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 71388002,
+                "display": "Procedure (procedure)"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 81266008,
+                "display": "Heart revascularization (procedure)"
+              }
+            },
+            "exclude": false
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 64572001,
+                "display": "Disease (disorder)"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 230690007,
+                "display": "Cerebrovascular accident (disorder)"
+              }
+            },
+            "exclude": false
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "Cancer",
+        "resourceType": "Group",
+        "title": "Cancer of any kind (except basal cell skin cancer or cancer in situ) unless documented to be disease-free for five years",
+        "description": "Cancer of any kind (except basal cell skin cancer or cancer in situ) unless documented to be disease-free for five years. This combination logic fails if the patient has both a basal cell skin cancer or cancer in situ and a cancer of another kind. Placeholder for now to represent 'screened surgical candidate'.",
+        "membership": "conceptual",
+        "combinationMethod": "all-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 64572001,
+                "display": "Disease (disorder)"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 363346000,
+                "display": "Malignant neoplastic disease (disorder)"
+              }
+            },
+            "exclude": false,
+            "description": "Cancer of any kind"
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 64572001,
+                "display": "Disease (disorder)"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 254701007,
+                "display": "Basal cell carcinoma of skin (disorder)"
+              }
+            },
+            "exclude": true,
+            "description": "(except basal cell skin cancer)"
+          },
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 64572001,
+                "display": "Disease (disorder)"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 109355002,
+                "display": "Carcinoma in situ (disorder)"
+              }
+            },
+            "exclude": true,
+            "description": "(except cancer in situ)"
+          },
+          {
+            "code": {
+              "text": "Defined by CodeableConcept"
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 395100000,
+                "display": "No evidence of cancer found (situation)"
+              }
+            },
+            "exclude": true,
+            "description": "unless documented to be disease-free for five years",
+            "timing": {
+              "offsetRange": {
+                "low": {
+                  "value": -5,
+                  "unit": "years",
+                  "system": "http://unitsofmeasure.org",
+                  "code": "a"
+                },
+                "high": {
+                  "value": 0,
+                  "unit": "years",
+                  "system": "http://unitsofmeasure.org",
+                  "code": "a"
+                }
+              },
+              "text": "for five years"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "name": "Recommend bariatric surgery if BMI 35 or higher",
+  "title": "RecommendationEligibilityCriteria: Eligibility Criteria for Bariatric Surgery (ADA Recommendation 8.16)",
+  "status": "active",
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "Inclusion Criteria: [[1]] Adults. [[2]] Diagnosed with type 2 diabetes. [[3]] Body Mass Index (BMI) \u2265 40.0 kg/m2 (BMI \u2265 37.5 kg/m2 in Asian Americans), or BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 (BMI 32.5-37.4 kg/m2 in Asian Americans) who do not achieve durable weight loss and improvement in comorbidities (including hyperglycemia) with nonsurgical methods. [[4]] Screened surgical candidates.",
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "type": "person",
+  "membership": "definitional",
+  "combinationMethod": "all-of",
+  "characteristic": [
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 397669002,
+          "display": "Age"
+        }
+      },
+      "valueQuantity": {
+        "value": 18,
+        "comparator": ">=",
+        "unit": "years",
+        "system": "http://unitsofmeasure.org",
+        "code": "a"
+      },
+      "exclude": false,
+      "description": "Adult"
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 44054006,
+          "display": "Diabetes mellitus type 2 (disorder)"
+        }
+      },
+      "exclude": false,
+      "description": "Diabetes mellitus type 2 (disorder)"
+    },
+    {
+      "code": {
+        "text": "Defined by Reference"
+      },
+      "valueReference": {
+        "reference": "#BMI-Qualifying-Group",
+        "type": "Group",
+        "display": "Body Mass Index (BMI) \u2265 40.0 kg/m2 (BMI \u2265 37.5 kg/m2 in Asian Americans), or BMI \u2265 35.0 kg/m2 and \u2264 39.9 kg/m2 (BMI 32.5-37.4 kg/m2 in Asian Americans) who do not achieve durable weight loss and improvement in comorbidities with nonsurgical methods"
+      },
+      "exclude": false
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 44054006,
+          "display": "Diabetes mellitus type 2 (disorder)"
+        }
+      },
+      "exclude": false,
+      "description": "Diabetes mellitus type 2 (disorder)"
+    },
+    {
+      "code": {
+        "text": "Defined by Reference"
+      },
+      "valueReference": {
+        "reference": "#Certain-Cardiovascular-Events",
+        "type": "Group",
+        "display": "Cardiovascular event (any of: myocardial infarction, acute coronary syndrome, coronary artery angioplasty or bypass, stroke)"
+      },
+      "exclude": true,
+      "description": "Cardiovascular event (myocardial infarction, acute coronary syndrome, coronary artery angioplasty or bypass, stroke) in the past six months.",
+      "timing": {
+        "offsetRange": {
+          "low": {
+            "value": -6,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          },
+          "high": {
+            "value": 0,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          }
+        },
+        "text": "in the past six months"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "text": "Current evidence of congestive heart failure, angina pectoris, or symptomatic peripheral vascular disease."
+      },
+      "exclude": true,
+      "description": "Current evidence of congestive heart failure, angina pectoris, or symptomatic peripheral vascular disease. This may be possible to encode as presence of Disease(disorder) without 'in remission. Placeholder for now to represent 'screened surgical candidate'."
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "text": "Cardiac stress test indicating that surgery or IMM would not be safe."
+      },
+      "exclude": true,
+      "description": "Cardiac stress test indicating that surgery or IMM would not be safe. Placeholder for now to represent 'screened surgical candidate'."
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 59282003,
+          "display": "Pulmonary embolism (disorder)"
+        }
+      },
+      "exclude": true,
+      "description": "Pulmonary embolus in the past six months. Placeholder for now to represent 'screened surgical candidate'.",
+      "timing": {
+        "offsetRange": {
+          "low": {
+            "value": -6,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          },
+          "high": {
+            "value": 0,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          }
+        },
+        "text": "in the past six months"
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64572001,
+          "display": "Disease (disorder)"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 64156001,
+          "display": "Thrombophlebitis (disorder)"
+        }
+      },
+      "exclude": true,
+      "description": "Thrombophlebitis in the past six months. Placeholder for now to represent 'screened surgical candidate'.",
+      "timing": {
+        "offsetRange": {
+          "low": {
+            "value": -6,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          },
+          "high": {
+            "value": 0,
+            "unit": "months",
+            "system": "http://unitsofmeasure.org",
+            "code": "mo"
+          }
+        },
+        "text": "in the past six months"
+      }
+    },
+    {
+      "code": {
+        "text": "Defined by Reference"
+      },
+      "valueReference": {
+        "reference": "#Cancer",
+        "type": "Group",
+        "display": "Cancer of any kind (except basal cell skin cancer or cancer in situ) unless documented to be disease-free for five years"
+      },
+      "exclude": true
+    },
+    {
+      "code": {
+        "text": "Defined by CodeableConcept"
+      },
+      "valueCodeableConcept": {
+        "text": "history of coagulopathy"
+      },
+      "exclude": true,
+      "description": "History of coagulopathy. Placeholder for now to represent 'screened surgical candidate'."
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "718-7",
+          "display": "Hemoglobin [Mass/volume] in Blood"
+        }
+      },
+      "valueQuantity": {
+        "value": -1,
+        "comparator": "<=",
+        "unit": "GramsPerDeciLiter",
+        "system": "http://unitsofmeasure.org",
+        "code": "g/dL"
+      },
+      "exclude": true,
+      "description": "Significant anemia (hemoglobin 1.0 g or more below normal range). Placeholder for now to represent 'screened surgical candidate'.",
+      "offset": {
+        "coding": {
+          "system": "http://hl7.org/fhir/characteristic-offset",
+          "code": "LNL",
+          "display": "Lower Normal Limit"
+        }
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "2160-0",
+          "display": "Creatinine [Mass/volume] in Serum or Plasma"
+        }
+      },
+      "valueQuantity": {
+        "value": 1.5,
+        "comparator": ">=",
+        "unit": "MilliGramsPerDeciLiter",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "exclude": true,
+      "description": "Serum creatinine \u2265 1.5 mg/dl. Placeholder for now to represent 'screened surgical candidate'."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "resourceType": "EventDefinition",
+  "id": "example-periodic",
+  "extension": [
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    },
+    {
+      "valueCode": "cds"
+    },
+    {
+      "valueCanonical": "http://hl7.org/fhir/EventDefinition/ExampleEventDefinitionLogic"
+    }
+  ],
+  "url": "http://hl7.org/fhir/EventDefinition/example-periodic",
+  "name": "PeriodicEventDefinitionExample",
+  "title": "Periodic EventDefinition Example",
+  "status": "draft",
+  "experimental": true,
+  "description": "Example of an EventDefinition using the periodic event approach.",
+  "purpose": "Monitor when 3 consecutive negative stick tests have occurred using a periodic event.",
+  "trigger": {
+    "type": "periodic",
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 3,
+        "periodUnit": "h"
+      }
+    },
+    "condition": {
+      "language": "text/cql-expression",
+      "expression": "StickTest.within(3 hours).consecutively.take(3).negative().count() = 3"
+    }
+  }
+}

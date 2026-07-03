@@ -1,0 +1,40 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-supplement",
+  "extension": {
+    "valueCanonical": "http://hl7.org/fhir/CodeSystem/example-supplement"
+  },
+  "url": "http://hl7.org/fhir/ValueSet/example-supplement",
+  "name": "ACMECholCodesPlasmaSupplemented",
+  "title": "ACME Codes for Cholesterol: Plasma only (Supplemented)",
+  "status": "draft",
+  "experimental": true,
+  "date": "2018-11-01",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "ACME Codes for Cholesterol: Plasma only - demonstrating the use of a supplement defined in a CodeSystem",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/CodeSystem/example",
+      "filter": {
+        "property": "legacy",
+        "op": "=",
+        "value": true
+      }
+    },
+    "property": "status"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "resourceType": "ValueSet",
+  "id": "audit-entity-detail-type-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/audit-entity-detail-type-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3335"
+  },
+  "version": "6.0.0",
+  "name": "AuditEventEntityDetailTypeExamples",
+  "title": "Example value set Audit Event Entity Detail Type",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Example values for the type of additional detail about an entity used in an event.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/audit-entity-detail-type-example"
+    }
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "resourceType": "Composition",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null
+      ]
+    }
+  },
+  "identifier": {
+    "system": "http://healthintersections.com.au/test",
+    "value": 1
+  },
+  "status": "final",
+  "type": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "11488-4",
+      "display": "Consult note"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "LP183761-8",
+      "display": "Report"
+    }
+  },
+  "subject": {
+    "reference": "Patient/xcda",
+    "display": "Henry Levin the 7th"
+  },
+  "encounter": {
+    "reference": "Encounter/xcda"
+  },
+  "date": "2012-01-04T09:10:14Z",
+  "author": {
+    "reference": "Practitioner/xcda-author",
+    "display": "Harold Hippocrates, MD"
+  },
+  "title": "Consultation Note",
+  "attester": {
+    "mode": {
+      "coding": {
+        "system": "http://hl7.org/fhir/composition-attestation-mode",
+        "code": "legal",
+        "display": "Legal"
+      }
+    },
+    "time": "2012-01-04T09:10:14Z",
+    "party": {
+      "reference": "Practitioner/xcda-author",
+      "display": "Harold Hippocrates, MD"
+    }
+  },
+  "custodian": {
+    "reference": "Organization/2.16.840.1.113883.19.5",
+    "display": "Good Health Clinic"
+  },
+  "relatesTo": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+          "code": "replaces",
+          "display": "Replaces"
+        }
+      },
+      "targetReference": {
+        "reference": "Composition/old-example"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+          "code": "appends",
+          "display": "Appends"
+        }
+      },
+      "targetReference": {
+        "identifier": {
+          "system": "http://example.org/fhir/NamingSystem/document-ids",
+          "value": "ABC123"
+        }
+      }
+    }
+  ],
+  "event": {
+    "period": {
+      "start": "2010-07-18",
+      "end": "2012-11-12"
+    },
+    "detail": {
+      "concept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "HEALTHREC",
+          "display": "health record"
+        }
+      },
+      "reference": {
+        "reference": "Observation/example"
+      }
+    }
+  },
+  "section": [
+    {
+      "title": "History of present illness",
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "11348-0",
+          "display": "History of Past illness note"
+        }
+      },
+      "text": {
+        "status": "generated",
+        "{http://www.w3.org/1999/xhtml}div": {
+          "{http://www.w3.org/1999/xhtml}table": {
+            "{http://www.w3.org/1999/xhtml}tr": [
+              {
+                "{http://www.w3.org/1999/xhtml}td": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null
+                  }
+                ]
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}td": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ]
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}td": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ]
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}td": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "orderedBy": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/list-order",
+          "code": "event-date",
+          "display": "Sorted by Event Date"
+        }
+      },
+      "entry": [
+        {
+          "reference": "Condition/stroke"
+        },
+        {
+          "reference": "Condition/example"
+        },
+        {
+          "reference": "Condition/example2"
+        }
+      ]
+    },
+    {
+      "title": "History of family member diseases",
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "10157-6",
+          "display": "History of family member diseases note"
+        }
+      },
+      "text": {
+        "status": "generated",
+        "{http://www.w3.org/1999/xhtml}div": {
+          "{http://www.w3.org/1999/xhtml}p": null
+        }
+      },
+      "emptyReason": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/list-empty-reason",
+          "code": "withheld",
+          "display": "Information Withheld"
+        }
+      }
+    }
+  ]
+}

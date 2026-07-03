@@ -1,0 +1,372 @@
+{
+  "_meta": {
+    "scenario": "payment",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.t6s7j4fg",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: John Gamble</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1178265"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3105"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Gamble",
+        "given": [
+          "John"
+        ],
+        "text": "John Gamble"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "828-488-4546x71891",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "sharonprice@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1970-02-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "62972 Timothy Shore Apt. 545"
+        ],
+        "city": "Margaretmouth",
+        "state": "MO",
+        "postalCode": "95071",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.vha3whmu",
+        "display": "Dr. Tara Anderson"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.gcsru7hz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Clinique du Parc</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8726842186"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Clinique du Parc",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "294-712-7811x07921",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "404 James Cliffs"
+        ],
+        "city": "Dylanport",
+        "state": "WY",
+        "postalCode": "82114",
+        "country": "US"
+      }
+    ]
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.z9d2jp9t",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Copay payment received</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.6tn6hqz3"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    },
+    "amount": {
+      "value": 25,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.6tn6hqz3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Copay reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-15",
+      "end": "2025-06-15"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 25,
+      "currency": "USD"
+    },
+    "detail": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/payment-type",
+              "code": "payment",
+              "display": "Payment"
+            }
+          ],
+          "text": "Payment"
+        },
+        "amount": {
+          "value": 25,
+          "currency": "USD"
+        },
+        "date": "2025-06-15"
+      }
+    ]
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.54j292ae",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Copay invoice for wellness visit</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "copay-invoice",
+          "display": "Copay Invoice"
+        }
+      ],
+      "text": "Copay Invoice"
+    },
+    "subject": {
+      "reference": "Patient/pt.t6s7j4fg",
+      "display": "John Gamble"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    },
+    "account": {
+      "reference": "Account/acct.puqqq2xb"
+    },
+    "totalNet": {
+      "value": 25,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 25,
+      "currency": "USD"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.puqqq2xb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for John Gamble</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - John Gamble",
+    "subject": [
+      {
+        "reference": "Patient/pt.t6s7j4fg",
+        "display": "John Gamble"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.gcsru7hz",
+      "display": "Clinique du Parc"
+    }
+  }
+}

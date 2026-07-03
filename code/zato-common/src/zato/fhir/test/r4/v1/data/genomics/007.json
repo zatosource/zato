@@ -1,0 +1,338 @@
+{
+  "_meta": {
+    "scenario": "genomics",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.sjhftprh",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Dustin Romero</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1901265"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1945"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Romero",
+        "given": [
+          "Dustin"
+        ],
+        "text": "Dustin Romero"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "8183813890",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kpage@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1956-05-16",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5622 Allen Centers Suite 075"
+        ],
+        "city": "Port Kristina",
+        "state": "IN",
+        "postalCode": "14889",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.t4es9t8s",
+        "display": "Dr. Jessica Taylor"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.s77s8p6m",
+      "display": "Clinique du Parc"
+    }
+  },
+  "molecular_sequence": {
+    "resourceType": "MolecularSequence",
+    "id": "ms.s94dskhr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MolecularSequence: Healthy genetic screening result</p></div>"
+    },
+    "type": "dna",
+    "coordinateSystem": 0,
+    "patient": {
+      "reference": "Patient/pt.sjhftprh",
+      "display": "Dustin Romero"
+    },
+    "referenceSeq": {
+      "referenceSeqId": {
+        "coding": [
+          {
+            "system": "http://www.ncbi.nlm.nih.gov/nuccore",
+            "code": "NC_000007.14",
+            "display": "Chromosome 7 Reference"
+          }
+        ],
+        "text": "Chromosome 7 Reference"
+      },
+      "strand": "watson",
+      "windowStart": 55086714,
+      "windowEnd": 55086814
+    }
+  },
+  "biologically_derived_product": {
+    "resourceType": "BiologicallyDerivedProduct",
+    "id": "bdp.2p7jr7b2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>BiologicallyDerivedProduct: Blood sample for genetic analysis</p></div>"
+    },
+    "productCategory": "fluid",
+    "productCode": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "status": "available",
+    "quantity": 1,
+    "collection": {
+      "source": {
+        "reference": "Patient/pt.sjhftprh",
+        "display": "Dustin Romero"
+      },
+      "collectedDateTime": "2025-06-15T09:00:00+00:00"
+    }
+  },
+  "body_structure": {
+    "resourceType": "BodyStructure",
+    "id": "bs.hhj38mu7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>BodyStructure: Median cubital vein, blood draw site</p></div>"
+    },
+    "active": true,
+    "location": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "49852007",
+          "display": "Median cubital vein"
+        }
+      ],
+      "text": "Median cubital vein"
+    },
+    "description": "Blood collection site for genetic screening sample",
+    "patient": {
+      "reference": "Patient/pt.sjhftprh",
+      "display": "Dustin Romero"
+    }
+  },
+  "substance_nucleic_acid": {
+    "resourceType": "SubstanceNucleicAcid",
+    "id": "sna.hgqhajaf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstanceNucleicAcid: Genomic DNA sample</p></div>"
+    },
+    "sequenceType": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "LA14698-0",
+          "display": "Genomic DNA"
+        }
+      ],
+      "text": "Genomic DNA"
+    },
+    "numberOfSubunits": 2
+  },
+  "substance_polymer": {
+    "resourceType": "SubstancePolymer",
+    "id": "sp.zrvjetem",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstancePolymer: Nucleic acid polymer</p></div>"
+    },
+    "class": {
+      "coding": [
+        {
+          "system": "http://example.org/polymer-class",
+          "code": "nucleicAcid",
+          "display": "Nucleic Acid"
+        }
+      ],
+      "text": "Nucleic Acid"
+    }
+  },
+  "substance_protein": {
+    "resourceType": "SubstanceProtein",
+    "id": "sprot.2q4tx9pn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstanceProtein: Reference protein</p></div>"
+    },
+    "sequenceType": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "LA6706-1",
+          "display": "Protein"
+        }
+      ],
+      "text": "Protein"
+    },
+    "numberOfSubunits": 1
+  },
+  "substance_reference_information": {
+    "resourceType": "SubstanceReferenceInformation",
+    "id": "sri.nmaj3cva",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstanceReferenceInformation: Genetic marker reference</p></div>"
+    },
+    "comment": "Reference information for genetic markers used in wellness screening."
+  },
+  "substance_source_material": {
+    "resourceType": "SubstanceSourceMaterial",
+    "id": "ssm.urmjnyvy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstanceSourceMaterial: Human blood source</p></div>"
+    },
+    "sourceMaterialType": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "organismName": "Homo sapiens"
+  },
+  "substance_specification": {
+    "resourceType": "SubstanceSpecification",
+    "id": "ss.b3dnw5we",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SubstanceSpecification: DNA specification for screening panel</p></div>"
+    },
+    "comment": "Specification for the genomic DNA used in the wellness genetic screening panel."
+  }
+}

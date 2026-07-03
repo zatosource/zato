@@ -1,0 +1,60 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-mRS3-6-at-90days",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": {
+    "Group": {
+      "id": "Definition-Group",
+      "title": "VariableDefinition: mRS 3-6 at 90 days",
+      "type": "person",
+      "membership": "definitional",
+      "characteristic": {
+        "code": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 260905004,
+            "display": "Condition"
+          }
+        },
+        "valueExpression": {
+          "description": "mRS 3-6",
+          "language": "text/cql",
+          "expression": "[\"Observation\": code in \"75859-9|LOINC\"] mRS where mRS.value between 3 and 6"
+        },
+        "exclude": false,
+        "description": "mRS 3-6 at 90 days",
+        "timing": {
+          "contextCode": {
+            "coding": {
+              "system": "http://hl7.org/fhir/evidence-variable-event",
+              "code": "study-start",
+              "display": "Study Start"
+            }
+          },
+          "offsetDuration": {
+            "value": 90,
+            "unit": "days",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          }
+        }
+      }
+    }
+  },
+  "name": "ModifiedRankinScaleScore36At90DaysAfterTreatment",
+  "title": "Modified Rankin Scale score 3-6 at 90 days after treatment",
+  "status": "draft",
+  "description": "Modified Rankin Scale score 3-6 at 90 days after treatment",
+  "actual": true,
+  "definition": {
+    "reference": {
+      "reference": "#Definition-Group"
+    }
+  },
+  "handling": "dichotomous"
+}

@@ -1,0 +1,340 @@
+{
+  "resourceType": "Basic",
+  "id": "basic-example-narrative",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}h1": null,
+      "{http://www.w3.org/1999/xhtml}h2": [
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}h3": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}h4": null,
+      "{http://www.w3.org/1999/xhtml}h5": null,
+      "{http://www.w3.org/1999/xhtml}h6": null,
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}span": null,
+          "{http://www.w3.org/1999/xhtml}a": null,
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}br": null,
+          "{http://www.w3.org/1999/xhtml}em": null,
+          "{http://www.w3.org/1999/xhtml}i": null,
+          "{http://www.w3.org/1999/xhtml}strong": null,
+          "{http://www.w3.org/1999/xhtml}small": [
+            null,
+            null
+          ],
+          "{http://www.w3.org/1999/xhtml}big": null,
+          "{http://www.w3.org/1999/xhtml}tt": null,
+          "{http://www.w3.org/1999/xhtml}dfn": null,
+          "{http://www.w3.org/1999/xhtml}q": null,
+          "{http://www.w3.org/1999/xhtml}var": null,
+          "{http://www.w3.org/1999/xhtml}abbr": null,
+          "{http://www.w3.org/1999/xhtml}acronym": null,
+          "{http://www.w3.org/1999/xhtml}cite": null
+        },
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}span": [
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        null,
+        null,
+        null,
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}span": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}blockquote": {
+        "{http://www.w3.org/1999/xhtml}p": null
+      },
+      "{http://www.w3.org/1999/xhtml}hr": null,
+      "{http://www.w3.org/1999/xhtml}div": {
+        "{http://www.w3.org/1999/xhtml}p": {
+          "{http://www.w3.org/1999/xhtml}a": null
+        }
+      },
+      "{http://www.w3.org/1999/xhtml}ul": [
+        {
+          "{http://www.w3.org/1999/xhtml}li": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}ol": [
+        {
+          "{http://www.w3.org/1999/xhtml}li": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}li": [
+            null,
+            null
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}dl": {
+        "{http://www.w3.org/1999/xhtml}dt": null,
+        "{http://www.w3.org/1999/xhtml}dd": null
+      },
+      "{http://www.w3.org/1999/xhtml}pre": null,
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}caption": null,
+          "{http://www.w3.org/1999/xhtml}colgroup": {
+            "{http://www.w3.org/1999/xhtml}col": [
+              null,
+              null
+            ]
+          },
+          "{http://www.w3.org/1999/xhtml}thead": {
+            "{http://www.w3.org/1999/xhtml}tr": {
+              "{http://www.w3.org/1999/xhtml}th": [
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "{http://www.w3.org/1999/xhtml}tfoot": {
+            "{http://www.w3.org/1999/xhtml}tr": {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null
+              ]
+            }
+          },
+          "{http://www.w3.org/1999/xhtml}tbody": {
+            "{http://www.w3.org/1999/xhtml}tr": {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": {
+            "{http://www.w3.org/1999/xhtml}td": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}code": null,
+      "{http://www.w3.org/1999/xhtml}samp": null
+    }
+  },
+  "code": {
+    "text": "Example Narrative Tester"
+  }
+}

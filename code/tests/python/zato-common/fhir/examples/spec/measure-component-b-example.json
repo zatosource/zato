@@ -1,0 +1,56 @@
+{
+  "resourceType": "Measure",
+  "id": "component-b-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "name": "ScreeningForDepression",
+  "title": "Screening for Depression",
+  "status": "draft",
+  "description": "Screening for Depression",
+  "scoring": {
+    "coding": {
+      "code": "proportion"
+    }
+  },
+  "group": {
+    "population": [
+      {
+        "code": {
+          "coding": {
+            "code": "initial-population"
+          }
+        },
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "Initial Population"
+        }
+      },
+      {
+        "code": {
+          "coding": {
+            "code": "denominator"
+          }
+        },
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "Denominator"
+        }
+      },
+      {
+        "code": {
+          "coding": {
+            "code": "numerator"
+          }
+        },
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "Numerator"
+        }
+      }
+    ]
+  }
+}
