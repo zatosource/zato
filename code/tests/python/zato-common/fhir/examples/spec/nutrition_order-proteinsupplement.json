@@ -1,0 +1,65 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "proteinsupplement",
+  "identifier": {
+    "system": "http://goodhealthhospital.org/nutrition-requests",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Inpatient"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "oralDiet": {
+    "type": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 182922004,
+        "display": "Regular diet care"
+      }
+    }
+  },
+  "additive": {
+    "modularType": {
+      "concept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 443581000124102,
+            "display": "Modular protein formula component (product)"
+          },
+          {
+            "system": "http://goodhealthhospital.org/supplement-type-codes",
+            "code": 1000,
+            "display": "High Protein Powder"
+          }
+        ],
+        "text": "High Protein Powder"
+      }
+    },
+    "productName": "Beneprotein",
+    "quantity": {
+      "value": 1,
+      "unit": "scoop",
+      "system": "http://unitsofmeasure.org",
+      "code": "{scoop}"
+    },
+    "routeOfAdministration": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
+        "code": "PO",
+        "display": "Swallow, oral"
+      }
+    }
+  }
+}

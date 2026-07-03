@@ -1,0 +1,186 @@
+{
+  "resourceType": "ObservationDefinition",
+  "id": "example-ck-panel",
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "laboratory",
+      "display": "Laboratory"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "32673-6",
+      "display": "Creatine kinase.MB [Enzymatic activity/volume] in Serum or Plasma"
+    },
+    "text": "Creatine Kinase Panel"
+  },
+  "permittedDataType": "Quantity",
+  "multipleResultsAllowed": true,
+  "preferredReportName": "Creatine Kinase, MB and Relative Percent",
+  "qualifiedValue": {
+    "condition": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 21134002,
+        "display": "Myocardial infarction"
+      }
+    },
+    "context": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+        "code": "normal",
+        "display": "Normal Range"
+      }
+    },
+    "rangeCategory": "reference",
+    "validCodedValueSet": {
+      "reference": "http://hl7.org/fhir/ValueSet/observation-status"
+    }
+  },
+  "component": [
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "2157-6",
+          "display": "Creatine kinase [Enzymatic activity/volume] in Serum or Plasma"
+        },
+        "text": "Creatine Kinase, Total"
+      },
+      "permittedDataType": "Quantity",
+      "permittedUnit": {
+        "system": "http://unitsofmeasure.org",
+        "code": "U/L",
+        "display": "U/L"
+      },
+      "qualifiedValue": {
+        "condition": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 21134002,
+            "display": "Myocardial infarction"
+          }
+        },
+        "context": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+            "code": "normal",
+            "display": "Normal Range"
+          }
+        },
+        "rangeCategory": "reference",
+        "range": {
+          "low": {
+            "value": 39,
+            "unit": "U/L",
+            "system": "http://unitsofmeasure.org",
+            "code": "U/L"
+          },
+          "high": {
+            "value": 308,
+            "unit": "U/L",
+            "system": "http://unitsofmeasure.org",
+            "code": "U/L"
+          }
+        }
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "13969-1",
+          "display": "Creatine kinase.MB [Mass/volume] in Serum or Plasma"
+        },
+        "text": "Creatine Kinase, Isoenzyme MB"
+      },
+      "permittedDataType": "Quantity",
+      "permittedUnit": {
+        "system": "http://unitsofmeasure.org",
+        "code": "ng/mL",
+        "display": "ng/mL"
+      },
+      "qualifiedValue": {
+        "condition": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 21134002,
+            "display": "Myocardial infarction"
+          }
+        },
+        "context": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+            "code": "normal",
+            "display": "Normal Range"
+          }
+        },
+        "rangeCategory": "reference",
+        "range": {
+          "low": {
+            "value": 0.0,
+            "unit": "ng/mL",
+            "system": "http://unitsofmeasure.org",
+            "code": "ng/mL"
+          },
+          "high": {
+            "value": 7.7,
+            "unit": "ng/mL",
+            "system": "http://unitsofmeasure.org",
+            "code": "ng/mL"
+          }
+        }
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "20569-0",
+          "display": "Creatine kinase.MB/Creatine kinase.total in Serum or Plasma"
+        },
+        "text": "CK-MB Relative Percent"
+      },
+      "permittedDataType": "Quantity",
+      "permittedUnit": {
+        "system": "http://unitsofmeasure.org",
+        "code": "%",
+        "display": "%"
+      },
+      "qualifiedValue": {
+        "condition": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 21134002,
+            "display": "Myocardial infarction"
+          }
+        },
+        "context": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+            "code": "normal",
+            "display": "Normal Range"
+          }
+        },
+        "rangeCategory": "reference",
+        "range": {
+          "low": {
+            "value": 0.0,
+            "unit": "%",
+            "system": "http://unitsofmeasure.org",
+            "code": "%"
+          },
+          "high": {
+            "value": 5.0,
+            "unit": "%",
+            "system": "http://unitsofmeasure.org",
+            "code": "%"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "resourceType": "Patient",
+  "id": "us01",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      ]
+    }
+  },
+  "extension": [
+    {
+      "extension": [
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Race",
+            "code": "2106-3",
+            "display": "White"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Race",
+            "code": "1002-5",
+            "display": "American Indian or Alaska Native"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Race",
+            "code": "2028-9",
+            "display": "Asian"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Race",
+            "code": "1586-7",
+            "display": "Shoshone"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Race",
+            "code": "2036-2",
+            "display": "Filipino"
+          }
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Ethnicity",
+            "code": "2135-2",
+            "display": "Hispanic or Latino"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Ethnicity",
+            "code": "2184-0",
+            "display": "Dominican"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-Ethnicity",
+            "code": "2148-5",
+            "display": "Mexican"
+          }
+        }
+      ]
+    },
+    {
+      "valueCode": "M"
+    }
+  ],
+  "active": true,
+  "name": {
+    "use": "official",
+    "family": "Chalmers",
+    "given": [
+      "Peter",
+      "James"
+    ]
+  },
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(03) 5555 6473",
+      "use": "work"
+    },
+    {
+      "extension": {
+        "valueBoolean": true
+      },
+      "system": "email",
+      "value": "person@example.org",
+      "use": "work"
+    }
+  ],
+  "address": {
+    "use": "home",
+    "line": "534 Erewhon St",
+    "city": "PleasantVille",
+    "district": "Orange County",
+    "state": "Vic",
+    "postalCode": 3999
+  }
+}

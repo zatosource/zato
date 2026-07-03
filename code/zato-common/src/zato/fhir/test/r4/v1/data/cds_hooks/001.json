@@ -1,0 +1,271 @@
+{
+  "_meta": {
+    "scenario": "cds_hooks",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.cjtyrdhf",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Charles Pena</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2593611"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1837"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Pena",
+        "given": [
+          "Charles"
+        ],
+        "text": "Charles Pena"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "955-392-3883x94114",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "sheilaowens@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1988-01-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "036 Rodriguez Hill"
+        ],
+        "city": "Yodermouth",
+        "state": "KY",
+        "postalCode": "27557",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.e2xyjmnq",
+        "display": "Dr. Devin Brown"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.z3keemmf",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "guidance_response": {
+    "resourceType": "GuidanceResponse",
+    "id": "gr.5h4mfhnz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GuidanceResponse: Recommend scheduling wellness visit</p></div>"
+    },
+    "requestIdentifier": {
+      "system": "http://example.org/cds-hooks",
+      "value": "req-25773"
+    },
+    "moduleCanonical": "PlanDefinition/pd.s3n9bgv9",
+    "status": "success",
+    "subject": {
+      "reference": "Patient/pt.cjtyrdhf",
+      "display": "Charles Pena"
+    },
+    "encounter": {
+      "reference": "Encounter/enc_placeholder.vhxtqa8s"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": {
+      "reference": "Practitioner/pr.e2xyjmnq",
+      "display": "Dr. Devin Brown"
+    },
+    "outputParameters": {
+      "reference": "Parameters/params_placeholder.uj2bmp3j"
+    },
+    "result": {
+      "reference": "RequestGroup/rg.7rgqsvzf"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.7rgqsvzf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit recommendation actions</p></div>"
+    },
+    "status": "active",
+    "intent": "proposal",
+    "subject": {
+      "reference": "Patient/pt.cjtyrdhf",
+      "display": "Charles Pena"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.e2xyjmnq",
+      "display": "Dr. Devin Brown"
+    },
+    "action": [
+      {
+        "title": "Schedule annual wellness visit",
+        "description": "Patient is due for annual wellness visit. Consider scheduling an appointment.",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/action-type",
+              "code": "create",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.s3n9bgv9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: CDS Hooks wellness reminder service</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.s3n9bgv9",
+    "name": "WellnessReminderService",
+    "title": "Wellness Visit Reminder CDS Service",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Green Valley Pharmacy",
+    "description": "A CDS Hooks service that reminds providers when a patient is due for an annual wellness visit.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "eca-rule",
+          "display": "ECA Rule"
+        }
+      ],
+      "text": "ECA Rule"
+    },
+    "action": [
+      {
+        "title": "Check wellness visit due date",
+        "description": "Evaluate whether patient is overdue for annual wellness visit",
+        "condition": [
+          {
+            "kind": "applicability",
+            "expression": {
+              "language": "text/cql",
+              "expression": "IsWellnessVisitOverdue"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

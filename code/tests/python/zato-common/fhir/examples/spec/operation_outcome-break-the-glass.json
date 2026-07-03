@@ -1,0 +1,22 @@
+{
+  "resourceType": "OperationOutcome",
+  "id": "break-the-glass",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "issue": {
+    "severity": "information",
+    "code": "suppressed",
+    "details": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "code": "BTG",
+        "display": "Break the glass"
+      },
+      "text": "Additional information may be available using the Break-The-Glass Protocol"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "variable-handling-example",
+  "extension": [
+    {
+      "valueCode": "cds"
+    },
+    {
+      "valueCode": "normative"
+    },
+    {
+      "valueInteger": 5
+    }
+  ],
+  "url": "http://hl7.org/fhir/variable-handling-example",
+  "version": "6.0.0",
+  "name": "EvidenceVariableHandlingExample",
+  "title": "Evidence Variable Handling Example",
+  "status": "active",
+  "experimental": false,
+  "date": "2021-01-05T10:01:24+11:00",
+  "publisher": "HL7 (FHIR Project)",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "The handling of the variable in statistical analysis for exposures or outcomes (E.g. Dichotomous, Continuous, Descriptive).",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/variable-handling-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "boolean",
+      "display": "boolean variable",
+      "definition": "A boolean variable is a variable which is defined to have only 2 possible values: True or False."
+    },
+    {
+      "code": "continuous",
+      "display": "continuous variable",
+      "definition": "A continuous variable is one for which, within the limits the variable ranges, any value is possible (from STATO http://purl.obolibrary.org/obo/STATO_0000251)."
+    },
+    {
+      "code": "dichotomous",
+      "display": "dichotomous variable",
+      "definition": "A dichotomous variable is a categorical variable which is defined to have only 2 categories or possible values (from STATO http://purl.obolibrary.org/obo/STATO_0000090)."
+    },
+    {
+      "code": "ordinal",
+      "display": "ordinal variable",
+      "definition": "An ordinal variable is a categorical variable where the discrete possible values are ordered or correspond to an implicit ranking (from STATO http://purl.obolibrary.org/obo/STATO_0000228)."
+    },
+    {
+      "code": "polychotomous",
+      "display": "polychotomous variable",
+      "definition": "A polychotomous variable is a categorical variable which is defined to have minimally 2 categories or possible values. (from STATO  http://purl.obolibrary.org/obo/STATO_0000087).  Suggestion to limit code use to situations when neither dichotomous nor ordinal variables apply."
+    },
+    {
+      "code": "time-to-event",
+      "display": "time-to-event",
+      "definition": "time-to-event"
+    },
+    {
+      "code": "not-specified",
+      "display": "not-specified",
+      "definition": "not-specified"
+    }
+  ]
+}

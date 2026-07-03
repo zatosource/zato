@@ -1,0 +1,19 @@
+{
+  "resourceType": "OperationOutcome",
+  "id": "validationfail",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "issue": {
+    "severity": "error",
+    "code": "structure",
+    "details": {
+      "text": "Error parsing resource XML (Unknown Content \"label\""
+    },
+    "location": "/f:Patient/f:identifier",
+    "expression": "Patient.identifier"
+  }
+}

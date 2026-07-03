@@ -1,0 +1,40 @@
+{
+  "resourceType": "MessageDefinition",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "url": "http://hl7.org/fhir/MessageDefinition/example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.15.3"
+  },
+  "name": "EXAMPLE",
+  "title": "Message definition base example",
+  "status": "draft",
+  "experimental": true,
+  "date": "2016-11-09",
+  "publisher": "HL7 International / Infrastructure and Messaging",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/inm/index.cfm"
+      }
+    }
+  ],
+  "description": "Message definition base example",
+  "purpose": "Defines a base example for other MessageDefinition instances.",
+  "eventCoding": {
+    "system": "http://example.org/fhir/message-events",
+    "code": "admin-notify"
+  },
+  "category": "notification"
+}

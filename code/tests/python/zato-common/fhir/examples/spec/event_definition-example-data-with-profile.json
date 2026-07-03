@@ -1,0 +1,36 @@
+{
+  "resourceType": "EventDefinition",
+  "id": "example-data-with-profile",
+  "extension": [
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    },
+    {
+      "valueCode": "cds"
+    },
+    {
+      "valueCanonical": "http://hl7.org/fhir/EventDefinition/ExampleEventDefinitionLogic"
+    }
+  ],
+  "url": "http://hl7.org/fhir/EventDefinition/example-data-with-profile",
+  "name": "DataWithProfileEventDefinitionExample",
+  "title": "Data With Profile EventDefinition Example",
+  "status": "draft",
+  "experimental": true,
+  "description": "Example of an EventDefinition using the data event approach with a profile in the data requirement.",
+  "purpose": "Monitor when 3 consecutive negative stick tests have occurred using a data change event and a profile.",
+  "trigger": {
+    "type": "data-changed",
+    "data": {
+      "type": "Observation",
+      "profile": "http://example.org/StructureDefinition/stick-test"
+    },
+    "condition": {
+      "language": "text/cql-expression",
+      "expression": "[StickTestProfile].consecutivelyAfter(%context).take(3).negative().count() = 3"
+    }
+  }
+}

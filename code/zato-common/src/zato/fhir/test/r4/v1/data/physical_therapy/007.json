@@ -1,0 +1,794 @@
+{
+  "_meta": {
+    "scenario": "physical_therapy",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.4nwh9rf3",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Amanda Campbell</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5493121"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3420"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Campbell",
+        "given": [
+          "Amanda"
+        ],
+        "text": "Amanda Campbell"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-670-348-1623x433",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "huntermichael@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1971-11-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "7077 Rodriguez Parkways"
+        ],
+        "city": "West Maryville",
+        "state": "OH",
+        "postalCode": "32617",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.bk9jn4yc",
+        "display": "Dr. Jordan Banks"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.u5beea2j",
+      "display": "Clinique du Parc"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.bk9jn4yc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Jordan Banks</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3408710149"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Banks",
+        "given": [
+          "Jordan"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Jordan Banks"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-791-433-0387x594",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "304 Karen Glen Apt. 278"
+        ],
+        "city": "East Donnaberg",
+        "state": "NV",
+        "postalCode": "34490",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.u5beea2j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Clinique du Parc</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3332015647"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Clinique du Parc",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "366-629-7388x60990",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "44077 Connor Ferry"
+        ],
+        "city": "North Gregorybury",
+        "state": "NC",
+        "postalCode": "74204",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.345ke494",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Physical therapy initial evaluation on 2024-05-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Physical therapy initial evaluation"
+            }
+          ],
+          "text": "Physical therapy initial evaluation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4nwh9rf3",
+        "display": "Amanda Campbell"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.bk9jn4yc",
+            "display": "Dr. Jordan Banks"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-06T08:30:00+00:00",
+        "end": "2024-05-06T09:10:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Physical therapy initial evaluation"
+            }
+          ],
+          "text": "Physical therapy initial evaluation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.u5beea2j",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kztcnmh5",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.2avkh38q",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: PT progress check on 2024-12-01</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "PT progress check"
+            }
+          ],
+          "text": "PT progress check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4nwh9rf3",
+        "display": "Amanda Campbell"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.bk9jn4yc",
+            "display": "Dr. Jordan Banks"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-01T09:30:00+00:00",
+        "end": "2024-12-01T10:10:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "PT progress check"
+            }
+          ],
+          "text": "PT progress check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.u5beea2j",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kztcnmh5",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.tdj32vkb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: PT discharge evaluation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "PT discharge evaluation"
+            }
+          ],
+          "text": "PT discharge evaluation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.4nwh9rf3",
+        "display": "Amanda Campbell"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.bk9jn4yc",
+            "display": "Dr. Jordan Banks"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T11:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "PT discharge evaluation"
+            }
+          ],
+          "text": "PT discharge evaluation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.u5beea2j",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kztcnmh5",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "procedure": {
+    "resourceType": "Procedure",
+    "id": "prc.9ctg3jxd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Procedure: Physical therapy session completed</p></div>"
+    },
+    "status": "completed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "91251008",
+          "display": "Physical therapy procedure"
+        }
+      ],
+      "text": "Physical therapy procedure"
+    },
+    "subject": {
+      "reference": "Patient/pt.4nwh9rf3",
+      "display": "Amanda Campbell"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.tdj32vkb"
+    },
+    "performedDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.bk9jn4yc",
+          "display": "Dr. Jordan Banks"
+        }
+      }
+    ],
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "S93.40",
+            "display": "Sprain of ankle, healing"
+          }
+        ],
+        "text": "Sprain of ankle, healing"
+      }
+    ]
+  },
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.z9p8e6he",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Physical therapy recovery plan for Amanda Campbell</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Ankle Recovery - Amanda Campbell",
+    "subject": {
+      "reference": "Patient/pt.4nwh9rf3",
+      "display": "Amanda Campbell"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.tdj32vkb"
+    },
+    "period": {
+      "start": "2024-05-06"
+    },
+    "author": {
+      "reference": "Practitioner/pr.bk9jn4yc",
+      "display": "Dr. Jordan Banks"
+    },
+    "goal": [
+      {
+        "reference": "Goal/goal.s6f9cf8c"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "91251008",
+                "display": "Physical therapy procedure"
+              }
+            ],
+            "text": "Physical therapy procedure"
+          },
+          "description": "Ankle strengthening and range-of-motion exercises, three times per week"
+        }
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.s6f9cf8c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Complete physical therapy program</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "improving",
+          "display": "Improving"
+        }
+      ],
+      "text": "Improving"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "physiotherapy",
+            "display": "Physiotherapy"
+          }
+        ],
+        "text": "Physiotherapy"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "91251008",
+          "display": "Complete physical therapy program"
+        }
+      ],
+      "text": "Complete physical therapy program"
+    },
+    "subject": {
+      "reference": "Patient/pt.4nwh9rf3",
+      "display": "Amanda Campbell"
+    },
+    "startDate": "2024-05-06",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "79190-3",
+              "display": "Ankle range of motion"
+            }
+          ],
+          "text": "Ankle range of motion"
+        },
+        "detailRange": {
+          "low": {
+            "value": 40,
+            "unit": "degrees"
+          },
+          "high": {
+            "value": 50,
+            "unit": "degrees"
+          }
+        },
+        "dueDate": "2025-12-31"
+      }
+    ]
+  },
+  "questionnaire": {
+    "resourceType": "Questionnaire",
+    "id": "q.f57exen2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Questionnaire: Physical therapy progress assessment</p></div>"
+    },
+    "url": "http://example.org/Questionnaire/q.f57exen2",
+    "name": "PTProgressAssessment",
+    "title": "Physical Therapy Progress Assessment",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Clinique du Parc",
+    "description": "Assessment form for tracking physical therapy progress after ankle sprain.",
+    "item": [
+      {
+        "linkId": "pain-level",
+        "text": "Current pain level on a scale of 0 to 10",
+        "type": "integer"
+      },
+      {
+        "linkId": "rom-improvement",
+        "text": "Has range of motion improved since last visit?",
+        "type": "boolean"
+      },
+      {
+        "linkId": "daily-activities",
+        "text": "Can you perform daily activities without difficulty?",
+        "type": "boolean"
+      },
+      {
+        "linkId": "progress-notes",
+        "text": "Additional notes on progress",
+        "type": "text"
+      }
+    ]
+  },
+  "questionnaire_response": {
+    "resourceType": "QuestionnaireResponse",
+    "id": "qr.buvy65zn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>QuestionnaireResponse: PT progress assessment completed</p></div>"
+    },
+    "questionnaire": "Questionnaire/q.f57exen2",
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.4nwh9rf3",
+      "display": "Amanda Campbell"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.tdj32vkb"
+    },
+    "authored": "2025-06-15T11:00:00+00:00",
+    "author": {
+      "reference": "Practitioner/pr.bk9jn4yc",
+      "display": "Dr. Jordan Banks"
+    },
+    "item": [
+      {
+        "linkId": "pain-level",
+        "text": "Current pain level on a scale of 0 to 10",
+        "answer": [
+          {
+            "valueInteger": 2
+          }
+        ]
+      },
+      {
+        "linkId": "rom-improvement",
+        "text": "Has range of motion improved since last visit?",
+        "answer": [
+          {
+            "valueBoolean": true
+          }
+        ]
+      },
+      {
+        "linkId": "daily-activities",
+        "text": "Can you perform daily activities without difficulty?",
+        "answer": [
+          {
+            "valueBoolean": true
+          }
+        ]
+      },
+      {
+        "linkId": "progress-notes",
+        "text": "Additional notes on progress",
+        "answer": [
+          {
+            "valueString": "Strength exercises progressing well. Patient completed all prescribed repetitions without discomfort. Balance exercises showing improvement."
+          }
+        ]
+      }
+    ]
+  }
+}

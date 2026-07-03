@@ -1,0 +1,28 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "di",
+  "status": "active",
+  "intent": "original-order",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://loinc.org",
+        "code": "24627-2"
+      },
+      "text": "Chest CT"
+    }
+  },
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "occurrenceDateTime": "2013-05-08T09:33:27+07:00",
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "reason": {
+    "concept": {
+      "text": "Check for metastatic disease"
+    }
+  }
+}

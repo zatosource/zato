@@ -1,0 +1,629 @@
+{
+  "_meta": {
+    "scenario": "supply_order",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.9x2cvcrr",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Andrew Thompson</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4867056"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5408"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Thompson",
+        "given": [
+          "Andrew"
+        ],
+        "text": "Andrew Thompson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-360-480-2582x7605",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "lauraleblanc@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1991-01-23",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "94112 Robert Mountains"
+        ],
+        "city": "Howardchester",
+        "state": "SD",
+        "postalCode": "23991",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.fpjsve3c",
+        "display": "Dr. Anna Cline"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.edrmswkc",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.edrmswkc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Sunrise Family Practice</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2513676858"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Sunrise Family Practice",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "992-971-5946",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "021 Andre Forge Apt. 160"
+        ],
+        "city": "Port Shelleyfort",
+        "state": "CO",
+        "postalCode": "30789",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ar7q388w",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply request on 2024-06-22</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9x2cvcrr",
+        "display": "Andrew Thompson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fpjsve3c",
+            "display": "Dr. Anna Cline"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-22T09:45:00+00:00",
+        "end": "2024-06-22T10:25:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.edrmswkc",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.abgjmjsj",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v37ysabp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply follow-up on 2024-12-31</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9x2cvcrr",
+        "display": "Andrew Thompson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fpjsve3c",
+            "display": "Dr. Anna Cline"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-31T15:00:00+00:00",
+        "end": "2024-12-31T15:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.edrmswkc",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.abgjmjsj",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3smnqm3n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply confirmation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9x2cvcrr",
+        "display": "Andrew Thompson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fpjsve3c",
+            "display": "Dr. Anna Cline"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:45:00+00:00",
+        "end": "2025-06-15T12:40:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.edrmswkc",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.abgjmjsj",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "supply_request": {
+    "resourceType": "SupplyRequest",
+    "id": "sr.8vcegsm7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyRequest: Adhesive bandages for school clinic</p></div>"
+    },
+    "status": "completed",
+    "category": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supplyrequest-kind",
+          "code": "nonstock",
+          "display": "Non-Stock"
+        }
+      ],
+      "text": "Non-Stock"
+    },
+    "itemCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "412020006",
+          "display": "Adhesive bandage"
+        }
+      ],
+      "text": "Adhesive bandage"
+    },
+    "quantity": {
+      "value": 200,
+      "unit": "unit",
+      "system": "http://unitsofmeasure.org",
+      "code": "{each}"
+    },
+    "occurrenceDateTime": "2025-06-15T09:00:00+00:00",
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Organization/rorg.3qhxme36",
+      "display": "Riverside School Health Office"
+    },
+    "supplier": [
+      {
+        "reference": "Organization/org.edrmswkc",
+        "display": "Sunrise Family Practice"
+      }
+    ],
+    "deliverFrom": {
+      "reference": "Organization/org.edrmswkc",
+      "display": "Sunrise Family Practice"
+    },
+    "deliverTo": {
+      "reference": "Organization/rorg.3qhxme36",
+      "display": "Riverside School Health Office"
+    }
+  },
+  "supply_delivery": {
+    "resourceType": "SupplyDelivery",
+    "id": "sd.ygkwe29u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyDelivery: Bandages delivered to school clinic</p></div>"
+    },
+    "status": "completed",
+    "basedOn": [
+      {
+        "reference": "SupplyRequest/sr.8vcegsm7"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.9x2cvcrr",
+      "display": "Andrew Thompson"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supply-item-type",
+          "code": "device",
+          "display": "Device"
+        }
+      ],
+      "text": "Device"
+    },
+    "suppliedItem": {
+      "quantity": {
+        "value": 200,
+        "unit": "unit",
+        "system": "http://unitsofmeasure.org",
+        "code": "{each}"
+      },
+      "itemCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "412020006",
+            "display": "Adhesive bandage"
+          }
+        ],
+        "text": "Adhesive bandage"
+      }
+    },
+    "occurrenceDateTime": "2025-06-17T14:00:00+00:00",
+    "supplier": {
+      "reference": "Organization/org.edrmswkc",
+      "display": "Sunrise Family Practice"
+    },
+    "destination": {
+      "reference": "Location/loc.abgjmjsj",
+      "display": "Sunrise Family Practice - Main Office"
+    }
+  },
+  "receiving_organization": {
+    "resourceType": "Organization",
+    "id": "rorg.3qhxme36",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverside School Health Office</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "edu",
+            "display": "Educational Institute"
+          }
+        ],
+        "text": "Educational Institute"
+      }
+    ],
+    "name": "Riverside School Health Office",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-314-761-5329x19143",
+        "use": "work"
+      }
+    ]
+  },
+  "organization_affiliation": {
+    "resourceType": "OrganizationAffiliation",
+    "id": "oa.hgc534gk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OrganizationAffiliation: Sunrise Family Practice supplies Riverside School</p></div>"
+    },
+    "active": true,
+    "organization": {
+      "reference": "Organization/org.edrmswkc",
+      "display": "Sunrise Family Practice"
+    },
+    "participatingOrganization": {
+      "reference": "Organization/rorg.3qhxme36",
+      "display": "Riverside School Health Office"
+    },
+    "code": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/organization-role",
+            "code": "supplier",
+            "display": "Supplier"
+          }
+        ],
+        "text": "Supplier"
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "resourceType": "Endpoint",
+  "id": "example-ccda-xca",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active",
+  "connectionType": [
+    {
+      "coding": {
+        "system": "https://profiles.ihe.net/ITI/mCSD/CodeSystem/MCSDEndpointTypes",
+        "code": "ihe-xca"
+      }
+    },
+    {
+      "coding": {
+        "system": "https://profiles.ihe.net/ITI/mCSD/CodeSystem/MCSDEndpointTypes",
+        "code": "XCA-RespGateway-Query"
+      }
+    },
+    {
+      "coding": {
+        "system": "https://profiles.ihe.net/ITI/mCSD/CodeSystem/MCSDEndpointTypes",
+        "code": "XCA-RespGateway-Retrieve"
+      }
+    }
+  ],
+  "name": "XCA CCDA Referral Exchange Endpoint",
+  "payload": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-HL7DocumentFormatCodes",
+        "code": "urn:hl7-org:sdwg:ccda-structuredBody:2.1"
+      }
+    },
+    "mimeType": [
+      "application/pdf",
+      "application/xml",
+      "application/jpg"
+    ],
+    "profileUri": [
+      "urn:hl7ii:2.16.840.1.113883.10.20.22.1.8:2015-08-01",
+      "urn:hl7ii:2.16.840.1.113883.10.20.22.1.14:2015-08-01"
+    ]
+  },
+  "address": "https://acme.org/interfaces/services/ihe/IHEXCARespondingGateway"
+}

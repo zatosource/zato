@@ -1,0 +1,1385 @@
+{
+  "_meta": {
+    "scenario": "lab_panel",
+    "instance": 5,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.pxj2fgyj",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Nathalie Bouchet</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN3261041"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1046"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Bouchet",
+        "given": [
+          "Nathalie"
+        ],
+        "text": "Nathalie Bouchet"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-920-713-9463x39523",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "christinaberger@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1952-07-14",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "64939 Stephanie Parkways Suite 659"
+        ],
+        "city": "East Brianstad",
+        "state": "CA",
+        "postalCode": "31397",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.e3d23896",
+        "display": "Dr. Michelle Marty"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.5f94xr9p",
+      "display": "Meadowbrook Health Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.e3d23896",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Michelle Marty</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3584898946"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Marty",
+        "given": [
+          "Michelle"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Michelle Marty"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "922.533.1871x5148",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "250 Katherine Lodge"
+        ],
+        "city": "Millerfurt",
+        "state": "FM",
+        "postalCode": "59819",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.5f94xr9p",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Health Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9726205194"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Meadowbrook Health Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "894.267.8626",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "420 Santos Expressway Apt. 990"
+        ],
+        "city": "Carlosport",
+        "state": "DC",
+        "postalCode": "19373",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6r7fgxkk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab panel order on 2024-08-07</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj",
+        "display": "Nathalie Bouchet"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.e3d23896",
+            "display": "Dr. Michelle Marty"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-07T08:30:00+00:00",
+        "end": "2024-08-07T09:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5f94xr9p",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.sekqertx",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.sfh8tg39",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab follow-up on 2025-01-28</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj",
+        "display": "Nathalie Bouchet"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.e3d23896",
+            "display": "Dr. Michelle Marty"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-28T12:30:00+00:00",
+        "end": "2025-01-28T13:16:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5f94xr9p",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.sekqertx",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3ywf4xpb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab results review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj",
+        "display": "Nathalie Bouchet"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.e3d23896",
+            "display": "Dr. Michelle Marty"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:45:00+00:00",
+        "end": "2025-06-15T17:23:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.5f94xr9p",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.sekqertx",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.z64atp66",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6r7fgxkk"
+      },
+      "effectiveDateTime": "2024-08-07T10:42:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gp225mb9"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.56umpczc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 45 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6r7fgxkk"
+      },
+      "effectiveDateTime": "2024-08-07T10:16:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gp225mb9"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.r8k9k9r5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6r7fgxkk"
+      },
+      "effectiveDateTime": "2024-08-07T14:43:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gp225mb9"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.zndy7wzn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 180 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.6r7fgxkk"
+      },
+      "effectiveDateTime": "2024-08-07T08:36:00+00:00",
+      "valueQuantity": {
+        "value": 180,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.gp225mb9"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.a6cf2j8m",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.sfh8tg39"
+      },
+      "effectiveDateTime": "2025-01-28T09:09:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.kvn3uczp"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.hqawp9pp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 50 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.sfh8tg39"
+      },
+      "effectiveDateTime": "2025-01-28T10:53:00+00:00",
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.kvn3uczp"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.9pd4mbsu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 125 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.sfh8tg39"
+      },
+      "effectiveDateTime": "2025-01-28T08:40:00+00:00",
+      "valueQuantity": {
+        "value": 125,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.kvn3uczp"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.p8cp9pdz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 160 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.sfh8tg39"
+      },
+      "effectiveDateTime": "2025-01-28T08:21:00+00:00",
+      "valueQuantity": {
+        "value": 160,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.kvn3uczp"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.5xkvy3qm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3ywf4xpb"
+      },
+      "effectiveDateTime": "2025-06-15T13:50:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.equ8xgme"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.gy8cnfwb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 55 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3ywf4xpb"
+      },
+      "effectiveDateTime": "2025-06-15T11:17:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.equ8xgme"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.m6gqecfd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 110 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3ywf4xpb"
+      },
+      "effectiveDateTime": "2025-06-15T08:46:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.equ8xgme"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.gbb5pa7a",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.pxj2fgyj"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.3ywf4xpb"
+      },
+      "effectiveDateTime": "2025-06-15T16:10:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.e3d23896"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.equ8xgme"
+      }
+    }
+  ],
+  "observation_definition": {
+    "resourceType": "ObservationDefinition",
+    "id": "od.9nr5zytk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ObservationDefinition: Lipid panel observation template</p></div>"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+            "code": "laboratory",
+            "display": "Laboratory"
+          }
+        ],
+        "text": "Laboratory"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "57698-3",
+          "display": "Lipid panel with direct LDL"
+        }
+      ],
+      "text": "Lipid panel with direct LDL"
+    },
+    "permittedDataType": [
+      "Quantity"
+    ],
+    "multipleResultsAllowed": false,
+    "preferredReportName": "Lipid Panel"
+  },
+  "media": {
+    "resourceType": "Media",
+    "id": "media.zuce389y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Media: Lab report scan</p></div>"
+    },
+    "status": "completed",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/media-type",
+          "code": "image",
+          "display": "Image"
+        }
+      ],
+      "text": "Image"
+    },
+    "subject": {
+      "reference": "Patient/pt.pxj2fgyj",
+      "display": "Nathalie Bouchet"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.3ywf4xpb"
+    },
+    "createdDateTime": "2025-06-15T15:00:00+00:00",
+    "operator": {
+      "reference": "Practitioner/pr.e3d23896",
+      "display": "Dr. Michelle Marty"
+    },
+    "content": {
+      "contentType": "image/png",
+      "data": "UE5HX1BMQUNFSE9MREVSX0xBQl9SRVBPUlRfU0NBTg==",
+      "title": "Lab Report Scan"
+    }
+  },
+  "specimen": {
+    "resourceType": "Specimen",
+    "id": "spc.gp225mb9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Specimen: Venous blood sample</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "subject": {
+      "reference": "Patient/pt.pxj2fgyj"
+    },
+    "collection": {
+      "collectedDateTime": "2024-08-07T09:36:00+00:00",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "49852007",
+            "display": "Median cubital vein"
+          }
+        ],
+        "text": "Median cubital vein"
+      }
+    }
+  },
+  "specimen_definition": {
+    "resourceType": "SpecimenDefinition",
+    "id": "sd.598q5ue8",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SpecimenDefinition: Venous blood collection protocol</p></div>"
+    },
+    "typeCollected": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "collection": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "129300006",
+            "display": "Puncture - Loss"
+          }
+        ],
+        "text": "Puncture - Loss"
+      }
+    ],
+    "typeTested": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "119297000",
+              "display": "Blood specimen"
+            }
+          ],
+          "text": "Blood specimen"
+        },
+        "preference": "preferred",
+        "container": {
+          "material": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "32039001",
+                "display": "Glass"
+              }
+            ],
+            "text": "Glass"
+          },
+          "type": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "767387006",
+                "display": "Vacuum blood collection tube"
+              }
+            ],
+            "text": "Vacuum blood collection tube"
+          },
+          "cap": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/container-cap",
+                "code": "red",
+                "display": "red cap"
+              }
+            ],
+            "text": "red cap"
+          },
+          "description": "Red-top tube for serum collection"
+        },
+        "handling": [
+          {
+            "temperatureQualifier": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/handling-condition",
+                  "code": "room",
+                  "display": "room temperature"
+                }
+              ],
+              "text": "room temperature"
+            },
+            "maxDuration": {
+              "value": 60,
+              "unit": "min",
+              "system": "http://unitsofmeasure.org",
+              "code": "min"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "nutrition_order": {
+    "resourceType": "NutritionOrder",
+    "id": "no.wayu9smj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>NutritionOrder: 12-hour fasting instructions for lipid panel</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "patient": {
+      "reference": "Patient/pt.pxj2fgyj",
+      "display": "Nathalie Bouchet"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.3ywf4xpb"
+    },
+    "dateTime": "2025-06-15T08:00:00+00:00",
+    "orderer": {
+      "reference": "Practitioner/pr.e3d23896",
+      "display": "Dr. Michelle Marty"
+    },
+    "oralDiet": {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "160674004",
+              "display": "Fasting diet"
+            }
+          ],
+          "text": "Fasting diet"
+        }
+      ],
+      "instruction": "Patient to fast for 12 hours before lipid panel blood draw. Water is permitted."
+    }
+  }
+}

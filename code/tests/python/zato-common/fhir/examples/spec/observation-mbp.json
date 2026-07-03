@@ -1,0 +1,31 @@
+{
+  "resourceType": "Observation",
+  "id": "mbp",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "vital-signs",
+      "display": "Vital Signs"
+    },
+    "text": "Vital Signs"
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "8478-0",
+      "display": "Mean blood pressure"
+    },
+    "text": "Mean blood pressure"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "effectiveDateTime": "1999-07-02",
+  "valueQuantity": {
+    "value": 80,
+    "unit": "mm[Hg]",
+    "system": "http://unitsofmeasure.org",
+    "code": "mm[Hg]"
+  }
+}

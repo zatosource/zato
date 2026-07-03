@@ -1,0 +1,34 @@
+{
+  "resourceType": "SupplyDelivery",
+  "id": "pumpdelivery",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "value": 98398459409,
+    "assigner": {
+      "display": "SupplierDeliveryNr"
+    }
+  },
+  "status": "in-progress",
+  "patient": {
+    "display": "Mr. Belpit"
+  },
+  "stage": {
+    "coding": {
+      "system": "http://hl7.org/fhir/supplydelivery-stage",
+      "code": "dispatch",
+      "display": "Dispatch"
+    }
+  },
+  "supplier": {
+    "display": "ACME distribution"
+  },
+  "destination": {
+    "display": "Home care dept"
+  },
+  "receiver": {
+    "display": "Nurse Smith"
+  }
+}

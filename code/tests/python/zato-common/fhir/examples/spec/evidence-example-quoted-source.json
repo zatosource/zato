@@ -1,0 +1,72 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-quoted-source",
+  "title": "Quoted Source: Prevalence of PASC at 30 days",
+  "status": "active",
+  "description": "An example of using the relatedArtifact element to quote a line of text from the evidence source.",
+  "variableDefinition": [
+    {
+      "description": "People with a history of COVID-19 who were not hospitalized (Arizona CoVHORT)",
+      "variableRole": "population"
+    },
+    {
+      "description": "Post-acute sequelae of COVID-19",
+      "variableRole": "outcome"
+    }
+  ],
+  "studyDesign": {
+    "coding": [
+      {
+        "system": "https://fevir.net/sevco",
+        "code": "SEVCO:01002",
+        "display": "Observational research"
+      },
+      {
+        "system": "https://fevir.net/sevco",
+        "code": "SEVCO:01028",
+        "display": "Longitudinal data collection"
+      }
+    ]
+  },
+  "statistic": {
+    "description": "Prevalence 68.7% (95% Confidence interval 63.4% to 73.9%)",
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/resources/CodeSystem/27270",
+        "code": "STATO:0000412",
+        "display": "prevalence"
+      }
+    },
+    "quantity": {
+      "value": 68.7,
+      "unit": "%",
+      "system": "http://unitsofmeasure.org",
+      "code": "%"
+    },
+    "attributeEstimate": {
+      "description": "95% Confidence interval 63.4% to 73.9%",
+      "type": {
+        "coding": {
+          "system": "https://fevir.net/resources/CodeSystem/27270",
+          "code": "TBD:0000059",
+          "display": "Confidence interval"
+        }
+      },
+      "level": 0.95,
+      "range": {
+        "low": {
+          "value": 63.4,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        },
+        "high": {
+          "value": 73.9,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    }
+  }
+}

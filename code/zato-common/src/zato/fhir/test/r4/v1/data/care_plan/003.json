@@ -1,0 +1,843 @@
+{
+  "_meta": {
+    "scenario": "care_plan",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.gu6am83h",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 최 재현</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5754393"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-6665"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "최",
+        "given": [
+          "재현"
+        ],
+        "text": "최 재현"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(316)914-5308x2523",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "steinangela@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1959-12-19",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "04085 Allen Cliff Suite 559"
+        ],
+        "city": "Nicoleton",
+        "state": "VT",
+        "postalCode": "68140",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.fr4bumd2",
+        "display": "송 현지"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.4b74hsya",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.fr4bumd2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 송 현지</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4589467973"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "송",
+        "given": [
+          "현지"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "송 현지"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(442)677-9747x476",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "529 Stephenson Field Apt. 907"
+        ],
+        "city": "Lake Logan",
+        "state": "IN",
+        "postalCode": "52708",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.4b74hsya",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2581504309"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "458-265-5404",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "7346 Pamela Mission"
+        ],
+        "city": "Jamesmouth",
+        "state": "TN",
+        "postalCode": "07548",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.dmz93mpj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care planning session on 2024-06-30</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gu6am83h",
+        "display": "최 재현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fr4bumd2",
+            "display": "송 현지"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-30T13:15:00+00:00",
+        "end": "2024-06-30T14:03:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4b74hsya",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.u8p5nw49",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rb3pt94a",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care plan review on 2024-11-28</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gu6am83h",
+        "display": "최 재현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fr4bumd2",
+            "display": "송 현지"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-28T10:00:00+00:00",
+        "end": "2024-11-28T10:46:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4b74hsya",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.u8p5nw49",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.5dhmhxg8",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Goal assessment on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.gu6am83h",
+        "display": "최 재현"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fr4bumd2",
+            "display": "송 현지"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:45:00+00:00",
+        "end": "2025-06-15T17:43:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.4b74hsya",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.u8p5nw49",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.4s6b5tcf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Wellness improvement plan for 최 재현</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Wellness Improvement Plan - 최 재현",
+    "subject": {
+      "reference": "Patient/pt.gu6am83h",
+      "display": "최 재현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.5dhmhxg8"
+    },
+    "period": {
+      "start": "2024-06-30"
+    },
+    "author": {
+      "reference": "Practitioner/pr.fr4bumd2",
+      "display": "송 현지"
+    },
+    "careTeam": [
+      {
+        "reference": "CareTeam/ct.fj4rwjpc"
+      }
+    ],
+    "goal": [
+      {
+        "reference": "Goal/goal.njscwn3x"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "226029000",
+                "display": "Exercises"
+              }
+            ],
+            "text": "Exercises"
+          },
+          "description": "Daily walking program, 30 minutes per day"
+        }
+      },
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11816003",
+                "display": "Diet education"
+              }
+            ],
+            "text": "Diet education"
+          },
+          "description": "Heart-healthy diet counseling"
+        }
+      }
+    ]
+  },
+  "care_team": {
+    "resourceType": "CareTeam",
+    "id": "ct.fj4rwjpc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CareTeam: Wellness team for 최 재현</p></div>"
+    },
+    "status": "active",
+    "name": "Wellness Care Team - 최 재현",
+    "subject": {
+      "reference": "Patient/pt.gu6am83h",
+      "display": "최 재현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.5dhmhxg8"
+    },
+    "participant": [
+      {
+        "role": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND",
+                "display": "attender"
+              }
+            ],
+            "text": "attender"
+          }
+        ],
+        "member": {
+          "reference": "Practitioner/pr.fr4bumd2",
+          "display": "송 현지"
+        }
+      }
+    ],
+    "managingOrganization": [
+      {
+        "reference": "Organization/org.4b74hsya",
+        "display": "Riverstone Medical Group"
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.njscwn3x",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Take daily multivitamin consistently</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "in-progress",
+          "display": "In Progress"
+        }
+      ],
+      "text": "In Progress"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "dietary",
+            "display": "Dietary"
+          }
+        ],
+        "text": "Dietary"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "408580007",
+          "display": "Take daily multivitamin consistently"
+        }
+      ],
+      "text": "Take daily multivitamin consistently"
+    },
+    "subject": {
+      "reference": "Patient/pt.gu6am83h",
+      "display": "최 재현"
+    },
+    "startDate": "2024-06-30",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index"
+            }
+          ],
+          "text": "Body mass index"
+        },
+        "detailRange": {
+          "low": {
+            "value": 18.5,
+            "unit": "kg/m2"
+          },
+          "high": {
+            "value": 24.9,
+            "unit": "kg/m2"
+          }
+        },
+        "dueDate": "2026-01-01"
+      }
+    ],
+    "expressedBy": {
+      "reference": "Patient/pt.gu6am83h",
+      "display": "최 재현"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.bzu6cw3d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit action group</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "subject": {
+      "reference": "Patient/pt.gu6am83h",
+      "display": "최 재현"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.5dhmhxg8"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.fr4bumd2",
+      "display": "송 현지"
+    },
+    "instantiatesCanonical": [
+      "PlanDefinition/pd.e562nt2z"
+    ],
+    "action": [
+      {
+        "title": "Start exercise program",
+        "resource": {
+          "reference": "CarePlan/cp.4s6b5tcf"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.e562nt2z",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Wellness improvement protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.e562nt2z",
+    "name": "WellnessImprovementProtocol",
+    "title": "Wellness Improvement Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Riverstone Medical Group",
+    "description": "A structured protocol for improving overall wellness through exercise, nutrition counseling, and regular follow-up visits.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    },
+    "goal": [
+      {
+        "description": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "408580007",
+              "display": "Take daily multivitamin consistently"
+            }
+          ],
+          "text": "Take daily multivitamin consistently"
+        },
+        "addresses": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "Z00.00",
+                "display": "General adult medical examination"
+              }
+            ],
+            "text": "General adult medical examination"
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "title": "Exercise Program",
+        "definitionCanonical": "ActivityDefinition/ad.fn47qsws"
+      }
+    ]
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.fn47qsws",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Daily walking exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.fn47qsws",
+    "name": "DailyWalkingProgram",
+    "title": "Daily Walking Exercise Program",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Riverstone Medical Group",
+    "description": "A structured daily walking program to improve cardiovascular fitness. Start with 15 minutes and increase to 30 minutes over four weeks.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    },
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 1,
+        "periodUnit": "d",
+        "duration": 30,
+        "durationUnit": "min"
+      }
+    }
+  }
+}

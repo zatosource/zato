@@ -1,0 +1,46 @@
+{
+  "resourceType": "ImagingStudy",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "urn:dicom:uid",
+    "value": "urn:oid:2.16.124.113543.6003.1154777499.30246.19789.3503430045"
+  },
+  "status": "available",
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "started": "2011-01-01T11:01:20+03:00",
+  "reason": {
+    "reference": {
+      "reference": "Observation/656"
+    }
+  },
+  "numberOfSeries": 1,
+  "numberOfInstances": 1,
+  "series": {
+    "uid": "2.16.124.113543.6003.2588828330.45298.17418.2723805630",
+    "number": 3,
+    "modality": {
+      "coding": {
+        "system": "http://dicom.nema.org/resources/ontology/DCM",
+        "code": "CT"
+      }
+    },
+    "description": "CT Surview 180",
+    "numberOfInstances": 1,
+    "bodySite": {
+      "reference": {
+        "reference": "BodyStructure/tumor"
+      }
+    },
+    "instance": {
+      "uid": "2.16.124.113543.6003.189642796.63084.16748.2599092903",
+      "sopClass": "urn:oid:1.2.840.10008.5.1.4.1.1.2",
+      "number": 1
+    }
+  }
+}

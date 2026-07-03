@@ -1,0 +1,595 @@
+{
+  "_meta": {
+    "scenario": "family_context",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.8ncjaykh",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Nicholas Carlson</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9836225"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3336"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Carlson",
+        "given": [
+          "Nicholas"
+        ],
+        "text": "Nicholas Carlson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(692)284-7565",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "johnmoore@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1971-03-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "924 Oneal Mountain"
+        ],
+        "city": "Barbaraside",
+        "state": "OK",
+        "postalCode": "61815",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.2vwxuvrt",
+        "display": "Dr. Christopher Taylor"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.t9c9hqz5",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.xtn4w3ng",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Family history review on 2024-07-14</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8ncjaykh",
+        "display": "Nicholas Carlson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2vwxuvrt",
+            "display": "Dr. Christopher Taylor"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-14T12:00:00+00:00",
+        "end": "2024-07-14T12:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t9c9hqz5",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8nmsgy4t",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.p4ydnh3n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Contact update on 2024-12-04</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8ncjaykh",
+        "display": "Nicholas Carlson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2vwxuvrt",
+            "display": "Dr. Christopher Taylor"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-04T16:30:00+00:00",
+        "end": "2024-12-04T17:01:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t9c9hqz5",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8nmsgy4t",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.b7tc4auh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.8ncjaykh",
+        "display": "Nicholas Carlson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2vwxuvrt",
+            "display": "Dr. Christopher Taylor"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T11:15:00+00:00",
+        "end": "2025-06-15T11:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.t9c9hqz5",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8nmsgy4t",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "related_person": {
+    "resourceType": "RelatedPerson",
+    "id": "rp.ghjppefn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RelatedPerson: Amy Gibson (spouse and emergency contact)</p></div>"
+    },
+    "active": true,
+    "patient": {
+      "reference": "Patient/pt.8ncjaykh",
+      "display": "Nicholas Carlson"
+    },
+    "relationship": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+            "code": "SPS",
+            "display": "Spouse"
+          }
+        ],
+        "text": "Spouse"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Gibson",
+        "given": [
+          "Amy"
+        ],
+        "text": "Amy Gibson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-747-745-6064",
+        "use": "mobile"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1992-09-21",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "16112 Shannon Ports Suite 231"
+        ],
+        "city": "Lindseymouth",
+        "state": "IA",
+        "postalCode": "69251",
+        "country": "US"
+      }
+    ]
+  },
+  "family_member_history": {
+    "resourceType": "FamilyMemberHistory",
+    "id": "fmh.e3yhkjyr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>FamilyMemberHistory: Parent with well-controlled hypertension</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.8ncjaykh",
+      "display": "Nicholas Carlson"
+    },
+    "date": "2025-06-15",
+    "name": "Michael Jones",
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "FTH",
+          "display": "father"
+        }
+      ],
+      "text": "father"
+    },
+    "sex": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/administrative-gender",
+          "code": "male",
+          "display": "Male"
+        }
+      ],
+      "text": "Male"
+    },
+    "bornDate": "1960-03-02",
+    "condition": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension"
+        },
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "370996005",
+              "display": "Patient condition well controlled"
+            }
+          ],
+          "text": "Patient condition well controlled"
+        },
+        "note": [
+          {
+            "text": "Father has essential hypertension, well controlled with medication. Active lifestyle."
+          }
+        ]
+      }
+    ]
+  },
+  "person": {
+    "resourceType": "Person",
+    "id": "person.kpq5sg8k",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Person: Nicholas Carlson</p></div>"
+    },
+    "name": [
+      {
+        "use": "official",
+        "text": "Nicholas Carlson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "863.390.6882",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1971-03-01",
+    "address": [
+      {
+        "use": "home",
+        "city": "Port Darren",
+        "state": "LA",
+        "country": "US"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.t9c9hqz5",
+      "display": "Sunrise Family Practice"
+    },
+    "link": [
+      {
+        "target": {
+          "reference": "Patient/pt.8ncjaykh",
+          "display": "Nicholas Carlson"
+        },
+        "assurance": "level4"
+      }
+    ]
+  },
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.dn9sstv7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Family of Nicholas Carlson</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Nicholas Carlson Family Group",
+    "quantity": 2,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.8ncjaykh",
+          "display": "Nicholas Carlson"
+        }
+      },
+      {
+        "entity": {
+          "reference": "RelatedPerson/rp.ghjppefn",
+          "display": "Amy Gibson"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "resourceType": "Organization",
+  "id": 2,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "identifier": {
+    "system": "urn:oid:2.16.840.1.113883.3.19.2.3",
+    "value": 666666
+  },
+  "name": "XYZ Insurance",
+  "alias": "ABC Insurance"
+}

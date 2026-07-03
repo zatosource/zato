@@ -1,0 +1,43 @@
+{
+  "resourceType": "Procedure",
+  "id": "colonoscopy",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "value": 12345
+  },
+  "status": "completed",
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 73761001,
+      "display": "Colonoscopy (procedure)"
+    },
+    "text": "Colonoscopy"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "performer": {
+    "actor": {
+      "reference": "Practitioner/example",
+      "display": "Dr Adam Careful"
+    }
+  },
+  "location": {
+    "reference": "Location/1",
+    "display": "Burgers University Medical Center, South Wing, second floor"
+  },
+  "complication": {
+    "reference": {
+      "display": "Perforated intestine condition"
+    }
+  },
+  "used": {
+    "reference": {
+      "display": "Colonoscope device"
+    }
+  }
+}

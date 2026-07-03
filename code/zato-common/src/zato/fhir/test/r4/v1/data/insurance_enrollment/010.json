@@ -1,0 +1,1302 @@
+{
+  "_meta": {
+    "scenario": "insurance_enrollment",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.3vpqepz3",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Paul Pierce</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4251760"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1945"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Pierce",
+        "given": [
+          "Paul"
+        ],
+        "text": "Paul Pierce"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "966.796.5107",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "lawsonrobert@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1998-12-13",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "154 Stone Flats Apt. 837"
+        ],
+        "city": "South Sandyport",
+        "state": "GU",
+        "postalCode": "47260",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.umenjat9",
+        "display": "Dr. Amy Gonzalez"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "insorg.ratmfy9g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Family HMO</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "ins",
+            "display": "Insurance Company"
+          }
+        ],
+        "text": "Insurance Company"
+      }
+    ],
+    "name": "Meadowbrook Family HMO"
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.2a4j8umn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Insurance enrollment on 2024-04-17</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3vpqepz3",
+        "display": "Paul Pierce"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.umenjat9",
+            "display": "Dr. Amy Gonzalez"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-04-17T09:30:00+00:00",
+        "end": "2024-04-17T10:20:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.48f5ghbs",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv7mck3k",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.p5pezrf8",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Coverage review on 2024-11-02</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3vpqepz3",
+        "display": "Paul Pierce"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.umenjat9",
+            "display": "Dr. Amy Gonzalez"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-02T13:15:00+00:00",
+        "end": "2024-11-02T13:47:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.48f5ghbs",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv7mck3k",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rqguuyuw",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Benefits check on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3vpqepz3",
+        "display": "Paul Pierce"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.umenjat9",
+            "display": "Dr. Amy Gonzalez"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:30:00+00:00",
+        "end": "2025-06-15T13:09:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.48f5ghbs",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.dv7mck3k",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "cov.58q33euz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Coverage: Meadowbrook Family HMO for Paul Pierce</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "HMO",
+          "display": "HMO"
+        }
+      ],
+      "text": "HMO"
+    },
+    "subscriber": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "subscriberId": "SUB961505",
+    "beneficiary": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+          "code": "self",
+          "display": "Self"
+        }
+      ],
+      "text": "Self"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "payor": [
+      {
+        "reference": "Organization/insorg.ratmfy9g",
+        "display": "Meadowbrook Family HMO"
+      }
+    ],
+    "class": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "group",
+              "display": "Group"
+            }
+          ],
+          "text": "Group"
+        },
+        "value": "GRP5950",
+        "name": "Employee Group"
+      },
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "plan",
+              "display": "Plan"
+            }
+          ],
+          "text": "Plan"
+        },
+        "value": "HMO",
+        "name": "Meadowbrook Family HMO"
+      }
+    ],
+    "costToBeneficiary": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-copay-type",
+              "code": "copay",
+              "display": "Copay"
+            }
+          ],
+          "text": "Copay"
+        },
+        "valueMoney": {
+          "value": 25,
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "insurance_plan": {
+    "resourceType": "InsurancePlan",
+    "id": "ip.sthg42r9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>InsurancePlan: Meadowbrook Family HMO</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+            "code": "HMO",
+            "display": "HMO"
+          }
+        ],
+        "text": "HMO"
+      }
+    ],
+    "name": "Meadowbrook Family HMO",
+    "ownedBy": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "administeredBy": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "plan": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+              "code": "HMO",
+              "display": "HMO"
+            }
+          ],
+          "text": "HMO"
+        },
+        "generalCost": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-cost-category",
+                  "code": "deductible",
+                  "display": "Deductible"
+                }
+              ],
+              "text": "Deductible"
+            },
+            "cost": {
+              "value": 600,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "enrollment_request": {
+    "resourceType": "EnrollmentRequest",
+    "id": "er.c75vqdwp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentRequest: Request to enroll in insurance plan</p></div>"
+    },
+    "status": "active",
+    "created": "2024-04-17",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "candidate": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "coverage": {
+      "reference": "Coverage/cov.58q33euz"
+    }
+  },
+  "enrollment_response": {
+    "resourceType": "EnrollmentResponse",
+    "id": "eresp.f7eupjck",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentResponse: Enrollment approved</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "EnrollmentRequest/er.c75vqdwp"
+    },
+    "outcome": "complete",
+    "disposition": "Enrollment approved. Coverage effective immediately.",
+    "created": "2024-04-17",
+    "organization": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    }
+  },
+  "eligibility_request": {
+    "resourceType": "CoverageEligibilityRequest",
+    "id": "cer.ewcxdrf8",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityRequest: Check benefits eligibility</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.58q33euz"
+        }
+      }
+    ]
+  },
+  "eligibility_response": {
+    "resourceType": "CoverageEligibilityResponse",
+    "id": "ceresp.dz5ybmjg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityResponse: Patient eligible</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "created": "2025-06-15",
+    "request": {
+      "reference": "CoverageEligibilityRequest/cer.ewcxdrf8"
+    },
+    "outcome": "complete",
+    "disposition": "Patient is eligible for benefits under current coverage.",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.58q33euz"
+        },
+        "inforce": true
+      }
+    ]
+  },
+  "claim": {
+    "resourceType": "Claim",
+    "id": "clm.gz4gh7u7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Claim: Wellness visit claim</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "provider": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "priority": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+          "code": "normal",
+          "display": "Normal"
+        }
+      ],
+      "text": "Normal"
+    },
+    "insurance": [
+      {
+        "sequence": 1,
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.58q33euz"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "unitPrice": {
+          "value": 191,
+          "currency": "USD"
+        },
+        "net": {
+          "value": 191,
+          "currency": "USD"
+        }
+      }
+    ],
+    "total": {
+      "value": 191,
+      "currency": "USD"
+    }
+  },
+  "claim_response": {
+    "resourceType": "ClaimResponse",
+    "id": "cr.kre6yvgr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClaimResponse: Claim processed</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "request": {
+      "reference": "Claim/clm.gz4gh7u7"
+    },
+    "outcome": "complete",
+    "disposition": "Claim processed successfully.",
+    "item": [
+      {
+        "itemSequence": 1,
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 191,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 166,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 25,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 191,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 166,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/ex-paymenttype",
+            "code": "complete",
+            "display": "Complete"
+          }
+        ],
+        "text": "Complete"
+      },
+      "date": "2025-06-15",
+      "amount": {
+        "value": 166,
+        "currency": "USD"
+      }
+    }
+  },
+  "explanation_of_benefit": {
+    "resourceType": "ExplanationOfBenefit",
+    "id": "eob.k4n8e9v6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExplanationOfBenefit: Wellness visit benefit explanation</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "provider": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "outcome": "complete",
+    "insurance": [
+      {
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.58q33euz"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 191,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 166,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 25,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 191,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 166,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "amount": {
+        "value": 166,
+        "currency": "USD"
+      }
+    }
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.bhge9zzp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Payment processed for wellness visit</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "Claim/clm.gz4gh7u7"
+    },
+    "response": {
+      "reference": "ClaimResponse/cr.kre6yvgr"
+    },
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.u9ebt86z"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "amount": {
+      "value": 166,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.u9ebt86z",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Payment reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-01",
+      "end": "2025-06-28"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/insorg.ratmfy9g",
+      "display": "Meadowbrook Family HMO"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 166,
+      "currency": "USD"
+    }
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.fhe8kg92",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Wellness visit invoice</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "wellness-visit",
+          "display": "Wellness Visit"
+        }
+      ],
+      "text": "Wellness Visit"
+    },
+    "subject": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "totalNet": {
+      "value": 191,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 191,
+      "currency": "USD"
+    }
+  },
+  "charge_item": {
+    "resourceType": "ChargeItem",
+    "id": "ci.7nbc74bz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItem: Wellness visit charge</p></div>"
+    },
+    "status": "billed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    },
+    "subject": {
+      "reference": "Patient/pt.3vpqepz3",
+      "display": "Paul Pierce"
+    },
+    "context": {
+      "reference": "Encounter/enc.rqguuyuw"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Organization/org.48f5ghbs",
+          "display": "Sunrise Family Practice"
+        }
+      }
+    ],
+    "performingOrganization": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "requestingOrganization": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    },
+    "quantity": {
+      "value": 1
+    },
+    "priceOverride": {
+      "value": 191,
+      "currency": "USD"
+    },
+    "account": [
+      {
+        "reference": "Account/acct.byv2zds2"
+      }
+    ]
+  },
+  "charge_item_definition": {
+    "resourceType": "ChargeItemDefinition",
+    "id": "cid.u7mejrt7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItemDefinition: Standard wellness visit charge</p></div>"
+    },
+    "url": "http://example.org/ChargeItemDefinition/cid.u7mejrt7",
+    "status": "active",
+    "title": "Wellness Visit Charge Definition",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "description": "Standard charge definition for preventive wellness visits.",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.byv2zds2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for Paul Pierce</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - Paul Pierce",
+    "subject": [
+      {
+        "reference": "Patient/pt.3vpqepz3",
+        "display": "Paul Pierce"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.48f5ghbs",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "contract": {
+    "resourceType": "Contract",
+    "id": "contract.a9tvhc2u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Contract: Insurance coverage agreement</p></div>"
+    },
+    "status": "executed",
+    "issued": "2025-01-01T00:00:00+00:00",
+    "applies": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "subject": [
+      {
+        "reference": "Patient/pt.3vpqepz3",
+        "display": "Paul Pierce"
+      }
+    ],
+    "authority": [
+      {
+        "reference": "Organization/insorg.ratmfy9g",
+        "display": "Meadowbrook Family HMO"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/contract-type",
+          "code": "healthinsurance",
+          "display": "Health Insurance"
+        }
+      ],
+      "text": "Health Insurance"
+    }
+  }
+}

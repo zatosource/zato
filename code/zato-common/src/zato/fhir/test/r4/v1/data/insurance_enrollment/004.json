@@ -1,0 +1,1302 @@
+{
+  "_meta": {
+    "scenario": "insurance_enrollment",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.a2htap8w",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Donna Wilson</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9795697"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9914"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Wilson",
+        "given": [
+          "Donna"
+        ],
+        "text": "Donna Wilson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "881.384.9606",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "orobinson@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1991-05-05",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "360 Little Turnpike"
+        ],
+        "city": "Lake Michaelhaven",
+        "state": "AL",
+        "postalCode": "64485",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.d39pu6xs",
+        "display": "Dr. Melissa Mitchell"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "insorg.etpdgvun",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Oakwood Premier PPO</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "ins",
+            "display": "Insurance Company"
+          }
+        ],
+        "text": "Insurance Company"
+      }
+    ],
+    "name": "Oakwood Premier PPO"
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.gcaahvm6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Insurance enrollment on 2024-04-07</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.a2htap8w",
+        "display": "Donna Wilson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.d39pu6xs",
+            "display": "Dr. Melissa Mitchell"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-04-07T13:00:00+00:00",
+        "end": "2024-04-07T13:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vqrrf9jm",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2gex64u7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.reefbbmu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Coverage review on 2024-10-30</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.a2htap8w",
+        "display": "Donna Wilson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.d39pu6xs",
+            "display": "Dr. Melissa Mitchell"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-10-30T15:15:00+00:00",
+        "end": "2024-10-30T16:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vqrrf9jm",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2gex64u7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.fzbejmkj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Benefits check on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.a2htap8w",
+        "display": "Donna Wilson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.d39pu6xs",
+            "display": "Dr. Melissa Mitchell"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:30:00+00:00",
+        "end": "2025-06-15T09:30:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.vqrrf9jm",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2gex64u7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "cov.9dyzknqs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Coverage: Oakwood Premier PPO for Donna Wilson</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PPO",
+          "display": "PPO"
+        }
+      ],
+      "text": "PPO"
+    },
+    "subscriber": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "subscriberId": "SUB913150",
+    "beneficiary": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+          "code": "self",
+          "display": "Self"
+        }
+      ],
+      "text": "Self"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "payor": [
+      {
+        "reference": "Organization/insorg.etpdgvun",
+        "display": "Oakwood Premier PPO"
+      }
+    ],
+    "class": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "group",
+              "display": "Group"
+            }
+          ],
+          "text": "Group"
+        },
+        "value": "GRP3866",
+        "name": "Employee Group"
+      },
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "plan",
+              "display": "Plan"
+            }
+          ],
+          "text": "Plan"
+        },
+        "value": "PPO",
+        "name": "Oakwood Premier PPO"
+      }
+    ],
+    "costToBeneficiary": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-copay-type",
+              "code": "copay",
+              "display": "Copay"
+            }
+          ],
+          "text": "Copay"
+        },
+        "valueMoney": {
+          "value": 35,
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "insurance_plan": {
+    "resourceType": "InsurancePlan",
+    "id": "ip.8uazbe5n",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>InsurancePlan: Oakwood Premier PPO</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+            "code": "PPO",
+            "display": "PPO"
+          }
+        ],
+        "text": "PPO"
+      }
+    ],
+    "name": "Oakwood Premier PPO",
+    "ownedBy": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "administeredBy": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "plan": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+              "code": "PPO",
+              "display": "PPO"
+            }
+          ],
+          "text": "PPO"
+        },
+        "generalCost": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-cost-category",
+                  "code": "deductible",
+                  "display": "Deductible"
+                }
+              ],
+              "text": "Deductible"
+            },
+            "cost": {
+              "value": 1500,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "enrollment_request": {
+    "resourceType": "EnrollmentRequest",
+    "id": "er.5vnegxer",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentRequest: Request to enroll in insurance plan</p></div>"
+    },
+    "status": "active",
+    "created": "2024-04-07",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "candidate": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "coverage": {
+      "reference": "Coverage/cov.9dyzknqs"
+    }
+  },
+  "enrollment_response": {
+    "resourceType": "EnrollmentResponse",
+    "id": "eresp.kd9sz75b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentResponse: Enrollment approved</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "EnrollmentRequest/er.5vnegxer"
+    },
+    "outcome": "complete",
+    "disposition": "Enrollment approved. Coverage effective immediately.",
+    "created": "2024-04-07",
+    "organization": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    }
+  },
+  "eligibility_request": {
+    "resourceType": "CoverageEligibilityRequest",
+    "id": "cer.hm9aysez",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityRequest: Check benefits eligibility</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.9dyzknqs"
+        }
+      }
+    ]
+  },
+  "eligibility_response": {
+    "resourceType": "CoverageEligibilityResponse",
+    "id": "ceresp.ky53y4a9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityResponse: Patient eligible</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "created": "2025-06-15",
+    "request": {
+      "reference": "CoverageEligibilityRequest/cer.hm9aysez"
+    },
+    "outcome": "complete",
+    "disposition": "Patient is eligible for benefits under current coverage.",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.9dyzknqs"
+        },
+        "inforce": true
+      }
+    ]
+  },
+  "claim": {
+    "resourceType": "Claim",
+    "id": "clm.h2vtry4g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Claim: Wellness visit claim</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "priority": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+          "code": "normal",
+          "display": "Normal"
+        }
+      ],
+      "text": "Normal"
+    },
+    "insurance": [
+      {
+        "sequence": 1,
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.9dyzknqs"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "unitPrice": {
+          "value": 201,
+          "currency": "USD"
+        },
+        "net": {
+          "value": 201,
+          "currency": "USD"
+        }
+      }
+    ],
+    "total": {
+      "value": 201,
+      "currency": "USD"
+    }
+  },
+  "claim_response": {
+    "resourceType": "ClaimResponse",
+    "id": "cr.y88age42",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClaimResponse: Claim processed</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "request": {
+      "reference": "Claim/clm.h2vtry4g"
+    },
+    "outcome": "complete",
+    "disposition": "Claim processed successfully.",
+    "item": [
+      {
+        "itemSequence": 1,
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 201,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 166,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 35,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 201,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 166,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/ex-paymenttype",
+            "code": "complete",
+            "display": "Complete"
+          }
+        ],
+        "text": "Complete"
+      },
+      "date": "2025-06-15",
+      "amount": {
+        "value": 166,
+        "currency": "USD"
+      }
+    }
+  },
+  "explanation_of_benefit": {
+    "resourceType": "ExplanationOfBenefit",
+    "id": "eob.f9bqw2c3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExplanationOfBenefit: Wellness visit benefit explanation</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "outcome": "complete",
+    "insurance": [
+      {
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.9dyzknqs"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 201,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 166,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 35,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 201,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 166,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "amount": {
+        "value": 166,
+        "currency": "USD"
+      }
+    }
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.553d34bf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Payment processed for wellness visit</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "Claim/clm.h2vtry4g"
+    },
+    "response": {
+      "reference": "ClaimResponse/cr.y88age42"
+    },
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.jufkkma7"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "amount": {
+      "value": 166,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.jufkkma7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Payment reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-01",
+      "end": "2025-06-28"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/insorg.etpdgvun",
+      "display": "Oakwood Premier PPO"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 166,
+      "currency": "USD"
+    }
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.ar45dbwp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Wellness visit invoice</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "wellness-visit",
+          "display": "Wellness Visit"
+        }
+      ],
+      "text": "Wellness Visit"
+    },
+    "subject": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "totalNet": {
+      "value": 201,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 201,
+      "currency": "USD"
+    }
+  },
+  "charge_item": {
+    "resourceType": "ChargeItem",
+    "id": "ci.db2aceme",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItem: Wellness visit charge</p></div>"
+    },
+    "status": "billed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    },
+    "subject": {
+      "reference": "Patient/pt.a2htap8w",
+      "display": "Donna Wilson"
+    },
+    "context": {
+      "reference": "Encounter/enc.fzbejmkj"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Organization/org.vqrrf9jm",
+          "display": "Harborview Community Clinic"
+        }
+      }
+    ],
+    "performingOrganization": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "requestingOrganization": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    },
+    "quantity": {
+      "value": 1
+    },
+    "priceOverride": {
+      "value": 201,
+      "currency": "USD"
+    },
+    "account": [
+      {
+        "reference": "Account/acct.q95ekpgm"
+      }
+    ]
+  },
+  "charge_item_definition": {
+    "resourceType": "ChargeItemDefinition",
+    "id": "cid.dmtpyprz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItemDefinition: Standard wellness visit charge</p></div>"
+    },
+    "url": "http://example.org/ChargeItemDefinition/cid.dmtpyprz",
+    "status": "active",
+    "title": "Wellness Visit Charge Definition",
+    "date": "2025-06-15",
+    "publisher": "Harborview Community Clinic",
+    "description": "Standard charge definition for preventive wellness visits.",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.q95ekpgm",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for Donna Wilson</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - Donna Wilson",
+    "subject": [
+      {
+        "reference": "Patient/pt.a2htap8w",
+        "display": "Donna Wilson"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.vqrrf9jm",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "contract": {
+    "resourceType": "Contract",
+    "id": "contract.dkw7yz33",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Contract: Insurance coverage agreement</p></div>"
+    },
+    "status": "executed",
+    "issued": "2025-01-01T00:00:00+00:00",
+    "applies": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "subject": [
+      {
+        "reference": "Patient/pt.a2htap8w",
+        "display": "Donna Wilson"
+      }
+    ],
+    "authority": [
+      {
+        "reference": "Organization/insorg.etpdgvun",
+        "display": "Oakwood Premier PPO"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/contract-type",
+          "code": "healthinsurance",
+          "display": "Health Insurance"
+        }
+      ],
+      "text": "Health Insurance"
+    }
+  }
+}

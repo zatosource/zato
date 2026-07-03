@@ -1,0 +1,67 @@
+{
+  "resourceType": "ResearchSubject",
+  "id": "example-crossover-placebo-to-drug",
+  "identifier": {
+    "value": "ecsr45"
+  },
+  "status": "active",
+  "progress": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/research-subject-state-type",
+          "code": "Enrollment"
+        },
+        "text": "Enrollment status"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/research-subject-state-type",
+          "code": "Enrollment",
+          "display": "Enrollment status"
+        }
+      },
+      "subjectState": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+          "code": "on-study",
+          "display": "On-study"
+        }
+      },
+      "reason": {
+        "coding": {
+          "code": "informedConsentSigned"
+        },
+        "text": "Informed consent signed"
+      },
+      "startDate": "2022-06-10"
+    }
+  ],
+  "period": {
+    "start": "2022-06-10"
+  },
+  "study": {
+    "reference": "example-ctgov-study-record"
+  },
+  "subject": {
+    "reference": "cfsb1676546565857"
+  },
+  "comparisonGroup": [
+    {
+      "concept": {
+        "coding": {
+          "system": "http://hl7.org/fhir/example-comparison-group",
+          "code": "placebo",
+          "display": "Placebo"
+        }
+      }
+    },
+    {
+      "concept": {
+        "text": "ap303"
+      }
+    }
+  ]
+}

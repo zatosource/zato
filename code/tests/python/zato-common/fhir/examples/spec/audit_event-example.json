@@ -1,0 +1,95 @@
+{
+  "resourceType": "AuditEvent",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "type": {
+    "coding": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": 110100,
+      "display": "Application Activity"
+    }
+  },
+  "subtype": {
+    "coding": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": 110120,
+      "display": "Application Start"
+    }
+  },
+  "action": "E",
+  "recorded": "2012-10-25T22:04:27+11:00",
+  "outcome": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-outcome",
+      "code": 0,
+      "display": "Success"
+    }
+  },
+  "agent": [
+    {
+      "role": {
+        "text": "Service User (Logon)"
+      },
+      "who": {
+        "identifier": {
+          "value": "Grahame"
+        }
+      },
+      "requestor": false
+    },
+    {
+      "extension": {
+        "valueIdentifier": {
+          "type": {
+            "text": "process ID"
+          },
+          "value": 6580
+        }
+      },
+      "who": {
+        "identifier": {
+          "system": "urn:oid:2.16.840.1.113883.4.2",
+          "value": "2.16.840.1.113883.4.2"
+        }
+      },
+      "requestor": false,
+      "networkString": "Workstation1.ehr.familyclinic.com"
+    }
+  ],
+  "source": {
+    "observer": {
+      "display": "Grahame's Laptop"
+    },
+    "type": {
+      "coding": {
+        "system": "http://dicom.nema.org/resources/ontology/DCM",
+        "code": 110122,
+        "display": "Login"
+      }
+    }
+  },
+  "entity": {
+    "what": {
+      "identifier": {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "code": "SNO"
+          },
+          "text": "Dell Serial Number"
+        },
+        "value": "ABCDEF"
+      }
+    },
+    "role": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/object-role",
+        "code": 4,
+        "display": "Domain Resource"
+      }
+    }
+  }
+}

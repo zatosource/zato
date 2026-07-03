@@ -1,0 +1,434 @@
+{
+  "resourceType": "ExampleScenario",
+  "id": "example-laborder",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}div": {
+        "{http://www.w3.org/1999/xhtml}p": null
+      },
+      "{http://www.w3.org/1999/xhtml}img": null
+    }
+  },
+  "name": "LabOrderTrackingWithTask",
+  "title": "Lab order tracking with Task",
+  "status": "draft",
+  "description": "In this example, the clinician creates an order in the CPOE. Then a Task is created and updated by both the CPOE and the Lab system...",
+  "purpose": "Purpose: this serves to demonstrate a scenario that uses service requests and Task resources to establish a handshake for order tracking.",
+  "actor": [
+    {
+      "key": "Clin",
+      "type": "person",
+      "title": "Clinician",
+      "description": "Clinician"
+    },
+    {
+      "key": "CPOE",
+      "type": "system",
+      "title": "CPOE",
+      "description": "CPOE"
+    },
+    {
+      "key": "EMR",
+      "type": "system",
+      "title": "EMR",
+      "description": "EMR"
+    },
+    {
+      "key": "LabMan",
+      "type": "person",
+      "title": "Lab Man",
+      "description": "Lab Person"
+    },
+    {
+      "key": "Lab",
+      "type": "other",
+      "title": "Lab",
+      "description": "Lab"
+    }
+  ],
+  "instance": [
+    {
+      "key": "req1",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "ServiceRequest"
+      },
+      "title": "Request for a lab procedure",
+      "description": "Bla",
+      "version": [
+        {
+          "key": "req1-v1",
+          "title": "v1- initial",
+          "description": "Initial order"
+        },
+        {
+          "key": "req1-v2",
+          "title": "v2 - in progress",
+          "description": "Order in progress"
+        },
+        {
+          "key": "req1-v3",
+          "title": "v3 - completed",
+          "description": "Order completed"
+        }
+      ]
+    },
+    {
+      "key": "task1",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "Task"
+      },
+      "title": "Task",
+      "description": "The task that handles the status updates...",
+      "version": [
+        {
+          "key": "task1-v1",
+          "title": "v1 - created",
+          "description": "Initially created"
+        },
+        {
+          "key": "task1-v2",
+          "title": "v2 - accepted",
+          "description": "Accepted"
+        },
+        {
+          "key": "task1-v3",
+          "title": "v3 - in progress",
+          "description": "In progress"
+        },
+        {
+          "key": "task1-v4",
+          "title": "v4 - completed",
+          "description": "Completed"
+        }
+      ]
+    },
+    {
+      "key": "req.lab1",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "ServiceRequest"
+      },
+      "title": "Internal lab request",
+      "description": "Lab's internal request for the procedure",
+      "version": [
+        {
+          "key": "req.lab1-v1",
+          "title": "v1 - created",
+          "description": "Order in progress"
+        },
+        {
+          "key": "req.lab1-v2",
+          "title": "v2 - in progress",
+          "description": "Order in progress"
+        },
+        {
+          "key": "req.lab1-v3",
+          "title": "v3 - completed",
+          "description": "Order completed"
+        }
+      ]
+    }
+  ],
+  "process": {
+    "title": "Lab order tracking with Task",
+    "description": "Lab order, status updates handled with Task between CPOE, EMR and Lab systems",
+    "step": [
+      {
+        "number": 1,
+        "process": {
+          "title": "Create order",
+          "description": "New lab order",
+          "step": [
+            {
+              "number": 1.1,
+              "operation": {
+                "title": "Make a call",
+                "initiator": "Clin",
+                "receiver": "LabMan"
+              }
+            },
+            {
+              "number": 1.2,
+              "operation": {
+                "title": "Create new EMR order",
+                "initiator": "Clin",
+                "receiver": "CPOE"
+              }
+            },
+            {
+              "number": 1.3,
+              "operation": {
+                "title": "Submit order to EMR",
+                "initiator": "CPOE",
+                "receiver": "EMR",
+                "request": {
+                  "instanceReference": "req1",
+                  "versionReference": "req1-v1"
+                }
+              }
+            },
+            {
+              "number": 1.3,
+              "operation": {
+                "title": "Create new task ",
+                "initiator": "EMR",
+                "receiver": "EMR",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v1"
+                }
+              }
+            },
+            {
+              "number": 1.4,
+              "operation": {
+                "title": "Send task to Lab",
+                "initiator": "EMR",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v1"
+                }
+              }
+            }
+          ]
+        },
+        "pause": true
+      },
+      {
+        "number": 2,
+        "process": {
+          "title": "Accept order",
+          "description": "New task for handling order tracking",
+          "step": [
+            {
+              "number": 2.1,
+              "operation": {
+                "title": "Accept task",
+                "initiator": "LabMan",
+                "receiver": "Lab"
+              }
+            },
+            {
+              "number": 2.2,
+              "operation": {
+                "title": "Task status = accepted",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v2"
+                }
+              }
+            },
+            {
+              "number": 2.3,
+              "operation": {
+                "title": "Create internal lab request",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "req.lab1",
+                  "versionReference": "req.lab1-v1"
+                }
+              }
+            },
+            {
+              "number": 2.4,
+              "operation": {
+                "title": "Send Task to EMR",
+                "initiator": "Lab",
+                "receiver": "EMR",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v2"
+                }
+              }
+            },
+            {
+              "number": 2.5,
+              "operation": {
+                "title": "Inform CPOE of Task status",
+                "initiator": "EMR",
+                "receiver": "CPOE",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v2"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "number": 3,
+        "process": {
+          "title": "Initiate procedure",
+          "description": "Procedure is initiated at the lab",
+          "step": [
+            {
+              "number": 3.1,
+              "operation": {
+                "title": "Begin procedure",
+                "initiator": "LabMan",
+                "receiver": "Lab"
+              }
+            },
+            {
+              "number": 3.2,
+              "operation": {
+                "title": "Task status: in-progress",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v3"
+                }
+              }
+            },
+            {
+              "number": 4.3,
+              "operation": {
+                "title": "Internal lab request: in-progress",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "req.lab1",
+                  "versionReference": "req.lab1-v2"
+                }
+              }
+            },
+            {
+              "number": 4.4,
+              "operation": {
+                "title": "Send updated Task to EMR",
+                "initiator": "Lab",
+                "receiver": "EMR",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v3"
+                }
+              }
+            },
+            {
+              "number": 4.5,
+              "operation": {
+                "title": "Inform CPOE of Task status",
+                "initiator": "EMR",
+                "receiver": "CPOE",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v4"
+                }
+              }
+            },
+            {
+              "number": 4.5,
+              "operation": {
+                "title": "Order status: in-progress",
+                "initiator": "CPOE",
+                "receiver": "CPOE",
+                "request": {
+                  "instanceReference": "req1",
+                  "versionReference": "req1-v2"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "number": 4,
+        "process": {
+          "title": "Finish procedure",
+          "description": "Procedure is finished",
+          "step": [
+            {
+              "number": 4.1,
+              "operation": {
+                "title": "Finish procedure",
+                "initiator": "LabMan",
+                "receiver": "Lab"
+              }
+            },
+            {
+              "number": 4.2,
+              "operation": {
+                "title": "Task status = completed",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v2"
+                }
+              }
+            },
+            {
+              "number": 4.3,
+              "operation": {
+                "title": "Internal lab request: complete",
+                "initiator": "Lab",
+                "receiver": "Lab",
+                "request": {
+                  "instanceReference": "req.lab1",
+                  "versionReference": "req.lab1-v2"
+                }
+              }
+            },
+            {
+              "number": 4.4,
+              "operation": {
+                "title": "Send updated Task to EMR",
+                "initiator": "Lab",
+                "receiver": "EMR",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v4"
+                }
+              }
+            },
+            {
+              "number": 4.5,
+              "operation": {
+                "title": "Inform CPOE of Task status",
+                "initiator": "EMR",
+                "receiver": "CPOE",
+                "request": {
+                  "instanceReference": "task1",
+                  "versionReference": "task1-v4"
+                }
+              }
+            },
+            {
+              "number": 4.5,
+              "operation": {
+                "title": "Order status = completed",
+                "initiator": "CPOE",
+                "receiver": "CPOE",
+                "request": {
+                  "instanceReference": "req1",
+                  "versionReference": "req1-v3"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "enteralbolus",
+  "identifier": {
+    "system": "http://www.acme.org/nutritionorders",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Inpatient"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "allergyIntolerance": {
+    "reference": "AllergyIntolerance/example",
+    "display": "Cashew Nuts"
+  },
+  "foodPreferenceModifier": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/diet",
+      "code": "dairy-free"
+    }
+  },
+  "excludeFoodModifier": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 227493005,
+      "display": "Cashew Nut"
+    }
+  },
+  "enteralFormula": {
+    "type": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 441541000124107,
+          "display": "High energy enteral formula"
+        }
+      }
+    },
+    "baseFormulaType": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 442991000124104,
+          "display": "Adult high protein formula"
+        }
+      }
+    },
+    "baseFormulaProductName": "Acme High Protein Formula",
+    "additive": {
+      "type": {
+        "concept": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/entformula-additive",
+            "code": "lipid",
+            "display": "Lipid"
+          }
+        }
+      },
+      "productName": "Acme Lipid Additive"
+    },
+    "caloricDensity": {
+      "value": 1.5,
+      "unit": "calories per milliliter",
+      "system": "http://unitsofmeasure.org",
+      "code": "cal/mL"
+    },
+    "routeOfAdministration": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
+        "code": "GT",
+        "display": "Instillation, gastrostomy tube"
+      }
+    },
+    "administration": {
+      "schedule": {
+        "timing": {
+          "repeat": {
+            "boundsPeriod": {
+              "start": "2014-09-17T16:00:00Z"
+            },
+            "frequency": 1,
+            "period": 4,
+            "periodUnit": "h"
+          }
+        }
+      },
+      "quantity": {
+        "value": 240,
+        "unit": "milliliters",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL"
+      }
+    },
+    "maxVolumeToDeliver": {
+      "value": 1440,
+      "unit": "milliliter/day",
+      "system": "http://unitsofmeasure.org",
+      "code": "mL/d"
+    },
+    "administrationInstruction": "240 mls every 4hrs"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "benchpress",
+  "status": "active",
+  "intent": "plan",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 229115003,
+        "display": "Bench Press (regime/therapy)"
+      }
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceTiming": {
+    "repeat": {
+      "count": 20,
+      "countMax": 30,
+      "frequency": 3,
+      "period": 1,
+      "periodUnit": "wk"
+    }
+  },
+  "patientInstruction": {
+    "instructionMarkdown": "Start with 30kg 10-15 repetitions for three sets and increase in increments of 5kg when you feel ready"
+  }
+}

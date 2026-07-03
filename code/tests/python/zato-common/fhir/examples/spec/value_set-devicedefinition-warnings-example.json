@@ -1,0 +1,25 @@
+{
+  "resourceType": "ValueSet",
+  "id": "devicedefinition-warnings-example",
+  "extension": [
+    {
+      "valueCode": "oo"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/devicedefinition-warnings-example",
+  "version": "6.0.0-ballot4",
+  "name": "DeviceWarningsExample",
+  "title": "Device Warnings",
+  "status": "active",
+  "experimental": true,
+  "publisher": "HL7 International",
+  "description": "Hazards of using a device.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/devicedefinition-warnings-example"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "resourceType": "ValueSet",
+  "id": "object-role-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/object-role-example",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.3.460"
+    },
+    {
+      "use": "old",
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.3.453"
+    },
+    {
+      "use": "old",
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.2.267"
+    }
+  ],
+  "version": "6.0.0",
+  "name": "AuditEventEntityRoleExample",
+  "title": "Example Audit Event Entity Role",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Example codes representing the role the entity played in the audit event.",
+  "immutable": true,
+  "copyright": "These codes are excerpted from Digital Imaging and Communications in Medicine (DICOM) Standard, Part 16: Content Mapping Resource, Copyright \u00a9 2011 by the National Electrical Manufacturers Association.",
+  "compose": {
+    "include": {
+      "system": "http://terminology.hl7.org/CodeSystem/object-role"
+    }
+  }
+}

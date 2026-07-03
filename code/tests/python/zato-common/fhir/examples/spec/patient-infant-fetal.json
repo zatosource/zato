@@ -1,0 +1,47 @@
+{
+  "resourceType": "Patient",
+  "id": "infant-fetal",
+  "extension": {
+    "valueString": "Organa"
+  },
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "MR"
+      }
+    },
+    "system": "http://coruscanthealth.org/main-hospital/patient-identifier",
+    "value": "MRN657865757378"
+  },
+  "gender": "male",
+  "contact": {
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": 72705000,
+          "display": "Mother"
+        },
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+          "code": "N"
+        },
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "MTH"
+        }
+      ]
+    },
+    "name": {
+      "use": "maiden",
+      "family": "Organa",
+      "given": "Leia"
+    },
+    "telecom": {
+      "system": "phone",
+      "value": 31201234567,
+      "use": "mobile"
+    }
+  }
+}

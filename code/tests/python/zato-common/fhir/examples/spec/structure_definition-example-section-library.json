@@ -1,0 +1,99 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-section-library",
+  "url": "http://hl7.org/fhir/StructureDefinition/example-section-library",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.5.1041"
+  },
+  "name": "DocumentSectionLibrary",
+  "title": "Document Section Library (For testing section templates)",
+  "status": "active",
+  "experimental": false,
+  "date": "2018-11-05T17:57:00+11:00",
+  "description": "Document Section Library (For testing section templates)",
+  "kind": "resource",
+  "abstract": true,
+  "type": "Composition",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Composition",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "path": "Composition"
+      },
+      {
+        "path": "Composition.section",
+        "slicing": {
+          "discriminator": {
+            "type": "pattern",
+            "path": "code"
+          },
+          "description": "Slice by .section.code when using this library of sections",
+          "ordered": true,
+          "rules": "closed"
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "procedure"
+      },
+      {
+        "path": "Composition.section.title",
+        "min": 1,
+        "fixedString": "Procedures Performed"
+      },
+      {
+        "path": "Composition.section.code",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": {
+            "system": "http://loinc.org",
+            "code": "29554-3",
+            "display": "Procedure Narrative"
+          }
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "medications"
+      },
+      {
+        "path": "Composition.section.title",
+        "min": 1,
+        "fixedString": "Medications Administered"
+      },
+      {
+        "path": "Composition.section.code",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": {
+            "system": "http://loinc.org",
+            "code": "29549-3",
+            "display": "Medication administered Narrative"
+          }
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "plan"
+      },
+      {
+        "path": "Composition.section.title",
+        "min": 1,
+        "fixedString": "Discharge Treatment Plan"
+      },
+      {
+        "path": "Composition.section.code",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": {
+            "system": "http://loinc.org",
+            "code": "18776-5",
+            "display": "Plan of care note"
+          }
+        }
+      }
+    ]
+  }
+}

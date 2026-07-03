@@ -1,0 +1,84 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "heart-failure",
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Heart Failure Patient"
+  },
+  "dateTime": "2024-10-23T00:00:00Z",
+  "allergyIntolerance": {
+    "reference": "AllergyIntolerance/lactose-intolerance",
+    "display": "Lactose Intolerance"
+  },
+  "excludeFoodModifier": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 102261002,
+      "display": "strawberry"
+    }
+  },
+  "oralDiet": {
+    "type": [
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 439111000124103,
+          "display": "Mechanically altered diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 1255164005,
+          "display": "Halal diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 425458000,
+          "display": "Lactose-free diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 437421000124105,
+          "display": "Decreased sodium diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 439061000124104,
+          "display": "Fluid restricted diet"
+        }
+      }
+    ],
+    "schedule": {
+      "repeat": {
+        "frequency": 3,
+        "period": 1,
+        "periodUnit": "d"
+      }
+    },
+    "nutrient": {
+      "modifier": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 39972003,
+          "display": "Sodium"
+        }
+      },
+      "amount": {
+        "value": 2,
+        "unit": "g",
+        "system": "http://unitsofmeasure.org",
+        "code": "g"
+      }
+    },
+    "instruction": "1500ml of fluid/day"
+  }
+}

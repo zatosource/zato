@@ -1,0 +1,173 @@
+{
+  "resourceType": "Device",
+  "id": "AndroidGatewayPHG",
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/ContinuaDeviceIdentifiers",
+        "code": "SYSID",
+        "display": "System Identifier"
+      }
+    },
+    "system": "urn:oid:1.2.840.10004.1.1.1.0.0.1.0.0.1.2680",
+    "value": "4C-4E-49-12-34-56-FF-FF"
+  },
+  "type": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 531981,
+      "display": "MDC_MOC_VMS_MDS_AHD"
+    },
+    "text": "MDC_MOC_VMS_MDS_AHD: Continua compliant Gateway"
+  },
+  "deviceVersion": {
+    "type": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 532352
+      },
+      "text": "MDC_REG_CERT_DATA_CONTINUA_VERSION: Continua version"
+    },
+    "value": 6.0
+  },
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532353
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_CERT_DEV_LIST: Continua certified device list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaPAN",
+          "code": 4
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532355
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_AHD_CERT_LIST: Continua certified Health&Fitness interfaces list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaHFS",
+          "code": 0
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532355
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_AHD_CERT_LIST: Continua certified Health&Fitness interfaces list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaHFS",
+          "code": 3
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532355
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_AHD_CERT_LIST: Continua certified Health&Fitness interfaces list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaHFS",
+          "code": 7
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532355
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_AHD_CERT_LIST: Continua certified Health&Fitness interfaces list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaHFS",
+          "code": 2
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532355
+        },
+        "text": "MDC_REG_CERT_DATA_CONTINUA_AHD_CERT_LIST: Continua certified Health&Fitness interfaces list"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaHFS",
+          "code": 6
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ASN1ToHL7",
+          "code": 532354.0,
+          "display": "regulation-status"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0136",
+          "code": "Y"
+        },
+        "text": "Device is Unregulated"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 68220
+        },
+        "text": "MDC_TIME_SYNC_PROTOCOL: Time synchronization protocol"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 532226
+        },
+        "text": "MDC_TIME_SYNC_NTPV4: NTPV4 time synchronization"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 68221
+        },
+        "text": "MDC_TIME_SYNC_ACCURACY: unknown code"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://unitsofmeasure.org",
+          "code": "us"
+        },
+        "text": 120000000
+      }
+    }
+  ]
+}

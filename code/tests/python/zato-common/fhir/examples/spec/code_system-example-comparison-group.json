@@ -1,0 +1,59 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "example-comparison-group",
+  "meta": {
+    "lastUpdated": "2025-10-23T10:01:24.148+11:00"
+  },
+  "extension": [
+    {
+      "valueCode": "brr"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 0
+    }
+  ],
+  "url": "http://hl7.org/fhir/example-comparison-group",
+  "version": "6.0.0",
+  "name": "ExampleComparisonGroup",
+  "title": "Example Comparison Group",
+  "status": "active",
+  "experimental": false,
+  "date": "2025-10-23T16:55:11+11:00",
+  "publisher": "HL7 (FHIR Project)",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Indicates the progression of a study subject through a study.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/example-comparison-group",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "placebo",
+      "display": "Placebo",
+      "definition": "A sham version of the intervention."
+    },
+    {
+      "code": "absence-of-exposure",
+      "display": "Absence of Exposure",
+      "definition": "Not receiving the exposure or intervention."
+    },
+    {
+      "code": "usual-care",
+      "display": "Usual Care",
+      "definition": "The typical care without the intervention under investigation."
+    }
+  ]
+}

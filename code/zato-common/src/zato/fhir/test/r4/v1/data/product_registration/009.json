@@ -1,0 +1,321 @@
+{
+  "_meta": {
+    "scenario": "product_registration",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "medicinal_product": {
+    "resourceType": "MedicinalProduct",
+    "id": "mp.z7e5pekc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProduct: Vitamin D3 1000 IU Supplement</p></div>"
+    },
+    "name": [
+      {
+        "productName": "Vitamin D3 1000 IU Supplement"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/product-type",
+          "code": "VitaminSupplement",
+          "display": "Vitamin Supplement"
+        }
+      ],
+      "text": "Vitamin Supplement"
+    },
+    "combinedPharmaceuticalDoseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    }
+  },
+  "medicinal_product_authorization": {
+    "resourceType": "MedicinalProductAuthorization",
+    "id": "mpa.jrnvgt7y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductAuthorization: Authorization for Vitamin D3 1000 IU Supplement</p></div>"
+    },
+    "subject": {
+      "reference": "MedicinalProduct/mp.z7e5pekc"
+    },
+    "status": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/medicinal-product-authorization-status",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "statusDate": "2025-06-15",
+    "holder": {
+      "reference": "Organization/mfr.ff53q6jy",
+      "display": "Wellness Supplements Inc"
+    },
+    "dateOfFirstAuthorization": "2020-01-15"
+  },
+  "medicinal_product_ingredient": {
+    "resourceType": "MedicinalProductIngredient",
+    "id": "mpi.qjc5e6nr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductIngredient: Cholecalciferol</p></div>"
+    },
+    "role": {
+      "coding": [
+        {
+          "system": "http://example.org/ingredient-role",
+          "code": "active",
+          "display": "Active Ingredient"
+        }
+      ],
+      "text": "Active Ingredient"
+    },
+    "substance": {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "18414002",
+            "display": "Cholecalciferol"
+          }
+        ],
+        "text": "Cholecalciferol"
+      }
+    }
+  },
+  "medicinal_product_manufactured": {
+    "resourceType": "MedicinalProductManufactured",
+    "id": "mpm.bjvd9aer",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductManufactured: Vitamin D3 1000 IU Supplement tablet form</p></div>"
+    },
+    "manufacturedDoseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "unitOfPresentation": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "732936001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "quantity": {
+      "value": 90,
+      "unit": "tablets"
+    },
+    "ingredient": [
+      {
+        "reference": "MedicinalProductIngredient/mpi.qjc5e6nr"
+      }
+    ]
+  },
+  "medicinal_product_packaged": {
+    "resourceType": "MedicinalProductPackaged",
+    "id": "mpp.nukkfb38",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductPackaged: Vitamin D3 1000 IU Supplement, 90-count bottle</p></div>"
+    },
+    "subject": [
+      {
+        "reference": "MedicinalProduct/mp.z7e5pekc"
+      }
+    ],
+    "description": "Vitamin D3 1000 IU Supplement, bottle of 90 tablets",
+    "marketingAuthorization": {
+      "reference": "MedicinalProductAuthorization/mpa.jrnvgt7y"
+    },
+    "packageItem": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://example.org/package-type",
+              "code": "bottle",
+              "display": "Bottle"
+            }
+          ],
+          "text": "Bottle"
+        },
+        "quantity": {
+          "value": 1
+        },
+        "material": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "32039001",
+                "display": "Glass"
+              }
+            ],
+            "text": "Glass"
+          }
+        ]
+      }
+    ]
+  },
+  "medicinal_product_pharmaceutical": {
+    "resourceType": "MedicinalProductPharmaceutical",
+    "id": "mpph.8zbzbf6z",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductPharmaceutical: Vitamin D3 1000 IU Supplement oral administration</p></div>"
+    },
+    "administrableDoseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "routeOfAdministration": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        }
+      }
+    ],
+    "ingredient": [
+      {
+        "reference": "MedicinalProductIngredient/mpi.qjc5e6nr"
+      }
+    ]
+  },
+  "medicinal_product_contraindication": {
+    "resourceType": "MedicinalProductContraindication",
+    "id": "mpci.5k7myu4z",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductContraindication: Hypercalcemia</p></div>"
+    },
+    "subject": [
+      {
+        "reference": "MedicinalProduct/mp.z7e5pekc"
+      }
+    ],
+    "disease": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "66931009",
+          "display": "Hypercalcemia"
+        }
+      ],
+      "text": "Hypercalcemia"
+    }
+  },
+  "medicinal_product_indication": {
+    "resourceType": "MedicinalProductIndication",
+    "id": "mpind.su8azmgw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductIndication: Vitamin D deficiency prevention</p></div>"
+    },
+    "subject": [
+      {
+        "reference": "MedicinalProduct/mp.z7e5pekc"
+      }
+    ],
+    "diseaseSymptomProcedure": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "E55.9",
+          "display": "Vitamin D deficiency"
+        }
+      ],
+      "text": "Vitamin D deficiency"
+    }
+  },
+  "medicinal_product_interaction": {
+    "resourceType": "MedicinalProductInteraction",
+    "id": "mpint.82gdyf8y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductInteraction: No significant interactions known</p></div>"
+    },
+    "subject": [
+      {
+        "reference": "MedicinalProduct/mp.z7e5pekc"
+      }
+    ],
+    "description": "No clinically significant drug interactions have been identified for cholecalciferol at standard supplementation doses.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/interaction-type",
+          "code": "none",
+          "display": "No significant interaction"
+        }
+      ],
+      "text": "No significant interaction"
+    }
+  },
+  "medicinal_product_undesirable": {
+    "resourceType": "MedicinalProductUndesirableEffect",
+    "id": "mpue.gm278nxv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicinalProductUndesirableEffect: Rare mild gastrointestinal discomfort</p></div>"
+    },
+    "subject": [
+      {
+        "reference": "MedicinalProduct/mp.z7e5pekc"
+      }
+    ],
+    "symptomConditionEffect": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "267060006",
+          "display": "Mild gastrointestinal discomfort"
+        }
+      ],
+      "text": "Mild gastrointestinal discomfort"
+    },
+    "classification": {
+      "coding": [
+        {
+          "system": "http://example.org/frequency",
+          "code": "rare",
+          "display": "Rare"
+        }
+      ],
+      "text": "Rare"
+    }
+  }
+}

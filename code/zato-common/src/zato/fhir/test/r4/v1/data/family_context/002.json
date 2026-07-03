@@ -1,0 +1,595 @@
+{
+  "_meta": {
+    "scenario": "family_context",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.9tsdstt3",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Capucine Fernandes</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9716426"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7420"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Fernandes",
+        "given": [
+          "Capucine"
+        ],
+        "text": "Capucine Fernandes"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "990.748.6191",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "haley70@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1970-09-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5639 Eugene Shoal Apt. 958"
+        ],
+        "city": "West Scott",
+        "state": "LA",
+        "postalCode": "20175",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.exj8pczq",
+        "display": "Dr. Rémy Voisin"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.v5qfsqpt",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zkhsbx93",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Family history review on 2024-08-20</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tsdstt3",
+        "display": "Capucine Fernandes"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.exj8pczq",
+            "display": "Dr. Rémy Voisin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-20T15:15:00+00:00",
+        "end": "2024-08-20T16:14:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v5qfsqpt",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.z67c9pkz",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.9rjzp6g3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Contact update on 2025-02-10</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tsdstt3",
+        "display": "Capucine Fernandes"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.exj8pczq",
+            "display": "Dr. Rémy Voisin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-10T08:45:00+00:00",
+        "end": "2025-02-10T09:31:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v5qfsqpt",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.z67c9pkz",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.bjwx3cje",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9tsdstt3",
+        "display": "Capucine Fernandes"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.exj8pczq",
+            "display": "Dr. Rémy Voisin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:15:00+00:00",
+        "end": "2025-06-15T16:04:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.v5qfsqpt",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.z67c9pkz",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "related_person": {
+    "resourceType": "RelatedPerson",
+    "id": "rp.nkmu7aw5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RelatedPerson: Lucie Guyot (spouse and emergency contact)</p></div>"
+    },
+    "active": true,
+    "patient": {
+      "reference": "Patient/pt.9tsdstt3",
+      "display": "Capucine Fernandes"
+    },
+    "relationship": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+            "code": "SPS",
+            "display": "Spouse"
+          }
+        ],
+        "text": "Spouse"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Guyot",
+        "given": [
+          "Lucie"
+        ],
+        "text": "Lucie Guyot"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "812-251-7413x414",
+        "use": "mobile"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1988-12-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "18183 Laurie Tunnel"
+        ],
+        "city": "West Daniel",
+        "state": "AR",
+        "postalCode": "03593",
+        "country": "US"
+      }
+    ]
+  },
+  "family_member_history": {
+    "resourceType": "FamilyMemberHistory",
+    "id": "fmh.axp5f5d8",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>FamilyMemberHistory: Parent with well-controlled hypertension</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.9tsdstt3",
+      "display": "Capucine Fernandes"
+    },
+    "date": "2025-06-15",
+    "name": "Alice Mercier",
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "FTH",
+          "display": "father"
+        }
+      ],
+      "text": "father"
+    },
+    "sex": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/administrative-gender",
+          "code": "male",
+          "display": "Male"
+        }
+      ],
+      "text": "Male"
+    },
+    "bornDate": "1956-06-21",
+    "condition": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension"
+        },
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "370996005",
+              "display": "Patient condition well controlled"
+            }
+          ],
+          "text": "Patient condition well controlled"
+        },
+        "note": [
+          {
+            "text": "Father has essential hypertension, well controlled with medication. Active lifestyle."
+          }
+        ]
+      }
+    ]
+  },
+  "person": {
+    "resourceType": "Person",
+    "id": "person.e4bqqq7c",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Person: Capucine Fernandes</p></div>"
+    },
+    "name": [
+      {
+        "use": "official",
+        "text": "Capucine Fernandes"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "855-821-7274x301",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1970-09-04",
+    "address": [
+      {
+        "use": "home",
+        "city": "Thomasborough",
+        "state": "ME",
+        "country": "US"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.v5qfsqpt",
+      "display": "Lakeside Wellness Center"
+    },
+    "link": [
+      {
+        "target": {
+          "reference": "Patient/pt.9tsdstt3",
+          "display": "Capucine Fernandes"
+        },
+        "assurance": "level4"
+      }
+    ]
+  },
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.a5qr8bg7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Family of Capucine Fernandes</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Capucine Fernandes Family Group",
+    "quantity": 2,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.9tsdstt3",
+          "display": "Capucine Fernandes"
+        }
+      },
+      {
+        "entity": {
+          "reference": "RelatedPerson/rp.nkmu7aw5",
+          "display": "Lucie Guyot"
+        }
+      }
+    ]
+  }
+}

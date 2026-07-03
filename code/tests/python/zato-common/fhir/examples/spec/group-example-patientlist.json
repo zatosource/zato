@@ -1,0 +1,25 @@
+{
+  "resourceType": "Group",
+  "id": "example-patientlist",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "type": "person",
+  "membership": "enumerated",
+  "characteristic": {
+    "code": {
+      "coding": {
+        "system": "http://example.org",
+        "code": "attributed-to"
+      },
+      "text": "Patients primarily attributed to"
+    },
+    "valueReference": {
+      "reference": "Practitioner/123"
+    },
+    "exclude": false
+  }
+}

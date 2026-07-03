@@ -1,0 +1,79 @@
+{
+  "resourceType": "Condition",
+  "id": "f204",
+  "clinicalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "inactive"
+    }
+  },
+  "verificationStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      "code": "differential"
+    }
+  },
+  "category": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": 55607006,
+        "display": "Problem"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+        "code": "problem-list-item"
+      }
+    ]
+  },
+  "severity": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 24484000,
+      "display": "Severe"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 36225005,
+      "display": "Acute renal failure due to procedure"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 181414000,
+      "display": "Entire kidney"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "encounter": {
+    "reference": "Encounter/f203",
+    "display": "Roel's encounter on March elevanth"
+  },
+  "onsetDateTime": "2013-03-11",
+  "abatementDateTime": "2013-03-20",
+  "recordedDate": "2013-03-11",
+  "asserter": {
+    "reference": "Practitioner/f201"
+  },
+  "stage": {
+    "summary": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 14803004,
+        "display": "Temporary"
+      }
+    },
+    "assessment": {
+      "display": "Genetic analysis master panel"
+    }
+  },
+  "note": {
+    "text": "The patient is anuric."
+  }
+}

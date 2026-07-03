@@ -1,0 +1,33 @@
+{
+  "resourceType": "OrganizationAffiliation",
+  "id": "orgrole2",
+  "identifier": {
+    "use": "secondary",
+    "type": {
+      "text": "member hospital"
+    },
+    "system": "http://example.org/www.monumentHIE.com",
+    "value": "hosp32",
+    "assigner": {
+      "display": "Monument Health Information Exchange"
+    }
+  },
+  "active": true,
+  "organization": {
+    "display": "Monument Health Information Exchange"
+  },
+  "participatingOrganization": {
+    "display": "Founding Fathers Memorial Hospital"
+  },
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/organization-role",
+      "code": "member",
+      "display": "Member"
+    },
+    "text": "Hospital member"
+  },
+  "endpoint": {
+    "display": "Founding Fathers Memorial Hospital HIE endpoint"
+  }
+}

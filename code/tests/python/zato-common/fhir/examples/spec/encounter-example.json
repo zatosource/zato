@@ -1,0 +1,28 @@
+{
+  "resourceType": "Encounter",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "in-progress",
+  "class": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "IMP",
+      "display": "inpatient encounter"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "subjectStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/encounter-subject-status",
+      "code": "receiving-care"
+    }
+  },
+  "careTeam": {
+    "reference": "CareTeam/example"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "resourceType": "Device",
+  "id": "example-pacemaker",
+  "identifier": {
+    "system": "http://acme.com/devices/pacemakers/octane/serial",
+    "value": "1234-5678-90AB-CDEF"
+  },
+  "manufacturer": "Acme Devices, Inc",
+  "lotNumber": "1234-5678",
+  "name": {
+    "value": "PM/Octane 2014",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "user-friendly-name"
+      }
+    }
+  },
+  "type": {
+    "coding": {
+      "system": "http://acme.com/devices",
+      "code": "octane2014",
+      "display": "Performance pace maker for high octane patients"
+    }
+  },
+  "contact": {
+    "system": "phone",
+    "value": "ext 4352"
+  }
+}

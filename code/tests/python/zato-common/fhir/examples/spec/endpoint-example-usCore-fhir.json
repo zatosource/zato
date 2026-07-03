@@ -1,0 +1,31 @@
+{
+  "resourceType": "Endpoint",
+  "id": "example-usCore-fhir",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active",
+  "connectionType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest"
+    }
+  },
+  "name": "US Core FHIR REST endpoint",
+  "payload": {
+    "type": {
+      "text": "clinical-data"
+    },
+    "mimeType": [
+      "application/fhir+json",
+      "application/fhir+xml"
+    ],
+    "profileCanonical": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-problems-health-concerns",
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-simple-observation",
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+    ]
+  },
+  "address": "https://acme.org/interfaces/fhir"
+}

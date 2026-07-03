@@ -1,0 +1,36 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-alteplase-for-stroke",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": {
+    "Group": {
+      "id": "Definition-Group",
+      "title": "VariableDefinition: Alteplase for Stroke",
+      "membership": "conceptual",
+      "characteristic": {
+        "code": {
+          "text": "Defined by Reference"
+        },
+        "valueUri": "http://example.org/fhir/ActivityDefinition/example-alteplase-dosing",
+        "exclude": false,
+        "description": "IV alteplase 0.9 mg/kg (maximum 90 mg) as 10% of dose over 1 minute and 90% over 1 hour"
+      }
+    }
+  },
+  "name": "AlteplaseForStroke",
+  "title": "Alteplase for Stroke",
+  "status": "draft",
+  "description": "Alteplase for Stroke",
+  "actual": false,
+  "definition": {
+    "reference": {
+      "reference": "#Definition-Group"
+    }
+  },
+  "handling": "dichotomous"
+}

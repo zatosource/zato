@@ -1,0 +1,46 @@
+{
+  "resourceType": "Patient",
+  "id": "pat3",
+  "meta": {
+    "versionId": 1
+  },
+  "extension": {
+    "extension": {
+      "valueCoding": {
+        "system": "urn:oid:2.16.840.1.113883.6.238",
+        "code": "2036-2",
+        "display": "Filipino"
+      }
+    }
+  },
+  "identifier": {
+    "use": "usual",
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "MR"
+      }
+    },
+    "system": "urn:oid:0.1.2.3.4.5.6.7",
+    "value": 123457
+  },
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Notsowell",
+      "given": "Simon"
+    },
+    {
+      "use": "nickname",
+      "given": "Jock"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1982-01-23",
+  "deceasedDateTime": "2015-02-14T13:42:00+10:00",
+  "managingOrganization": {
+    "reference": "Organization/1",
+    "display": "ACME Healthcare, Inc"
+  }
+}

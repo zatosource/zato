@@ -1,0 +1,177 @@
+{
+  "resourceType": "CarePlan",
+  "id": "apply-operation-response",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "contained": [
+    {
+      "ServiceRequest": {
+        "id": "referralrequest",
+        "status": "draft",
+        "intent": "proposal",
+        "code": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 306206005
+          },
+          "text": "Referral to service (procedure)"
+        },
+        "subject": {
+          "reference": "Patient/124"
+        },
+        "occurrenceDateTime": "2017-02-26T11:47:00.000Z",
+        "requester": {
+          "reference": "Practitioner/123"
+        },
+        "performerType": {
+          "coding": {
+            "system": "http://nucc.org/provider-taxonomy",
+            "code": "261QM0850X",
+            "display": "Adult Mental Health"
+          }
+        },
+        "reasonCode": {
+          "coding": {
+            "system": "http://example.org/CodeSystem/suicide-risk-assessment-score",
+            "code": "Low",
+            "display": "Low Suicide Risk"
+          },
+          "text": "Low Suicide Risk"
+        },
+        "reasonReference": {
+          "reference": "RiskAssessment/suicide-risk-assessment"
+        }
+      }
+    },
+    {
+      "Medication": {
+        "id": "citalopramMedication",
+        "code": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 200371
+          },
+          "text": "citalopram"
+        },
+        "form": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 385055001,
+            "display": "Tablet (basic dose form)"
+          },
+          "text": "Tablet dose form"
+        },
+        "ingredient": {
+          "itemReference": {
+            "reference": "#citalopramSubstance"
+          },
+          "amount": {
+            "numerator": {
+              "value": 20,
+              "unit": "mg"
+            },
+            "denominator": {
+              "value": 1,
+              "unit": "{tbl}"
+            }
+          }
+        }
+      }
+    },
+    {
+      "Substance": {
+        "id": "citalopramSubstance",
+        "code": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 2556
+          },
+          "text": "citalopram"
+        }
+      }
+    },
+    {
+      "MedicationRequest": {
+        "id": "citalopramPrescription",
+        "status": "draft",
+        "intent": "proposal",
+        "medicationReference": {
+          "reference": "#citalopramMedication"
+        },
+        "subject": {
+          "reference": "Patient/124"
+        },
+        "requester": {
+          "reference": "Practitioner/123"
+        },
+        "reasonCode": {
+          "coding": {
+            "system": "http://example.org/CodeSystem/suicide-risk-assessment-score",
+            "code": "Low",
+            "display": "Low Suicide Risk"
+          },
+          "text": "Low Suicide Risk"
+        },
+        "reasonReference": {
+          "reference": "RiskAssessment/suicide-risk-assessment"
+        },
+        "instantiates": "http://example.org/fhir/ActivityDefinition/citalopramPrescription",
+        "dosageInstruction": {
+          "simple": {
+            "text": "1 tablet oral 1 time daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "route": {
+              "coding": {
+                "code": 26643006,
+                "display": "Oral route (qualifier value)"
+              },
+              "text": "Oral route (qualifier value)"
+            },
+            "doseAndRate": {
+              "type": {
+                "text": "ordered"
+              },
+              "doseQuantity": {
+                "value": 1,
+                "unit": "{tbl}"
+              }
+            }
+          }
+        },
+        "dispenseRequest": {
+          "numberOfRepeatsAllowed": 3,
+          "quantity": {
+            "value": 30,
+            "unit": "{tbl}"
+          }
+        }
+      }
+    }
+  ],
+  "instantiatesCanonical": "http://example.org/fhir/PlanDefinition/example",
+  "status": "draft",
+  "intent": "proposal",
+  "subject": {
+    "reference": "Patient/124"
+  },
+  "activity": [
+    {
+      "reference": {
+        "reference": "#referralrequest"
+      }
+    },
+    {
+      "reference": {
+        "reference": "#citalopramPrescription"
+      }
+    }
+  ]
+}

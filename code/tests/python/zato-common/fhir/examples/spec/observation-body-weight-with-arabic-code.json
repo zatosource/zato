@@ -1,0 +1,54 @@
+{
+  "resourceType": "Observation",
+  "id": "body-weight-with-arabic-code",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "vital-signs",
+      "display": "Vital Signs"
+    }
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "29463-7",
+        "display": "Body Weight"
+      },
+      {
+        "system": "http://loinc.org",
+        "code": "3141-9",
+        "display": "Body weight Measured"
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "code": 27113001,
+        "display": "Body weight"
+      },
+      {
+        "system": "http://acme.org/devices/clinical-codes",
+        "code": "body-weight",
+        "display": "Body Weight"
+      },
+      {
+        "system": "http://i18n.example/rtl-code/",
+        "code": "\u0648\u0632\u0646-\u0627\u0644\u062c\u0633\u0645",
+        "display": "\u0648\u0632\u0646 \u0627\u0644\u062c\u0633\u0645"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  },
+  "effectiveDateTime": "2016-03-28",
+  "valueQuantity": {
+    "value": 185,
+    "unit": "lbs",
+    "system": "http://unitsofmeasure.org",
+    "code": "[lb_av]"
+  }
+}

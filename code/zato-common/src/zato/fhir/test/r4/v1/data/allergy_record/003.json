@@ -1,0 +1,823 @@
+{
+  "_meta": {
+    "scenario": "allergy_record",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.tnc27pxg",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 이 영일</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1064902"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3896"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "영일"
+        ],
+        "text": "이 영일"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "643.453.3146x54844",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "davisronald@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1983-09-12",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "348 Sanchez Island"
+        ],
+        "city": "West Pedroport",
+        "state": "GA",
+        "postalCode": "10044",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.tj2be9qh",
+        "display": "최 상훈"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.avqvpkcv",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.tj2be9qh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 최 상훈</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2324019494"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "최",
+        "given": [
+          "상훈"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "최 상훈"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "996-598-2750",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "26042 Turner Valleys"
+        ],
+        "city": "Margarettown",
+        "state": "MN",
+        "postalCode": "79470",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.avqvpkcv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3549908366"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "918.938.7356x463",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "204 Fisher Center Apt. 807"
+        ],
+        "city": "Evansview",
+        "state": "RI",
+        "postalCode": "60565",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4tz94cjh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy assessment on 2024-06-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.tnc27pxg",
+        "display": "이 영일"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tj2be9qh",
+            "display": "최 상훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-21T15:15:00+00:00",
+        "end": "2024-06-21T15:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.avqvpkcv",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ujau2bee",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.h8ch26pk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy follow-up on 2024-11-01</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.tnc27pxg",
+        "display": "이 영일"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tj2be9qh",
+            "display": "최 상훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-01T14:00:00+00:00",
+        "end": "2024-11-01T14:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.avqvpkcv",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ujau2bee",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.dyacm8ed",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Seasonal review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.tnc27pxg",
+        "display": "이 영일"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.tj2be9qh",
+            "display": "최 상훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:00:00+00:00",
+        "end": "2025-06-15T14:36:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.avqvpkcv",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.ujau2bee",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "allergy_intolerance": {
+    "resourceType": "AllergyIntolerance",
+    "id": "ai.pnhp6qxz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AllergyIntolerance: Mild seasonal pollen allergy</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "type": "allergy",
+    "category": [
+      "environment"
+    ],
+    "criticality": "low",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "256259004",
+          "display": "Pollen"
+        }
+      ],
+      "text": "Pollen"
+    },
+    "patient": {
+      "reference": "Patient/pt.tnc27pxg",
+      "display": "이 영일"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.dyacm8ed"
+    },
+    "recordedDate": "2025-06-15",
+    "recorder": {
+      "reference": "Practitioner/pr.tj2be9qh",
+      "display": "최 상훈"
+    },
+    "reaction": [
+      {
+        "substance": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "256259004",
+              "display": "Pollen"
+            }
+          ],
+          "text": "Pollen"
+        },
+        "manifestation": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "267036007",
+                "display": "Sneezing"
+              }
+            ],
+            "text": "Sneezing"
+          }
+        ],
+        "severity": "mild"
+      }
+    ],
+    "note": [
+      {
+        "text": "Mild seasonal symptoms managed with over-the-counter antihistamine. No history of severe reactions."
+      }
+    ]
+  },
+  "clinical_impression": {
+    "resourceType": "ClinicalImpression",
+    "id": "ci.rw85p39e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClinicalImpression: Mild seasonal allergies, well controlled</p></div>"
+    },
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.tnc27pxg",
+      "display": "이 영일"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.dyacm8ed"
+    },
+    "effectiveDateTime": "2025-06-15T10:00:00+00:00",
+    "date": "2025-06-15T10:00:00+00:00",
+    "assessor": {
+      "reference": "Practitioner/pr.tj2be9qh",
+      "display": "최 상훈"
+    },
+    "summary": "Patient presents with mild seasonal allergic rhinitis. Symptoms are well controlled with cetirizine 10 mg daily during pollen season. No escalation needed.",
+    "finding": [
+      {
+        "itemCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J30.1",
+              "display": "Allergic rhinitis due to pollen"
+            }
+          ],
+          "text": "Allergic rhinitis due to pollen"
+        }
+      }
+    ]
+  },
+  "risk_assessment": {
+    "resourceType": "RiskAssessment",
+    "id": "ra.bhsvksxj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskAssessment: Low risk for severe allergic reaction</p></div>"
+    },
+    "status": "final",
+    "subject": {
+      "reference": "Patient/pt.tnc27pxg",
+      "display": "이 영일"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.dyacm8ed"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "condition": {
+      "reference": "AllergyIntolerance/ai.pnhp6qxz"
+    },
+    "performer": {
+      "reference": "Practitioner/pr.tj2be9qh",
+      "display": "최 상훈"
+    },
+    "prediction": [
+      {
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "39579001",
+              "display": "Anaphylaxis"
+            }
+          ],
+          "text": "Anaphylaxis"
+        },
+        "probabilityDecimal": 0.01,
+        "qualitativeRisk": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
+              "code": "low",
+              "display": "Low likelihood"
+            }
+          ],
+          "text": "Low likelihood"
+        },
+        "rationale": "History of mild seasonal symptoms only. No prior anaphylaxis. Low-risk allergen."
+      }
+    ]
+  },
+  "condition": {
+    "resourceType": "Condition",
+    "id": "cond.9db34ymd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Condition: Allergic rhinitis due to pollen</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+            "code": "encounter-diagnosis",
+            "display": "Encounter Diagnosis"
+          }
+        ],
+        "text": "Encounter Diagnosis"
+      }
+    ],
+    "severity": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "255604002",
+          "display": "Mild"
+        }
+      ],
+      "text": "Mild"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "J30.1",
+          "display": "Allergic rhinitis due to pollen"
+        }
+      ],
+      "text": "Allergic rhinitis due to pollen"
+    },
+    "subject": {
+      "reference": "Patient/pt.tnc27pxg",
+      "display": "이 영일"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.dyacm8ed"
+    },
+    "onsetDateTime": "2024-06-21",
+    "recorder": {
+      "reference": "Practitioner/pr.tj2be9qh",
+      "display": "최 상훈"
+    }
+  },
+  "consent": {
+    "resourceType": "Consent",
+    "id": "cons.65veq7tr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Consent: Patient consent to share allergy information</p></div>"
+    },
+    "status": "active",
+    "scope": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+          "code": "patient-privacy",
+          "display": "Privacy Consent"
+        }
+      ],
+      "text": "Privacy Consent"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "59284-0",
+            "display": "Patient Consent"
+          }
+        ],
+        "text": "Patient Consent"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.tnc27pxg",
+      "display": "이 영일"
+    },
+    "dateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "reference": "Patient/pt.tnc27pxg",
+        "display": "이 영일"
+      }
+    ],
+    "organization": [
+      {
+        "reference": "Organization/org.avqvpkcv",
+        "display": "Riverstone Medical Group"
+      }
+    ],
+    "policyRule": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "OPTIN",
+          "display": "opt-in"
+        }
+      ],
+      "text": "opt-in"
+    }
+  }
+}

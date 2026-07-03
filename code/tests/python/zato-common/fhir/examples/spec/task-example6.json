@@ -1,0 +1,95 @@
+{
+  "resourceType": "Task",
+  "id": "example6",
+  "identifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/identifiers",
+    "value": "20170201-001"
+  },
+  "basedOn": {
+    "display": "General Wellness Careplan"
+  },
+  "groupIdentifier": {
+    "use": "official",
+    "system": "http:/goodhealth.org/accession/identifiers",
+    "value": "G20170201-001"
+  },
+  "status": "completed",
+  "businessStatus": {
+    "text": "test completed and posted"
+  },
+  "intent": "order",
+  "priority": "routine",
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/CodeSystem/task-code",
+      "code": "fulfill"
+    }
+  },
+  "description": "Create order for getting specimen, Set up inhouse testing,  generate order for any sendouts and submit with specimen",
+  "focus": {
+    "valueReference": {
+      "reference": "ServiceRequest/lipid",
+      "display": "Lipid Panel Request"
+    }
+  },
+  "for": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Example In-Patient Encounter"
+  },
+  "executionPeriod": {
+    "start": "2016-10-31T08:25:05+10:00",
+    "end": "2016-10-31T18:45:05+10:00"
+  },
+  "authoredOn": "2016-10-31T08:25:05+10:00",
+  "lastModified": "2016-10-31T18:45:05+10:00",
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "requestedPerformer": {
+    "reference": {
+      "reference": "PractitionerRole/f202"
+    }
+  },
+  "owner": {
+    "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f",
+    "display": "Clinical Laboratory @ Acme Hospital"
+  },
+  "reason": {
+    "concept": {
+      "text": "The Task.reason should only be included if there is no Task.focus or if it differs from the reason indicated on the focus"
+    }
+  },
+  "note": {
+    "text": "This is an example to demonstrate using task for actioning a servicerequest and to illustrate how to populate many of the task elements - this is the parent task that will be broken into subtask to grab the specimen and a sendout lab test"
+  },
+  "restriction": {
+    "repetitions": 1,
+    "period": {
+      "end": "2016-11-02T09:45:05+10:00"
+    }
+  },
+  "output": [
+    {
+      "type": {
+        "text": "DiagnosticReport generated"
+      },
+      "valueReference": {
+        "reference": "DiagnosticReport/lipids"
+      }
+    },
+    {
+      "type": {
+        "text": "collected specimen"
+      },
+      "valueReference": {
+        "reference": "Specimen/101"
+      }
+    }
+  ]
+}

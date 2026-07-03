@@ -1,0 +1,23 @@
+{
+  "resourceType": "Slot",
+  "id": 2,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}b": null
+    }
+  },
+  "serviceCategory": {
+    "coding": {
+      "code": 17,
+      "display": "General Practice"
+    }
+  },
+  "schedule": {
+    "reference": "Schedule/example"
+  },
+  "status": "busy-tentative",
+  "start": "2013-12-25T09:45:00Z",
+  "end": "2013-12-25T10:00:00Z",
+  "comment": "Dr Careful is out of the office"
+}

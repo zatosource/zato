@@ -1,0 +1,843 @@
+{
+  "_meta": {
+    "scenario": "care_plan",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.b65qt5tx",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Jeffery Davis</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4942522"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4490"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Davis",
+        "given": [
+          "Jeffery"
+        ],
+        "text": "Jeffery Davis"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "9367345478",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "anthony81@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1965-01-01",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "3012 Michael Villages"
+        ],
+        "city": "Raymondhaven",
+        "state": "NJ",
+        "postalCode": "06372",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.qc3c5vy5",
+        "display": "Dr. Joel Williams"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.pfph84h4",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.qc3c5vy5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Joel Williams</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "5531071507"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Williams",
+        "given": [
+          "Joel"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Joel Williams"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(664)411-7101x875",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "21138 Philip Plain Suite 440"
+        ],
+        "city": "North Michelle",
+        "state": "VT",
+        "postalCode": "23046",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.pfph84h4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Green Valley Pharmacy</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2118870222"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Green Valley Pharmacy",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-675-293-9471x01258",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "7718 Yang Station"
+        ],
+        "city": "Baldwinshire",
+        "state": "WV",
+        "postalCode": "36042",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.cnufj6eg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care planning session on 2024-09-25</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b65qt5tx",
+        "display": "Jeffery Davis"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qc3c5vy5",
+            "display": "Dr. Joel Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-25T14:30:00+00:00",
+        "end": "2024-09-25T15:08:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.pfph84h4",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9syyq8a7",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.qhh89skj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care plan review on 2025-02-12</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b65qt5tx",
+        "display": "Jeffery Davis"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qc3c5vy5",
+            "display": "Dr. Joel Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-12T15:45:00+00:00",
+        "end": "2025-02-12T16:36:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.pfph84h4",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9syyq8a7",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.3txujmzs",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Goal assessment on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b65qt5tx",
+        "display": "Jeffery Davis"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.qc3c5vy5",
+            "display": "Dr. Joel Williams"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:45:00+00:00",
+        "end": "2025-06-15T15:20:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.pfph84h4",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9syyq8a7",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.g25b9am4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Wellness improvement plan for Jeffery Davis</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Wellness Improvement Plan - Jeffery Davis",
+    "subject": {
+      "reference": "Patient/pt.b65qt5tx",
+      "display": "Jeffery Davis"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.3txujmzs"
+    },
+    "period": {
+      "start": "2024-09-25"
+    },
+    "author": {
+      "reference": "Practitioner/pr.qc3c5vy5",
+      "display": "Dr. Joel Williams"
+    },
+    "careTeam": [
+      {
+        "reference": "CareTeam/ct.xar6uumd"
+      }
+    ],
+    "goal": [
+      {
+        "reference": "Goal/goal.ewbwvysy"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "226029000",
+                "display": "Exercises"
+              }
+            ],
+            "text": "Exercises"
+          },
+          "description": "Daily walking program, 30 minutes per day"
+        }
+      },
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11816003",
+                "display": "Diet education"
+              }
+            ],
+            "text": "Diet education"
+          },
+          "description": "Heart-healthy diet counseling"
+        }
+      }
+    ]
+  },
+  "care_team": {
+    "resourceType": "CareTeam",
+    "id": "ct.xar6uumd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CareTeam: Wellness team for Jeffery Davis</p></div>"
+    },
+    "status": "active",
+    "name": "Wellness Care Team - Jeffery Davis",
+    "subject": {
+      "reference": "Patient/pt.b65qt5tx",
+      "display": "Jeffery Davis"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.3txujmzs"
+    },
+    "participant": [
+      {
+        "role": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND",
+                "display": "attender"
+              }
+            ],
+            "text": "attender"
+          }
+        ],
+        "member": {
+          "reference": "Practitioner/pr.qc3c5vy5",
+          "display": "Dr. Joel Williams"
+        }
+      }
+    ],
+    "managingOrganization": [
+      {
+        "reference": "Organization/org.pfph84h4",
+        "display": "Green Valley Pharmacy"
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.ewbwvysy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Maintain healthy BMI between 18.5 and 24.9</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "in-progress",
+          "display": "In Progress"
+        }
+      ],
+      "text": "In Progress"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "dietary",
+            "display": "Dietary"
+          }
+        ],
+        "text": "Dietary"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "408580007",
+          "display": "Maintain healthy BMI between 18.5 and 24.9"
+        }
+      ],
+      "text": "Maintain healthy BMI between 18.5 and 24.9"
+    },
+    "subject": {
+      "reference": "Patient/pt.b65qt5tx",
+      "display": "Jeffery Davis"
+    },
+    "startDate": "2024-09-25",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index"
+            }
+          ],
+          "text": "Body mass index"
+        },
+        "detailRange": {
+          "low": {
+            "value": 18.5,
+            "unit": "kg/m2"
+          },
+          "high": {
+            "value": 24.9,
+            "unit": "kg/m2"
+          }
+        },
+        "dueDate": "2026-01-01"
+      }
+    ],
+    "expressedBy": {
+      "reference": "Patient/pt.b65qt5tx",
+      "display": "Jeffery Davis"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.wbku5ssb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit action group</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "subject": {
+      "reference": "Patient/pt.b65qt5tx",
+      "display": "Jeffery Davis"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.3txujmzs"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.qc3c5vy5",
+      "display": "Dr. Joel Williams"
+    },
+    "instantiatesCanonical": [
+      "PlanDefinition/pd.2c9v3aaw"
+    ],
+    "action": [
+      {
+        "title": "Start exercise program",
+        "resource": {
+          "reference": "CarePlan/cp.g25b9am4"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.2c9v3aaw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Wellness improvement protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.2c9v3aaw",
+    "name": "WellnessImprovementProtocol",
+    "title": "Wellness Improvement Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Green Valley Pharmacy",
+    "description": "A structured protocol for improving overall wellness through exercise, nutrition counseling, and regular follow-up visits.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    },
+    "goal": [
+      {
+        "description": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "408580007",
+              "display": "Maintain healthy BMI between 18.5 and 24.9"
+            }
+          ],
+          "text": "Maintain healthy BMI between 18.5 and 24.9"
+        },
+        "addresses": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "Z00.00",
+                "display": "General adult medical examination"
+              }
+            ],
+            "text": "General adult medical examination"
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "title": "Exercise Program",
+        "definitionCanonical": "ActivityDefinition/ad.zjrzej5e"
+      }
+    ]
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.zjrzej5e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Daily walking exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.zjrzej5e",
+    "name": "DailyWalkingProgram",
+    "title": "Daily Walking Exercise Program",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Green Valley Pharmacy",
+    "description": "A structured daily walking program to improve cardiovascular fitness. Start with 15 minutes and increase to 30 minutes over four weeks.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    },
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 1,
+        "periodUnit": "d",
+        "duration": 30,
+        "durationUnit": "min"
+      }
+    }
+  }
+}

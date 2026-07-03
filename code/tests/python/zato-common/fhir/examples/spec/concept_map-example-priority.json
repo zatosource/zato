@@ -1,0 +1,90 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "example-priority",
+  "url": "http://hl7.org/fhir/ConceptMap/example-priority",
+  "version": 20220809,
+  "title": "Example map with priorities",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "Example inspired by UK extended complex map (999002271000000101)",
+  "copyright": "Creative Commons 0",
+  "sourceScopeUri": "http://snomed.info/sct?fhir_vs",
+  "property": [
+    {
+      "code": "priority",
+      "description": "The priority with which to choose this mapping over the other mappings for the same code",
+      "type": "string"
+    },
+    {
+      "code": "mapAdvice",
+      "description": "Additional advice for a user using these maps",
+      "type": "string"
+    }
+  ],
+  "group": {
+    "source": "http://snomed.info./sct",
+    "target": "http://hl7.org/fhir/sid/icd-10",
+    "element": {
+      "code": 429353004,
+      "target": [
+        {
+          "code": "S59.7",
+          "relationship": "source-is-narrower-than-target",
+          "property": [
+            {
+              "code": "priority",
+              "valueString": 1
+            },
+            {
+              "code": "mapAdvice",
+              "valueString": "ADDITIONAL CODE POSSIBLE"
+            }
+          ]
+        },
+        {
+          "code": "S59.9",
+          "relationship": "source-is-narrower-than-target",
+          "property": [
+            {
+              "code": "priority",
+              "valueString": 3
+            },
+            {
+              "code": "mapAdvice",
+              "valueString": "ADDITIONAL CODE POSSIBLE"
+            }
+          ]
+        },
+        {
+          "code": "S59.8",
+          "relationship": "source-is-narrower-than-target",
+          "property": [
+            {
+              "code": "priority",
+              "valueString": 2
+            },
+            {
+              "code": "mapAdvice",
+              "valueString": "ADDITIONAL CODE POSSIBLE"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

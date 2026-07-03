@@ -1,0 +1,801 @@
+{
+  "_meta": {
+    "scenario": "medication_refill",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.372p6zmt",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Juliette Barre</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2410598"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9673"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Barre",
+        "given": [
+          "Juliette"
+        ],
+        "text": "Juliette Barre"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(207)283-8466x978",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "johnsonjohn@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1963-05-12",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "098 Boyer Lake"
+        ],
+        "city": "North Allison",
+        "state": "NC",
+        "postalCode": "47915",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.ev7nu3mv",
+        "display": "Dr. Caroline Blin"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.nsnxhsfj",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.ev7nu3mv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Caroline Blin</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9492097144"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Blin",
+        "given": [
+          "Caroline"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Caroline Blin"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-324-257-5180x38911",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "8137 Tina Avenue"
+        ],
+        "city": "Port Lindseyton",
+        "state": "GA",
+        "postalCode": "73015",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.nsnxhsfj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Centre de Bien-Etre Lumiere</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4805617137"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Centre de Bien-Etre Lumiere",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(866)913-4620",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "2973 Allen Roads"
+        ],
+        "city": "Davidville",
+        "state": "KS",
+        "postalCode": "02804",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.2gpba8mc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription review on 2024-09-25</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.372p6zmt",
+        "display": "Juliette Barre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ev7nu3mv",
+            "display": "Dr. Caroline Blin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-25T08:30:00+00:00",
+        "end": "2024-09-25T09:12:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.nsnxhsfj",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.zhncnqr9",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4suwg3uj",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Medication follow-up on 2025-02-11</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.372p6zmt",
+        "display": "Juliette Barre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ev7nu3mv",
+            "display": "Dr. Caroline Blin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-11T15:45:00+00:00",
+        "end": "2025-02-11T16:45:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.nsnxhsfj",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.zhncnqr9",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.e5a7qqjh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Refill visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.372p6zmt",
+        "display": "Juliette Barre"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ev7nu3mv",
+            "display": "Dr. Caroline Blin"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:45:00+00:00",
+        "end": "2025-06-15T13:42:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.nsnxhsfj",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.zhncnqr9",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "medication_request": {
+    "resourceType": "MedicationRequest",
+    "id": "mr.6y7tghcw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationRequest: Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.372p6zmt",
+      "display": "Juliette Barre"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.e5a7qqjh"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.ev7nu3mv",
+      "display": "Dr. Caroline Blin"
+    },
+    "dosageInstruction": [
+      {
+        "text": "Take one tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        },
+        "doseAndRate": [
+          {
+            "doseQuantity": {
+              "value": 1,
+              "unit": "tablet",
+              "system": "http://unitsofmeasure.org",
+              "code": "{tbl}"
+            }
+          }
+        ]
+      }
+    ],
+    "dispenseRequest": {
+      "numberOfRepeatsAllowed": 3,
+      "quantity": {
+        "value": 90,
+        "unit": "tablet",
+        "system": "http://unitsofmeasure.org",
+        "code": "{tbl}"
+      },
+      "expectedSupplyDuration": {
+        "value": 90,
+        "unit": "days",
+        "system": "http://unitsofmeasure.org",
+        "code": "d"
+      }
+    }
+  },
+  "medication_dispense": {
+    "resourceType": "MedicationDispense",
+    "id": "md.v7wr95cd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationDispense: Vitamin D3 1000 IU oral tablet dispensed</p></div>"
+    },
+    "status": "completed",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.372p6zmt",
+      "display": "Juliette Barre"
+    },
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.ev7nu3mv",
+          "display": "Dr. Caroline Blin"
+        }
+      }
+    ],
+    "authorizingPrescription": [
+      {
+        "reference": "MedicationRequest/mr.6y7tghcw"
+      }
+    ],
+    "quantity": {
+      "value": 90,
+      "unit": "tablet",
+      "system": "http://unitsofmeasure.org",
+      "code": "{tbl}"
+    },
+    "daysSupply": {
+      "value": 90,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "whenHandedOver": "2025-06-15T14:00:00+00:00"
+  },
+  "medication_statement": {
+    "resourceType": "MedicationStatement",
+    "id": "ms.urk6knsz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationStatement: Patient taking Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.372p6zmt",
+      "display": "Juliette Barre"
+    },
+    "effectivePeriod": {
+      "start": "2024-09-25"
+    },
+    "dateAsserted": "2025-06-15",
+    "informationSource": {
+      "reference": "Patient/pt.372p6zmt",
+      "display": "Juliette Barre"
+    },
+    "dosage": [
+      {
+        "text": "One tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        }
+      }
+    ]
+  },
+  "medication_knowledge": {
+    "resourceType": "MedicationKnowledge",
+    "id": "mk.w9dbr883",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationKnowledge: Vitamin D3 1000 IU oral tablet</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "status": "active",
+    "doseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "amount": {
+      "value": 1000,
+      "unit": "IU",
+      "system": "http://unitsofmeasure.org",
+      "code": "[iU]"
+    },
+    "synonym": [
+      "Vitamin D3 1000 IU oral tablet"
+    ]
+  },
+  "substance": {
+    "resourceType": "Substance",
+    "id": "sub.yhnb3cky",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Substance: Cholecalciferol (Vitamin D3)</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+            "code": "drug",
+            "display": "Drug or Medicament"
+          }
+        ],
+        "text": "Drug or Medicament"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "18414002",
+          "display": "Cholecalciferol"
+        }
+      ],
+      "text": "Cholecalciferol"
+    },
+    "description": "Cholecalciferol (Vitamin D3), used as a dietary supplement"
+  },
+  "detected_issue": {
+    "resourceType": "DetectedIssue",
+    "id": "di.6j22p563",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DetectedIssue: No drug interactions found</p></div>"
+    },
+    "status": "final",
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "DACT",
+          "display": "drug action detected issue"
+        }
+      ],
+      "text": "drug action detected issue"
+    },
+    "severity": "low",
+    "patient": {
+      "reference": "Patient/pt.372p6zmt",
+      "display": "Juliette Barre"
+    },
+    "identifiedDateTime": "2025-06-15",
+    "implicated": [
+      {
+        "reference": "MedicationRequest/mr.6y7tghcw"
+      }
+    ],
+    "detail": "Automated screening completed. No drug-drug interactions detected for current medication regimen."
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "resourceType": "Provenance",
+  "id": "example-correction-replacement",
+  "target": {
+    "reference": "Immunization/example"
+  },
+  "recorded": "2024-06-01T13:00:00Z",
+  "authorization": {
+    "concept": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "code": "PATSFTY"
+      }
+    }
+  },
+  "why": "Corrected immunization record to reflect accurate vaccine information.",
+  "activity": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+      "code": "FIXDATA"
+    }
+  },
+  "patient": {
+    "reference": "Patient/example"
+  },
+  "agent": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+        "code": "author"
+      }
+    },
+    "who": {
+      "reference": "Practitioner/example"
+    }
+  },
+  "entity": {
+    "role": "removal",
+    "what": {
+      "reference": "Immunization/historical",
+      "identifier": {
+        "system": "urn:ietf:rfc:3986",
+        "value": "urn:oid:1.3.6.1.4.1.21367.2005.3.7.1234"
+      },
+      "display": "Historic Immunization Record with Errors"
+    }
+  }
+}

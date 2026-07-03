@@ -1,0 +1,29 @@
+{
+  "resourceType": "ValueSet",
+  "id": "measure-group-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/measure-group-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3191"
+  },
+  "version": "6.0.0",
+  "name": "MeasureGroupExample",
+  "title": "Measure Group Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Example Measure Groups for the Measure Resource.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/measure-group-example"
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "_meta": {
+    "scenario": "cds_hooks",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.jjqe6hmw",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Honoré Charpentier</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6273729"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2902"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Charpentier",
+        "given": [
+          "Honoré"
+        ],
+        "text": "Honoré Charpentier"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(886)974-0301x44158",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "theresacook@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1954-05-10",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "913 Morales Prairie"
+        ],
+        "city": "Brittanyberg",
+        "state": "FM",
+        "postalCode": "07466",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.f52xz3nf",
+        "display": "Dr. Alain Peron"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.hvma96b8",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "guidance_response": {
+    "resourceType": "GuidanceResponse",
+    "id": "gr.xraj8azr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GuidanceResponse: Recommend scheduling wellness visit</p></div>"
+    },
+    "requestIdentifier": {
+      "system": "http://example.org/cds-hooks",
+      "value": "req-72312"
+    },
+    "moduleCanonical": "PlanDefinition/pd.t2sukzpk",
+    "status": "success",
+    "subject": {
+      "reference": "Patient/pt.jjqe6hmw",
+      "display": "Honoré Charpentier"
+    },
+    "encounter": {
+      "reference": "Encounter/enc_placeholder.2ashbxue"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": {
+      "reference": "Practitioner/pr.f52xz3nf",
+      "display": "Dr. Alain Peron"
+    },
+    "outputParameters": {
+      "reference": "Parameters/params_placeholder.r77jbydv"
+    },
+    "result": {
+      "reference": "RequestGroup/rg.utht4yhd"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.utht4yhd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit recommendation actions</p></div>"
+    },
+    "status": "active",
+    "intent": "proposal",
+    "subject": {
+      "reference": "Patient/pt.jjqe6hmw",
+      "display": "Honoré Charpentier"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.f52xz3nf",
+      "display": "Dr. Alain Peron"
+    },
+    "action": [
+      {
+        "title": "Schedule annual wellness visit",
+        "description": "Patient is due for annual wellness visit. Consider scheduling an appointment.",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/action-type",
+              "code": "create",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.t2sukzpk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: CDS Hooks wellness reminder service</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.t2sukzpk",
+    "name": "WellnessReminderService",
+    "title": "Wellness Visit Reminder CDS Service",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Lakeside Wellness Center",
+    "description": "A CDS Hooks service that reminds providers when a patient is due for an annual wellness visit.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "eca-rule",
+          "display": "ECA Rule"
+        }
+      ],
+      "text": "ECA Rule"
+    },
+    "action": [
+      {
+        "title": "Check wellness visit due date",
+        "description": "Evaluate whether patient is overdue for annual wellness visit",
+        "condition": [
+          {
+            "kind": "applicability",
+            "expression": {
+              "language": "text/cql",
+              "expression": "IsWellnessVisitOverdue"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

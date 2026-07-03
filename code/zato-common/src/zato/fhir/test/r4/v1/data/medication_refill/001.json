@@ -1,0 +1,801 @@
+{
+  "_meta": {
+    "scenario": "medication_refill",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.6asqaxmb",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Connor Green</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9571042"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4830"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Green",
+        "given": [
+          "Connor"
+        ],
+        "text": "Connor Green"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-898-329-0602",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "teverett@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1954-07-07",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "2721 Gibson Forge Apt. 409"
+        ],
+        "city": "New Jefferyshire",
+        "state": "IA",
+        "postalCode": "41172",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.gjdfej88",
+        "display": "Dr. David James"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.x5a684bn",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.gjdfej88",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. David James</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9003556917"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "James",
+        "given": [
+          "David"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. David James"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "672-267-2277x967",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "36360 Colleen Road Suite 158"
+        ],
+        "city": "Herrerabury",
+        "state": "NH",
+        "postalCode": "29828",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.x5a684bn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Green Valley Pharmacy</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9226699261"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Green Valley Pharmacy",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "495-367-0340x9126",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "9748 Carson Ridges"
+        ],
+        "city": "Port Richardtown",
+        "state": "MN",
+        "postalCode": "38141",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.9nbc2593",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription review on 2024-05-31</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.6asqaxmb",
+        "display": "Connor Green"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gjdfej88",
+            "display": "Dr. David James"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-31T15:45:00+00:00",
+        "end": "2024-05-31T16:20:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.x5a684bn",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.g4s794jh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ftmpxm88",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Medication follow-up on 2024-11-10</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.6asqaxmb",
+        "display": "Connor Green"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gjdfej88",
+            "display": "Dr. David James"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-10T15:15:00+00:00",
+        "end": "2024-11-10T16:03:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.x5a684bn",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.g4s794jh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6q8b2d6t",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Refill visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.6asqaxmb",
+        "display": "Connor Green"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.gjdfej88",
+            "display": "Dr. David James"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:15:00+00:00",
+        "end": "2025-06-15T14:47:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.x5a684bn",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.g4s794jh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "medication_request": {
+    "resourceType": "MedicationRequest",
+    "id": "mr.zx8r9d4b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationRequest: Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.6asqaxmb",
+      "display": "Connor Green"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.6q8b2d6t"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.gjdfej88",
+      "display": "Dr. David James"
+    },
+    "dosageInstruction": [
+      {
+        "text": "Take one tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        },
+        "doseAndRate": [
+          {
+            "doseQuantity": {
+              "value": 1,
+              "unit": "tablet",
+              "system": "http://unitsofmeasure.org",
+              "code": "{tbl}"
+            }
+          }
+        ]
+      }
+    ],
+    "dispenseRequest": {
+      "numberOfRepeatsAllowed": 3,
+      "quantity": {
+        "value": 90,
+        "unit": "tablet",
+        "system": "http://unitsofmeasure.org",
+        "code": "{tbl}"
+      },
+      "expectedSupplyDuration": {
+        "value": 90,
+        "unit": "days",
+        "system": "http://unitsofmeasure.org",
+        "code": "d"
+      }
+    }
+  },
+  "medication_dispense": {
+    "resourceType": "MedicationDispense",
+    "id": "md.dvgyjv9r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationDispense: Vitamin D3 1000 IU oral tablet dispensed</p></div>"
+    },
+    "status": "completed",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.6asqaxmb",
+      "display": "Connor Green"
+    },
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.gjdfej88",
+          "display": "Dr. David James"
+        }
+      }
+    ],
+    "authorizingPrescription": [
+      {
+        "reference": "MedicationRequest/mr.zx8r9d4b"
+      }
+    ],
+    "quantity": {
+      "value": 90,
+      "unit": "tablet",
+      "system": "http://unitsofmeasure.org",
+      "code": "{tbl}"
+    },
+    "daysSupply": {
+      "value": 90,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "whenHandedOver": "2025-06-15T14:00:00+00:00"
+  },
+  "medication_statement": {
+    "resourceType": "MedicationStatement",
+    "id": "ms.s7vnwjfy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationStatement: Patient taking Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.6asqaxmb",
+      "display": "Connor Green"
+    },
+    "effectivePeriod": {
+      "start": "2024-05-31"
+    },
+    "dateAsserted": "2025-06-15",
+    "informationSource": {
+      "reference": "Patient/pt.6asqaxmb",
+      "display": "Connor Green"
+    },
+    "dosage": [
+      {
+        "text": "One tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        }
+      }
+    ]
+  },
+  "medication_knowledge": {
+    "resourceType": "MedicationKnowledge",
+    "id": "mk.k8wgqq2r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationKnowledge: Vitamin D3 1000 IU oral tablet</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "status": "active",
+    "doseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "amount": {
+      "value": 1000,
+      "unit": "IU",
+      "system": "http://unitsofmeasure.org",
+      "code": "[iU]"
+    },
+    "synonym": [
+      "Vitamin D3 1000 IU oral tablet"
+    ]
+  },
+  "substance": {
+    "resourceType": "Substance",
+    "id": "sub.arbpsgam",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Substance: Cholecalciferol (Vitamin D3)</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+            "code": "drug",
+            "display": "Drug or Medicament"
+          }
+        ],
+        "text": "Drug or Medicament"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "18414002",
+          "display": "Cholecalciferol"
+        }
+      ],
+      "text": "Cholecalciferol"
+    },
+    "description": "Cholecalciferol (Vitamin D3), used as a dietary supplement"
+  },
+  "detected_issue": {
+    "resourceType": "DetectedIssue",
+    "id": "di.42hemubs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DetectedIssue: No drug interactions found</p></div>"
+    },
+    "status": "final",
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "DACT",
+          "display": "drug action detected issue"
+        }
+      ],
+      "text": "drug action detected issue"
+    },
+    "severity": "low",
+    "patient": {
+      "reference": "Patient/pt.6asqaxmb",
+      "display": "Connor Green"
+    },
+    "identifiedDateTime": "2025-06-15",
+    "implicated": [
+      {
+        "reference": "MedicationRequest/mr.zx8r9d4b"
+      }
+    ],
+    "detail": "Automated screening completed. No drug-drug interactions detected for current medication regimen."
+  }
+}

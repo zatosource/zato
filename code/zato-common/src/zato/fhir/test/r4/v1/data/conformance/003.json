@@ -1,0 +1,319 @@
+{
+  "_meta": {
+    "scenario": "conformance",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "capability_statement": {
+    "resourceType": "CapabilityStatement",
+    "id": "cs.ay3g324a",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CapabilityStatement: Wellness FHIR server capabilities</p></div>"
+    },
+    "url": "http://example.org/CapabilityStatement/cs.ay3g324a",
+    "name": "WellnessFHIRServer",
+    "title": "Wellness FHIR Server Capability Statement",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Describes the capabilities of the wellness data FHIR server.",
+    "kind": "instance",
+    "fhirVersion": "4.0.1",
+    "format": [
+      "json",
+      "xml"
+    ],
+    "rest": [
+      {
+        "mode": "server",
+        "resource": [
+          {
+            "type": "Patient",
+            "interaction": [
+              {
+                "code": "read"
+              },
+              {
+                "code": "search-type"
+              }
+            ]
+          },
+          {
+            "type": "Observation",
+            "interaction": [
+              {
+                "code": "read"
+              },
+              {
+                "code": "search-type"
+              }
+            ]
+          },
+          {
+            "type": "Encounter",
+            "interaction": [
+              {
+                "code": "read"
+              },
+              {
+                "code": "search-type"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "operation_definition": {
+    "resourceType": "OperationDefinition",
+    "id": "od.mjcwtvkv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OperationDefinition: Wellness summary operation</p></div>"
+    },
+    "url": "http://example.org/OperationDefinition/od.mjcwtvkv",
+    "name": "wellness-summary",
+    "title": "Patient Wellness Summary",
+    "status": "active",
+    "kind": "operation",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Returns a summary of wellness data for a given patient.",
+    "code": "wellness-summary",
+    "resource": [
+      "Patient"
+    ],
+    "system": false,
+    "type": true,
+    "instance": true,
+    "parameter": [
+      {
+        "name": "patient",
+        "use": "in",
+        "min": 1,
+        "max": "1",
+        "type": "Reference"
+      },
+      {
+        "name": "return",
+        "use": "out",
+        "min": 1,
+        "max": "1",
+        "type": "Bundle"
+      }
+    ]
+  },
+  "search_parameter": {
+    "resourceType": "SearchParameter",
+    "id": "sp.n3jcgcpm",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SearchParameter: Search observations by wellness category</p></div>"
+    },
+    "url": "http://example.org/SearchParameter/sp.n3jcgcpm",
+    "name": "wellness-category",
+    "status": "active",
+    "description": "Search parameter for filtering observations by wellness visit category.",
+    "code": "wellness-category",
+    "base": [
+      "Observation"
+    ],
+    "type": "token",
+    "expression": "Observation.category"
+  },
+  "compartment_definition": {
+    "resourceType": "CompartmentDefinition",
+    "id": "cd.mn5rvsfj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CompartmentDefinition: Patient wellness compartment</p></div>"
+    },
+    "url": "http://example.org/CompartmentDefinition/cd.mn5rvsfj",
+    "name": "PatientWellness",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Compartment definition for patient wellness data.",
+    "code": "Patient",
+    "search": true,
+    "resource": [
+      {
+        "code": "Observation",
+        "param": [
+          "subject"
+        ]
+      },
+      {
+        "code": "Encounter",
+        "param": [
+          "subject"
+        ]
+      }
+    ]
+  },
+  "structure_definition": {
+    "resourceType": "StructureDefinition",
+    "id": "sd.jj9vajta",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>StructureDefinition: Wellness observation profile</p></div>"
+    },
+    "url": "http://example.org/StructureDefinition/sd.jj9vajta",
+    "name": "WellnessObservation",
+    "title": "Wellness Observation Profile",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Profile for observations collected during wellness visits.",
+    "fhirVersion": "4.0.1",
+    "kind": "resource",
+    "abstract": false,
+    "type": "Observation",
+    "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+    "derivation": "constraint"
+  },
+  "structure_map": {
+    "resourceType": "StructureMap",
+    "id": "sm.76cf4uqc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>StructureMap: Transform wellness data</p></div>"
+    },
+    "url": "http://example.org/StructureMap/sm.76cf4uqc",
+    "name": "WellnessDataTransform",
+    "title": "Wellness Data Transform",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Structure map for transforming wellness visit data.",
+    "structure": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/Observation",
+        "mode": "source"
+      },
+      {
+        "url": "http://example.org/StructureDefinition/sd.jj9vajta",
+        "mode": "target"
+      }
+    ],
+    "group": [
+      {
+        "name": "main",
+        "typeMode": "none",
+        "input": [
+          {
+            "name": "src",
+            "type": "Observation",
+            "mode": "source"
+          },
+          {
+            "name": "tgt",
+            "type": "Observation",
+            "mode": "target"
+          }
+        ],
+        "rule": [
+          {
+            "name": "copy-code",
+            "source": [
+              {
+                "context": "src",
+                "element": "code"
+              }
+            ],
+            "target": [
+              {
+                "context": "tgt",
+                "element": "code"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "implementation_guide": {
+    "resourceType": "ImplementationGuide",
+    "id": "ig.s5q8xbx2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ImplementationGuide: Wellness data implementation guide</p></div>"
+    },
+    "url": "http://example.org/ImplementationGuide/ig.s5q8xbx2",
+    "name": "WellnessDataIG",
+    "title": "Wellness Data Implementation Guide",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "packageId": "org.example.wellness",
+    "fhirVersion": [
+      "4.0.1"
+    ]
+  },
+  "graph_definition": {
+    "resourceType": "GraphDefinition",
+    "id": "gd.6ete7fpn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GraphDefinition: Patient wellness graph</p></div>"
+    },
+    "url": "http://example.org/GraphDefinition/gd.6ete7fpn",
+    "name": "PatientWellnessGraph",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "description": "Graph definition showing relationships between patient wellness resources.",
+    "start": "Patient",
+    "link": [
+      {
+        "path": "Patient.id",
+        "target": [
+          {
+            "type": "Encounter",
+            "params": "subject={ref}"
+          }
+        ]
+      }
+    ]
+  },
+  "example_scenario": {
+    "resourceType": "ExampleScenario",
+    "id": "es.7f25ej3w",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExampleScenario: Wellness visit workflow</p></div>"
+    },
+    "url": "http://example.org/ExampleScenario/es.7f25ej3w",
+    "name": "WellnessVisitWorkflow",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness FHIR Conformance Authority",
+    "purpose": "Illustrate the workflow for a routine wellness visit.",
+    "actor": [
+      {
+        "actorId": "1",
+        "type": "person",
+        "name": "Patient"
+      },
+      {
+        "actorId": "2",
+        "type": "person",
+        "name": "Practitioner"
+      }
+    ],
+    "instance": [
+      {
+        "resourceId": "patient-example",
+        "resourceType": "Patient",
+        "name": "Example Patient"
+      },
+      {
+        "resourceId": "encounter-example",
+        "resourceType": "Encounter",
+        "name": "Example Encounter"
+      }
+    ]
+  }
+}

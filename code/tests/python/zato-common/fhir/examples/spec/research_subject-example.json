@@ -1,0 +1,64 @@
+{
+  "resourceType": "ResearchSubject",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "type": {
+      "text": "Subject id"
+    },
+    "system": "http://example.org/studysubjectids",
+    "value": 123
+  },
+  "status": "active",
+  "progress": [
+    {
+      "type": {
+        "coding": {
+          "code": "state"
+        }
+      },
+      "subjectState": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+          "code": "on-study"
+        }
+      },
+      "startDate": "2019-06-10"
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "milestone"
+        }
+      },
+      "milestone": {
+        "coding": {
+          "code": "SignedUp"
+        }
+      },
+      "startDate": "2019-06-06"
+    },
+    {
+      "type": {
+        "coding": {
+          "code": "milestone"
+        }
+      },
+      "milestone": {
+        "coding": {
+          "code": "Randomized"
+        }
+      },
+      "startDate": "2019-06-10"
+    }
+  ],
+  "study": {
+    "reference": "ResearchStudy/example"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  }
+}

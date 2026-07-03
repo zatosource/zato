@@ -1,0 +1,49 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "xray",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "current",
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "context": [
+    {
+      "reference": "Encounter/example"
+    },
+    {
+      "reference": "DocumentReference/documentreference-example-xray-encounter"
+    }
+  ],
+  "event": [
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 39714003,
+          "display": "Skeletal X-ray of wrist and hand"
+        }
+      }
+    },
+    {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 85151006,
+          "display": "Structure of left hand (body structure)"
+        }
+      }
+    }
+  ],
+  "content": {
+    "attachment": {
+      "contentType": "image/jpeg",
+      "url": "http://someimagingcenter.org/fhir/Binary/A12345",
+      "creation": "2016-03-15",
+      "height": 432,
+      "width": 640
+    }
+  }
+}

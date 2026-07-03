@@ -1,0 +1,28 @@
+{
+  "resourceType": "Endpoint",
+  "id": "example-au-hl7v2",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active",
+  "connectionType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7v2-mllp"
+    }
+  },
+  "name": "AU HL7v2 Referral Exchange endpoint",
+  "payload": {
+    "type": {
+      "text": "referral-request"
+    },
+    "mimeType": "application/hl7-v2",
+    "profileUri": [
+      "http://ns.hl7.org.au/hl7v2/profiles/HL7AU-OO-REF-SIMPLIFIED-201706",
+      "http://ns.electronichealth.net.au/ds/sc/deliver/hl7Mdm/2012",
+      "http://ns.electronichealth.net.au/ack/sc/deliver/hl7Ack/2012"
+    ]
+  },
+  "address": "mllp:acme.org:2360"
+}

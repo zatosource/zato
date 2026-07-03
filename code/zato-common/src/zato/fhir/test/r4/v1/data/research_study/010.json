@@ -1,0 +1,630 @@
+{
+  "_meta": {
+    "scenario": "research_study",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.675qzq82",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Shane Marshall</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7094182"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2529"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Marshall",
+        "given": [
+          "Shane"
+        ],
+        "text": "Shane Marshall"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "698.773.9562",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "laurenfrazier@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1954-02-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "45926 Ochoa Estates"
+        ],
+        "city": "North Kathryn",
+        "state": "MP",
+        "postalCode": "22372",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.wrdpd777",
+        "display": "Dr. Brandon Simon"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.w4dvfzwf",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.w4dvfzwf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Sunrise Family Practice</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9369349002"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Sunrise Family Practice",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-337-449-5098",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "7439 Clarence Isle"
+        ],
+        "city": "West Olivialand",
+        "state": "NM",
+        "postalCode": "04428",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.wp7j6mty",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study enrollment on 2024-04-10</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study enrollment"
+            }
+          ],
+          "text": "Study enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.675qzq82",
+        "display": "Shane Marshall"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wrdpd777",
+            "display": "Dr. Brandon Simon"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-04-10T13:30:00+00:00",
+        "end": "2024-04-10T14:11:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study enrollment"
+            }
+          ],
+          "text": "Study enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.w4dvfzwf",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kerq2pjk",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.bn4exrz2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study follow-up on 2024-11-17</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study follow-up"
+            }
+          ],
+          "text": "Study follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.675qzq82",
+        "display": "Shane Marshall"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wrdpd777",
+            "display": "Dr. Brandon Simon"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-17T15:45:00+00:00",
+        "end": "2024-11-17T16:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study follow-up"
+            }
+          ],
+          "text": "Study follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.w4dvfzwf",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kerq2pjk",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.tdwswcyg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Study completion on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Study completion"
+            }
+          ],
+          "text": "Study completion"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.675qzq82",
+        "display": "Shane Marshall"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.wrdpd777",
+            "display": "Dr. Brandon Simon"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T13:00:00+00:00",
+        "end": "2025-06-15T13:49:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Study completion"
+            }
+          ],
+          "text": "Study completion"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.w4dvfzwf",
+        "display": "Sunrise Family Practice"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.kerq2pjk",
+            "display": "Sunrise Family Practice - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "research_study": {
+    "resourceType": "ResearchStudy",
+    "id": "rs.tb2a5rdx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchStudy: Effect of Vitamin D Supplementation on Healthy Adults</p></div>"
+    },
+    "status": "active",
+    "title": "Effect of Vitamin D Supplementation on Healthy Adults",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/research-study-category",
+            "code": "interventional",
+            "display": "Interventional"
+          }
+        ],
+        "text": "Interventional"
+      }
+    ],
+    "condition": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "E55.9",
+            "display": "Vitamin D deficiency"
+          }
+        ],
+        "text": "Vitamin D deficiency"
+      }
+    ],
+    "description": "A randomized controlled trial examining the effect of daily vitamin D3 supplementation on serum levels in healthy adults over 12 months. All participants showed improvement.",
+    "period": {
+      "start": "2024-04-10",
+      "end": "2026-06-30"
+    },
+    "sponsor": {
+      "reference": "Organization/org.w4dvfzwf",
+      "display": "Sunrise Family Practice"
+    },
+    "principalInvestigator": {
+      "reference": "Practitioner/pr.wrdpd777",
+      "display": "Dr. Brandon Simon"
+    },
+    "enrollment": [
+      {
+        "reference": "Group/grp_placeholder.8hw2mmmj"
+      }
+    ]
+  },
+  "research_subject": {
+    "resourceType": "ResearchSubject",
+    "id": "rsub.smh2t9w2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchSubject: Shane Marshall enrolled in vitamin D study</p></div>"
+    },
+    "status": "on-study",
+    "study": {
+      "reference": "ResearchStudy/rs.tb2a5rdx"
+    },
+    "individual": {
+      "reference": "Patient/pt.675qzq82",
+      "display": "Shane Marshall"
+    },
+    "period": {
+      "start": "2024-04-10"
+    },
+    "assignedArm": "Treatment arm - Vitamin D3 1000 IU daily",
+    "actualArm": "Treatment arm - Vitamin D3 1000 IU daily"
+  },
+  "research_definition": {
+    "resourceType": "ResearchDefinition",
+    "id": "rd.bwgf7fc2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchDefinition: Vitamin D supplementation study design</p></div>"
+    },
+    "url": "http://example.org/ResearchDefinition/rd.bwgf7fc2",
+    "name": "VitaminDSupplementationStudy",
+    "title": "Effect of Vitamin D Supplementation on Healthy Adults",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "description": "Study definition for evaluating vitamin D supplementation in healthy adults.",
+    "population": {
+      "reference": "ResearchElementDefinition/red.dh2my9ms"
+    }
+  },
+  "research_element_definition": {
+    "resourceType": "ResearchElementDefinition",
+    "id": "red.dh2my9ms",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ResearchElementDefinition: Study population criteria</p></div>"
+    },
+    "url": "http://example.org/ResearchElementDefinition/red.dh2my9ms",
+    "name": "VitaminDStudyPopulation",
+    "title": "Vitamin D Study Population",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "type": "population",
+    "characteristic": [
+      {
+        "definitionCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Healthy adult"
+            }
+          ],
+          "text": "Healthy adult"
+        },
+        "exclude": false
+      }
+    ]
+  },
+  "evidence": {
+    "resourceType": "Evidence",
+    "id": "ev.pgmyfjy6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Evidence: Vitamin D supplementation improves serum levels</p></div>"
+    },
+    "url": "http://example.org/Evidence/ev.pgmyfjy6",
+    "name": "VitaminDEvidence",
+    "title": "Evidence for Vitamin D Supplementation Efficacy",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "description": "Evidence showing that daily vitamin D3 1000 IU supplementation improves serum 25-hydroxyvitamin D levels from deficient to sufficient range within 6-12 months in healthy adults.",
+    "exposureBackground": {
+      "reference": "EvidenceVariable/evv.nd2serct"
+    }
+  },
+  "evidence_variable": {
+    "resourceType": "EvidenceVariable",
+    "id": "evv.nd2serct",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EvidenceVariable: Serum vitamin D level</p></div>"
+    },
+    "url": "http://example.org/EvidenceVariable/evv.nd2serct",
+    "name": "SerumVitaminDLevel",
+    "title": "Serum 25-Hydroxyvitamin D Level",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "type": "continuous",
+    "characteristic": [
+      {
+        "definitionCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "1989-3",
+              "display": "Vitamin D"
+            }
+          ],
+          "text": "Vitamin D"
+        },
+        "exclude": false
+      }
+    ]
+  }
+}

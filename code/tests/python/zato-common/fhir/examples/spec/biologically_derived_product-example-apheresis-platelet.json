@@ -1,0 +1,31 @@
+{
+  "resourceType": "BiologicallyDerivedProduct",
+  "id": "example-apheresis-platelet",
+  "meta": {
+    "profile": "http://hl7.org/fhir/StructureDefinition/medicalproductofhumanorigin"
+  },
+  "productCategory": {
+    "coding": {
+      "system": "http://hl7.org/fhir/product-category",
+      "code": "mpho"
+    },
+    "text": "Medical Product of Human Origin"
+  },
+  "productCode": {
+    "coding": {
+      "system": "https://www.isbt128.org/uri/ProductDescriptionCode",
+      "code": "E3046"
+    },
+    "text": "Apheresis Platelets, Irradiated, Leukocyte reduced"
+  },
+  "identifier": {
+    "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+    "value": "00000E3046A999924123457000000"
+  },
+  "biologicalSourceEvent": {
+    "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+    "value": "A999924123457"
+  },
+  "division": 0,
+  "expirationDate": "2024-02-02T23:59:00-05:00"
+}

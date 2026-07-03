@@ -1,0 +1,57 @@
+{
+  "resourceType": "Basic",
+  "id": "classModel",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": {
+        "{http://www.w3.org/1999/xhtml}b": null
+      },
+      "{http://www.w3.org/1999/xhtml}ul": {
+        "{http://www.w3.org/1999/xhtml}li": [
+          null,
+          null
+        ]
+      }
+    }
+  },
+  "extension": {
+    "extension": [
+      {
+        "valueString": "Class1"
+      },
+      {
+        "extension": [
+          {
+            "valueString": "attribute1"
+          },
+          {
+            "valueInteger": 1
+          },
+          {
+            "valueCode": "*"
+          }
+        ]
+      },
+      {
+        "extension": [
+          {
+            "valueString": "attribute2"
+          },
+          {
+            "valueInteger": 0
+          },
+          {
+            "valueInteger": 1
+          }
+        ]
+      }
+    ]
+  },
+  "code": {
+    "coding": {
+      "system": "http://example.org/do-not-use/fhir-codes#resourceTypes",
+      "code": "UMLCLASSMODEL"
+    }
+  }
+}

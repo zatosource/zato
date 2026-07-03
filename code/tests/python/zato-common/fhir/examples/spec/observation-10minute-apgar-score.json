@@ -1,0 +1,231 @@
+{
+  "resourceType": "Observation",
+  "id": "10minute-apgar-score",
+  "contained": {
+    "Patient": {
+      "id": "newborn",
+      "identifier": {
+        "system": "http://acmehealthcare/org/mrns",
+        "value": 12345
+      },
+      "active": true,
+      "name": {
+        "family": "Chalmers",
+        "given": [
+          "Peter",
+          "James"
+        ]
+      },
+      "gender": "male",
+      "birthDate": "2016-05-18"
+    }
+  },
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "survey",
+      "display": "Survey"
+    },
+    "text": "Survey"
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "9271-8",
+        "display": "10 minute Apgar Score"
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "code": 169922007,
+        "display": "Apgar at 10 minutes"
+      }
+    ],
+    "text": "10 minute Apgar Score"
+  },
+  "subject": {
+    "reference": "#newborn"
+  },
+  "effectiveDateTime": "2016-05-18T22:33:22Z",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "valueQuantity": {
+    "value": 10,
+    "system": "http://unitsofmeasure.org",
+    "code": "{score}"
+  },
+  "component": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32401-2",
+            "display": "10 minute Apgar Color"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249227004,
+            "display": "Apgar color score"
+          }
+        ],
+        "text": "Apgar color score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 2
+            },
+            "system": "http://loinc.org",
+            "code": "LA6724-4",
+            "display": "Good color all over"
+          },
+          {
+            "system": "http://acme.ped/apgarcolor",
+            "code": 2
+          }
+        ],
+        "text": "2. Good color all over"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32402-0",
+            "display": "10 minute Apgar Heart Rate"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249223000,
+            "display": "Apgar heart rate score"
+          }
+        ],
+        "text": "Apgar heart rate score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 2
+            },
+            "system": "http://loinc.org",
+            "code": "LA6718-6",
+            "display": "At least 100 beats per minute"
+          },
+          {
+            "system": "http://acme.ped/apgarheartrate",
+            "code": 2
+          }
+        ],
+        "text": "2. At least 100 beats per minute"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32404-6",
+            "display": "10 minute Apgar Reflex Irritability"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249226008,
+            "display": "Apgar response to stimulus score"
+          }
+        ],
+        "text": "Apgar response to stimulus score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 2
+            },
+            "system": "http://loinc.org",
+            "code": "LA6721-0",
+            "display": "Grimace and pulling away, cough, or sneeze during suctioning"
+          },
+          {
+            "system": "http://acme.ped/apgarreflexirritability",
+            "code": 2
+          }
+        ],
+        "text": "2. Grimace and pulling away, cough, or sneeze during suctioning"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32403-8",
+            "display": "10 minute Apgar Muscle Tone"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249225007,
+            "display": "Apgar muscle tone score"
+          }
+        ],
+        "text": "Apgar muscle tone score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 2
+            },
+            "system": "http://loinc.org",
+            "code": "LA6715-2",
+            "display": "Active motion"
+          },
+          {
+            "system": "http://acme.ped/apgarmuscletone",
+            "code": 2
+          }
+        ],
+        "text": "2. Active motion"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "32405-3",
+            "display": "10 minute Apgar Respiratory effort"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 249224006,
+            "display": "Apgar respiratory effort score"
+          }
+        ],
+        "text": "Apgar respiratory effort score"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "extension": {
+              "valueDecimal": 2
+            },
+            "system": "http://loinc.org",
+            "code": "LA6727-7",
+            "display": "Good, strong cry; normal rate and effort of breathing"
+          },
+          {
+            "system": "http://acme.ped/apgarrespiratoryeffort",
+            "code": 2
+          }
+        ],
+        "text": "2. Good, strong cry; normal rate and effort of breathing"
+      }
+    }
+  ]
+}

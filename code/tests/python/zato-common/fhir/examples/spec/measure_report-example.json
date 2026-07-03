@@ -1,0 +1,11 @@
+{
+  "resourceType": "MeasureReport",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "complete",
+  "type": "individual",
+  "measure": "http://example.org/fhir/Measure/measure-cms146-example"
+}

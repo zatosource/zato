@@ -1,0 +1,106 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-statistic-model-include-if",
+  "meta": {
+    "versionId": 9,
+    "lastUpdated": "2025-03-10T14:59:32.227Z",
+    "profile": "http://hl7.org/fhir/uv/ebm/StructureDefinition/statistic-model"
+  },
+  "url": "http://hl7.org/fhir/Evidence/example-statistic-model-include-if",
+  "identifier": {
+    "type": {
+      "text": "FEvIR Object Identifier"
+    },
+    "system": "urn:ietf:rfc:3986",
+    "value": "https://fevir.net/FOI/346428",
+    "assigner": {
+      "display": "Computable Publishing LLC"
+    }
+  },
+  "title": "Example of statistical analysis plan with different statistical test if non-normal distribution",
+  "status": "active",
+  "author": {
+    "name": "Brian S. Alper, MD, MSPH"
+  },
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "description": "This example uses the StatisticModelIncludeIf extension to represent the model characteristic of Welch's 2-sample t-test if the data is consistent with a normal distribution (based on Shapiro-Wilk test with p-value >= 0.05) and a Wilcoxon Mann-Whitney test if not.",
+  "variableDefinition": [
+    {
+      "description": "Adults with hypertension",
+      "variableRole": "population"
+    },
+    {
+      "description": "Reversitol vs. Placebo",
+      "variableRole": "exposure"
+    },
+    {
+      "description": "Change in systolic blood pressure from baseline to 3 months",
+      "variableRole": "outcome"
+    }
+  ],
+  "studyDesign": {
+    "coding": {
+      "system": "https://fevir.net/sevco",
+      "code": "SEVCO:01003",
+      "display": "randomized assignment"
+    }
+  },
+  "statistic": {
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/sevco",
+        "code": "STATO:0000457",
+        "display": "difference in means"
+      }
+    },
+    "modelCharacteristic": [
+      {
+        "extension": {
+          "extension": [
+            {
+              "valueCodeableConcept": {
+                "text": "data distribution"
+              }
+            },
+            {
+              "valueCodeableConcept": {
+                "text": "normal distribution (Shapiro-Wilk test with p-value >= 0.05)"
+              }
+            }
+          ]
+        },
+        "code": {
+          "text": "Welch's 2-sample t-test"
+        },
+        "intended": true
+      },
+      {
+        "extension": {
+          "extension": [
+            {
+              "valueCodeableConcept": {
+                "text": "data distribution"
+              }
+            },
+            {
+              "valueCodeableConcept": {
+                "text": "not consistent with normal distribution (Shapiro-Wilk test with p-value < 0.05)"
+              }
+            }
+          ]
+        },
+        "code": {
+          "text": "Wilcoxon Mann-Whitney test"
+        },
+        "intended": true
+      }
+    ]
+  }
+}

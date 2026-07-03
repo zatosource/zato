@@ -1,0 +1,106 @@
+{
+  "resourceType": "Observation",
+  "id": "f205",
+  "identifier": {
+    "system": "https://intranet.aumc.nl/labvalues",
+    "value": "1304-03720-eGFR"
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "33914-3",
+      "display": "Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "issued": "2013-04-04T14:34:00+01:00",
+  "performer": {
+    "reference": "Practitioner/f202",
+    "display": "Luigi Maas"
+  },
+  "interpretation": {
+    "text": "interpretation of results should be assigned based upon the level of kindey function"
+  },
+  "note": {
+    "text": "GFR estimating equations developed by the Modification of Diet in Renal Disease (MDRD) Study Group and the Chronic Kidney Disease Epidemiology Collaboration (CKD-EPI)...."
+  },
+  "method": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 702668005,
+      "display": "MDRD"
+    }
+  },
+  "component": [
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "48643-1",
+          "display": "Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (MDRD)/1.73 sq M among black population"
+        }
+      },
+      "valueQuantity": {
+        "value": 60,
+        "comparator": ">",
+        "unit": "mL/min/1.73m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL/min/{1.73_m2}"
+      },
+      "referenceRange": {
+        "low": {
+          "value": 60,
+          "unit": "mL/min/1.73m2",
+          "system": "http://unitsofmeasure.org",
+          "code": "mL/min/{1.73_m2}"
+        },
+        "appliesTo": {
+          "text": "non-black/african-american"
+        },
+        "age": {
+          "low": {
+            "value": 18,
+            "unit": "yrs",
+            "system": "http://unitsofmeasure.org",
+            "code": "a"
+          }
+        }
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "48642-3",
+          "display": "GFR/BSA pr.non blk SerPlBld MDRD-ArV"
+        }
+      },
+      "valueQuantity": {
+        "value": 60,
+        "unit": "mL/min/1.73m2",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL/min/{1.73_m2}"
+      },
+      "referenceRange": {
+        "low": {
+          "value": 60,
+          "unit": "mL/min/1.73m2",
+          "system": "http://unitsofmeasure.org",
+          "code": "mL/min/{1.73_m2}"
+        },
+        "age": {
+          "low": {
+            "value": 18,
+            "unit": "yrs",
+            "system": "http://unitsofmeasure.org",
+            "code": "a"
+          }
+        }
+      }
+    }
+  ]
+}

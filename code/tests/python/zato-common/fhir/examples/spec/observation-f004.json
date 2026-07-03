@@ -1,0 +1,43 @@
+{
+  "resourceType": "Observation",
+  "id": "f004",
+  "identifier": {
+    "use": "official",
+    "system": "http://www.bmc.nl/zorgportal/identifiers/observations",
+    "value": 6326
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "789-8",
+      "display": "Erythrocytes [#/volume] in Blood by Automated count"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "effectiveDateTime": "2013-04-02T10:30:10+01:00",
+  "issued": "2013-04-03T15:30:10+01:00",
+  "performer": {
+    "reference": "Practitioner/f005",
+    "display": "A. Langeveld"
+  },
+  "valueQuantity": {
+    "value": 4.12,
+    "unit": "10^12/L",
+    "system": "http://unitsofmeasure.org",
+    "code": "10*12/L"
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "L",
+      "display": "Low"
+    }
+  },
+  "referenceRange": {
+    "text": "12-14 y Male: 4.4 - 5.2  x  10^12/L ; 12-14 y Female: 4.2 - 4.8  x  10^12/L ; 15-17 y Male: 4.6 - 5.4  x  10^12/L ; 15-17 y Female: 4.2 - 4.8  x  10^12/L ; 18-64 y Male: 4.6 - 5.4  x  10^12/L ; 18-64 y Female: 4.0 - 4.8  x  10^12/L ; 65-74 y Male: 4.3 - 5.3  x  10^12/L ; 65-74 y Female: 4.1 - 4.9  x  10^12/L"
+  }
+}

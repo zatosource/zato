@@ -1,0 +1,52 @@
+{
+  "resourceType": "Device",
+  "id": "device-example-specimen-container-polycup",
+  "identifier": {
+    "system": "http://acme.com/containers/id",
+    "value": 345675
+  },
+  "name": {
+    "value": "100mL Sterile Polycup",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "registered-name",
+        "display": "Registered Name"
+      }
+    }
+  },
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/containers/codes",
+          "code": "container-type",
+          "display": "Container Type"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://acme.com/containers/types",
+          "code": "100mlcup",
+          "display": "100 mL Sterile Polycup"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/containers/codes",
+          "code": "amount",
+          "display": "Amount"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://acme.com/containers/capacities",
+          "code": "100mL",
+          "display": "100 mL"
+        }
+      }
+    }
+  ]
+}

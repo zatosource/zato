@@ -1,0 +1,90 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-composition",
+  "meta": {
+    "security": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+      "code": "HTEST"
+    }
+  },
+  "identifier": {
+    "system": "http://healthintersections.com.au/test",
+    "value": 1
+  },
+  "status": "current",
+  "type": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "11488-4",
+      "display": "Consult note"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "LP183761-8",
+      "display": "Report"
+    }
+  },
+  "subject": {
+    "reference": "Patient/xcda",
+    "display": "Henry Levin the 7th"
+  },
+  "context": {
+    "reference": "Encounter/xcda"
+  },
+  "event": [
+    {
+      "concept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "HEALTHREC",
+          "display": "health record"
+        }
+      }
+    },
+    {
+      "reference": {
+        "reference": "Observation/example"
+      }
+    }
+  ],
+  "period": {
+    "start": "2010-07-18",
+    "end": "2012-11-12"
+  },
+  "date": "2012-01-04T09:10:14Z",
+  "author": {
+    "reference": "Practitioner/xcda-author",
+    "display": "Harold Hippocrates, MD"
+  },
+  "attester": {
+    "mode": {
+      "coding": {
+        "system": "http://hl7.org/fhir/composition-attestation-mode",
+        "code": "professional"
+      }
+    },
+    "party": {
+      "reference": "Practitioner/xcda-author",
+      "display": "Harold Hippocrates, MD"
+    }
+  },
+  "relatesTo": {
+    "code": {
+      "coding": {
+        "system": "http://hl7.org/fhir/document-relationship-type",
+        "code": "replaces"
+      }
+    },
+    "target": {
+      "reference": "DocumentReference/old-example"
+    }
+  },
+  "description": "Example of a Comprehensive DocumentReference resource. This is fully filled for all mandatory elements and all optional elements.",
+  "content": {
+    "attachment": {
+      "url": "Composition/example"
+    }
+  }
+}

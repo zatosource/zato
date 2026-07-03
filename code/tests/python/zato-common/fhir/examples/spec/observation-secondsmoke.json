@@ -1,0 +1,40 @@
+{
+  "resourceType": "Observation",
+  "id": "secondsmoke",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "social-history",
+      "display": "Social History"
+    },
+    "text": "Social History"
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "39243-1",
+        "display": "Second hand smoke exposure CPHS"
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "code": 102409004,
+        "display": "Second hand cigarette smoke (substance)"
+      }
+    ],
+    "text": "Second hand smoke exposure"
+  },
+  "subject": {
+    "reference": "Patient/infant"
+  },
+  "effectiveDateTime": "2016-05-18T22:33:22Z",
+  "valueCodeableConcept": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 373066001,
+      "display": "Yes (qualifier value)"
+    },
+    "text": "YES"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "resourceType": "Substance",
+  "id": "f202",
+  "instance": false,
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 3092008,
+        "display": "Staphylococcus Aureus"
+      }
+    }
+  }
+}

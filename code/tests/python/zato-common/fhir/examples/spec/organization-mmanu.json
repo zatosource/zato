@@ -1,0 +1,17 @@
+{
+  "resourceType": "Organization",
+  "id": "mmanu",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "active": true,
+  "name": "Acme Corporation",
+  "contact": {
+    "address": {
+      "country": "Swizterland"
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "_meta": {
+    "scenario": "cds_hooks",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.mh36pzc5",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Robert Sanchez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7826302"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-6786"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Sanchez",
+        "given": [
+          "Robert"
+        ],
+        "text": "Robert Sanchez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-983-916-1106",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "xburns@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1999-01-27",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "4175 Thornton Knolls Suite 351"
+        ],
+        "city": "Graychester",
+        "state": "CT",
+        "postalCode": "49998",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.4hw9wwbg",
+        "display": "Dr. Crystal Smith"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.s8yrmd4q",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "guidance_response": {
+    "resourceType": "GuidanceResponse",
+    "id": "gr.677wkypg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>GuidanceResponse: Recommend scheduling wellness visit</p></div>"
+    },
+    "requestIdentifier": {
+      "system": "http://example.org/cds-hooks",
+      "value": "req-30622"
+    },
+    "moduleCanonical": "PlanDefinition/pd.xg652ntr",
+    "status": "success",
+    "subject": {
+      "reference": "Patient/pt.mh36pzc5",
+      "display": "Robert Sanchez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc_placeholder.4pgc8asw"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": {
+      "reference": "Practitioner/pr.4hw9wwbg",
+      "display": "Dr. Crystal Smith"
+    },
+    "outputParameters": {
+      "reference": "Parameters/params_placeholder.aabbs233"
+    },
+    "result": {
+      "reference": "RequestGroup/rg.cjjfqxzv"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.cjjfqxzv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit recommendation actions</p></div>"
+    },
+    "status": "active",
+    "intent": "proposal",
+    "subject": {
+      "reference": "Patient/pt.mh36pzc5",
+      "display": "Robert Sanchez"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.4hw9wwbg",
+      "display": "Dr. Crystal Smith"
+    },
+    "action": [
+      {
+        "title": "Schedule annual wellness visit",
+        "description": "Patient is due for annual wellness visit. Consider scheduling an appointment.",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/action-type",
+              "code": "create",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.xg652ntr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: CDS Hooks wellness reminder service</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.xg652ntr",
+    "name": "WellnessReminderService",
+    "title": "Wellness Visit Reminder CDS Service",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Sunrise Family Practice",
+    "description": "A CDS Hooks service that reminds providers when a patient is due for an annual wellness visit.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "eca-rule",
+          "display": "ECA Rule"
+        }
+      ],
+      "text": "ECA Rule"
+    },
+    "action": [
+      {
+        "title": "Check wellness visit due date",
+        "description": "Evaluate whether patient is overdue for annual wellness visit",
+        "condition": [
+          {
+            "kind": "applicability",
+            "expression": {
+              "language": "text/cql",
+              "expression": "IsWellnessVisitOverdue"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

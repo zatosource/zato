@@ -1,0 +1,1302 @@
+{
+  "_meta": {
+    "scenario": "insurance_enrollment",
+    "instance": 6,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.s753xj3r",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 한 영순</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2336711"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5042"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "한",
+        "given": [
+          "영순"
+        ],
+        "text": "한 영순"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "9406276308",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "sarahcallahan@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1953-04-14",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5986 Nicholas Course"
+        ],
+        "city": "Port Hannah",
+        "state": "OR",
+        "postalCode": "53947",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.rzd7k8af",
+        "display": "서 정희"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "insorg.rssh7v9p",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Select PPO</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "ins",
+            "display": "Insurance Company"
+          }
+        ],
+        "text": "Insurance Company"
+      }
+    ],
+    "name": "Riverstone Select PPO"
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.xunpmw5v",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Insurance enrollment on 2024-09-10</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s753xj3r",
+        "display": "한 영순"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rzd7k8af",
+            "display": "서 정희"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-10T16:45:00+00:00",
+        "end": "2024-09-10T17:25:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rnye9wj8",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.fm2pukpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.m34v7ay2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Coverage review on 2025-01-23</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s753xj3r",
+        "display": "한 영순"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rzd7k8af",
+            "display": "서 정희"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-23T15:00:00+00:00",
+        "end": "2025-01-23T15:52:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rnye9wj8",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.fm2pukpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.9hwu97pn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Benefits check on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.s753xj3r",
+        "display": "한 영순"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rzd7k8af",
+            "display": "서 정희"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:45:00+00:00",
+        "end": "2025-06-15T11:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rnye9wj8",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.fm2pukpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "cov.qye3t6wh",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Coverage: Riverstone Select PPO for 한 영순</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PPO",
+          "display": "PPO"
+        }
+      ],
+      "text": "PPO"
+    },
+    "subscriber": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "subscriberId": "SUB607552",
+    "beneficiary": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+          "code": "self",
+          "display": "Self"
+        }
+      ],
+      "text": "Self"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "payor": [
+      {
+        "reference": "Organization/insorg.rssh7v9p",
+        "display": "Riverstone Select PPO"
+      }
+    ],
+    "class": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "group",
+              "display": "Group"
+            }
+          ],
+          "text": "Group"
+        },
+        "value": "GRP7744",
+        "name": "Employee Group"
+      },
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "plan",
+              "display": "Plan"
+            }
+          ],
+          "text": "Plan"
+        },
+        "value": "PPO",
+        "name": "Riverstone Select PPO"
+      }
+    ],
+    "costToBeneficiary": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-copay-type",
+              "code": "copay",
+              "display": "Copay"
+            }
+          ],
+          "text": "Copay"
+        },
+        "valueMoney": {
+          "value": 40,
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "insurance_plan": {
+    "resourceType": "InsurancePlan",
+    "id": "ip.jynzhnu2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>InsurancePlan: Riverstone Select PPO</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+            "code": "PPO",
+            "display": "PPO"
+          }
+        ],
+        "text": "PPO"
+      }
+    ],
+    "name": "Riverstone Select PPO",
+    "ownedBy": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "administeredBy": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "plan": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+              "code": "PPO",
+              "display": "PPO"
+            }
+          ],
+          "text": "PPO"
+        },
+        "generalCost": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-cost-category",
+                  "code": "deductible",
+                  "display": "Deductible"
+                }
+              ],
+              "text": "Deductible"
+            },
+            "cost": {
+              "value": 2000,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "enrollment_request": {
+    "resourceType": "EnrollmentRequest",
+    "id": "er.hfuhkuzb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentRequest: Request to enroll in insurance plan</p></div>"
+    },
+    "status": "active",
+    "created": "2024-09-10",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "candidate": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "coverage": {
+      "reference": "Coverage/cov.qye3t6wh"
+    }
+  },
+  "enrollment_response": {
+    "resourceType": "EnrollmentResponse",
+    "id": "eresp.87c7krub",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentResponse: Enrollment approved</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "EnrollmentRequest/er.hfuhkuzb"
+    },
+    "outcome": "complete",
+    "disposition": "Enrollment approved. Coverage effective immediately.",
+    "created": "2024-09-10",
+    "organization": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    }
+  },
+  "eligibility_request": {
+    "resourceType": "CoverageEligibilityRequest",
+    "id": "cer.ua3nw6cv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityRequest: Check benefits eligibility</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.qye3t6wh"
+        }
+      }
+    ]
+  },
+  "eligibility_response": {
+    "resourceType": "CoverageEligibilityResponse",
+    "id": "ceresp.m32yx2uk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityResponse: Patient eligible</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "created": "2025-06-15",
+    "request": {
+      "reference": "CoverageEligibilityRequest/cer.ua3nw6cv"
+    },
+    "outcome": "complete",
+    "disposition": "Patient is eligible for benefits under current coverage.",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.qye3t6wh"
+        },
+        "inforce": true
+      }
+    ]
+  },
+  "claim": {
+    "resourceType": "Claim",
+    "id": "clm.rhbrqssa",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Claim: Wellness visit claim</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "priority": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+          "code": "normal",
+          "display": "Normal"
+        }
+      ],
+      "text": "Normal"
+    },
+    "insurance": [
+      {
+        "sequence": 1,
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.qye3t6wh"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "unitPrice": {
+          "value": 175,
+          "currency": "USD"
+        },
+        "net": {
+          "value": 175,
+          "currency": "USD"
+        }
+      }
+    ],
+    "total": {
+      "value": 175,
+      "currency": "USD"
+    }
+  },
+  "claim_response": {
+    "resourceType": "ClaimResponse",
+    "id": "cr.eqkr3x2v",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClaimResponse: Claim processed</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "request": {
+      "reference": "Claim/clm.rhbrqssa"
+    },
+    "outcome": "complete",
+    "disposition": "Claim processed successfully.",
+    "item": [
+      {
+        "itemSequence": 1,
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 175,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 135,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 40,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 175,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 135,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/ex-paymenttype",
+            "code": "complete",
+            "display": "Complete"
+          }
+        ],
+        "text": "Complete"
+      },
+      "date": "2025-06-15",
+      "amount": {
+        "value": 135,
+        "currency": "USD"
+      }
+    }
+  },
+  "explanation_of_benefit": {
+    "resourceType": "ExplanationOfBenefit",
+    "id": "eob.bnhuymah",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExplanationOfBenefit: Wellness visit benefit explanation</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "outcome": "complete",
+    "insurance": [
+      {
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.qye3t6wh"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 175,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 135,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 40,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 175,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 135,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "amount": {
+        "value": 135,
+        "currency": "USD"
+      }
+    }
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.4jzeztpt",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Payment processed for wellness visit</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "Claim/clm.rhbrqssa"
+    },
+    "response": {
+      "reference": "ClaimResponse/cr.eqkr3x2v"
+    },
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.9aau29kc"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "amount": {
+      "value": 135,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.9aau29kc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Payment reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-01",
+      "end": "2025-06-28"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/insorg.rssh7v9p",
+      "display": "Riverstone Select PPO"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 135,
+      "currency": "USD"
+    }
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.dmw9ra64",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Wellness visit invoice</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "wellness-visit",
+          "display": "Wellness Visit"
+        }
+      ],
+      "text": "Wellness Visit"
+    },
+    "subject": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "totalNet": {
+      "value": 175,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 175,
+      "currency": "USD"
+    }
+  },
+  "charge_item": {
+    "resourceType": "ChargeItem",
+    "id": "ci.w69re2h7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItem: Wellness visit charge</p></div>"
+    },
+    "status": "billed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    },
+    "subject": {
+      "reference": "Patient/pt.s753xj3r",
+      "display": "한 영순"
+    },
+    "context": {
+      "reference": "Encounter/enc.9hwu97pn"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Organization/org.rnye9wj8",
+          "display": "Oakwood Family Medicine"
+        }
+      }
+    ],
+    "performingOrganization": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "requestingOrganization": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    },
+    "quantity": {
+      "value": 1
+    },
+    "priceOverride": {
+      "value": 175,
+      "currency": "USD"
+    },
+    "account": [
+      {
+        "reference": "Account/acct.x58xup6e"
+      }
+    ]
+  },
+  "charge_item_definition": {
+    "resourceType": "ChargeItemDefinition",
+    "id": "cid.6kn6xa94",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItemDefinition: Standard wellness visit charge</p></div>"
+    },
+    "url": "http://example.org/ChargeItemDefinition/cid.6kn6xa94",
+    "status": "active",
+    "title": "Wellness Visit Charge Definition",
+    "date": "2025-06-15",
+    "publisher": "Oakwood Family Medicine",
+    "description": "Standard charge definition for preventive wellness visits.",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.x58xup6e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for 한 영순</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - 한 영순",
+    "subject": [
+      {
+        "reference": "Patient/pt.s753xj3r",
+        "display": "한 영순"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.rnye9wj8",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "contract": {
+    "resourceType": "Contract",
+    "id": "contract.nfvqprzg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Contract: Insurance coverage agreement</p></div>"
+    },
+    "status": "executed",
+    "issued": "2025-01-01T00:00:00+00:00",
+    "applies": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "subject": [
+      {
+        "reference": "Patient/pt.s753xj3r",
+        "display": "한 영순"
+      }
+    ],
+    "authority": [
+      {
+        "reference": "Organization/insorg.rssh7v9p",
+        "display": "Riverstone Select PPO"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/contract-type",
+          "code": "healthinsurance",
+          "display": "Health Insurance"
+        }
+      ],
+      "text": "Health Insurance"
+    }
+  }
+}

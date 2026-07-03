@@ -1,0 +1,9 @@
+{
+  "resourceType": "Device",
+  "id": "f001",
+  "identifier": {
+    "system": "http:/goodhealthhospital/identifier/devices",
+    "value": 12345
+  },
+  "status": "active"
+}

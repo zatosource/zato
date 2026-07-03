@@ -1,0 +1,25 @@
+{
+  "resourceType": "Substance",
+  "id": "f203",
+  "identifier": {
+    "system": "http://acme.org/identifiers/substances",
+    "value": 1234
+  },
+  "instance": false,
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+      "code": "chemical",
+      "display": "Chemical"
+    }
+  },
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 88480006,
+        "display": "Potassium"
+      }
+    }
+  }
+}

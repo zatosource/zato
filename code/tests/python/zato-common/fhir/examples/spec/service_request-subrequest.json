@@ -1,0 +1,50 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "subrequest",
+  "basedOn": {
+    "display": "Original Request"
+  },
+  "replaces": {
+    "display": "Previous allergy test"
+  },
+  "requisition": {
+    "value": "A13848392"
+  },
+  "status": "active",
+  "intent": "instance-order",
+  "priority": "routine",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://loinc.org",
+        "code": "35542-0"
+      },
+      "text": "Peanut IgG"
+    }
+  },
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "occurrenceDateTime": "2013-05-08T09:33:27+07:00",
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "performerType": {
+    "coding": {
+      "display": "Qualified nurse"
+    },
+    "text": "Nurse"
+  },
+  "reason": {
+    "concept": {
+      "text": "Check for Peanut Allergy"
+    }
+  },
+  "bodySite": {
+    "coding": {
+      "display": "Right arm"
+    },
+    "text": "Right arm"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-group-assignment",
+  "meta": {
+    "versionId": 1,
+    "lastUpdated": "2024-12-17T19:40:19.291Z",
+    "profile": "http://hl7.org/fhir/uv/ebm/StructureDefinition/group-assignment"
+  },
+  "url": "http://hl7.org/fhir/EvidenceVariable/example-group-assignment",
+  "identifier": {
+    "type": {
+      "text": "FEvIR Object Identifier"
+    },
+    "system": "urn:ietf:rfc:3986",
+    "value": "https://fevir.net/FOI/297490",
+    "assigner": {
+      "display": "Computable Publishing LLC"
+    }
+  },
+  "title": "GroupAssignment: Jumping from aircraft with parachute vs. Jumping from aircraft with empty backpack",
+  "status": "active",
+  "author": {
+    "name": "Joanne Dehnbostel"
+  },
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "This EvidenceVariable Resource (GroupAssignment Profile) describes a 2-group study (so handling='dichotomous') and lists the 2 study arms in category.name elements. Because the definition of this EvidenceVariable Resource is fully expressed in the handling and category elements, the defintion.concept element uses a CodeableConcept for 'Defined in handling and category elements'.",
+  "useContext": {
+    "code": {
+      "system": "https://fevir.net/resources/CodeSystem/179423",
+      "code": "evidence-communication",
+      "display": "Evidence Communication"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "https://fevir.net/resources/CodeSystem/179423",
+        "code": "GroupAssignment",
+        "display": "GroupAssignment"
+      }
+    }
+  },
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "definition": {
+    "concept": {
+      "coding": {
+        "system": "https://fevir.net/resources/CodeSystem/179423",
+        "code": "defined-in-handling-and-category",
+        "display": "Defined in handling and category elements"
+      }
+    }
+  },
+  "handling": "dichotomous",
+  "category": [
+    {
+      "name": "Jumping from aircraft with parachute",
+      "valueReference": {
+        "reference": "Group/297486",
+        "type": "Group",
+        "display": "Jumping from aircraft with parachute"
+      }
+    },
+    {
+      "name": "Jumping from aircraft with empty backpack",
+      "valueReference": {
+        "reference": "Group/297488",
+        "type": "Group",
+        "display": "Jumping from aircraft with empty backpack"
+      }
+    }
+  ]
+}

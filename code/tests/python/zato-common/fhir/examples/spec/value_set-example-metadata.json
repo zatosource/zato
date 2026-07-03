@@ -1,0 +1,82 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-metadata",
+  "url": "http://hl7.org/fhir/ValueSet/example-metadata",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3139"
+  },
+  "version": 20210721,
+  "name": "ExampleMetadata",
+  "title": "Metadata Example",
+  "status": "draft",
+  "experimental": true,
+  "date": "2021-07-21",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "This is an example value set that illustrates usage of the metadata resource elements introduced in R5",
+  "approvalDate": "2021-07-21",
+  "lastReviewDate": "2022-07-21",
+  "effectivePeriod": {
+    "start": "2021-08-01",
+    "end": "2022-07-31"
+  },
+  "topic": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/definition-topic",
+      "code": "treatment",
+      "display": "Treatment"
+    }
+  },
+  "author": {
+    "name": "ACME ValueSet Development",
+    "telecom": {
+      "system": "url",
+      "value": "http://acme.org/development"
+    }
+  },
+  "editor": {
+    "name": "ACME ValueSet Management",
+    "telecom": {
+      "system": "url",
+      "value": "http://acme.org/management"
+    }
+  },
+  "reviewer": {
+    "name": "Society for Creative ValueSet Review",
+    "telecom": {
+      "system": "url",
+      "value": "http://example.org/scvr"
+    }
+  },
+  "endorser": {
+    "name": "National Foundation for ValueSet Quality",
+    "telecom": {
+      "system": "url",
+      "value": "http://example.org/nfvq"
+    }
+  },
+  "relatedArtifact": {
+    "type": "derived-from",
+    "resource": "http://hl7.org/fhir/ValueSet/example"
+  },
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/CodeSystem/example-metadata",
+      "version": 20210721
+    }
+  }
+}

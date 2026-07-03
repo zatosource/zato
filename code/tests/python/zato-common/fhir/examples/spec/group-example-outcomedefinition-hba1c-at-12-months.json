@@ -1,0 +1,58 @@
+{
+  "resourceType": "Group",
+  "id": "example-outcomedefinition-hba1c-at-12-months",
+  "meta": {
+    "versionId": 6,
+    "lastUpdated": "2025-03-15T21:09:28.653Z",
+    "profile": "https://hl7.org/fhir/uv/ebm/StructureDefinition/outcome-definition"
+  },
+  "extension": {
+    "valueContactDetail": {
+      "name": "Brian S. Alper"
+    }
+  },
+  "url": "http://hl7.org/fhir/Group/example-outcomedefinition-hba1c-at-12-months",
+  "name": "HbA1c at 12 months",
+  "title": "OutcomeDefinition: HbA1c at 12 months",
+  "status": "active",
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "HbA1c at 12 months as the endpoint (outcome measure)",
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "membership": "conceptual",
+  "characteristic": {
+    "code": {
+      "text": "Observation"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://loinc.org",
+        "code": "4548-4",
+        "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+      }
+    },
+    "exclude": false,
+    "description": "HbA1c at 12 months",
+    "timing": {
+      "contextCode": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 709491003,
+          "display": "Enrollment in clinical trial"
+        }
+      },
+      "offsetDuration": {
+        "value": 12,
+        "unit": "months",
+        "system": "http://unitsofmeasure.org",
+        "code": "mo"
+      },
+      "text": "at 12 months"
+    }
+  }
+}

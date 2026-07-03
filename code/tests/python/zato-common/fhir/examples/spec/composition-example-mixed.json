@@ -1,0 +1,77 @@
+{
+  "resourceType": "Composition",
+  "id": "example-mixed",
+  "status": "final",
+  "type": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "78418-1",
+      "display": "Neonatal perinatal medicine Discharge summary"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "LP183761-8",
+      "display": "Report"
+    }
+  },
+  "subject": {
+    "reference": "Patient/newborn",
+    "display": "Tahlia Smith"
+  },
+  "date": "2018-10-30T16:56:04+11:00",
+  "author": {
+    "reference": "Practitioner/xcda-author",
+    "display": "Harold Hippocrates, MD"
+  },
+  "title": "Discharge Summary (Neonatal Service)",
+  "attester": {
+    "mode": {
+      "coding": {
+        "system": "http://hl7.org/fhir/composition-attestation-mode",
+        "code": "legal",
+        "display": "Legal"
+      }
+    },
+    "time": "2012-01-04T09:10:14Z",
+    "party": {
+      "reference": "Practitioner/xcda-author",
+      "display": "Harold Hippocrates, MD"
+    }
+  },
+  "custodian": {
+    "reference": "Organization/2.16.840.1.113883.19.5",
+    "display": "Good Health Clinic"
+  },
+  "section": [
+    {
+      "title": "Child's Details",
+      "code": {
+        "coding": {
+          "system": "http://acme.org/codes/SectionType",
+          "code": "newborn",
+          "display": "New Born Details"
+        }
+      },
+      "text": {
+        "status": "generated",
+        "{http://www.w3.org/1999/xhtml}div": null
+      }
+    },
+    {
+      "title": "Mpther's Details",
+      "code": {
+        "coding": {
+          "system": "http://acme.org/codes/SectionType",
+          "code": "mother",
+          "display": "Mother's Details"
+        }
+      },
+      "text": {
+        "status": "generated",
+        "{http://www.w3.org/1999/xhtml}div": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "resourceType": "Patient",
+  "id": "infant-mom",
+  "name": [
+    {
+      "use": "official",
+      "family": "Solo",
+      "given": "Leia"
+    },
+    {
+      "use": "maiden",
+      "family": "Organa",
+      "given": "Leia"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1995-10-12",
+  "maritalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+      "code": "M",
+      "display": "Married"
+    }
+  },
+  "generalPractitioner": {
+    "reference": "Practitioner/f202",
+    "display": "Luigi Maas"
+  }
+}

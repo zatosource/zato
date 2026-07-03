@@ -1,0 +1,33 @@
+{
+  "resourceType": "Substance",
+  "id": "f204",
+  "identifier": {
+    "system": "http://acme.org/identifiers/substances/lot",
+    "value": "AB94687"
+  },
+  "instance": true,
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+      "code": "chemical",
+      "display": "Chemical"
+    }
+  },
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 333346007,
+        "display": "Silver nitrate 200 mg/mL cutaneous solution"
+      }
+    }
+  },
+  "description": "Solution for silver nitrate stain",
+  "expiry": "2018-01-01",
+  "quantity": {
+    "value": 100,
+    "unit": "mL",
+    "system": "http://unitsofmeasure.org",
+    "code": "mL"
+  }
+}

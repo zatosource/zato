@@ -1,0 +1,98 @@
+{
+  "resourceType": "CarePlan",
+  "id": "f003",
+  "contained": [
+    {
+      "CareTeam": {
+        "id": "careteam",
+        "participant": {
+          "member": {
+            "reference": "Practitioner/f001",
+            "display": "E.M. van den broek"
+          }
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "goal",
+        "lifecycleStatus": "completed",
+        "achievementStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+            "code": "achieved",
+            "display": "Achieved"
+          },
+          "text": "Achieved"
+        },
+        "description": {
+          "text": "Retropharyngeal abscess removal"
+        },
+        "subject": {
+          "reference": "Patient/f001",
+          "display": "P. van de Heuvel"
+        },
+        "note": {
+          "text": "goal accomplished without complications"
+        }
+      }
+    },
+    {
+      "ServiceRequest": {
+        "id": "activity",
+        "status": "completed",
+        "intent": "order",
+        "code": {
+          "concept": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 172960003,
+              "display": "Incision of retropharyngeal abscess"
+            }
+          }
+        },
+        "subject": {
+          "reference": "Patient/f001",
+          "display": "P. van de Heuvel"
+        },
+        "occurrenceDateTime": "2011-06-27T09:30:10+01:00",
+        "performer": {
+          "reference": "Practitioner/f001",
+          "display": "E.M. van den broek"
+        }
+      }
+    }
+  ],
+  "identifier": {
+    "use": "official",
+    "system": "http://www.bmc.nl/zorgportal/identifiers/careplans",
+    "value": "CP3953"
+  },
+  "status": "completed",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "period": {
+    "start": "2013-03-08T09:00:10+01:00",
+    "end": "2013-03-08T09:30:10+01:00"
+  },
+  "careTeam": {
+    "reference": "#careteam"
+  },
+  "addresses": {
+    "reference": {
+      "reference": "Condition/f201",
+      "display": "?????"
+    }
+  },
+  "goal": {
+    "reference": "#goal"
+  },
+  "activity": {
+    "plannedActivityReference": {
+      "reference": "#activity"
+    }
+  }
+}

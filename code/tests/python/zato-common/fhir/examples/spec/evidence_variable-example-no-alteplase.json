@@ -1,0 +1,42 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-no-alteplase",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": {
+    "Group": {
+      "id": "Definition-Group",
+      "title": "VariableDefinition: No alteplase",
+      "membership": "conceptual",
+      "characteristic": {
+        "code": {
+          "text": "Defined by CodeableConcept"
+        },
+        "valueCodeableConcept": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 8410,
+            "display": "alteplase"
+          }
+        },
+        "exclude": true,
+        "description": "No alteplase"
+      }
+    }
+  },
+  "name": "NoAlteplase",
+  "title": "No Alteplase",
+  "status": "draft",
+  "description": "no alteplase",
+  "actual": false,
+  "definition": {
+    "reference": {
+      "reference": "#Definition-Group"
+    }
+  },
+  "handling": "dichotomous"
+}

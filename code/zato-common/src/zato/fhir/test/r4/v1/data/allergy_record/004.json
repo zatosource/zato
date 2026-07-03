@@ -1,0 +1,823 @@
+{
+  "_meta": {
+    "scenario": "allergy_record",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.vvzs3f9e",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Melody Patterson</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4647144"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2425"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Patterson",
+        "given": [
+          "Melody"
+        ],
+        "text": "Melody Patterson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-278-241-6397",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "elizabethortega@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1972-08-23",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5676 Jeremiah Courts"
+        ],
+        "city": "Karenmouth",
+        "state": "PR",
+        "postalCode": "57549",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.xqxxx2ea",
+        "display": "Dr. Darlene Ramos"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.f2fn48b4",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.xqxxx2ea",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Darlene Ramos</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9801481434"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Ramos",
+        "given": [
+          "Darlene"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Darlene Ramos"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(367)635-4459x87683",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "113 Miller Shore Suite 808"
+        ],
+        "city": "Timothyborough",
+        "state": "OK",
+        "postalCode": "92843",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.f2fn48b4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Harborview Community Clinic</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9332026891"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Harborview Community Clinic",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "892.457.6551x006",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "1320 Julie Forest"
+        ],
+        "city": "Richardsburgh",
+        "state": "NC",
+        "postalCode": "46700",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.5tc7pupd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy assessment on 2024-08-23</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.vvzs3f9e",
+        "display": "Melody Patterson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.xqxxx2ea",
+            "display": "Dr. Darlene Ramos"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-23T09:30:00+00:00",
+        "end": "2024-08-23T10:26:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.f2fn48b4",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.yk3v9ek7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.pz7q77gd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy follow-up on 2025-01-11</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.vvzs3f9e",
+        "display": "Melody Patterson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.xqxxx2ea",
+            "display": "Dr. Darlene Ramos"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-11T14:00:00+00:00",
+        "end": "2025-01-11T14:43:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.f2fn48b4",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.yk3v9ek7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ef2azy7u",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Seasonal review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.vvzs3f9e",
+        "display": "Melody Patterson"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.xqxxx2ea",
+            "display": "Dr. Darlene Ramos"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T11:08:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.f2fn48b4",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.yk3v9ek7",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "allergy_intolerance": {
+    "resourceType": "AllergyIntolerance",
+    "id": "ai.s8m2dsbs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AllergyIntolerance: Mild seasonal pollen allergy</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "type": "allergy",
+    "category": [
+      "environment"
+    ],
+    "criticality": "low",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "256259004",
+          "display": "Pollen"
+        }
+      ],
+      "text": "Pollen"
+    },
+    "patient": {
+      "reference": "Patient/pt.vvzs3f9e",
+      "display": "Melody Patterson"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.ef2azy7u"
+    },
+    "recordedDate": "2025-06-15",
+    "recorder": {
+      "reference": "Practitioner/pr.xqxxx2ea",
+      "display": "Dr. Darlene Ramos"
+    },
+    "reaction": [
+      {
+        "substance": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "256259004",
+              "display": "Pollen"
+            }
+          ],
+          "text": "Pollen"
+        },
+        "manifestation": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "267036007",
+                "display": "Sneezing"
+              }
+            ],
+            "text": "Sneezing"
+          }
+        ],
+        "severity": "mild"
+      }
+    ],
+    "note": [
+      {
+        "text": "Mild seasonal symptoms managed with over-the-counter antihistamine. No history of severe reactions."
+      }
+    ]
+  },
+  "clinical_impression": {
+    "resourceType": "ClinicalImpression",
+    "id": "ci.spadyfg4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClinicalImpression: Mild seasonal allergies, well controlled</p></div>"
+    },
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.vvzs3f9e",
+      "display": "Melody Patterson"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.ef2azy7u"
+    },
+    "effectiveDateTime": "2025-06-15T10:00:00+00:00",
+    "date": "2025-06-15T10:00:00+00:00",
+    "assessor": {
+      "reference": "Practitioner/pr.xqxxx2ea",
+      "display": "Dr. Darlene Ramos"
+    },
+    "summary": "Patient presents with mild seasonal allergic rhinitis. Symptoms are well controlled with cetirizine 10 mg daily during pollen season. No escalation needed.",
+    "finding": [
+      {
+        "itemCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J30.1",
+              "display": "Allergic rhinitis due to pollen"
+            }
+          ],
+          "text": "Allergic rhinitis due to pollen"
+        }
+      }
+    ]
+  },
+  "risk_assessment": {
+    "resourceType": "RiskAssessment",
+    "id": "ra.v3beadbb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskAssessment: Low risk for severe allergic reaction</p></div>"
+    },
+    "status": "final",
+    "subject": {
+      "reference": "Patient/pt.vvzs3f9e",
+      "display": "Melody Patterson"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.ef2azy7u"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "condition": {
+      "reference": "AllergyIntolerance/ai.s8m2dsbs"
+    },
+    "performer": {
+      "reference": "Practitioner/pr.xqxxx2ea",
+      "display": "Dr. Darlene Ramos"
+    },
+    "prediction": [
+      {
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "39579001",
+              "display": "Anaphylaxis"
+            }
+          ],
+          "text": "Anaphylaxis"
+        },
+        "probabilityDecimal": 0.01,
+        "qualitativeRisk": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
+              "code": "low",
+              "display": "Low likelihood"
+            }
+          ],
+          "text": "Low likelihood"
+        },
+        "rationale": "History of mild seasonal symptoms only. No prior anaphylaxis. Low-risk allergen."
+      }
+    ]
+  },
+  "condition": {
+    "resourceType": "Condition",
+    "id": "cond.vy9d9995",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Condition: Allergic rhinitis due to pollen</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+            "code": "encounter-diagnosis",
+            "display": "Encounter Diagnosis"
+          }
+        ],
+        "text": "Encounter Diagnosis"
+      }
+    ],
+    "severity": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "255604002",
+          "display": "Mild"
+        }
+      ],
+      "text": "Mild"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "J30.1",
+          "display": "Allergic rhinitis due to pollen"
+        }
+      ],
+      "text": "Allergic rhinitis due to pollen"
+    },
+    "subject": {
+      "reference": "Patient/pt.vvzs3f9e",
+      "display": "Melody Patterson"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.ef2azy7u"
+    },
+    "onsetDateTime": "2024-08-23",
+    "recorder": {
+      "reference": "Practitioner/pr.xqxxx2ea",
+      "display": "Dr. Darlene Ramos"
+    }
+  },
+  "consent": {
+    "resourceType": "Consent",
+    "id": "cons.c9pdm29y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Consent: Patient consent to share allergy information</p></div>"
+    },
+    "status": "active",
+    "scope": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+          "code": "patient-privacy",
+          "display": "Privacy Consent"
+        }
+      ],
+      "text": "Privacy Consent"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "59284-0",
+            "display": "Patient Consent"
+          }
+        ],
+        "text": "Patient Consent"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.vvzs3f9e",
+      "display": "Melody Patterson"
+    },
+    "dateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "reference": "Patient/pt.vvzs3f9e",
+        "display": "Melody Patterson"
+      }
+    ],
+    "organization": [
+      {
+        "reference": "Organization/org.f2fn48b4",
+        "display": "Harborview Community Clinic"
+      }
+    ],
+    "policyRule": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "OPTIN",
+          "display": "opt-in"
+        }
+      ],
+      "text": "opt-in"
+    }
+  }
+}

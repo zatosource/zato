@@ -1,0 +1,12 @@
+{
+  "resourceType": "Procedure",
+  "id": "appendectomy-narrative",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "completed",
+  "subject": {
+    "reference": "Patient/example"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Substance",
+  "id": "example",
+  "identifier": {
+    "system": "http://acme.org/identifiers/substances",
+    "value": 1463
+  },
+  "instance": false,
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+      "code": "allergen",
+      "display": "Allergen"
+    }
+  },
+  "code": {
+    "concept": {
+      "text": "apitoxin (Honey Bee Venom)"
+    }
+  }
+}

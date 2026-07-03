@@ -1,0 +1,13 @@
+{
+  "resourceType": "Device",
+  "id": "example-udi4",
+  "udiCarrier": {
+    "deviceIdentifier": "A4599XQZ990T0474",
+    "issuer": "http://hl7.org/fhir/NamingSystem/iccbba-blood",
+    "jurisdiction": "http://hl7.org/fhir/NamingSystem/fda-udi",
+    "carrierHRF": "=)1TE123456A&)RZ12345678"
+  },
+  "status": "inactive",
+  "manufacturer": "GlobalMed, Inc",
+  "lotNumber": "RZ12345678"
+}

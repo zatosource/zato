@@ -1,0 +1,44 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "measure-stratifier-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/measure-stratifier-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.2047"
+  },
+  "version": "6.0.0",
+  "name": "MeasureStratifierExample",
+  "title": "Measure Stratifier Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "This example code system defines codes for common types of measure stratification.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/measure-stratifier-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "age",
+      "display": "Age",
+      "definition": "Age Stratification."
+    },
+    {
+      "code": "gender",
+      "display": "Gender",
+      "definition": "Gender Stratification."
+    },
+    {
+      "code": "region",
+      "display": "Region",
+      "definition": "Region Stratification."
+    }
+  ]
+}

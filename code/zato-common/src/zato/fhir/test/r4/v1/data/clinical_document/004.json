@@ -1,0 +1,503 @@
+{
+  "_meta": {
+    "scenario": "clinical_document",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.e6w4queu",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Eric Santos</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8129860"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5101"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Santos",
+        "given": [
+          "Eric"
+        ],
+        "text": "Eric Santos"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "343.957.1667x59847",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kjones@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1991-01-10",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "594 Roberts Brook Apt. 630"
+        ],
+        "city": "Howardville",
+        "state": "TX",
+        "postalCode": "28990",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.rxvwkxb9",
+        "display": "Dr. Mackenzie Thomas"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.6bnb7ayg",
+      "display": "Harborview Community Clinic"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.z53agxd5",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document creation on 2024-09-10</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e6w4queu",
+        "display": "Eric Santos"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rxvwkxb9",
+            "display": "Dr. Mackenzie Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-10T12:00:00+00:00",
+        "end": "2024-09-10T12:59:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6bnb7ayg",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.tepqaht8",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.7qmpdz4n",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document review on 2025-01-12</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e6w4queu",
+        "display": "Eric Santos"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rxvwkxb9",
+            "display": "Dr. Mackenzie Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-12T08:45:00+00:00",
+        "end": "2025-01-12T09:27:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6bnb7ayg",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.tepqaht8",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.wgswfjp8",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e6w4queu",
+        "display": "Eric Santos"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.rxvwkxb9",
+            "display": "Dr. Mackenzie Thomas"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T09:30:00+00:00",
+        "end": "2025-06-15T10:04:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.6bnb7ayg",
+        "display": "Harborview Community Clinic"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.tepqaht8",
+            "display": "Harborview Community Clinic - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.fe79kke7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Clinical document for Eric Santos</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.e6w4queu",
+      "display": "Eric Santos"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.wgswfjp8"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.rxvwkxb9",
+        "display": "Dr. Mackenzie Thomas"
+      }
+    ],
+    "title": "Clinical Document - Eric Santos",
+    "custodian": {
+      "reference": "Organization/org.6bnb7ayg",
+      "display": "Harborview Community Clinic"
+    },
+    "section": [
+      {
+        "title": "Reason for Visit",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29299-5",
+              "display": "Reason for visit"
+            }
+          ],
+          "text": "Reason for visit"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for routine wellness visit and documentation review.</p></div>"
+        }
+      },
+      {
+        "title": "Assessment",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51848-0",
+              "display": "Assessment"
+            }
+          ],
+          "text": "Assessment"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient is in good health. All preventive care measures are up to date. No new concerns identified.</p></div>"
+        }
+      }
+    ]
+  },
+  "catalog": {
+    "resourceType": "CatalogEntry",
+    "id": "ce.c32v75sj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CatalogEntry: Wellness visit service catalog entry</p></div>"
+    },
+    "orderable": true,
+    "referencedItem": {
+      "reference": "ActivityDefinition/ad_placeholder.jtrvvyn4"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/resource-types",
+          "code": "ActivityDefinition",
+          "display": "ActivityDefinition"
+        }
+      ],
+      "text": "ActivityDefinition"
+    },
+    "status": "active",
+    "validityPeriod": {
+      "start": "2025-01-01"
+    }
+  }
+}

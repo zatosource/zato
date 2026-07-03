@@ -1,0 +1,53 @@
+{
+  "resourceType": "Consent",
+  "id": "consent-example-No-Emergency",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null
+      ]
+    }
+  },
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "INFA"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f002",
+    "display": "Donald D Duck"
+  },
+  "date": "2018-12-28",
+  "sourceAttachment": {
+    "title": "The Patient has expressed both deny Treatment and deny Emergency.",
+    "url": "https://uhin.org/wp-content/uploads/2017/06/cHIE_Patient_Participation_Form.pdf"
+  },
+  "decision": "permit",
+  "provision": {
+    "actor": {
+      "role": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code": "PRCP"
+        }
+      },
+      "reference": {
+        "reference": "Organization/f201"
+      }
+    },
+    "purpose": [
+      {
+        "system": "http://hl7.org/fhir/v3/ActReason",
+        "code": "TREAT"
+      },
+      {
+        "system": "http://hl7.org/fhir/v3/ActReason",
+        "code": "ETREAT"
+      }
+    ]
+  }
+}

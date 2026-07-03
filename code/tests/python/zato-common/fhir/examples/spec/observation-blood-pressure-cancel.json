@@ -1,0 +1,98 @@
+{
+  "resourceType": "Observation",
+  "id": "blood-pressure-cancel",
+  "meta": {
+    "profile": "http://hl7.org/fhir/StructureDefinition/vitalsigns"
+  },
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:uuid:187e0c12-8dd2-67e2-99b2-bf273c878281"
+  },
+  "status": "cancelled",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "vital-signs",
+      "display": "Vital Signs"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "85354-9",
+      "display": "Blood pressure panel with all children optional"
+    },
+    "text": "Blood pressure systolic & diastolic"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "effectiveDateTime": "2012-09-17",
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "L",
+      "display": "low"
+    },
+    "text": "Below low normal"
+  },
+  "note": {
+    "text": "In this example, the blood pressure measurements are not available due to cancellation of the order.  Data absent reason is present for each component"
+  },
+  "bodySite": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 368209003,
+      "display": "Right arm"
+    }
+  },
+  "component": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": 271649006,
+            "display": "Systolic blood pressure"
+          },
+          {
+            "system": "http://acme.org/devices/clinical-codes",
+            "code": "bp-s",
+            "display": "Systolic Blood pressure"
+          }
+        ]
+      },
+      "dataAbsentReason": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+          "code": "not-asked",
+          "display": "Not Asked"
+        }
+      }
+    },
+    {
+      "code": {
+        "coding": {
+          "system": "http://loinc.org",
+          "code": "8462-4",
+          "display": "Diastolic blood pressure"
+        }
+      },
+      "dataAbsentReason": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+          "code": "not-asked",
+          "display": "Not Asked"
+        }
+      }
+    }
+  ]
+}

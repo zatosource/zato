@@ -1,0 +1,19 @@
+{
+  "resourceType": "Task",
+  "id": "cpg-example-1",
+  "status": "ready",
+  "intent": "order",
+  "doNotPerform": true,
+  "code": {
+    "text": "Collect information"
+  },
+  "for": {
+    "reference": "Patient/example"
+  },
+  "input": {
+    "type": {
+      "text": "Collect information"
+    },
+    "valueCanonical": "http://hl7.org/fhir/Questionnaire/f201"
+  }
+}

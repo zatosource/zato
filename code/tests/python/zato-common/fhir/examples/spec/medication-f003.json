@@ -1,0 +1,21 @@
+{
+  "resourceType": "Medication",
+  "id": "f003",
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 325267004,
+      "display": "Tolbutamide 500mg tablet"
+    }
+  },
+  "isBrand": true,
+  "package": {
+    "container": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 398124009,
+        "display": "drug container"
+      }
+    }
+  }
+}

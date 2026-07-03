@@ -1,0 +1,503 @@
+{
+  "_meta": {
+    "scenario": "clinical_document",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.3xfjy2h3",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Victor Faure</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8801273"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1537"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Faure",
+        "given": [
+          "Victor"
+        ],
+        "text": "Victor Faure"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "683-414-6371",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "hansenantonio@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1960-11-03",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "162 Alex Rapids"
+        ],
+        "city": "Frazierburgh",
+        "state": "DE",
+        "postalCode": "05690",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.5w9q24a4",
+        "display": "Dr. Jules Toussaint"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.9m47pfbm",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ucmyh2tr",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document creation on 2024-03-07</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3xfjy2h3",
+        "display": "Victor Faure"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5w9q24a4",
+            "display": "Dr. Jules Toussaint"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-03-07T14:45:00+00:00",
+        "end": "2024-03-07T15:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9m47pfbm",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6xnefcqq",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.k2kfju9p",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document review on 2024-11-01</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3xfjy2h3",
+        "display": "Victor Faure"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5w9q24a4",
+            "display": "Dr. Jules Toussaint"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-01T14:00:00+00:00",
+        "end": "2024-11-01T14:38:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9m47pfbm",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6xnefcqq",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.v5rg4nj7",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.3xfjy2h3",
+        "display": "Victor Faure"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5w9q24a4",
+            "display": "Dr. Jules Toussaint"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T08:00:00+00:00",
+        "end": "2025-06-15T08:45:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9m47pfbm",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.6xnefcqq",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.k7hd66hj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Clinical document for Victor Faure</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.3xfjy2h3",
+      "display": "Victor Faure"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.v5rg4nj7"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.5w9q24a4",
+        "display": "Dr. Jules Toussaint"
+      }
+    ],
+    "title": "Clinical Document - Victor Faure",
+    "custodian": {
+      "reference": "Organization/org.9m47pfbm",
+      "display": "Lakeside Wellness Center"
+    },
+    "section": [
+      {
+        "title": "Reason for Visit",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29299-5",
+              "display": "Reason for visit"
+            }
+          ],
+          "text": "Reason for visit"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for routine wellness visit and documentation review.</p></div>"
+        }
+      },
+      {
+        "title": "Assessment",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51848-0",
+              "display": "Assessment"
+            }
+          ],
+          "text": "Assessment"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient is in good health. All preventive care measures are up to date. No new concerns identified.</p></div>"
+        }
+      }
+    ]
+  },
+  "catalog": {
+    "resourceType": "CatalogEntry",
+    "id": "ce.yfre8h9g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CatalogEntry: Wellness visit service catalog entry</p></div>"
+    },
+    "orderable": true,
+    "referencedItem": {
+      "reference": "ActivityDefinition/ad_placeholder.tcznc3jd"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/resource-types",
+          "code": "ActivityDefinition",
+          "display": "ActivityDefinition"
+        }
+      ],
+      "text": "ActivityDefinition"
+    },
+    "status": "active",
+    "validityPeriod": {
+      "start": "2025-01-01"
+    }
+  }
+}

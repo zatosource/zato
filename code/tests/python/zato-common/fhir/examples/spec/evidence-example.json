@@ -1,0 +1,13 @@
+{
+  "resourceType": "Evidence",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.10.9"
+  },
+  "status": "draft"
+}

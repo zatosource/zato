@@ -1,0 +1,61 @@
+{
+  "resourceType": "OrganizationAffiliation",
+  "id": "orgrole1",
+  "identifier": {
+    "use": "secondary",
+    "system": "http://example.org/www.foundingfathersmemorial.com",
+    "value": "service002",
+    "assigner": {
+      "display": "Founding Fathers Memorial Hospital"
+    }
+  },
+  "active": true,
+  "period": {
+    "start": "2018-02-09",
+    "end": "2022-02-01"
+  },
+  "organization": {
+    "display": "Founding Fathers Memorial Hospital"
+  },
+  "participatingOrganization": {
+    "display": "Independence Rehabilitation Services, Inc."
+  },
+  "network": {
+    "display": "Patriot Preferred Provider Network"
+  },
+  "code": {
+    "coding": {
+      "system": "http://hl7.org/fhir/organization-role",
+      "code": "provider",
+      "display": "Provider",
+      "userSelected": true
+    },
+    "text": "Provider of rehabilitation services"
+  },
+  "specialty": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 394602003,
+      "display": "Rehabilitation specialty"
+    },
+    "text": "Rehabilitation"
+  },
+  "location": {
+    "display": "Founding Fathers Memorial Hospital"
+  },
+  "healthcareService": [
+    {
+      "display": "Inpatient rehabilitation services"
+    },
+    {
+      "display": "Outpatient rehabilitation services"
+    }
+  ],
+  "contact": {
+    "telecom": {
+      "system": "phone",
+      "value": "202-109-8765",
+      "use": "work"
+    }
+  }
+}

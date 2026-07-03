@@ -1,0 +1,503 @@
+{
+  "_meta": {
+    "scenario": "clinical_document",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.jsrrn8yg",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Anthony Adams</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8790307"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9845"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Adams",
+        "given": [
+          "Anthony"
+        ],
+        "text": "Anthony Adams"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "206.562.6738x4555",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "jaredkoch@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1992-01-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "97972 Melissa Throughway Suite 142"
+        ],
+        "city": "Port Anthonyberg",
+        "state": "VA",
+        "postalCode": "82135",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.jqt6crs6",
+        "display": "Dr. Lisa Smith"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.wt2wy24u",
+      "display": "Clinique du Parc"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.akydff46",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document creation on 2024-05-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.jsrrn8yg",
+        "display": "Anthony Adams"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.jqt6crs6",
+            "display": "Dr. Lisa Smith"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-26T12:00:00+00:00",
+        "end": "2024-05-26T12:58:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wt2wy24u",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9vqmmjms",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.c8rpanky",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document review on 2024-11-23</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.jsrrn8yg",
+        "display": "Anthony Adams"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.jqt6crs6",
+            "display": "Dr. Lisa Smith"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-23T14:00:00+00:00",
+        "end": "2024-11-23T14:42:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wt2wy24u",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9vqmmjms",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.26paj6kc",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.jsrrn8yg",
+        "display": "Anthony Adams"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.jqt6crs6",
+            "display": "Dr. Lisa Smith"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:00:00+00:00",
+        "end": "2025-06-15T10:41:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wt2wy24u",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.9vqmmjms",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.hx2rad6m",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Clinical document for Anthony Adams</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.jsrrn8yg",
+      "display": "Anthony Adams"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.26paj6kc"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.jqt6crs6",
+        "display": "Dr. Lisa Smith"
+      }
+    ],
+    "title": "Clinical Document - Anthony Adams",
+    "custodian": {
+      "reference": "Organization/org.wt2wy24u",
+      "display": "Clinique du Parc"
+    },
+    "section": [
+      {
+        "title": "Reason for Visit",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29299-5",
+              "display": "Reason for visit"
+            }
+          ],
+          "text": "Reason for visit"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for routine wellness visit and documentation review.</p></div>"
+        }
+      },
+      {
+        "title": "Assessment",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51848-0",
+              "display": "Assessment"
+            }
+          ],
+          "text": "Assessment"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient is in good health. All preventive care measures are up to date. No new concerns identified.</p></div>"
+        }
+      }
+    ]
+  },
+  "catalog": {
+    "resourceType": "CatalogEntry",
+    "id": "ce.kctd4jdp",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CatalogEntry: Wellness visit service catalog entry</p></div>"
+    },
+    "orderable": true,
+    "referencedItem": {
+      "reference": "ActivityDefinition/ad_placeholder.qegg7bu7"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/resource-types",
+          "code": "ActivityDefinition",
+          "display": "ActivityDefinition"
+        }
+      ],
+      "text": "ActivityDefinition"
+    },
+    "status": "active",
+    "validityPeriod": {
+      "start": "2025-01-01"
+    }
+  }
+}

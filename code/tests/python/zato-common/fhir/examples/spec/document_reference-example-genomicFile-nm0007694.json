@@ -1,0 +1,65 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-genomicFile-nm0007694",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": {
+            "{http://www.w3.org/1999/xhtml}a": null
+          }
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}div": {
+        "{http://www.w3.org/1999/xhtml}p": null
+      },
+      "{http://www.w3.org/1999/xhtml}blockquote": {
+        "{http://www.w3.org/1999/xhtml}p": {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      }
+    }
+  },
+  "identifier": {
+    "system": "http://www.somesystemabc.net/identifiers/files",
+    "value": 11111
+  },
+  "status": "current",
+  "docStatus": "preliminary",
+  "description": "(CYP2C19), mRNA",
+  "securityLabel": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "R",
+      "display": "Restricted"
+    }
+  },
+  "content": {
+    "attachment": {
+      "title": "Homo sapiens cytochrome P450 family 2 subfamily C member 19 (CYP2C19), mRNA",
+      "contentType": "text/html",
+      "url": "https://www.ncbi.nlm.nih.gov/nuccore/NM_000769.4?report=fasta"
+    }
+  }
+}

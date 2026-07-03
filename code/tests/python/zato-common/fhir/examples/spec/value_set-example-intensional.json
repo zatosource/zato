@@ -1,0 +1,67 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-intensional",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "url": "http://hl7.org/fhir/ValueSet/example-intensional",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.3.3145"
+    },
+    {
+      "system": "http://acme.com/identifiers/valuesets",
+      "value": "loinc-cholesterol-ext"
+    }
+  ],
+  "version": 20150622,
+  "name": "LOINCCodesForCholesterolInSerumPlasma",
+  "title": "LOINC Codes for Cholesterol in Serum/Plasma",
+  "status": "draft",
+  "experimental": true,
+  "date": "2015-06-22",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "This is an example value set that includes all the LOINC codes for serum/plasma cholesterol from v2.36.",
+  "copyright": "This content from LOINC\u00c2\u00ae is copyright \u00c2\u00a9 1995 Regenstrief Institute, Inc. and the LOINC Committee, and available at no cost under the license at http://loinc.org/terms-of-use",
+  "compose": {
+    "include": {
+      "system": "http://loinc.org",
+      "filter": {
+        "property": "parent",
+        "op": "=",
+        "value": "LP382412-7"
+      }
+    },
+    "exclude": {
+      "system": "http://loinc.org",
+      "concept": {
+        "code": "5932-9",
+        "display": "Cholesterol [Presence] in Blood by Test strip"
+      }
+    }
+  }
+}

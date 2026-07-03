@@ -1,0 +1,153 @@
+{
+  "resourceType": "RiskAssessment",
+  "id": "cardiac",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": {
+        "{http://www.w3.org/1999/xhtml}tr": [
+          {
+            "{http://www.w3.org/1999/xhtml}td": {
+              "{http://www.w3.org/1999/xhtml}h1": null
+            }
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}b": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}br": null
+              }
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": null
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": {
+              "{http://www.w3.org/1999/xhtml}br": [
+                null,
+                null,
+                null
+              ],
+              "{http://www.w3.org/1999/xhtml}a": [
+                null,
+                null,
+                null
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "identifier": {
+    "use": "official",
+    "system": "http://example.org",
+    "value": "risk-assessment-cardiac"
+  },
+  "status": "final",
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  },
+  "occurrenceDateTime": "2014-07-19T16:04:00Z",
+  "performer": {
+    "display": "http://cvdrisk.nhlbi.nih.gov/#cholesterol"
+  },
+  "basis": [
+    {
+      "reference": "Patient/pat2"
+    },
+    {
+      "reference": "DiagnosticReport/lipids"
+    },
+    {
+      "reference": "Observation/blood-pressure"
+    }
+  ],
+  "prediction": {
+    "outcome": {
+      "text": "Heart Attack"
+    },
+    "probabilityQuantity": {
+      "value": 0.02,
+      "unit": "%",
+      "system": "http://unitsofmeasure.org",
+      "code": "%"
+    },
+    "whenRange": {
+      "low": {
+        "value": 39,
+        "unit": "years",
+        "system": "http://unitsofmeasure.org",
+        "code": "a"
+      },
+      "high": {
+        "value": 49,
+        "unit": "years",
+        "system": "http://unitsofmeasure.org",
+        "code": "a"
+      }
+    }
+  }
+}

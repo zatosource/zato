@@ -1,0 +1,56 @@
+{
+  "resourceType": "Procedure",
+  "id": "ambulation",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "value": 12345
+  },
+  "instantiatesUri": "http://example.org/protocol-for-hypertension-during-pregnancy",
+  "basedOn": {
+    "reference": "CarePlan/preg",
+    "display": "Maternity care plan"
+  },
+  "status": "not-done",
+  "statusReason": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 398254007,
+      "display": "Pre-eclampsia (disorder)"
+    },
+    "text": "Pre-eclampsia"
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 62013009,
+      "display": "Ambulating patient (procedure)"
+    },
+    "text": "Ambulation"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "performer": {
+    "actor": {
+      "reference": "CareTeam/example",
+      "display": "Maternity CareTeam"
+    },
+    "onBehalfOf": {
+      "reference": "Organization/f001",
+      "display": "University Medical Hospital"
+    }
+  },
+  "location": {
+    "reference": "Location/1",
+    "display": "Burgers University Medical Center, South Wing, second floor"
+  },
+  "reason": {
+    "reference": {
+      "reference": "Observation/blood-pressure",
+      "display": "Blood Pressure"
+    }
+  }
+}

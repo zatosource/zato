@@ -1,0 +1,443 @@
+{
+  "_meta": {
+    "scenario": "messaging",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.atwn95g2",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Thomas Chevalier</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1564379"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-1127"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Chevalier",
+        "given": [
+          "Thomas"
+        ],
+        "text": "Thomas Chevalier"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "340.268.9750x95271",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "elliottcalvin@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1960-02-07",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5653 Brown Mills Apt. 247"
+        ],
+        "city": "Rachelchester",
+        "state": "VI",
+        "postalCode": "27111",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.yar4f4p5",
+        "display": "Dr. Véronique Denis"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.akr37f5j",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "message_definition": {
+    "resourceType": "MessageDefinition",
+    "id": "md.rhhrhzk9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageDefinition: Patient transfer notification</p></div>"
+    },
+    "url": "http://example.org/MessageDefinition/md.rhhrhzk9",
+    "name": "PatientTransferNotification",
+    "title": "Patient Transfer Notification Message",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Lakeside Wellness Center",
+    "description": "Definition for a message notifying receiving facility of patient transfer.",
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "category": "notification"
+  },
+  "message_header": {
+    "resourceType": "MessageHeader",
+    "id": "mh.sdcj37uw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+    },
+    "eventCoding": {
+      "system": "http://example.org/message-events",
+      "code": "admin-notify",
+      "display": "Admin Notification"
+    },
+    "destination": [
+      {
+        "name": "Receiving Facility",
+        "endpoint": "https://fhir.example.org/receive"
+      }
+    ],
+    "sender": {
+      "reference": "Organization/org.akr37f5j",
+      "display": "Lakeside Wellness Center"
+    },
+    "source": {
+      "name": "Lakeside Wellness Center",
+      "endpoint": "https://fhir.example.org/send"
+    },
+    "focus": [
+      {
+        "reference": "Patient/pt.atwn95g2",
+        "display": "Thomas Chevalier"
+      }
+    ],
+    "definition": "MessageDefinition/md.rhhrhzk9"
+  },
+  "bundle": {
+    "resourceType": "Bundle",
+    "id": "bnd.zteg3p4b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Bundle: Message bundle for patient transfer</p></div>"
+    },
+    "type": "message",
+    "timestamp": "2025-06-15T10:00:00+00:00",
+    "entry": [
+      {
+        "fullUrl": "MessageHeader/mh.sdcj37uw",
+        "resource": {
+          "resourceType": "MessageHeader",
+          "id": "mh.sdcj37uw",
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MessageHeader: Patient wellness record transfer</p></div>"
+          },
+          "eventCoding": {
+            "system": "http://example.org/message-events",
+            "code": "admin-notify",
+            "display": "Admin Notification"
+          },
+          "destination": [
+            {
+              "name": "Receiving Facility",
+              "endpoint": "https://fhir.example.org/receive"
+            }
+          ],
+          "sender": {
+            "reference": "Organization/org.akr37f5j",
+            "display": "Lakeside Wellness Center"
+          },
+          "source": {
+            "name": "Lakeside Wellness Center",
+            "endpoint": "https://fhir.example.org/send"
+          },
+          "focus": [
+            {
+              "reference": "Patient/pt.atwn95g2",
+              "display": "Thomas Chevalier"
+            }
+          ],
+          "definition": "MessageDefinition/md.rhhrhzk9"
+        }
+      },
+      {
+        "fullUrl": "Patient/pt.atwn95g2",
+        "resource": {
+          "resourceType": "Patient",
+          "id": "pt.atwn95g2",
+          "meta": {
+            "profile": [
+              "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+            ]
+          },
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Thomas Chevalier</p></div>"
+          },
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2076-8",
+                    "display": "Native Hawaiian or Other Pacific Islander"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "Native Hawaiian or Other Pacific Islander"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+              "extension": [
+                {
+                  "url": "ombCategory",
+                  "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2186-5",
+                    "display": "Not Hispanic or Latino"
+                  }
+                },
+                {
+                  "url": "text",
+                  "valueString": "Not Hispanic or Latino"
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+              "valueCode": "M"
+            }
+          ],
+          "identifier": [
+            {
+              "use": "usual",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "MR",
+                    "display": "Medical record number"
+                  }
+                ],
+                "text": "Medical record number"
+              },
+              "system": "http://example.org/mrn",
+              "value": "MRN1564379"
+            },
+            {
+              "use": "official",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": "SS",
+                    "display": "Social Security number"
+                  }
+                ],
+                "text": "Social Security number"
+              },
+              "system": "http://hl7.org/fhir/sid/us-ssn",
+              "value": "987-65-1127"
+            }
+          ],
+          "name": [
+            {
+              "use": "official",
+              "family": "Chevalier",
+              "given": [
+                "Thomas"
+              ],
+              "text": "Thomas Chevalier"
+            }
+          ],
+          "telecom": [
+            {
+              "system": "phone",
+              "value": "340.268.9750x95271",
+              "use": "home"
+            },
+            {
+              "system": "email",
+              "value": "elliottcalvin@yahoo.com",
+              "use": "home"
+            }
+          ],
+          "gender": "male",
+          "birthDate": "1960-02-07",
+          "address": [
+            {
+              "use": "home",
+              "line": [
+                "5653 Brown Mills Apt. 247"
+              ],
+              "city": "Rachelchester",
+              "state": "VI",
+              "postalCode": "27111",
+              "country": "US"
+            }
+          ],
+          "maritalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+                "code": "D",
+                "display": "Divorced"
+              }
+            ],
+            "text": "Divorced"
+          },
+          "communication": [
+            {
+              "language": {
+                "coding": [
+                  {
+                    "system": "urn:ietf:bcp:47",
+                    "code": "fr",
+                    "display": "French"
+                  }
+                ],
+                "text": "French"
+              },
+              "preferred": true
+            }
+          ],
+          "generalPractitioner": [
+            {
+              "reference": "Practitioner/pr.yar4f4p5",
+              "display": "Dr. Véronique Denis"
+            }
+          ],
+          "managingOrganization": {
+            "reference": "Organization/org.akr37f5j",
+            "display": "Lakeside Wellness Center"
+          }
+        }
+      }
+    ]
+  },
+  "subscription": {
+    "resourceType": "Subscription",
+    "id": "sub.38fw3uth",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Subscription: Subscribe to patient transfer notifications</p></div>"
+    },
+    "status": "active",
+    "reason": "Monitor patient transfers for wellness coordination",
+    "criteria": "Patient?_lastUpdated=gt2024-01-01",
+    "channel": {
+      "type": "rest-hook",
+      "endpoint": "https://fhir.example.org/webhook/transfers",
+      "payload": "application/fhir+json"
+    }
+  }
+}

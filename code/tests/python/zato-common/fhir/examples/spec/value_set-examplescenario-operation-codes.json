@@ -1,0 +1,31 @@
+{
+  "resourceType": "ValueSet",
+  "id": "examplescenario-operation-codes",
+  "extension": [
+    {
+      "valueCode": "fhir"
+    },
+    {
+      "valueCode": "normative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/examplescenario-operation-codes",
+  "version": "6.0.0",
+  "name": "ExampleScenarioOperationCode",
+  "title": "Example Scenario Operation Code",
+  "status": "active",
+  "experimental": false,
+  "publisher": "FHIR Project team",
+  "contact": {
+    "telecom": {
+      "system": "url",
+      "value": "http://hl7.org/fhir"
+    }
+  },
+  "description": "This value set defines a set of codes that are used to indicate the supported operations of a testing engine or tool.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/restful-interaction"
+    }
+  }
+}

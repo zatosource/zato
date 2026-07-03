@@ -1,0 +1,144 @@
+{
+  "resourceType": "Group",
+  "id": "example-conceptualcohortdefinition-cancer-except-subset",
+  "meta": {
+    "versionId": 8,
+    "lastUpdated": "2025-03-15T20:57:46.493Z",
+    "profile": "https://hl7.org/fhir/uv/ebm/StructureDefinition/conceptual-cohort-definition"
+  },
+  "extension": {
+    "valueContactDetail": {
+      "name": "Brian S. Alper"
+    }
+  },
+  "url": "http://hl7.org/fhir/Group/example-conceptualcohortdefinition-cancer-except-subset",
+  "name": "ConceptualCohortDefinition: Cancer except subsets",
+  "status": "active",
+  "date": "2022-09-09T10:30:50.570Z",
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "description": "Cancer of any kind (except basal cell skin cancer or cancer in situ) unless documented to be disease-free for five years",
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "membership": "conceptual",
+  "combinationMethod": "except-subset",
+  "characteristic": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 64572001,
+            "display": "Disease (disorder)"
+          },
+          {
+            "system": "http://hl7.org/fhir/fhir-types",
+            "code": "Condition",
+            "display": "Condition"
+          }
+        ]
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 363346000,
+          "display": "Malignant neoplastic disease (disorder)"
+        }
+      },
+      "exclude": false,
+      "description": "Cancer of any kind"
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 64572001,
+            "display": "Disease (disorder)"
+          },
+          {
+            "system": "http://hl7.org/fhir/fhir-types",
+            "code": "Condition",
+            "display": "Condition"
+          }
+        ]
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 254701007,
+          "display": "Basal cell carcinoma of skin (disorder)"
+        }
+      },
+      "exclude": true,
+      "description": "(except basal cell skin cancer)"
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": 64572001,
+            "display": "Disease (disorder)"
+          },
+          {
+            "system": "http://hl7.org/fhir/fhir-types",
+            "code": "Condition",
+            "display": "Condition"
+          }
+        ]
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 109355002,
+          "display": "Carcinoma in situ (disorder)"
+        }
+      },
+      "exclude": true,
+      "description": "(except cancer in situ)"
+    },
+    {
+      "code": {
+        "text": "Defined by CodeableConcept"
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 395100000,
+          "display": "No evidence of cancer found (situation)"
+        }
+      },
+      "exclude": true,
+      "description": "unless documented to be disease-free for five years",
+      "timing": {
+        "contextCode": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 450332002,
+            "display": "Assessment of eligibility for clinical trial (procedure)"
+          }
+        },
+        "offsetRange": {
+          "low": {
+            "value": -5,
+            "unit": "years",
+            "system": "http://unitsofmeasure.org",
+            "code": "a"
+          },
+          "high": {
+            "value": 0,
+            "unit": "years",
+            "system": "http://unitsofmeasure.org",
+            "code": "a"
+          }
+        },
+        "text": "for five years up until study enrollment"
+      }
+    }
+  ]
+}

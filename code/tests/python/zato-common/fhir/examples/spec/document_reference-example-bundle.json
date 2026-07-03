@@ -1,0 +1,53 @@
+{
+  "resourceType": "DocumentReference",
+  "id": "example-bundle",
+  "meta": {
+    "security": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "code": "HTEST"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+        "code": "N"
+      }
+    ]
+  },
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:uuid:0c3151bd-1cbf-4d64-b04d-cd9187a4c6e0"
+  },
+  "status": "current",
+  "type": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "28655-9"
+    }
+  },
+  "subject": {
+    "reference": "http://fhir.healthintersections.com.au/open/Patient/d1",
+    "display": "Eve Everywoman"
+  },
+  "event": {
+    "reference": {
+      "reference": "http://fhir.healthintersections.com.au/open/Encounter/doc-example"
+    }
+  },
+  "date": "2013-02-01T12:30:02Z",
+  "author": {
+    "reference": "Practitioner/example",
+    "display": "Doctor Dave"
+  },
+  "description": "Discharge Summary",
+  "securityLabel": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+      "code": "N"
+    }
+  },
+  "content": {
+    "attachment": {
+      "url": "Bundle/father"
+    }
+  }
+}

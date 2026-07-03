@@ -1,0 +1,23 @@
+{
+  "resourceType": "DiagnosticReport",
+  "text": {
+    "status": "empty",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "partial",
+  "code": {
+    "coding": {
+      "system": "http://mater.org.au/brisbane/pathology/tests",
+      "code": "Mblcl",
+      "display": "Blood Cultures"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "effectiveDateTime": "2013-03-04T18:00:00+10:00",
+  "issued": "2013-10-07T17:18:16+10:00",
+  "performer": {
+    "reference": "Organization/acme-lab"
+  }
+}

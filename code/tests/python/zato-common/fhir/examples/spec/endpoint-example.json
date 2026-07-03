@@ -1,0 +1,59 @@
+{
+  "resourceType": "Endpoint",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": null
+    }
+  },
+  "identifier": {
+    "system": "http://example.org/enpoint-identifier",
+    "value": "epcp12"
+  },
+  "status": "active",
+  "connectionType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest"
+    }
+  },
+  "name": "Health Intersections CarePlan Hub",
+  "description": "The CarePlan hub provides a test/dev environment for testing submissions",
+  "environmentType": [
+    {
+      "coding": {
+        "system": "http://hl7.org/fhir/endpoint-environment",
+        "code": "test"
+      }
+    },
+    {
+      "coding": {
+        "system": "http://hl7.org/fhir/endpoint-environment",
+        "code": "dev"
+      }
+    }
+  ],
+  "managingOrganization": {
+    "reference": "Organization/hl7"
+  },
+  "contact": {
+    "system": "email",
+    "value": "endpointmanager@example.org",
+    "use": "work"
+  },
+  "period": {
+    "start": "2014-09-01"
+  },
+  "payload": {
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "CarePlan"
+      }
+    },
+    "mimeType": "application/fhir+xml"
+  },
+  "address": "http://fhir3.healthintersections.com.au/open/CarePlan",
+  "header": "bearer-code BASGS534s4"
+}

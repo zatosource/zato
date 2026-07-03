@@ -1,0 +1,49 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "measure-supplemental-data-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/measure-supplemental-data-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.2046"
+  },
+  "version": "6.0.0",
+  "name": "MeasureSupplementalDataExample",
+  "title": "Measure Supplemental Data Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Identifier supplemental data in a population for measuring purposes.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/measure-supplemental-data-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "age",
+      "display": "Age",
+      "definition": "Age Supplemental Data."
+    },
+    {
+      "code": "gender",
+      "display": "Gender",
+      "definition": "Gender Supplemental Data ."
+    },
+    {
+      "code": "ethnicity",
+      "display": "Ethnicity",
+      "definition": "Ethnicity Supplemental Data ."
+    },
+    {
+      "code": "payer",
+      "display": "Payer",
+      "definition": "Payer Supplemental Data."
+    }
+  ]
+}

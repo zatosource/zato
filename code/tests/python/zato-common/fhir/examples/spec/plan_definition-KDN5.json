@@ -1,0 +1,325 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "KDN5",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}tr": {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}div": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}h3": null,
+                "{http://www.w3.org/1999/xhtml}h1": null,
+                "{http://www.w3.org/1999/xhtml}h2": null
+              },
+              null
+            ]
+          }
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}h4": null,
+                "{http://www.w3.org/1999/xhtml}p": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}h4": null,
+                "{http://www.w3.org/1999/xhtml}ol": {
+                  "{http://www.w3.org/1999/xhtml}li": [
+                    {
+                      "{http://www.w3.org/1999/xhtml}a": null
+                    },
+                    {
+                      "{http://www.w3.org/1999/xhtml}a": {
+                        "{http://www.w3.org/1999/xhtml}em": null
+                      },
+                      "{http://www.w3.org/1999/xhtml}sup": {
+                        "{http://www.w3.org/1999/xhtml}a": null
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}h4": null,
+                "{http://www.w3.org/1999/xhtml}ol": {
+                  "{http://www.w3.org/1999/xhtml}li": [
+                    {
+                      "{http://www.w3.org/1999/xhtml}i": null,
+                      "{http://www.w3.org/1999/xhtml}table": {
+                        "{http://www.w3.org/1999/xhtml}tr": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}td": [
+                              null,
+                              null
+                            ]
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}td": [
+                              null,
+                              null
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "{http://www.w3.org/1999/xhtml}i": null,
+                      "{http://www.w3.org/1999/xhtml}br": null,
+                      "{http://www.w3.org/1999/xhtml}a": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}h4": null,
+      "{http://www.w3.org/1999/xhtml}p": {
+        "{http://www.w3.org/1999/xhtml}i": null
+      },
+      "{http://www.w3.org/1999/xhtml}ul": {
+        "{http://www.w3.org/1999/xhtml}li": [
+          {
+            "{http://www.w3.org/1999/xhtml}sup": null
+          },
+          null
+        ]
+      }
+    }
+  },
+  "contained": [
+    {
+      "ActivityDefinition": {
+        "id": 1111,
+        "status": "draft",
+        "productCodeableConcept": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 12574,
+            "display": "gemcitabine"
+          },
+          "text": "gemcitabine"
+        },
+        "dosage": {
+          "text": "1250 mg/m\u00b2 IV over 30 minutes",
+          "timing": {
+            "repeat": {
+              "duration": 30,
+              "durationUnit": "min"
+            }
+          },
+          "route": {
+            "text": "IV"
+          },
+          "doseAndRate": {
+            "type": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                "code": "ordered",
+                "display": "Ordered"
+              }
+            },
+            "doseQuantity": {
+              "value": 1250,
+              "unit": "mg/m\u00b2"
+            }
+          }
+        }
+      }
+    },
+    {
+      "ActivityDefinition": {
+        "id": 2222,
+        "status": "draft",
+        "productCodeableConcept": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 40048,
+            "display": "Carboplatin"
+          },
+          "text": "CARBOplatin"
+        },
+        "dosage": {
+          "text": "AUC 5 IV over 30 minutes",
+          "timing": {
+            "repeat": {
+              "duration": 30,
+              "durationUnit": "min"
+            }
+          },
+          "route": {
+            "text": "IV"
+          },
+          "doseAndRate": {
+            "type": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                "code": "ordered",
+                "display": "Ordered"
+              }
+            },
+            "doseQuantity": {
+              "extension": {
+                "valueInteger": 5
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "identifier": [
+    {
+      "system": "http://example.org/ordertemplates",
+      "value": "KDN5"
+    },
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.11.21"
+    }
+  ],
+  "version": 1,
+  "name": "GemcitabineCARBOplatin",
+  "title": "Gemcitabine/CARBOplatin",
+  "type": {
+    "text": "Chemotherapy Order Template"
+  },
+  "status": "draft",
+  "experimental": true,
+  "publisher": "National Comprehensive Cancer Network, Inc.",
+  "description": "Gemcitabine/CARBOplatin",
+  "useContext": [
+    {
+      "code": {
+        "system": "http://example.org/fhir/CodeSystem/indications",
+        "code": "treamentSetting-or-diseaseStatus"
+      },
+      "valueCodeableConcept": {
+        "text": "Metastatic"
+      }
+    },
+    {
+      "code": {
+        "system": "http://example.org/fhir/CodeSystem/indications",
+        "code": "disease-or-histology"
+      },
+      "valueCodeableConcept": {
+        "text": "Collecting Duct/Medullary Subtypes"
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "focus"
+      },
+      "valueCodeableConcept": {
+        "text": "Kidney Cancer"
+      }
+    },
+    {
+      "code": {
+        "system": "http://example.org/fhir/CodeSystem/indications",
+        "code": "treatmentSetting-or-diseaseStatus"
+      },
+      "valueCodeableConcept": {
+        "text": "Relapsed"
+      }
+    },
+    {
+      "code": {
+        "system": "http://example.org/fhir/CodeSystem/indications",
+        "code": "disease-or-histology"
+      },
+      "valueCodeableConcept": {
+        "text": "Collecting Duct/Medullary Subtypes"
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "focus"
+      },
+      "valueCodeableConcept": {
+        "text": "Kidney Cancer \u2013 Collecting Duct/Medullary Subtypes - Metastatic"
+      }
+    }
+  ],
+  "copyright": "All rights reserved.",
+  "approvalDate": "2016-07-27",
+  "lastReviewDate": "2016-07-27",
+  "author": {
+    "name": "Lee Surprenant"
+  },
+  "relatedArtifact": [
+    {
+      "type": "derived-from",
+      "display": "NCCN Guidelines for Kidney Cancer. V.2.2016",
+      "document": {
+        "url": "http://www.example.org/professionals/physician_gls/PDF/kidney.pdf"
+      }
+    },
+    {
+      "type": "citation",
+      "citation": "Oudard S, et al. J Urol. 2007;177(5):1698-702",
+      "document": {
+        "url": "http://www.ncbi.nlm.nih.gov/pubmed/17437788"
+      }
+    }
+  ],
+  "action": {
+    "selectionBehavior": "exactly-one",
+    "action": {
+      "selectionBehavior": "all",
+      "action": {
+        "groupingBehavior": "sentence-group",
+        "selectionBehavior": "exactly-one",
+        "action": {
+          "textEquivalent": "21-day cycle for 6 cycles",
+          "timingTiming": {
+            "repeat": {
+              "count": 6,
+              "duration": 21,
+              "durationUnit": "d"
+            }
+          },
+          "action": [
+            {
+              "extension": {
+                "extension": [
+                  {
+                    "valueInteger": 1
+                  },
+                  {
+                    "valueInteger": 8
+                  }
+                ]
+              },
+              "textEquivalent": "Gemcitabine 1250 mg/m\u00b2 IV over 30 minutes on days 1 and 8",
+              "definitionCanonical": "#1111"
+            },
+            {
+              "extension": {
+                "extension": {
+                  "valueInteger": 1
+                }
+              },
+              "textEquivalent": "CARBOplatin AUC 5 IV over 30 minutes on Day 1",
+              "relatedAction": {
+                "targetId": "action-1",
+                "relationship": "concurrent-with-start"
+              },
+              "definitionCanonical": "#2222"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

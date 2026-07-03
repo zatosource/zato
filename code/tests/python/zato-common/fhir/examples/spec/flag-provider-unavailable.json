@@ -1,0 +1,40 @@
+{
+  "resourceType": "Flag",
+  "id": "provider-unavailable",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "value": "provider-unavailable-2024"
+  },
+  "status": "inactive",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/flag-category",
+      "code": "admin",
+      "display": "Administrative"
+    },
+    "text": "Administrative"
+  },
+  "code": {
+    "coding": {
+      "system": "http://example.org/local",
+      "code": "unavailable",
+      "display": "Unavailable for Referrals"
+    },
+    "text": "Dr. Adam Careful is unavailable for referrals from 10/1/2023 to 11/30/2023"
+  },
+  "subject": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "period": {
+    "start": "2023-09-12",
+    "end": "2023-11-30"
+  },
+  "author": {
+    "reference": "Organization/example",
+    "display": "ACME Health"
+  }
+}

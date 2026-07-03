@@ -1,0 +1,23 @@
+{
+  "resourceType": "Media",
+  "id": "sound",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": null,
+      "{http://www.w3.org/1999/xhtml}img": null
+    }
+  },
+  "status": "completed",
+  "subject": {
+    "reference": "Patient/xcda"
+  },
+  "operator": {
+    "reference": "Practitioner/xcda-author"
+  },
+  "duration": 65,
+  "content": {
+    "contentType": "audio/mpeg",
+    "data": "dG9vIGJpZyB0b28gaW5jbHVkZSB0aGUgd2hvbGU="
+  }
+}

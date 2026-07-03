@@ -1,0 +1,595 @@
+{
+  "_meta": {
+    "scenario": "family_context",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.yfdt3hjw",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Candice Keller</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2028-9",
+              "display": "Asian"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Asian"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1845795"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5447"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Keller",
+        "given": [
+          "Candice"
+        ],
+        "text": "Candice Keller"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "250-754-1303x001",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "gonzalezjoseph@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1989-02-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "9391 Samantha Trace Apt. 748"
+        ],
+        "city": "South Jamie",
+        "state": "KY",
+        "postalCode": "03642",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.f2yyrubs",
+        "display": "Dr. Robert Brown"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.9qdag6z2",
+      "display": "Clinique du Parc"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.trpuf555",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Family history review on 2024-06-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yfdt3hjw",
+        "display": "Candice Keller"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.f2yyrubs",
+            "display": "Dr. Robert Brown"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-26T12:30:00+00:00",
+        "end": "2024-06-26T13:21:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Family history review"
+            }
+          ],
+          "text": "Family history review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9qdag6z2",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e9s65jf3",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6fxxrxpv",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Contact update on 2024-11-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yfdt3hjw",
+        "display": "Candice Keller"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.f2yyrubs",
+            "display": "Dr. Robert Brown"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-06T08:15:00+00:00",
+        "end": "2024-11-06T09:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Contact update"
+            }
+          ],
+          "text": "Contact update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9qdag6z2",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e9s65jf3",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.xxqm5ksg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Routine visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yfdt3hjw",
+        "display": "Candice Keller"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.f2yyrubs",
+            "display": "Dr. Robert Brown"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T11:08:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Routine visit"
+            }
+          ],
+          "text": "Routine visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.9qdag6z2",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.e9s65jf3",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "related_person": {
+    "resourceType": "RelatedPerson",
+    "id": "rp.jzpqb99k",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RelatedPerson: Samuel Johnson (spouse and emergency contact)</p></div>"
+    },
+    "active": true,
+    "patient": {
+      "reference": "Patient/pt.yfdt3hjw",
+      "display": "Candice Keller"
+    },
+    "relationship": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+            "code": "SPS",
+            "display": "Spouse"
+          }
+        ],
+        "text": "Spouse"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Johnson",
+        "given": [
+          "Samuel"
+        ],
+        "text": "Samuel Johnson"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "504.363.9841x02814",
+        "use": "mobile"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1996-11-08",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "18081 Deborah Cliffs"
+        ],
+        "city": "East Lindsayborough",
+        "state": "PA",
+        "postalCode": "18695",
+        "country": "US"
+      }
+    ]
+  },
+  "family_member_history": {
+    "resourceType": "FamilyMemberHistory",
+    "id": "fmh.jjtjzf5t",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>FamilyMemberHistory: Parent with well-controlled hypertension</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.yfdt3hjw",
+      "display": "Candice Keller"
+    },
+    "date": "2025-06-15",
+    "name": "Rebecca Evans",
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+          "code": "FTH",
+          "display": "father"
+        }
+      ],
+      "text": "father"
+    },
+    "sex": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/administrative-gender",
+          "code": "male",
+          "display": "Male"
+        }
+      ],
+      "text": "Male"
+    },
+    "bornDate": "1947-11-26",
+    "condition": [
+      {
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ],
+          "text": "Essential hypertension"
+        },
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "370996005",
+              "display": "Patient condition well controlled"
+            }
+          ],
+          "text": "Patient condition well controlled"
+        },
+        "note": [
+          {
+            "text": "Father has essential hypertension, well controlled with medication. Active lifestyle."
+          }
+        ]
+      }
+    ]
+  },
+  "person": {
+    "resourceType": "Person",
+    "id": "person.fdmtmjxf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Person: Candice Keller</p></div>"
+    },
+    "name": [
+      {
+        "use": "official",
+        "text": "Candice Keller"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(868)236-4383",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1989-02-06",
+    "address": [
+      {
+        "use": "home",
+        "city": "Jameshaven",
+        "state": "FM",
+        "country": "US"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.9qdag6z2",
+      "display": "Clinique du Parc"
+    },
+    "link": [
+      {
+        "target": {
+          "reference": "Patient/pt.yfdt3hjw",
+          "display": "Candice Keller"
+        },
+        "assurance": "level4"
+      }
+    ]
+  },
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.cxdbwuqz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Family of Candice Keller</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Candice Keller Family Group",
+    "quantity": 2,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.yfdt3hjw",
+          "display": "Candice Keller"
+        }
+      },
+      {
+        "entity": {
+          "reference": "RelatedPerson/rp.jzpqb99k",
+          "display": "Samuel Johnson"
+        }
+      }
+    ]
+  }
+}

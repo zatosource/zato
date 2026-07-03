@@ -1,0 +1,22 @@
+{
+  "resourceType": "Organization",
+  "id": "odh-2-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": [
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "name": "Big County",
+  "address": {
+    "line": "2468 High St.",
+    "city": "Somewhere",
+    "state": "CA",
+    "postalCode": 55555,
+    "country": "USA"
+  }
+}

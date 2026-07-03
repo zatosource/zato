@@ -1,0 +1,669 @@
+{
+  "resourceType": "Measure",
+  "id": "measure-cms146-example",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}span": {
+                  "{http://www.w3.org/1999/xhtml}span": {
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}span": null,
+                        "{http://www.w3.org/1999/xhtml}br": null
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}span": null,
+                        "{http://www.w3.org/1999/xhtml}br": null
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}span": {
+                  "{http://www.w3.org/1999/xhtml}b": null,
+                  "{http://www.w3.org/1999/xhtml}span": null,
+                  "{http://www.w3.org/1999/xhtml}br": null
+                }
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}p": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": {
+                      "{http://www.w3.org/1999/xhtml}b": null,
+                      "{http://www.w3.org/1999/xhtml}span": null,
+                      "{http://www.w3.org/1999/xhtml}br": null
+                    }
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "url": "http://hl7.org/fhir/Measure/measure-cms146-example",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.28.1"
+    },
+    {
+      "use": "official",
+      "system": "http://hl7.org/fhir/cqi/ecqm/Measure/Identifier/cms",
+      "value": 146
+    },
+    {
+      "use": "official",
+      "system": "http://hl7.org/fhir/cqi/ecqm/Measure/Identifier/nqf",
+      "value": 2
+    }
+  ],
+  "version": "1.0.0",
+  "name": "CMS146",
+  "title": "Appropriate Testing for Children with Pharyngitis",
+  "status": "active",
+  "experimental": true,
+  "date": "2017-03-10",
+  "publisher": "National Committee for Quality Assurance",
+  "contact": {
+    "telecom": {
+      "system": "url",
+      "value": "http://www.ncqa.org/"
+    }
+  },
+  "description": "Percentage of children 3-18 years of age who were diagnosed with pharyngitis, ordered an antibiotic and received a group A streptococcus (strep) test for the episode.",
+  "useContext": [
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "program"
+      },
+      "valueCodeableConcept": {
+        "text": "Eligible Clinician (EC)"
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "age"
+      },
+      "valueRange": {
+        "low": {
+          "value": 3,
+          "unit": "a"
+        },
+        "high": {
+          "value": 18,
+          "unit": "a"
+        }
+      }
+    }
+  ],
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "US"
+    }
+  },
+  "purpose": "Measure of children with a group A streptococcus test in the 7-day period from 3 days prior through 3 days after the diagnosis of pharyngitis",
+  "copyright": "Physician Performance Measure (Measures) and related data specifications were developed by the National Committee for Quality Assurance (NCQA).  The Measures are copyrighted but can be reproduced and distributed, without modification, for noncommercial purposes (eg, use by healthcare providers in connection with their practices). Commercial use is defined as the sale, licensing, or distribution of the Measures for commercial gain, or incorporation of the Measures into a product or service that is sold, licensed or distributed for commercial gain. Commercial use of the Measures requires a license agreement between the user and NCQA. NCQA is not responsible for any use of the Measures.  (c) 2008-2016 National Committee for Quality Assurance. All Rights Reserved.  Limited proprietary coding is contained in the Measure specifications for user convenience. Users of proprietary code sets should obtain all necessary licenses from the owners of the code sets. NCQA disclaims all liability for use or accuracy of any CPT or other codes contained in the specifications.  CPT(R) contained in the Measure specifications is copyright 2004-2015 American Medical Association. LOINC(R) copyright 2004-2015 Regenstrief Institute, Inc. This material contains SNOMED Clinical Terms(R) (SNOMED CT[R]) copyright 2004-2015 International Health Terminology Standards Development Organisation. ICD-10 copyright 2015 World Health Organization. All Rights Reserved.",
+  "approvalDate": "2016-01-01",
+  "lastReviewDate": "2016-09-01",
+  "effectivePeriod": {
+    "start": "2017-01-01",
+    "end": "2017-12-31"
+  },
+  "topic": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "57024-2"
+    }
+  },
+  "author": {
+    "name": "National Committee for Quality Assurance"
+  },
+  "relatedArtifact": [
+    {
+      "type": "documentation",
+      "citation": "Linder, J.A., D.W. Bates, G.M. Lee, J.A. Finkelstein. 2005. _Antibiotic treatment of children with sore throat._ JAMA 294(18):2315-2322. "
+    },
+    {
+      "type": "documentation",
+      "citation": "Infectious Diseases Society of America. 2012. _Clinical Practice Guideline for the Diagnosis and Management of Group A Streptococcal Pharyngitis: 2012 Update._ "
+    },
+    {
+      "type": "documentation",
+      "citation": "Roberts, R.R., B. Hota, I. Ahmad, et al. _Hospital and Societal Costs of Antimicrobial-Resistant Infections in a Chicago Teaching Hospital: Implications for Antibiotic Stewardship._ Clin Infect Dis. Oct 2009; 49(8):1175-84."
+    }
+  ],
+  "library": "http://hl7.org/fhir/Library/library-cms146-example",
+  "disclaimer": "These performance Measures are not clinical guidelines and do not establish a standard of medical care, and have not been tested for all potential applications. THE MEASURES AND SPECIFICATIONS ARE PROVIDED \"AS IS\" WITHOUT WARRANTY OF ANY KIND. Due to technical limitations, registered trademarks are indicated by (R) or [R] and unregistered trademarks are indicated by (TM) or [TM].",
+  "type": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/measure-type",
+      "code": "process"
+    }
+  },
+  "rationale": "Group A streptococcal bacterial infections and other infections that cause pharyngitis (which are most often viral) often produce the same signs and symptoms (IDSA 2002). The American Academy of Pediatrics, the Centers for Disease Control and Prevention, and the Infectious Diseases Society of America all recommend a diagnostic test for Strep A to improve diagnostic accuracy and avoid unnecessary antibiotic treatment (Linder et al. 2005). Estimated economic costs of pediatric streptococcal pharyngitis in the United States range from $224 million to $539 million per year, including indirect costs related to parental work losses. At a higher level, the economic cost of antibiotic resistance vary but have extended as high as $20 billion in excess direct healthcare costs, with additional costs to society for lost productivity as high as $35 billion a year (2008 dollars) (Roberts et al. 2009).",
+  "clinicalRecommendationStatement": "The Infectious Diseases Society of America (IDSA) \"recommends swabbing the throat and testing for GAS pharyngitis by rapid antigen detection test (RADT) and/or culture because the clinical features alone do not reliably discriminate between GAS and viral pharyngitis except when overt viral features like rhinorrhea, cough, oral ulcers, and/or hoarseness are present\"",
+  "guidance": "This is an episode of care measure that examines all eligible episodes for the patient during the measurement period. If the patient has more than one episode, include all episodes in the measure",
+  "group": {
+    "linkId": "CMS146-group-1",
+    "scoring": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+        "code": "proportion"
+      }
+    },
+    "improvementNotation": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/measure-improvement-notation",
+        "code": "increase"
+      }
+    },
+    "population": [
+      {
+        "linkId": "CMS146-group-1-ip",
+        "code": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+            "code": "initial-population"
+          }
+        },
+        "description": "Outpatient, telephone, virtual encounter (i.e., e-visit or virtual check-in), or emergency department (ED) visits with a diagnosis of pharyngitis or tonsillitis from January 1 to December 28 of the measurement period and an antibiotic order on or three days after the episode date among patients 3 years or older",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "InitialPopulation"
+        }
+      },
+      {
+        "linkId": "CMS146-group-1-num",
+        "code": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+            "code": "numerator"
+          }
+        },
+        "description": "A group A streptococcus test in the seven-day period from three days prior to the episode date through three days after the episode date",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "Numerator"
+        }
+      },
+      {
+        "linkId": "CMS146-group-1-den",
+        "code": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+            "code": "denominator"
+          }
+        },
+        "description": "Equals Initial Population",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "Denominator"
+        }
+      },
+      {
+        "linkId": "CMS146-group-1-denex",
+        "code": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+            "code": "denominator-exclusion"
+          }
+        },
+        "description": "Exclude pharyngitis episodes when the patient had hospice care for any part of the measurement period.\\n\\nExclude pharyngitis episodes when the patient had a comorbid condition during the 12 months prior to or on the episode date.\\n\\nExclude pharyngitis episodes where the patient is taking antibiotics in the 30 days prior to the episode date.\\n\\nExclude pharyngitis episodes where the patient had a competing diagnosis on or three days after the episode date.",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "DenominatorExclusion"
+        }
+      }
+    ],
+    "stratifier": [
+      {
+        "linkId": "CMS146-group-1-stratifier-ages-up-to-9",
+        "code": {
+          "text": "stratifier-ages-up-to-9"
+        },
+        "description": "3-9 years",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "AgesUpToNine"
+        }
+      },
+      {
+        "linkId": "CMS146-group-1-stratifier-ages-10-plus",
+        "code": {
+          "text": "stratifier-ages-10-plus"
+        },
+        "description": "10 years or older",
+        "criteria": {
+          "language": "text/cql-identifier",
+          "expression": "AgesTenPlus"
+        }
+      },
+      {
+        "linkId": "CMS146-group-1-stratifier-gender",
+        "code": {
+          "text": "stratifier-gender"
+        },
+        "description": "Stratification based on gender of patient",
+        "criteria": {
+          "language": "text/fhirpath",
+          "expression": "Patient.gender"
+        }
+      }
+    ]
+  },
+  "supplementalData": [
+    {
+      "linkId": "CMS146-supplemental-data-gender",
+      "code": {
+        "text": "supplemental-data-gender"
+      },
+      "criteria": {
+        "language": "text/fhirpath",
+        "expression": "Patient.gender"
+      }
+    },
+    {
+      "linkId": "CMS146-supplemental-data-deceased",
+      "code": {
+        "text": "supplemental-data-deceased"
+      },
+      "criteria": {
+        "language": "text/fhirpath",
+        "expression": "Patient.deceased"
+      }
+    }
+  ]
+}

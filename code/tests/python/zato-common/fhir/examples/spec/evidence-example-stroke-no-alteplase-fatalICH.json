@@ -1,0 +1,88 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-stroke-no-alteplase-fatalICH",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "url": "http://hl7.org/fhir/Evidence/example-stroke-no-alteplase-fatalICH",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.10.4"
+  },
+  "name": "RiskOfFatalICHWithoutAlteplaseForStroke",
+  "title": "Risk of fatal ICH without alteplase for stroke",
+  "status": "draft",
+  "relatesTo": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+        "code": "cites",
+        "display": "Cites"
+      }
+    },
+    "targetMarkdown": "Effect of treatment delay, age, and stroke severity on the effects of intravenous thrombolysis with alteplase for acute ischaemic stroke: a meta-analysis of individual patient data from randomised trials. <b>Citation:</b> Emberson J, Lees KR, Lyden P, Blackwell L, Albers G, Bluhmki E, et al;Stroke Thrombolysis Trialists' Collaborative Group. Effect of treatment delay, age, and stroke severity on the effects of intravenous thrombolysis with alteplase for acute ischaemic stroke: a meta-analysis of individual patient data from randomised trials. Lancet 2014 Nov 29;384(9958):1929-35 PMID 25106063 <b>URL:</b> https://doi.org/10.1016/S0140-6736(14)60584-5"
+  },
+  "description": "0.4% incidence of fatal intracranial hemorrhage within 7 days without alteplase in patients with acute ischemic stroke",
+  "variableDefinition": [
+    {
+      "variableRole": "population",
+      "observed": {
+        "reference": "Group/Emberson-2014-IPD-MA-No-Alteplase-Cohort",
+        "type": "Group",
+        "display": "Emberson 2014 IPD-MA No Alteplase Cohort"
+      },
+      "intended": {
+        "reference": "Group/AcuteIschemicStrokeTreatedWithoutAlteplase",
+        "type": "Group",
+        "display": "adults with acute ischemic stroke treated without alteplase"
+      }
+    },
+    {
+      "variableRole": "outcome",
+      "observed": {
+        "reference": "EvidenceVariable/example-fatal-ICH-in-7-days",
+        "type": "EvidenceVariable",
+        "display": "fatal ICH"
+      },
+      "intended": {
+        "reference": "EvidenceVariable/example-fatal-ICH-in-7-days",
+        "type": "EvidenceVariable",
+        "display": "fatal ICH"
+      }
+    }
+  ],
+  "synthesisType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/synthesis-type",
+      "code": "IPD-MA",
+      "display": "individual patient data meta-analysis"
+    }
+  },
+  "studyDesign": {
+    "coding": {
+      "system": "https://fevir.net/sevco",
+      "code": "SEVCO:01003",
+      "display": "randomized assignment"
+    }
+  },
+  "statistic": {
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/sevco",
+        "code": "STATO:0000607",
+        "display": "proportion"
+      }
+    },
+    "quantity": {
+      "value": 0.00386298627
+    },
+    "numberOfEvents": 13,
+    "sampleSize": {
+      "numberOfStudies": 9,
+      "numberOfParticipants": 3365
+    }
+  }
+}

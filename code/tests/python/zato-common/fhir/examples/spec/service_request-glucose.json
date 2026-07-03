@@ -1,0 +1,25 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "glucose",
+  "status": "active",
+  "intent": "original-order",
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "occurrenceDateTime": "2013-05-08T09:33:27+07:00",
+  "asNeeded": true,
+  "asNeededFor": {
+    "concept": {
+      "text": "Series of elevated glucose levels"
+    }
+  },
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "reason": {
+    "concept": {
+      "text": "Glucose monitoring"
+    }
+  }
+}

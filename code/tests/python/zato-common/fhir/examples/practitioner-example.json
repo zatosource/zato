@@ -1,0 +1,73 @@
+{
+  "resourceType": "Practitioner",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Dr. Jane Jones</div>"
+  },
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://www.acme.org/practitioners",
+      "value": "23"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Jones",
+      "given": ["Jane"],
+      "prefix": ["Dr"]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(03) 5555 1234",
+      "use": "work"
+    },
+    {
+      "system": "email",
+      "value": "jane.jones@example.org",
+      "use": "work"
+    }
+  ],
+  "address": [
+    {
+      "use": "work",
+      "line": ["534 Erewhon St"],
+      "city": "PleasantVille",
+      "state": "Vic",
+      "postalCode": "3999"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1975-05-15",
+  "qualification": [
+    {
+      "identifier": [
+        {
+          "system": "http://example.org/UniversityIdentifier",
+          "value": "12345"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0360",
+            "code": "MD",
+            "display": "Doctor of Medicine"
+          }
+        ],
+        "text": "MD"
+      },
+      "period": {
+        "start": "2000-01-01"
+      },
+      "issuer": {
+        "display": "Example University"
+      }
+    }
+  ]
+}

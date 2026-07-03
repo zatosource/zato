@@ -1,0 +1,109 @@
+{
+  "resourceType": "Patient",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">John Smith</div>"
+  },
+  "identifier": [
+    {
+      "use": "usual",
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "code": "MR"
+          }
+        ]
+      },
+      "system": "urn:oid:1.2.36.146.595.217.0.1",
+      "value": "12345",
+      "period": {
+        "start": "2001-05-06"
+      },
+      "assigner": {
+        "display": "Acme Healthcare"
+      }
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Smith",
+      "given": ["John", "Jacob"]
+    },
+    {
+      "use": "usual",
+      "given": ["Johnny"]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(03) 5555 6473",
+      "use": "home"
+    },
+    {
+      "system": "email",
+      "value": "john.smith@example.com",
+      "use": "work"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1974-12-25",
+  "deceasedBoolean": false,
+  "address": [
+    {
+      "use": "home",
+      "type": "both",
+      "text": "534 Erewhon St, PleasantVille, Vic 3999",
+      "line": ["534 Erewhon St"],
+      "city": "PleasantVille",
+      "district": "Rainbow",
+      "state": "Vic",
+      "postalCode": "3999",
+      "period": {
+        "start": "1974-12-25"
+      }
+    }
+  ],
+  "maritalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+        "code": "M",
+        "display": "Married"
+      }
+    ]
+  },
+  "contact": [
+    {
+      "relationship": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+              "code": "N"
+            }
+          ]
+        }
+      ],
+      "name": {
+        "family": "Smith",
+        "given": ["Jane"]
+      },
+      "telecom": [
+        {
+          "system": "phone",
+          "value": "(03) 5555 6789",
+          "use": "mobile"
+        }
+      ],
+      "gender": "female"
+    }
+  ],
+  "managingOrganization": {
+    "reference": "Organization/1"
+  }
+}

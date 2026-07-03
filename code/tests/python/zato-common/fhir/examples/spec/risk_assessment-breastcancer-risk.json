@@ -1,0 +1,72 @@
+{
+  "resourceType": "RiskAssessment",
+  "id": "breastcancer-risk",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": {
+        "{http://www.w3.org/1999/xhtml}tr": [
+          {
+            "{http://www.w3.org/1999/xhtml}td": {
+              "{http://www.w3.org/1999/xhtml}h1": null
+            }
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}td": [
+              {
+                "{http://www.w3.org/1999/xhtml}strong": null
+              },
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "identifier": {
+    "use": "official",
+    "system": "http://example.org",
+    "value": "risk-assessment-breastcancer1"
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://browser.ihtsdotools.org/",
+      "code": 709510001,
+      "display": "Assessment of risk for disease (procedure)"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "performer": {
+    "reference": "Practitioner/example"
+  },
+  "basis": {
+    "reference": "Observation/example-genetics-brcapat"
+  },
+  "prediction": {
+    "outcome": {
+      "text": "Unknown risk of developing breast cancer"
+    }
+  },
+  "note": {
+    "text": "This risk assessment is based on BRCA1 and BRCA2 genetic mutation test"
+  }
+}

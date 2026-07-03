@@ -1,0 +1,51 @@
+{
+  "resourceType": "Observation",
+  "id": "unsat",
+  "identifier": {
+    "use": "official",
+    "system": "http://www.bmc.nl/zorgportal/identifiers/observations",
+    "value": 6323
+  },
+  "status": "cancelled",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "15074-8",
+      "display": "Glucose [Moles/volume] in Blood"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "effectiveDateTime": "2013-04-02T09:30:10+01:00",
+  "issued": "2013-04-03T15:30:10+01:00",
+  "performer": {
+    "reference": "Practitioner/f005",
+    "display": "A. Langeveld"
+  },
+  "dataAbsentReason": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 125154007,
+      "display": "Specimen unsatisfactory for evaluation"
+    }
+  },
+  "note": {
+    "text": "Tube broken in transit and sample leaked"
+  },
+  "referenceRange": {
+    "low": {
+      "value": 3.1,
+      "unit": "mmol/l",
+      "system": "http://unitsofmeasure.org",
+      "code": "mmol/L"
+    },
+    "high": {
+      "value": 6.2,
+      "unit": "mmol/l",
+      "system": "http://unitsofmeasure.org",
+      "code": "mmol/L"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "resourceType": "AuditEvent",
+  "id": "example-rest",
+  "type": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "code": "rest",
+      "display": "Restful Operation"
+    }
+  },
+  "subtype": {
+    "coding": {
+      "system": "http://hl7.org/fhir/restful-interaction",
+      "code": "vread",
+      "display": "vread"
+    }
+  },
+  "action": "R",
+  "recorded": "2013-06-20T23:42:24Z",
+  "outcome": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-outcome",
+      "code": 0,
+      "display": "Success"
+    }
+  },
+  "agent": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+          "code": "humanuser",
+          "display": "human user"
+        }
+      },
+      "who": {
+        "identifier": {
+          "value": 95
+        }
+      },
+      "requestor": true
+    },
+    {
+      "extension": {
+        "valueIdentifier": {
+          "type": {
+            "text": "process ID"
+          },
+          "value": 6580
+        }
+      },
+      "type": {
+        "coding": {
+          "system": "http://dicom.nema.org/resources/ontology/DCM",
+          "code": 110153,
+          "display": "Source Role ID"
+        }
+      },
+      "who": {
+        "identifier": {
+          "system": "urn:oid:2.16.840.1.113883.4.2",
+          "value": "2.16.840.1.113883.4.2"
+        }
+      },
+      "requestor": false,
+      "networkString": "Workstation1.ehr.familyclinic.com"
+    }
+  ],
+  "source": {
+    "observer": {
+      "identifier": {
+        "value": "hl7connect.healthintersections.com.au"
+      }
+    },
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+        "code": 3,
+        "display": "Web Server"
+      }
+    }
+  },
+  "entity": {
+    "what": {
+      "reference": "Patient/example/_history/1"
+    },
+    "role": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/object-role",
+        "code": 1,
+        "display": "Patient"
+      }
+    }
+  }
+}

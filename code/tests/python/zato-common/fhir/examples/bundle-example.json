@@ -1,0 +1,47 @@
+{
+  "resourceType": "Bundle",
+  "id": "example",
+  "type": "collection",
+  "timestamp": "2024-03-15T10:00:00+01:00",
+  "entry": [
+    {
+      "fullUrl": "http://example.org/fhir/Patient/example",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "example",
+        "name": [
+          {
+            "family": "Smith",
+            "given": ["John"]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1974-12-25"
+      }
+    },
+    {
+      "fullUrl": "http://example.org/fhir/Observation/example",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "example",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "15074-8",
+              "display": "Glucose"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/example"
+        },
+        "valueQuantity": {
+          "value": 6.3,
+          "unit": "mmol/l"
+        }
+      }
+    }
+  ]
+}

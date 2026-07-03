@@ -1,0 +1,164 @@
+{
+  "_meta": {
+    "scenario": "shareable_definitions",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.ua3znpk5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Shareable daily exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.ua3znpk5",
+    "name": "ShareableDailyExercise",
+    "title": "Shareable Daily Exercise Activity",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable activity definition for daily exercise in wellness programs.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    }
+  },
+  "code_system": {
+    "resourceType": "CodeSystem",
+    "id": "cs.f6swbj8r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CodeSystem: Shareable wellness codes</p></div>"
+    },
+    "url": "http://example.org/CodeSystem/cs.f6swbj8r",
+    "name": "ShareableWellnessCodes",
+    "title": "Shareable Wellness Code System",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable code system for wellness program concepts.",
+    "content": "complete",
+    "count": 2,
+    "concept": [
+      {
+        "code": "wellness-plan",
+        "display": "Wellness Plan"
+      },
+      {
+        "code": "wellness-goal",
+        "display": "Wellness Goal"
+      }
+    ]
+  },
+  "library": {
+    "resourceType": "Library",
+    "id": "lib.34jcvj2j",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Library: Shareable wellness logic library</p></div>"
+    },
+    "url": "http://example.org/Library/lib.34jcvj2j",
+    "name": "ShareableWellnessLogic",
+    "title": "Shareable Wellness Logic Library",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable logic library for wellness quality measure evaluation.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/library-type",
+          "code": "logic-library",
+          "display": "Logic Library"
+        }
+      ],
+      "text": "Logic Library"
+    },
+    "content": [
+      {
+        "contentType": "text/cql",
+        "title": "Wellness Logic"
+      }
+    ]
+  },
+  "measure": {
+    "resourceType": "Measure",
+    "id": "meas.j847wxqy",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Measure: Shareable wellness compliance measure</p></div>"
+    },
+    "url": "http://example.org/Measure/meas.j847wxqy",
+    "name": "ShareableWellnessCompliance",
+    "title": "Shareable Wellness Compliance Measure",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable measure for tracking wellness program compliance.",
+    "scoring": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+          "code": "proportion",
+          "display": "Proportion"
+        }
+      ],
+      "text": "Proportion"
+    }
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.3kgkvtn4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Shareable wellness protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.3kgkvtn4",
+    "name": "ShareableWellnessProtocol",
+    "title": "Shareable Wellness Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable plan definition for wellness program protocols.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    }
+  },
+  "value_set": {
+    "resourceType": "ValueSet",
+    "id": "vs.s76uekfa",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ValueSet: Shareable wellness codes value set</p></div>"
+    },
+    "url": "http://example.org/ValueSet/vs.s76uekfa",
+    "name": "ShareableWellnessCodesVS",
+    "title": "Shareable Wellness Codes Value Set",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness Implementation Guide Authority",
+    "description": "A shareable value set containing wellness program codes.",
+    "compose": {
+      "include": [
+        {
+          "system": "http://example.org/CodeSystem/cs.f6swbj8r"
+        }
+      ]
+    }
+  }
+}

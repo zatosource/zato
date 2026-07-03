@@ -1,0 +1,59 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "malnutritionlongtermcare",
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Malnutrition Patient"
+  },
+  "dateTime": "2024-10-23T00:00:00Z",
+  "oralDiet": {
+    "type": [
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 435771000124106,
+          "display": "General healthful diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 436721000124103,
+          "display": "Increased energy diet"
+        }
+      },
+      {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 1055200005,
+          "display": "Increased protein diet"
+        }
+      }
+    ]
+  },
+  "supplement": {
+    "type": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 442921000124101,
+        "display": "Adult standard supplement"
+      }
+    },
+    "schedule": {
+      "timing": {
+        "repeat": {
+          "frequency": 3,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      }
+    },
+    "quantity": {
+      "value": 1,
+      "unit": "serving"
+    },
+    "instruction": "Ensure pudding 4oz cup, 1 serving 3 times per day with meals."
+  }
+}

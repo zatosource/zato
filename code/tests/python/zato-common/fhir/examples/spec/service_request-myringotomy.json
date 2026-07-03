@@ -1,0 +1,73 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "myringotomy",
+  "identifier": {
+    "system": "http://orionhealth.com/fhir/apps/referralids",
+    "value": "ret4421"
+  },
+  "basedOn": {
+    "display": "ServiceRequest for Myringotomy and insertion of short-term grommet"
+  },
+  "replaces": {
+    "display": "prior ServiceRequest"
+  },
+  "requisition": {
+    "value": 1234
+  },
+  "status": "active",
+  "intent": "order",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 103696004,
+      "display": "Patient referral to specialist"
+    }
+  },
+  "priority": "routine",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 172676009,
+        "display": "Myringotomy and insertion of short-term grommet"
+      },
+      "text": "Insertion of grommets"
+    }
+  },
+  "subject": {
+    "reference": "https://fhir.example.org/blaze/fhir/Patient/77662",
+    "display": "Beverly Weaver"
+  },
+  "encounter": {
+    "display": "Beverly Waver's encounter on 2014-02-14"
+  },
+  "occurrencePeriod": {
+    "end": "2014-03-14"
+  },
+  "authoredOn": "2014-02-14",
+  "requester": {
+    "reference": "https://fhir.example.org/blaze/fhir/Practitioner/77272",
+    "display": "Serena Shrink"
+  },
+  "performerType": {
+    "coding": {
+      "system": "http://orionhealth.com/fhir/apps/specialties",
+      "code": "ent",
+      "display": "ENT"
+    }
+  },
+  "performer": {
+    "reference": "https://fhir.example.org/blaze/fhir/Practitioner/76597",
+    "display": "Dr Dave"
+  },
+  "reason": {
+    "concept": {
+      "text": "For consideration of Grommets"
+    }
+  },
+  "note": {
+    "authorString": "Serena Shrink",
+    "time": "2014-02-14",
+    "text": "In the past 2 years Beverly has had 6 instances of rt-sided Otitis media. She is     falling behind her peers at school, and displaying some learning difficulties."
+  }
+}

@@ -1,0 +1,213 @@
+{
+  "resourceType": "SupplyDelivery",
+  "id": "mphodelivery",
+  "contained": [
+    {
+      "BiologicallyDerivedProduct": {
+        "id": "Item1",
+        "productCode": {
+          "coding": {
+            "code": "E0398"
+          }
+        },
+        "identifier": {
+          "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+          "value": "A9999E0398A999921123456000001"
+        },
+        "biologicalSourceEvent": {
+          "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+          "value": "A999921123456"
+        },
+        "processingFacility": {
+          "reference": "Organization/A9999"
+        },
+        "division": 1,
+        "productStatus": {
+          "code": "available"
+        },
+        "expirationDate": "2021-08-02T23:59:00-05:00",
+        "property": [
+          {
+            "type": {
+              "coding": {
+                "code": "ABORhD"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/ABORhD",
+                "code": 62,
+                "display": "A RhD Positive"
+              }
+            }
+          },
+          {
+            "type": {
+              "coding": {
+                "code": "Donor"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/CollectionType",
+                "code": "V",
+                "display": "Volunteer"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "BiologicallyDerivedProduct": {
+        "id": "Item2",
+        "productCode": {
+          "coding": {
+            "code": "E0398"
+          }
+        },
+        "identifier": {
+          "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+          "value": "A9999E0398A999921123457000001"
+        },
+        "biologicalSourceEvent": {
+          "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+          "value": "A999921123457"
+        },
+        "processingFacility": {
+          "reference": "Organization/A9999"
+        },
+        "division": 1,
+        "productStatus": {
+          "code": "available"
+        },
+        "expirationDate": "2021-07-31T23:59:00-05:00",
+        "property": [
+          {
+            "type": {
+              "coding": {
+                "code": "ABORhD"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/ABORhD",
+                "code": 51,
+                "display": "O RhD Positive"
+              }
+            }
+          },
+          {
+            "type": {
+              "coding": {
+                "code": "Donor"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/CollectionType",
+                "code": "V",
+                "display": "Volunteer"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "BiologicallyDerivedProduct": {
+        "id": "Item3",
+        "productCode": {
+          "coding": {
+            "code": "E0398"
+          }
+        },
+        "identifier": {
+          "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+          "value": "A9999E0398A999921123458000001"
+        },
+        "biologicalSourceEvent": {
+          "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+          "value": "A999921123458"
+        },
+        "processingFacility": {
+          "reference": "Organization/A9999"
+        },
+        "division": 1,
+        "productStatus": {
+          "code": "available"
+        },
+        "expirationDate": "2021-08-04T23:59:00-05:00",
+        "property": [
+          {
+            "type": {
+              "coding": {
+                "code": "ABORhD"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/ABORhD",
+                "code": 51,
+                "display": "O RhD Positive"
+              }
+            }
+          },
+          {
+            "type": {
+              "coding": {
+                "code": "Donor"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "https://www.isbt128.org/uri/CollectionType",
+                "code": "V",
+                "display": "Volunteer"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "identifier": {
+    "system": "https://www.isbt128.org/uri/ProductConsignment",
+    "value": "A999922123450101"
+  },
+  "status": "completed",
+  "type": {
+    "coding": {
+      "system": "http://hl7.org/fhir/supplydelivery-supplyitemtype",
+      "code": "biologicallyderivedproduct"
+    },
+    "text": "Blood Dispatch"
+  },
+  "stage": {
+    "coding": {
+      "system": "http://hl7.org/fhir/supplydelivery-stage",
+      "code": "dispatch",
+      "display": "Dispatch"
+    }
+  },
+  "suppliedItem": [
+    {
+      "quantity": {
+        "value": 3
+      },
+      "itemReference": {
+        "reference": "#Item1"
+      }
+    },
+    {
+      "itemReference": {
+        "reference": "#Item2"
+      }
+    },
+    {
+      "itemReference": {
+        "reference": "#Item3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "resourceType": "CarePlan",
+  "id": "preg",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "contained": [
+    {
+      "Condition": {
+        "id": "p1",
+        "clinicalStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "code": "active"
+          }
+        },
+        "verificationStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "code": "confirmed"
+          }
+        },
+        "code": {
+          "text": "pregnancy"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Practitioner": {
+        "id": "pr1",
+        "name": {
+          "family": "Midwife",
+          "given": "Mavis"
+        }
+      }
+    },
+    {
+      "Practitioner": {
+        "id": "pr2",
+        "name": {
+          "family": "Obstetrician",
+          "given": "Oscar"
+        }
+      }
+    },
+    {
+      "CareTeam": {
+        "id": "careteam",
+        "participant": [
+          {
+            "role": {
+              "coding": {
+                "system": "http://example.org/mysys",
+                "code": "lmc"
+              },
+              "text": "Midwife"
+            },
+            "member": {
+              "reference": "#pr1",
+              "display": "Mavis Midwife"
+            }
+          },
+          {
+            "role": {
+              "coding": {
+                "system": "http://example.org/mysys",
+                "code": "obs"
+              },
+              "text": "Obstretitian"
+            },
+            "member": {
+              "reference": "#pr2",
+              "display": "Oscar Obstetrician"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Goal": {
+        "id": "goal",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Maintain patient's health throughout pregnancy and ensure a healthy child"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Appointment": {
+        "id": "activity-1",
+        "status": "booked",
+        "description": "The first antenatal encounter. This is where a detailed physical examination is performed and the pregnanacy discussed with the mother-to-be.",
+        "start": "2013-02-14T10:38:00+00:00",
+        "end": "2013-02-14T10:50:00+00:00",
+        "requestedPeriod": {
+          "start": "2013-02-14",
+          "end": "2013-02-28"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        },
+        "participant": [
+          {
+            "actor": {
+              "reference": "Patient/1",
+              "display": "Eve Everywoman"
+            },
+            "required": true,
+            "status": "accepted"
+          },
+          {
+            "type": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND"
+              }
+            },
+            "actor": {
+              "reference": "#pr1",
+              "display": "Mavis Midwife"
+            },
+            "required": true,
+            "status": "accepted"
+          }
+        ]
+      }
+    },
+    {
+      "Appointment": {
+        "id": "activity-2",
+        "status": "proposed",
+        "description": "The second antenatal encounter. Discuss any issues that arose from the first antenatal encounter",
+        "requestedPeriod": {
+          "start": "2013-03-01",
+          "end": "2013-03-14"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        },
+        "participant": [
+          {
+            "actor": {
+              "reference": "Patient/1",
+              "display": "Eve Everywoman"
+            },
+            "required": true,
+            "status": "accepted"
+          },
+          {
+            "type": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND"
+              }
+            },
+            "actor": {
+              "reference": "#pr1",
+              "display": "Mavis Midwife"
+            },
+            "required": true,
+            "status": "accepted"
+          }
+        ]
+      }
+    },
+    {
+      "Appointment": {
+        "id": "activity-3",
+        "status": "proposed",
+        "description": "The delivery.",
+        "requestedPeriod": {
+          "start": "2013-09-01",
+          "end": "2013-09-14"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        },
+        "participant": [
+          {
+            "actor": {
+              "reference": "Patient/1",
+              "display": "Eve Everywoman"
+            },
+            "required": true,
+            "status": "accepted"
+          },
+          {
+            "type": {
+              "coding": {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND"
+              }
+            },
+            "actor": {
+              "reference": "#pr1",
+              "display": "Mavis Midwife"
+            },
+            "required": true,
+            "status": "accepted"
+          }
+        ]
+      }
+    }
+  ],
+  "extension": {
+    "valueDateTime": "2013-01-01"
+  },
+  "status": "active",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/1",
+    "display": "Eve Everywoman"
+  },
+  "period": {
+    "start": "2013-01-01",
+    "end": "2013-10-01"
+  },
+  "careTeam": {
+    "reference": "#careteam"
+  },
+  "addresses": {
+    "reference": {
+      "reference": "#p1",
+      "display": "pregnancy"
+    }
+  },
+  "goal": {
+    "reference": "#goal"
+  },
+  "activity": [
+    {
+      "plannedActivityReference": {
+        "display": "Prenatal vitamin MedicationRequest"
+      }
+    },
+    {
+      "extension": {
+        "valueUri": "http://orionhealth.com/fhir/careplan/1andetails"
+      },
+      "plannedActivityReference": {
+        "reference": "#activity-1"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "#activity-2"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "#activity-3"
+      }
+    }
+  ]
+}

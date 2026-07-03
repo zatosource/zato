@@ -1,0 +1,21 @@
+{
+  "resourceType": "MedicationStatement",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null
+      ]
+    }
+  },
+  "status": "recorded",
+  "medicationReference": {
+    "reference": "Medication/example"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "dateAsserted": "2015-02-22"
+}

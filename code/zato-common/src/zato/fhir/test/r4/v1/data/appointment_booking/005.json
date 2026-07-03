@@ -1,0 +1,811 @@
+{
+  "_meta": {
+    "scenario": "appointment_booking",
+    "instance": 5,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.66gkebvc",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Claudine Gérard</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8723889"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-6967"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Gérard",
+        "given": [
+          "Claudine"
+        ],
+        "text": "Claudine Gérard"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "947.743.3778",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "tvasquez@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1994-03-05",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "9069 Hall Cliff Suite 703"
+        ],
+        "city": "West Jimmy",
+        "state": "DC",
+        "postalCode": "17068",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.2ek3xkhn",
+        "display": "Dr. Clémence Henry"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.thps9vcg",
+      "display": "Meadowbrook Health Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.2ek3xkhn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Clémence Henry</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "4791056899"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Henry",
+        "given": [
+          "Clémence"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Clémence Henry"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-374-621-1738",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "79295 Kevin Views"
+        ],
+        "city": "Russomouth",
+        "state": "DE",
+        "postalCode": "30088",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.thps9vcg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Health Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3442061071"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Meadowbrook Health Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "8669513650",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "9416 Dunlap Neck Suite 780"
+        ],
+        "city": "Port Laura",
+        "state": "NV",
+        "postalCode": "23050",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.5w8b49zy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual checkup on 2024-04-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.66gkebvc",
+        "display": "Claudine Gérard"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2ek3xkhn",
+            "display": "Dr. Clémence Henry"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-04-21T08:15:00+00:00",
+        "end": "2024-04-21T08:51:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.thps9vcg",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vtbwr5m7",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.hxfcrj7v",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2024-12-12</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.66gkebvc",
+        "display": "Claudine Gérard"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2ek3xkhn",
+            "display": "Dr. Clémence Henry"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-12T15:30:00+00:00",
+        "end": "2024-12-12T16:18:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.thps9vcg",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vtbwr5m7",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.6c54ajpy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Wellness screening on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.66gkebvc",
+        "display": "Claudine Gérard"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2ek3xkhn",
+            "display": "Dr. Clémence Henry"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:00:00+00:00",
+        "end": "2025-06-15T12:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.thps9vcg",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.vtbwr5m7",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "appointment": {
+    "resourceType": "Appointment",
+    "id": "appt.ez8m8efg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Appointment: Follow-up wellness visit</p></div>"
+    },
+    "status": "booked",
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "appointmentType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+          "code": "FOLLOWUP",
+          "display": "A follow up visit"
+        }
+      ],
+      "text": "A follow up visit"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "Z00.00",
+            "display": "Annual wellness follow-up"
+          }
+        ],
+        "text": "Annual wellness follow-up"
+      }
+    ],
+    "start": "2025-11-14T09:00:00+00:00",
+    "end": "2025-11-14T09:30:00+00:00",
+    "minutesDuration": 30,
+    "slot": [
+      {
+        "reference": "Slot/slot.fq2vt39k"
+      }
+    ],
+    "created": "2025-06-15",
+    "participant": [
+      {
+        "actor": {
+          "reference": "Patient/pt.66gkebvc",
+          "display": "Claudine Gérard"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Practitioner/pr.2ek3xkhn",
+          "display": "Dr. Clémence Henry"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Location/loc.vtbwr5m7",
+          "display": "Meadowbrook Health Center - Main Office"
+        },
+        "required": "required",
+        "status": "accepted"
+      }
+    ]
+  },
+  "appointment_response": {
+    "resourceType": "AppointmentResponse",
+    "id": "ar.22h5ft2n",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AppointmentResponse: Patient accepted</p></div>"
+    },
+    "appointment": {
+      "reference": "Appointment/appt.ez8m8efg"
+    },
+    "start": "2025-11-14T09:00:00+00:00",
+    "end": "2025-11-14T09:30:00+00:00",
+    "participantType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "ATND",
+            "display": "attender"
+          }
+        ],
+        "text": "attender"
+      }
+    ],
+    "actor": {
+      "reference": "Patient/pt.66gkebvc",
+      "display": "Claudine Gérard"
+    },
+    "participantStatus": "accepted"
+  },
+  "schedule": {
+    "resourceType": "Schedule",
+    "id": "sched.mpgzak5s",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Schedule: Dr. Dr. Clémence Henry availability</p></div>"
+    },
+    "active": true,
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "actor": [
+      {
+        "reference": "Practitioner/pr.2ek3xkhn",
+        "display": "Dr. Clémence Henry"
+      },
+      {
+        "reference": "Location/loc.vtbwr5m7",
+        "display": "Meadowbrook Health Center - Main Office"
+      },
+      {
+        "reference": "HealthcareService/hs.ea58jk9y"
+      }
+    ],
+    "planningHorizon": {
+      "start": "2025-06-15",
+      "end": "2026-12-31"
+    }
+  },
+  "slot": {
+    "resourceType": "Slot",
+    "id": "slot.fq2vt39k",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Slot: Available appointment slot</p></div>"
+    },
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "schedule": {
+      "reference": "Schedule/sched.mpgzak5s"
+    },
+    "status": "busy",
+    "start": "2025-11-14T09:00:00+00:00",
+    "end": "2025-11-14T09:30:00+00:00"
+  },
+  "healthcare_service": {
+    "resourceType": "HealthcareService",
+    "id": "hs.ea58jk9y",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HealthcareService: General wellness services at Meadowbrook Health Center</p></div>"
+    },
+    "active": true,
+    "providedBy": {
+      "reference": "Organization/org.thps9vcg",
+      "display": "Meadowbrook Health Center"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "name": "General Wellness - Meadowbrook Health Center",
+    "appointmentRequired": true,
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "08:00:00",
+        "availableEndTime": "17:00:00"
+      }
+    ]
+  },
+  "endpoint": {
+    "resourceType": "Endpoint",
+    "id": "ep.9vtg54ye",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Endpoint: FHIR endpoint for Meadowbrook Health Center</p></div>"
+    },
+    "status": "active",
+    "connectionType": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest",
+      "display": "HL7 FHIR"
+    },
+    "name": "Meadowbrook Health Center FHIR Endpoint",
+    "managingOrganization": {
+      "reference": "Organization/org.thps9vcg",
+      "display": "Meadowbrook Health Center"
+    },
+    "payloadType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-payload-type",
+            "code": "any",
+            "display": "Any"
+          }
+        ],
+        "text": "Any"
+      }
+    ],
+    "address": "https://fhir.example.org/org.thps9vcg"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "resourceType": "Organization",
+  "id": "1832473e-2fe0-452d-abe9-3cdb9879522f",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": {
+        "{http://www.w3.org/1999/xhtml}a": null
+      }
+    }
+  },
+  "identifier": {
+    "system": "http://www.acme.org.au/units",
+    "value": "ClinLab"
+  },
+  "name": "Clinical Lab",
+  "contact": {
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1 555 234 1234",
+        "use": "work"
+      },
+      {
+        "system": "email",
+        "value": "contact@labs.acme.org",
+        "use": "work"
+      }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "resourceType": "Schedule",
+  "id": "example-hcs",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "active": true,
+  "serviceCategory": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/service-category",
+      "code": 8,
+      "display": "Counselling"
+    }
+  },
+  "serviceType": {
+    "reference": {
+      "reference": "HealthcareService/example",
+      "display": "Burgers UMC, Posttraumatic Stress Disorder Clinic"
+    }
+  },
+  "specialty": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 47505003,
+      "display": "Posttraumatic stress disorder"
+    }
+  },
+  "name": "Burgers UMC, Posttraumatic Stress Disorder counselling",
+  "actor": {
+    "reference": "Location/1",
+    "display": "Burgers UMC, South Wing, second floor"
+  },
+  "planningHorizon": {
+    "start": "2023-12-25T09:15:00Z",
+    "end": "2023-12-25T09:30:00Z"
+  }
+}

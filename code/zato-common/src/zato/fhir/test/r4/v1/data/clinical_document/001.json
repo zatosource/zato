@@ -1,0 +1,503 @@
+{
+  "_meta": {
+    "scenario": "clinical_document",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.b42dmqts",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Tiffany Flores</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1097633"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8034"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Flores",
+        "given": [
+          "Tiffany"
+        ],
+        "text": "Tiffany Flores"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-635-485-2581x64559",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "kempdeborah@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1961-04-13",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "84781 Collins Dam"
+        ],
+        "city": "South Samantha",
+        "state": "TN",
+        "postalCode": "41494",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.mrsde2ws",
+        "display": "Dr. Julie Gilbert"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.a82njuz9",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.x4dz5tu3",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document creation on 2024-07-13</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b42dmqts",
+        "display": "Tiffany Flores"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.mrsde2ws",
+            "display": "Dr. Julie Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-13T14:15:00+00:00",
+        "end": "2024-07-13T15:03:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a82njuz9",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.f378cm38",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rxmqf6vb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document review on 2024-11-21</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b42dmqts",
+        "display": "Tiffany Flores"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.mrsde2ws",
+            "display": "Dr. Julie Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-21T13:15:00+00:00",
+        "end": "2024-11-21T13:51:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a82njuz9",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.f378cm38",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.tw4g6s3h",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.b42dmqts",
+        "display": "Tiffany Flores"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.mrsde2ws",
+            "display": "Dr. Julie Gilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T12:00:00+00:00",
+        "end": "2025-06-15T12:30:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.a82njuz9",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.f378cm38",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.qej43aep",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Clinical document for Tiffany Flores</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.b42dmqts",
+      "display": "Tiffany Flores"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.tw4g6s3h"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.mrsde2ws",
+        "display": "Dr. Julie Gilbert"
+      }
+    ],
+    "title": "Clinical Document - Tiffany Flores",
+    "custodian": {
+      "reference": "Organization/org.a82njuz9",
+      "display": "Green Valley Pharmacy"
+    },
+    "section": [
+      {
+        "title": "Reason for Visit",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29299-5",
+              "display": "Reason for visit"
+            }
+          ],
+          "text": "Reason for visit"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for routine wellness visit and documentation review.</p></div>"
+        }
+      },
+      {
+        "title": "Assessment",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51848-0",
+              "display": "Assessment"
+            }
+          ],
+          "text": "Assessment"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient is in good health. All preventive care measures are up to date. No new concerns identified.</p></div>"
+        }
+      }
+    ]
+  },
+  "catalog": {
+    "resourceType": "CatalogEntry",
+    "id": "ce.gzf9hbym",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CatalogEntry: Wellness visit service catalog entry</p></div>"
+    },
+    "orderable": true,
+    "referencedItem": {
+      "reference": "ActivityDefinition/ad_placeholder.arvwypka"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/resource-types",
+          "code": "ActivityDefinition",
+          "display": "ActivityDefinition"
+        }
+      ],
+      "text": "ActivityDefinition"
+    },
+    "status": "active",
+    "validityPeriod": {
+      "start": "2025-01-01"
+    }
+  }
+}

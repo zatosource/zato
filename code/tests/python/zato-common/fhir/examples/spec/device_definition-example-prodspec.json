@@ -1,0 +1,10 @@
+{
+  "resourceType": "DeviceDefinition",
+  "id": "example-prodspec",
+  "identifier": {
+    "value": 789123
+  },
+  "status": "active",
+  "experimental": true,
+  "url": "http://hl7.org/fhir/DeviceDefinition/example-prodspec"
+}

@@ -1,0 +1,101 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "apply-operation-response",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "contained": [
+    {
+      "Medication": {
+        "id": "citalopramMedication",
+        "code": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 200371
+          },
+          "text": "citalopram"
+        },
+        "form": {
+          "coding": {
+            "system": "http://snomed.info/sct",
+            "code": 385055001,
+            "display": "Tablet (basic dose form)"
+          },
+          "text": "Tablet dose form"
+        },
+        "ingredient": {
+          "itemReference": {
+            "reference": "#citalopramSubstance"
+          },
+          "amount": {
+            "numerator": {
+              "value": 20,
+              "unit": "mg"
+            },
+            "denominator": {
+              "value": 1,
+              "unit": "{tbl}"
+            }
+          }
+        }
+      }
+    },
+    {
+      "Substance": {
+        "id": "citalopramSubstance",
+        "code": {
+          "coding": {
+            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "code": 2556
+          },
+          "text": "citalopram"
+        }
+      }
+    }
+  ],
+  "status": "draft",
+  "intent": "proposal",
+  "medicationReference": {
+    "reference": "#citalopramMedication"
+  },
+  "subject": {
+    "reference": "Patient/124"
+  },
+  "instantiates": "http://example.org/fhir/ActivityDefinition/citalopramPrescription",
+  "dosageInstruction": {
+    "simple": {
+      "text": "1 tablet oral 1 time daily",
+      "timing": {
+        "repeat": {
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      },
+      "route": {
+        "coding": {
+          "code": 26643006,
+          "display": "Oral route (qualifier value)"
+        },
+        "text": "Oral route (qualifier value)"
+      },
+      "doseAndRate": {
+        "type": {
+          "text": "ordered"
+        },
+        "doseQuantity": {
+          "value": 1,
+          "unit": "{tbl}"
+        }
+      }
+    }
+  },
+  "dispenseRequest": {
+    "numberOfRepeatsAllowed": 3,
+    "quantity": {
+      "value": 30,
+      "unit": "{tbl}"
+    }
+  }
+}

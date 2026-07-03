@@ -1,0 +1,101 @@
+{
+  "resourceType": "Specimen",
+  "id": "liver-biopsy",
+  "identifier": [
+    {
+      "system": "http://lab.acme.org/specimens/2024",
+      "value": "LB-2024-001"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "ACSN",
+          "display": "Accession ID"
+        }
+      },
+      "system": "http://pathology.acme.org/accession",
+      "value": "PB24-00789"
+    }
+  ],
+  "status": "available",
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 119376003,
+      "display": "Tissue specimen"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Patient"
+  },
+  "receivedTime": "2024-03-15T10:30:00Z",
+  "request": {
+    "reference": "ServiceRequest/liver-biopsy-request"
+  },
+  "collection": {
+    "collector": {
+      "reference": "Practitioner/gastroenterologist"
+    },
+    "collectedDateTime": "2024-03-15T09:45:00Z",
+    "quantity": {
+      "value": 1.5,
+      "unit": "cm",
+      "system": "http://unitsofmeasure.org",
+      "code": "cm"
+    },
+    "method": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 129314006,
+        "display": "Biopsy - action"
+      }
+    },
+    "bodySite": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 10200004,
+          "display": "Liver structure"
+        }
+      }
+    },
+    "procedure": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 62438007,
+        "display": "Percutaneous needle biopsy of liver"
+      }
+    }
+  },
+  "processing": {
+    "description": "Fixed in 10% neutral buffered formalin",
+    "additive": {
+      "concept": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0371",
+          "code": "F10",
+          "display": "10% Formalin"
+        }
+      }
+    },
+    "timeDateTime": "2024-03-15T10:45:00Z"
+  },
+  "container": {
+    "deviceCanonical": "http://hl7.org/fhir/Device/specimen-container-formalin",
+    "specimenQuantity": {
+      "value": 1,
+      "unit": "specimen"
+    }
+  },
+  "condition": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 48883003
+    }
+  },
+  "note": {
+    "text": "Core biopsy specimen obtained for evaluation of hepatic steatosis and fibrosis. Adequate tissue for histopathological assessment."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "resourceType": "ValueSet",
+  "id": "measure-supplemental-data-example",
+  "extension": [
+    {
+      "valueCode": "cqi"
+    },
+    {
+      "valueCode": "informative"
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/measure-supplemental-data-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3189"
+  },
+  "version": "6.0.0",
+  "name": "MeasureSupplementalDataExample",
+  "title": "Measure Supplemental Data Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "Supplemental data in a population for measuring purposes.",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/measure-supplemental-data-example"
+    }
+  }
+}

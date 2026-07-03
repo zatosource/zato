@@ -1,0 +1,854 @@
+{
+  "_meta": {
+    "scenario": "immunization_visit",
+    "instance": 6,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.pan52bsd",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 이 하은</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6153093"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3887"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "하은"
+        ],
+        "text": "이 하은"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "628.200.5238x309",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "hillbrandi@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1994-07-09",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "9818 Hughes Prairie Apt. 628"
+        ],
+        "city": "East Jamieside",
+        "state": "NV",
+        "postalCode": "88966",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.x59ex42x",
+        "display": "김 지영"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.px9ffzsv",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.x59ex42x",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 김 지영</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "9582895967"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "김",
+        "given": [
+          "지영"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "김 지영"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "9556786439",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "1345 Kenneth Way"
+        ],
+        "city": "South Robert",
+        "state": "NM",
+        "postalCode": "83161",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.px9ffzsv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Oakwood Family Medicine</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2326748774"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Oakwood Family Medicine",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-774-487-0708x13249",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "6439 Kenneth Station"
+        ],
+        "city": "Andrewmouth",
+        "state": "RI",
+        "postalCode": "28634",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.drnry5c4",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization visit on 2024-07-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization visit"
+            }
+          ],
+          "text": "Immunization visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pan52bsd",
+        "display": "이 하은"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.x59ex42x",
+            "display": "김 지영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-15T12:15:00+00:00",
+        "end": "2024-07-15T13:03:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization visit"
+            }
+          ],
+          "text": "Immunization visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.px9ffzsv",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t2sszrpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.ae97832x",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization follow-up on 2025-02-05</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization follow-up"
+            }
+          ],
+          "text": "Immunization follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pan52bsd",
+        "display": "이 하은"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.x59ex42x",
+            "display": "김 지영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-05T13:45:00+00:00",
+        "end": "2025-02-05T14:36:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization follow-up"
+            }
+          ],
+          "text": "Immunization follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.px9ffzsv",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t2sszrpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.dq29eg8u",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Immunization review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Immunization review"
+            }
+          ],
+          "text": "Immunization review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.pan52bsd",
+        "display": "이 하은"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.x59ex42x",
+            "display": "김 지영"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:30:00+00:00",
+        "end": "2025-06-15T17:11:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Immunization review"
+            }
+          ],
+          "text": "Immunization review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.px9ffzsv",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.t2sszrpz",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "immunization": {
+    "resourceType": "Immunization",
+    "id": "imm.38y3phmg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Immunization: Influenza, injectable, quadrivalent</p></div>"
+    },
+    "status": "completed",
+    "vaccineCode": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/cvx",
+          "code": "150",
+          "display": "Influenza, injectable, quadrivalent"
+        }
+      ],
+      "text": "Influenza, injectable, quadrivalent"
+    },
+    "patient": {
+      "reference": "Patient/pt.pan52bsd",
+      "display": "이 하은"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.dq29eg8u"
+    },
+    "occurrenceDateTime": "2025-06-15T10:42:00+00:00",
+    "primarySource": true,
+    "location": {
+      "reference": "Location/loc.t2sszrpz",
+      "display": "Oakwood Family Medicine - Main Office"
+    },
+    "site": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "368208006",
+          "display": "Left upper arm structure"
+        }
+      ],
+      "text": "Left upper arm structure"
+    },
+    "route": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "34206005",
+          "display": "Subcutaneous route"
+        }
+      ],
+      "text": "Subcutaneous route"
+    },
+    "doseQuantity": {
+      "value": 0.5,
+      "unit": "mL",
+      "system": "http://unitsofmeasure.org",
+      "code": "mL"
+    },
+    "performer": [
+      {
+        "function": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0443",
+              "code": "AP",
+              "display": "Administering Provider"
+            }
+          ],
+          "text": "Administering Provider"
+        },
+        "actor": {
+          "reference": "Practitioner/pr.x59ex42x",
+          "display": "김 지영"
+        }
+      }
+    ],
+    "lotNumber": "LOT487837",
+    "expirationDate": "2026-07-28"
+  },
+  "immunization_eval": {
+    "resourceType": "ImmunizationEvaluation",
+    "id": "ie.m2yjagbx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ImmunizationEvaluation: Dose valid</p></div>"
+    },
+    "status": "completed",
+    "patient": {
+      "reference": "Patient/pt.pan52bsd",
+      "display": "이 하은"
+    },
+    "date": "2025-06-15T10:42:00+00:00",
+    "targetDisease": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "6142004",
+          "display": "Influenza"
+        }
+      ],
+      "text": "Influenza"
+    },
+    "immunizationEvent": {
+      "reference": "Immunization/imm.38y3phmg"
+    },
+    "doseStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status",
+          "code": "valid",
+          "display": "Valid"
+        }
+      ],
+      "text": "Valid"
+    },
+    "doseStatusReason": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status-reason",
+            "code": "administer",
+            "display": "Administered"
+          }
+        ],
+        "text": "Administered"
+      }
+    ],
+    "series": "Annual influenza",
+    "doseNumberPositiveInt": 1,
+    "seriesDosesPositiveInt": 1
+  },
+  "immunization_rec": {
+    "resourceType": "ImmunizationRecommendation",
+    "id": "ir.qak859cx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ImmunizationRecommendation: Next annual influenza dose</p></div>"
+    },
+    "patient": {
+      "reference": "Patient/pt.pan52bsd",
+      "display": "이 하은"
+    },
+    "date": "2025-06-15T10:42:00+00:00",
+    "authority": {
+      "reference": "Organization/org.px9ffzsv",
+      "display": "Oakwood Family Medicine"
+    },
+    "recommendation": [
+      {
+        "vaccineCode": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/cvx",
+                "code": "150",
+                "display": "Influenza, injectable, quadrivalent"
+              }
+            ],
+            "text": "Influenza, injectable, quadrivalent"
+          }
+        ],
+        "targetDisease": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "6142004",
+              "display": "Influenza"
+            }
+          ],
+          "text": "Influenza"
+        },
+        "forecastStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
+              "code": "due",
+              "display": "Due"
+            }
+          ],
+          "text": "Due"
+        },
+        "dateCriterion": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "30981-5",
+                  "display": "Earliest date to give"
+                }
+              ],
+              "text": "Earliest date to give"
+            },
+            "value": "2026-06-01"
+          }
+        ],
+        "doseNumberPositiveInt": 1
+      }
+    ]
+  },
+  "medication": {
+    "resourceType": "Medication",
+    "id": "med.sh9b6edb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Medication: Influenza, injectable, quadrivalent</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/cvx",
+          "code": "150",
+          "display": "Influenza, injectable, quadrivalent"
+        }
+      ],
+      "text": "Influenza, injectable, quadrivalent"
+    },
+    "status": "active",
+    "form": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385219001",
+          "display": "Injection solution"
+        }
+      ],
+      "text": "Injection solution"
+    },
+    "batch": {
+      "lotNumber": "LOT487837",
+      "expirationDate": "2026-07-28"
+    }
+  },
+  "medication_admin": {
+    "resourceType": "MedicationAdministration",
+    "id": "ma.8gapqehq",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationAdministration: Influenza, injectable, quadrivalent administered</p></div>"
+    },
+    "status": "completed",
+    "medicationReference": {
+      "reference": "Medication/med.sh9b6edb",
+      "display": "Influenza, injectable, quadrivalent"
+    },
+    "subject": {
+      "reference": "Patient/pt.pan52bsd",
+      "display": "이 하은"
+    },
+    "context": {
+      "reference": "Encounter/enc.dq29eg8u"
+    },
+    "effectiveDateTime": "2025-06-15T10:42:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.x59ex42x",
+          "display": "김 지영"
+        }
+      }
+    ],
+    "dosage": {
+      "route": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "34206005",
+            "display": "Subcutaneous route"
+          }
+        ],
+        "text": "Subcutaneous route"
+      },
+      "dose": {
+        "value": 0.5,
+        "unit": "mL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL"
+      },
+      "site": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "368208006",
+            "display": "Left upper arm structure"
+          }
+        ],
+        "text": "Left upper arm structure"
+      }
+    }
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.xt68xqyu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.pan52bsd"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.x59ex42x",
+          "display": "김 지영"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.px9ffzsv"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "resourceType": "Encounter",
+  "id": "colonoscopy",
+  "status": "completed",
+  "class": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "IMP",
+      "display": "inpatient encounter"
+    }
+  },
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 73761001,
+      "display": "Colonoscopy (procedure)"
+    },
+    "text": "Colonoscopy"
+  },
+  "subject": {
+    "reference": "Patient/glossy",
+    "display": "Henry Levin the 7th"
+  },
+  "serviceProvider": {
+    "reference": "Organization/1",
+    "display": "Gastroenterology @ Acme Hospital"
+  },
+  "participant": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        "code": "PART"
+      }
+    },
+    "actor": {
+      "reference": "Practitioner/example",
+      "display": "Dr Adam Careful"
+    }
+  },
+  "actualPeriod": {
+    "start": "2013-03-11",
+    "end": "2013-03-20"
+  },
+  "reason": {
+    "value": {
+      "concept": {
+        "text": "Routine investigation"
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "resourceType": "Provenance",
+  "id": "example-diagnosticreport-sig",
+  "target": {
+    "reference": "DiagnosticReport/101"
+  },
+  "recorded": "2011-03-04T08:30:00+11:00",
+  "policy": "http://example.org/policy/Reviewed",
+  "activity": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/iso-21089-lifecycle",
+      "code": "verify"
+    }
+  },
+  "patient": {
+    "reference": "Patient/pat2"
+  },
+  "agent": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+        "code": "verifier",
+        "display": "Verifier"
+      }
+    },
+    "who": {
+      "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f"
+    }
+  },
+  "signature": {
+    "type": {
+      "system": "http://uri.etsi.org/01903/v1.2.2",
+      "code": "ProofOfapproval",
+      "display": "Proof of approval"
+    },
+    "when": "2011-03-04T08:30:00+11:00",
+    "who": {
+      "reference": "Organization/1832473e-2fe0-452d-abe9-3cdb9879522f"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "resourceType": "CommunicationRequest",
+  "id": "example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "active",
+  "intent": "proposal",
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "encounter": {
+    "reference": "Encounter/example"
+  }
+}

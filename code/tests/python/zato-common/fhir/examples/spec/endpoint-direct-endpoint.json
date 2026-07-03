@@ -1,0 +1,28 @@
+{
+  "resourceType": "Endpoint",
+  "id": "direct-endpoint",
+  "status": "active",
+  "connectionType": {
+    "coding": {
+      "code": "direct-project"
+    }
+  },
+  "name": "MARTIN SMIETANKA",
+  "managingOrganization": {
+    "reference": "Organization/f201"
+  },
+  "payload": {
+    "type": {
+      "coding": {
+        "system": "urn:oid:1.3.6.1.4.1.19376.1.2.3",
+        "code": "urn:hl7-org:sdwg:ccda-structuredBody:1.1"
+      }
+    },
+    "mimeType": [
+      "text/x-hl7-text+xml",
+      "application/fhir+xml",
+      "application/fhir+json"
+    ]
+  },
+  "address": "mailto:MARTIN.SMIETANKA@directnppes.com"
+}

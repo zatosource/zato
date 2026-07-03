@@ -1,0 +1,23 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "ft4",
+  "status": "active",
+  "intent": "reflex-order",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://loinc.org",
+        "code": "3024-7",
+        "display": "Thyroxine (T4) free [Mass/volume] in Serum or Plasma"
+      },
+      "text": "Free T4"
+    }
+  },
+  "subject": {
+    "reference": "Patient/pat2"
+  },
+  "occurrenceDateTime": "2015-08-27T09:33:27+07:00",
+  "requester": {
+    "reference": "Practitioner/example"
+  }
+}

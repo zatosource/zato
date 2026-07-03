@@ -1,0 +1,121 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-death-or-major-injury-reduce-parachute-vs-empty-backpack",
+  "meta": {
+    "versionId": 6,
+    "lastUpdated": "2025-02-17T13:56:56.719Z",
+    "profile": [
+      "http://hl7.org/fhir/uv/ebm/StructureDefinition/comparative-evidence",
+      "http://hl7.org/fhir/uv/ebm/StructureDefinition/single-study-evidence"
+    ]
+  },
+  "url": "http://hl7.org/fhir/Evidence/example-death-or-major-injury-reduce-parachute-vs-empty-backpack",
+  "identifier": {
+    "type": {
+      "text": "FEvIR Object Identifier"
+    },
+    "system": "urn:ietf:rfc:3986",
+    "value": "https://fevir.net/FOI/318273",
+    "assigner": {
+      "display": "Computable Publishing LLC"
+    }
+  },
+  "title": "Death or Major Traumatic Injury on Impact comparing intervention vs. comparator",
+  "citeAs": "Death or Major Traumatic Injury on Impact comparing intervention vs. comparator [Database Entry: FHIR Evidence Resource]. Contributors: Joanne Dehnbostel [Authors/Creators]. In: Fast Evidence Interoperability Resources (FEvIR) Platform, FOI 318273. Revised 2025-02-17. Available at: https://fevir.net/resources/Evidence/318273. Computable resource at: https://fevir.net/resources/Evidence/318273#json.",
+  "status": "active",
+  "author": {
+    "name": "Joanne Dehnbostel"
+  },
+  "publisher": "Computable Publishing LLC",
+  "contact": {
+    "telecom": {
+      "system": "email",
+      "value": "support@computablepublishing.com"
+    }
+  },
+  "copyright": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "relatesTo": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+        "code": "part-of",
+        "display": "Part Of"
+      }
+    },
+    "targetReference": {
+      "reference": "Composition/312172",
+      "type": "Composition",
+      "display": "PARACHUTE Trial Results"
+    }
+  },
+  "description": "Example Evidence Resource for EBMonFHIR IG using SingleStudyEvidence and ComparativeEvidence Profiles",
+  "variableDefinition": [
+    {
+      "variableRole": "population",
+      "observed": {
+        "reference": "Group/292955",
+        "type": "Group",
+        "display": "PARACHUTE Trial Participants"
+      }
+    },
+    {
+      "variableRole": "exposure",
+      "comparatorCategory": "Parachute trial participants assigned an empty backpack",
+      "observed": {
+        "reference": "EvidenceVariable/297490",
+        "type": "EvidenceVariable",
+        "display": "GroupAssignment: Jumping from aircraft with parachute vs. Jumping from aircraft with empty backpack"
+      }
+    },
+    {
+      "variableRole": "outcome",
+      "observed": {
+        "reference": "EvidenceVariable/297743",
+        "type": "EvidenceVariable",
+        "display": "Death or Major Traumatic Injury on Impact"
+      }
+    }
+  ],
+  "synthesisType": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/synthesis-type",
+      "code": "NotApplicable",
+      "display": "not applicable"
+    }
+  },
+  "studyDesign": {
+    "coding": {
+      "system": "https://fevir.net/sevco",
+      "code": "SEVCO:01003",
+      "display": "randomized assignment"
+    }
+  },
+  "statistic": {
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/sevco",
+        "code": "STATO:0000614",
+        "display": "absolute difference"
+      }
+    },
+    "quantity": {
+      "value": 0
+    },
+    "sampleSize": {
+      "knownDataCount": 23
+    },
+    "attributeEstimate": {
+      "type": {
+        "coding": {
+          "system": "https://fevir.net/sevco",
+          "code": "STATO:0000700",
+          "display": "p-value"
+        }
+      },
+      "quantity": {
+        "value": 0.9,
+        "comparator": ">"
+      }
+    }
+  }
+}

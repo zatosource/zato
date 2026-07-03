@@ -1,0 +1,133 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "example-metadata-2",
+  "url": "http://hl7.org/fhir/ConceptMap/example-metadata-2",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.14.4"
+  },
+  "version": 20220721,
+  "name": "ExampleMetadata",
+  "title": "Metadata Example",
+  "status": "draft",
+  "experimental": true,
+  "date": "2022-07-21",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "This is an example concept map that illustrates usage of the metadata resource elements introduced in R5",
+  "approvalDate": "2021-07-21",
+  "lastReviewDate": "2022-07-21",
+  "effectivePeriod": {
+    "start": "2022-08-01",
+    "end": "2023-07-31"
+  },
+  "topic": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/definition-topic",
+      "code": "treatment",
+      "display": "Treatment"
+    }
+  },
+  "author": {
+    "name": "ACME ConceptMap Development",
+    "telecom": {
+      "system": "url",
+      "value": "http://acme.org/development"
+    }
+  },
+  "editor": {
+    "name": "ACME ConceptMap Management",
+    "telecom": {
+      "system": "url",
+      "value": "http://acme.org/management"
+    }
+  },
+  "reviewer": {
+    "name": "Society for Creative ConceptMap Review",
+    "telecom": {
+      "system": "url",
+      "value": "http://example.org/sccr"
+    }
+  },
+  "endorser": {
+    "name": "National Foundation for ConceptMap Quality",
+    "telecom": {
+      "system": "url",
+      "value": "http://example.org/nfcq"
+    }
+  },
+  "relatedArtifact": [
+    {
+      "type": "derived-from",
+      "resource": "http://hl7.org/fhir/ConceptMap/example"
+    },
+    {
+      "type": "predecessor",
+      "resource": "http://hl7.org/fhir/ConceptMap/example-metadata|20210701"
+    }
+  ],
+  "sourceScopeUri": "http://hl7.org/fhir/ValueSet/address-use",
+  "targetScopeUri": "http://terminology.hl7.org/ValueSet/v3-AddressUse",
+  "group": {
+    "source": "http://hl7.org/fhir/address-use",
+    "target": "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
+    "element": [
+      {
+        "code": "home",
+        "display": "Home",
+        "target": {
+          "code": "H",
+          "display": "home address",
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "work",
+        "display": "Work",
+        "target": {
+          "code": "WP",
+          "display": "work place",
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "temp",
+        "display": "Temporary",
+        "target": {
+          "code": "TMP",
+          "display": "temporary address",
+          "relationship": "equivalent"
+        }
+      },
+      {
+        "code": "old",
+        "display": "Old / Incorrect",
+        "target": {
+          "code": "BAD",
+          "display": "bad address",
+          "relationship": "not-related-to",
+          "comment": "In the HL7 v3 AD, old is handled by the usablePeriod element, but you have to provide a time, there's no simple equivalent of flagging an address as old"
+        }
+      }
+    ],
+    "unmapped": {
+      "mode": "fixed",
+      "code": "temp",
+      "display": "temp",
+      "relationship": "related-to"
+    }
+  }
+}

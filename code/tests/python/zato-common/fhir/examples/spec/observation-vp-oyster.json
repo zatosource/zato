@@ -1,0 +1,99 @@
+{
+  "resourceType": "Observation",
+  "id": "vp-oyster",
+  "contained": [
+    {
+      "Specimen": {
+        "id": "bed1",
+        "note": {
+          "text": "Live Oysters Acc#20171014-1234 from Bed 1"
+        }
+      }
+    },
+    {
+      "Specimen": {
+        "id": "bed2",
+        "note": {
+          "text": "Live Oysters Acc#20171014-1234 from Bed 2"
+        }
+      }
+    },
+    {
+      "Group": {
+        "id": "group1",
+        "type": "animal",
+        "membership": "enumerated",
+        "member": [
+          {
+            "entity": {
+              "reference": "#bed1"
+            }
+          },
+          {
+            "entity": {
+              "reference": "#bed2"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "identifier": {
+    "use": "official",
+    "system": "http://sonomacounty.ca.gov/Health/Public-Health/Laboratory",
+    "value": "20171014-1234"
+  },
+  "status": "preliminary",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "41857-4",
+        "display": "Vibrio parahaemolyticus DNA [Presence] in Specimen by NAA with probe detection"
+      },
+      {
+        "system": "http://sonomacounty.ca.gov/Health/Public-Health/Laboratory/test-codes",
+        "code": "VP MULTI PCR",
+        "display": "VP MULTI PCR"
+      }
+    ],
+    "text": "OYSTER TESTING"
+  },
+  "subject": {
+    "display": "Sonoma oyster farm"
+  },
+  "effectiveDateTime": "2017-10-12",
+  "issued": "2017-10-14T23:11:24Z",
+  "performer": {
+    "reference": "Practitioner/f005",
+    "display": "A. Langeveld"
+  },
+  "valueCodeableConcept": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": 10828004,
+        "display": "Positive (qualifier value)"
+      },
+      {
+        "system": "http://sonomacounty.ca.gov/Health/Public-Health/Laboratory/result-codes",
+        "code": "POSITIVE",
+        "display": "POSITIVE"
+      }
+    ],
+    "text": "POSITIVE"
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "A",
+      "display": "Abnormal"
+    }
+  },
+  "specimen": {
+    "reference": "#group1"
+  },
+  "referenceRange": {
+    "text": "NEGATIVE"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "resourceType": "ValueSet",
+  "id": "security-label-data-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/security-label-data-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3013"
+  },
+  "version": "2.0.0",
+  "name": "SecurityLabelDataExamples",
+  "title": "Example set of Data Security Labels",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "A sample of security labels from [Healthcare Privacy and Security Classification System](security-labels.html#hcs) used on data (.meta.security) to indicate confidentialityCode classification and maybe sensitivity codes.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+        "concept": [
+          {
+            "code": "N"
+          },
+          {
+            "code": "R"
+          }
+        ]
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "concept": [
+          {
+            "code": "ETH"
+          },
+          {
+            "code": "PSY"
+          },
+          {
+            "code": "STD"
+          }
+        ]
+      }
+    ]
+  }
+}

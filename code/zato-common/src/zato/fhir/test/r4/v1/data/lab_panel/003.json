@@ -1,0 +1,1385 @@
+{
+  "_meta": {
+    "scenario": "lab_panel",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.2g7uf362",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 강 주원</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6936956"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-2497"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "강",
+        "given": [
+          "주원"
+        ],
+        "text": "강 주원"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(967)435-3698x1068",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "dunlapkristin@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1974-08-26",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "724 Richard Radial Apt. 255"
+        ],
+        "city": "North Sarah",
+        "state": "PR",
+        "postalCode": "23137",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.8wneya3h",
+        "display": "이 수빈"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.89jbacpq",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.8wneya3h",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 이 수빈</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3785237762"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "수빈"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "이 수빈"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "917.572.0406x29212",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "3960 Steven Wells Apt. 185"
+        ],
+        "city": "West Susantown",
+        "state": "NV",
+        "postalCode": "38910",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.89jbacpq",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "3032854848"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(867)267-9577x31209",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "065 Christine Shoal Suite 465"
+        ],
+        "city": "Cathybury",
+        "state": "OR",
+        "postalCode": "47947",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.rs7hmtdq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab panel order on 2024-07-13</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.2g7uf362",
+        "display": "강 주원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8wneya3h",
+            "display": "이 수빈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-13T10:15:00+00:00",
+        "end": "2024-07-13T10:46:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab panel order"
+            }
+          ],
+          "text": "Lab panel order"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.89jbacpq",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.af33n7cz",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.5tcqzuxg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab follow-up on 2024-11-20</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.2g7uf362",
+        "display": "강 주원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8wneya3h",
+            "display": "이 수빈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-11-20T16:30:00+00:00",
+        "end": "2024-11-20T17:15:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab follow-up"
+            }
+          ],
+          "text": "Lab follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.89jbacpq",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.af33n7cz",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.adebkmuf",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Lab results review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.2g7uf362",
+        "display": "강 주원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.8wneya3h",
+            "display": "이 수빈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:45:00+00:00",
+        "end": "2025-06-15T17:34:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Lab results review"
+            }
+          ],
+          "text": "Lab results review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.89jbacpq",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.af33n7cz",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.w9bfxpxw",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 210 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.rs7hmtdq"
+      },
+      "effectiveDateTime": "2024-07-13T08:52:00+00:00",
+      "valueQuantity": {
+        "value": 210,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.84f674wb"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.k45f6t77",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 45 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.rs7hmtdq"
+      },
+      "effectiveDateTime": "2024-07-13T11:57:00+00:00",
+      "valueQuantity": {
+        "value": 45,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.84f674wb"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.f8f5q825",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.rs7hmtdq"
+      },
+      "effectiveDateTime": "2024-07-13T14:02:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.84f674wb"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.2edackwy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 180 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.rs7hmtdq"
+      },
+      "effectiveDateTime": "2024-07-13T16:11:00+00:00",
+      "valueQuantity": {
+        "value": 180,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.84f674wb"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.hjhebcq6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 195 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.5tcqzuxg"
+      },
+      "effectiveDateTime": "2024-11-20T08:44:00+00:00",
+      "valueQuantity": {
+        "value": 195,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.3k5k82vx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.6uxz5feh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 50 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.5tcqzuxg"
+      },
+      "effectiveDateTime": "2024-11-20T15:14:00+00:00",
+      "valueQuantity": {
+        "value": 50,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.3k5k82vx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.25wczgwd",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 125 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.5tcqzuxg"
+      },
+      "effectiveDateTime": "2024-11-20T15:07:00+00:00",
+      "valueQuantity": {
+        "value": 125,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.3k5k82vx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.22wnf47r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 160 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.5tcqzuxg"
+      },
+      "effectiveDateTime": "2024-11-20T14:32:00+00:00",
+      "valueQuantity": {
+        "value": 160,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.3k5k82vx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.crafnb3r",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Total cholesterol: 182 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093-3",
+            "display": "Total cholesterol"
+          }
+        ],
+        "text": "Total cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.adebkmuf"
+      },
+      "effectiveDateTime": "2025-06-15T09:26:00+00:00",
+      "valueQuantity": {
+        "value": 182,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.zpncpc5y"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.dh3kzwcn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HDL cholesterol: 55 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2085-9",
+            "display": "HDL cholesterol"
+          }
+        ],
+        "text": "HDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.adebkmuf"
+      },
+      "effectiveDateTime": "2025-06-15T13:13:00+00:00",
+      "valueQuantity": {
+        "value": 55,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.zpncpc5y"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.2vetmx3z",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>LDL cholesterol: 110 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2089-1",
+            "display": "LDL cholesterol"
+          }
+        ],
+        "text": "LDL cholesterol"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.adebkmuf"
+      },
+      "effectiveDateTime": "2025-06-15T09:24:00+00:00",
+      "valueQuantity": {
+        "value": 110,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.zpncpc5y"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.2mm7s3n2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Triglycerides: 140 mg/dL</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "laboratory",
+              "display": "Laboratory"
+            }
+          ],
+          "text": "Laboratory"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2571-8",
+            "display": "Triglycerides"
+          }
+        ],
+        "text": "Triglycerides"
+      },
+      "subject": {
+        "reference": "Patient/pt.2g7uf362"
+      },
+      "encounter": {
+        "reference": "Encounter/enc.adebkmuf"
+      },
+      "effectiveDateTime": "2025-06-15T15:15:00+00:00",
+      "valueQuantity": {
+        "value": 140,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr.8wneya3h"
+        }
+      ],
+      "specimen": {
+        "reference": "Specimen/spc.zpncpc5y"
+      }
+    }
+  ],
+  "observation_definition": {
+    "resourceType": "ObservationDefinition",
+    "id": "od.ffgbxwgd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ObservationDefinition: Lipid panel observation template</p></div>"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+            "code": "laboratory",
+            "display": "Laboratory"
+          }
+        ],
+        "text": "Laboratory"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "57698-3",
+          "display": "Lipid panel with direct LDL"
+        }
+      ],
+      "text": "Lipid panel with direct LDL"
+    },
+    "permittedDataType": [
+      "Quantity"
+    ],
+    "multipleResultsAllowed": false,
+    "preferredReportName": "Lipid Panel"
+  },
+  "media": {
+    "resourceType": "Media",
+    "id": "media.3dy8fxjc",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Media: Lab report scan</p></div>"
+    },
+    "status": "completed",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/media-type",
+          "code": "image",
+          "display": "Image"
+        }
+      ],
+      "text": "Image"
+    },
+    "subject": {
+      "reference": "Patient/pt.2g7uf362",
+      "display": "강 주원"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.adebkmuf"
+    },
+    "createdDateTime": "2025-06-15T15:00:00+00:00",
+    "operator": {
+      "reference": "Practitioner/pr.8wneya3h",
+      "display": "이 수빈"
+    },
+    "content": {
+      "contentType": "image/png",
+      "data": "UE5HX1BMQUNFSE9MREVSX0xBQl9SRVBPUlRfU0NBTg==",
+      "title": "Lab Report Scan"
+    }
+  },
+  "specimen": {
+    "resourceType": "Specimen",
+    "id": "spc.84f674wb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Specimen: Venous blood sample</p></div>"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "subject": {
+      "reference": "Patient/pt.2g7uf362"
+    },
+    "collection": {
+      "collectedDateTime": "2024-07-13T09:36:00+00:00",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "49852007",
+            "display": "Median cubital vein"
+          }
+        ],
+        "text": "Median cubital vein"
+      }
+    }
+  },
+  "specimen_definition": {
+    "resourceType": "SpecimenDefinition",
+    "id": "sd.39bwaept",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SpecimenDefinition: Venous blood collection protocol</p></div>"
+    },
+    "typeCollected": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "119297000",
+          "display": "Blood specimen"
+        }
+      ],
+      "text": "Blood specimen"
+    },
+    "collection": [
+      {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "129300006",
+            "display": "Puncture - Loss"
+          }
+        ],
+        "text": "Puncture - Loss"
+      }
+    ],
+    "typeTested": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "119297000",
+              "display": "Blood specimen"
+            }
+          ],
+          "text": "Blood specimen"
+        },
+        "preference": "preferred",
+        "container": {
+          "material": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "32039001",
+                "display": "Glass"
+              }
+            ],
+            "text": "Glass"
+          },
+          "type": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "767387006",
+                "display": "Vacuum blood collection tube"
+              }
+            ],
+            "text": "Vacuum blood collection tube"
+          },
+          "cap": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/container-cap",
+                "code": "red",
+                "display": "red cap"
+              }
+            ],
+            "text": "red cap"
+          },
+          "description": "Red-top tube for serum collection"
+        },
+        "handling": [
+          {
+            "temperatureQualifier": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/handling-condition",
+                  "code": "room",
+                  "display": "room temperature"
+                }
+              ],
+              "text": "room temperature"
+            },
+            "maxDuration": {
+              "value": 60,
+              "unit": "min",
+              "system": "http://unitsofmeasure.org",
+              "code": "min"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "nutrition_order": {
+    "resourceType": "NutritionOrder",
+    "id": "no.ewyrucyv",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>NutritionOrder: 12-hour fasting instructions for lipid panel</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "patient": {
+      "reference": "Patient/pt.2g7uf362",
+      "display": "강 주원"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.adebkmuf"
+    },
+    "dateTime": "2025-06-15T08:00:00+00:00",
+    "orderer": {
+      "reference": "Practitioner/pr.8wneya3h",
+      "display": "이 수빈"
+    },
+    "oralDiet": {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "160674004",
+              "display": "Fasting diet"
+            }
+          ],
+          "text": "Fasting diet"
+        }
+      ],
+      "instruction": "Patient to fast for 12 hours before lipid panel blood draw. Water is permitted."
+    }
+  }
+}

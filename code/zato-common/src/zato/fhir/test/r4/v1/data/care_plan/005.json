@@ -1,0 +1,843 @@
+{
+  "_meta": {
+    "scenario": "care_plan",
+    "instance": 5,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.bvqp4rkm",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Margaux Dupuy</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2315215"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-5297"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Dupuy",
+        "given": [
+          "Margaux"
+        ],
+        "text": "Margaux Dupuy"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-417-420-6658x6834",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "saundersjohnny@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1961-06-09",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "999 Reynolds Street Apt. 435"
+        ],
+        "city": "Justinville",
+        "state": "MI",
+        "postalCode": "35776",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.5cjvn4rn",
+        "display": "Dr. Thérèse Chevallier"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.wk8etdsx",
+      "display": "Meadowbrook Health Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.5cjvn4rn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Thérèse Chevallier</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "7474287130"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Chevallier",
+        "given": [
+          "Thérèse"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Thérèse Chevallier"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "638-475-6976x75428",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "2554 Alexander Brooks Suite 129"
+        ],
+        "city": "South Stevenbury",
+        "state": "WI",
+        "postalCode": "74721",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.wk8etdsx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Health Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2768242309"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Meadowbrook Health Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-249-260-2547",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "50625 Torres Route Suite 111"
+        ],
+        "city": "Ronaldburgh",
+        "state": "LA",
+        "postalCode": "37723",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.dk2pbzx2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care planning session on 2024-06-08</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.bvqp4rkm",
+        "display": "Margaux Dupuy"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5cjvn4rn",
+            "display": "Dr. Thérèse Chevallier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-08T15:45:00+00:00",
+        "end": "2024-06-08T16:32:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care planning session"
+            }
+          ],
+          "text": "Care planning session"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wk8etdsx",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8a3p3u9t",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.vn65mfjy",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Care plan review on 2024-12-12</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.bvqp4rkm",
+        "display": "Margaux Dupuy"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5cjvn4rn",
+            "display": "Dr. Thérèse Chevallier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-12T11:00:00+00:00",
+        "end": "2024-12-12T11:32:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Care plan review"
+            }
+          ],
+          "text": "Care plan review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wk8etdsx",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8a3p3u9t",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.542qfsdr",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Goal assessment on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.bvqp4rkm",
+        "display": "Margaux Dupuy"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.5cjvn4rn",
+            "display": "Dr. Thérèse Chevallier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T16:15:00+00:00",
+        "end": "2025-06-15T17:12:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Goal assessment"
+            }
+          ],
+          "text": "Goal assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.wk8etdsx",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.8a3p3u9t",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "care_plan": {
+    "resourceType": "CarePlan",
+    "id": "cp.z35hmnm3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CarePlan: Wellness improvement plan for Margaux Dupuy</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/us/core/CodeSystem/careplan-category",
+            "code": "assess-plan",
+            "display": "Assessment and Plan of Treatment"
+          }
+        ],
+        "text": "Assessment and Plan of Treatment"
+      }
+    ],
+    "title": "Wellness Improvement Plan - Margaux Dupuy",
+    "subject": {
+      "reference": "Patient/pt.bvqp4rkm",
+      "display": "Margaux Dupuy"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.542qfsdr"
+    },
+    "period": {
+      "start": "2024-06-08"
+    },
+    "author": {
+      "reference": "Practitioner/pr.5cjvn4rn",
+      "display": "Dr. Thérèse Chevallier"
+    },
+    "careTeam": [
+      {
+        "reference": "CareTeam/ct.4gavpfc3"
+      }
+    ],
+    "goal": [
+      {
+        "reference": "Goal/goal.fev3b67a"
+      }
+    ],
+    "activity": [
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "226029000",
+                "display": "Exercises"
+              }
+            ],
+            "text": "Exercises"
+          },
+          "description": "Daily walking program, 30 minutes per day"
+        }
+      },
+      {
+        "detail": {
+          "status": "in-progress",
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "11816003",
+                "display": "Diet education"
+              }
+            ],
+            "text": "Diet education"
+          },
+          "description": "Heart-healthy diet counseling"
+        }
+      }
+    ]
+  },
+  "care_team": {
+    "resourceType": "CareTeam",
+    "id": "ct.4gavpfc3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CareTeam: Wellness team for Margaux Dupuy</p></div>"
+    },
+    "status": "active",
+    "name": "Wellness Care Team - Margaux Dupuy",
+    "subject": {
+      "reference": "Patient/pt.bvqp4rkm",
+      "display": "Margaux Dupuy"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.542qfsdr"
+    },
+    "participant": [
+      {
+        "role": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                "code": "ATND",
+                "display": "attender"
+              }
+            ],
+            "text": "attender"
+          }
+        ],
+        "member": {
+          "reference": "Practitioner/pr.5cjvn4rn",
+          "display": "Dr. Thérèse Chevallier"
+        }
+      }
+    ],
+    "managingOrganization": [
+      {
+        "reference": "Organization/org.wk8etdsx",
+        "display": "Meadowbrook Health Center"
+      }
+    ]
+  },
+  "goal": {
+    "resourceType": "Goal",
+    "id": "goal.fev3b67a",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Goal: Reduce total cholesterol below 200 mg/dL</p></div>"
+    },
+    "lifecycleStatus": "active",
+    "achievementStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+          "code": "in-progress",
+          "display": "In Progress"
+        }
+      ],
+      "text": "In Progress"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/goal-category",
+            "code": "dietary",
+            "display": "Dietary"
+          }
+        ],
+        "text": "Dietary"
+      }
+    ],
+    "description": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "408580007",
+          "display": "Reduce total cholesterol below 200 mg/dL"
+        }
+      ],
+      "text": "Reduce total cholesterol below 200 mg/dL"
+    },
+    "subject": {
+      "reference": "Patient/pt.bvqp4rkm",
+      "display": "Margaux Dupuy"
+    },
+    "startDate": "2024-06-08",
+    "target": [
+      {
+        "measure": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index"
+            }
+          ],
+          "text": "Body mass index"
+        },
+        "detailRange": {
+          "low": {
+            "value": 18.5,
+            "unit": "kg/m2"
+          },
+          "high": {
+            "value": 24.9,
+            "unit": "kg/m2"
+          }
+        },
+        "dueDate": "2026-01-01"
+      }
+    ],
+    "expressedBy": {
+      "reference": "Patient/pt.bvqp4rkm",
+      "display": "Margaux Dupuy"
+    }
+  },
+  "request_group": {
+    "resourceType": "RequestGroup",
+    "id": "rg.3q77smsj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RequestGroup: Wellness visit action group</p></div>"
+    },
+    "status": "active",
+    "intent": "plan",
+    "subject": {
+      "reference": "Patient/pt.bvqp4rkm",
+      "display": "Margaux Dupuy"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.542qfsdr"
+    },
+    "authoredOn": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.5cjvn4rn",
+      "display": "Dr. Thérèse Chevallier"
+    },
+    "instantiatesCanonical": [
+      "PlanDefinition/pd.tgw5htcn"
+    ],
+    "action": [
+      {
+        "title": "Start exercise program",
+        "resource": {
+          "reference": "CarePlan/cp.z35hmnm3"
+        }
+      }
+    ]
+  },
+  "plan_definition": {
+    "resourceType": "PlanDefinition",
+    "id": "pd.tgw5htcn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PlanDefinition: Wellness improvement protocol</p></div>"
+    },
+    "url": "http://example.org/PlanDefinition/pd.tgw5htcn",
+    "name": "WellnessImprovementProtocol",
+    "title": "Wellness Improvement Protocol",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Meadowbrook Health Center",
+    "description": "A structured protocol for improving overall wellness through exercise, nutrition counseling, and regular follow-up visits.",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+          "code": "clinical-protocol",
+          "display": "Clinical Protocol"
+        }
+      ],
+      "text": "Clinical Protocol"
+    },
+    "goal": [
+      {
+        "description": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "408580007",
+              "display": "Reduce total cholesterol below 200 mg/dL"
+            }
+          ],
+          "text": "Reduce total cholesterol below 200 mg/dL"
+        },
+        "addresses": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "Z00.00",
+                "display": "General adult medical examination"
+              }
+            ],
+            "text": "General adult medical examination"
+          }
+        ]
+      }
+    ],
+    "action": [
+      {
+        "title": "Exercise Program",
+        "definitionCanonical": "ActivityDefinition/ad.bxwtpvs9"
+      }
+    ]
+  },
+  "activity_definition": {
+    "resourceType": "ActivityDefinition",
+    "id": "ad.bxwtpvs9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ActivityDefinition: Daily walking exercise protocol</p></div>"
+    },
+    "url": "http://example.org/ActivityDefinition/ad.bxwtpvs9",
+    "name": "DailyWalkingProgram",
+    "title": "Daily Walking Exercise Program",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Meadowbrook Health Center",
+    "description": "A structured daily walking program to improve cardiovascular fitness. Start with 15 minutes and increase to 30 minutes over four weeks.",
+    "kind": "ServiceRequest",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "226029000",
+          "display": "Exercises"
+        }
+      ],
+      "text": "Exercises"
+    },
+    "timingTiming": {
+      "repeat": {
+        "frequency": 1,
+        "period": 1,
+        "periodUnit": "d",
+        "duration": 30,
+        "durationUnit": "min"
+      }
+    }
+  }
+}

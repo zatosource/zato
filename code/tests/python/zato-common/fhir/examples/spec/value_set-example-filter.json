@@ -1,0 +1,41 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-filter",
+  "url": "http://hl7.org/fhir/ValueSet/example-filter",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3148"
+  },
+  "name": "ACMECholCodesPlasma",
+  "title": "ACME Codes for Cholesterol: Plasma only",
+  "status": "draft",
+  "experimental": true,
+  "date": "2018-11-01",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "ACME Codes for Cholesterol: Plasma only - demonstrating the use of a filter defined in a CodeSystem",
+  "compose": {
+    "include": {
+      "system": "http://hl7.org/fhir/CodeSystem/example",
+      "filter": {
+        "property": "acme-plasma",
+        "op": "=",
+        "value": true
+      }
+    },
+    "property": "status"
+  }
+}

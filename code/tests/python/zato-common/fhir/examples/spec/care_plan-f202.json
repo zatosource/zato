@@ -1,0 +1,66 @@
+{
+  "resourceType": "CarePlan",
+  "id": "f202",
+  "contained": [
+    {
+      "CareTeam": {
+        "id": "careteam",
+        "participant": {
+          "role": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 28995006,
+              "display": "Treated with"
+            }
+          },
+          "member": {
+            "reference": "Practitioner/f201",
+            "display": "Dokter Bronsig"
+          }
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "goal",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Elimination of the spenoid bone tumor"
+        },
+        "subject": {
+          "reference": "Patient/f201",
+          "display": "Roel"
+        }
+      }
+    }
+  ],
+  "status": "active",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "careTeam": {
+    "reference": "#careteam"
+  },
+  "addresses": {
+    "reference": {
+      "reference": "Condition/f202",
+      "display": "Roel's head-neck tumor"
+    }
+  },
+  "goal": {
+    "reference": "#goal"
+  },
+  "activity": {
+    "performedActivity": {
+      "reference": {
+        "reference": "Procedure/f201",
+        "display": "Roel's Chemotherapy"
+      }
+    },
+    "plannedActivityReference": {
+      "reference": "RequestOrchestration/example"
+    }
+  }
+}

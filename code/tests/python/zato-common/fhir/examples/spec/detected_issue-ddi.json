@@ -1,0 +1,79 @@
+{
+  "resourceType": "DetectedIssue",
+  "id": "ddi",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        null,
+        null,
+        null
+      ],
+      "{http://www.w3.org/1999/xhtml}ul": {
+        "{http://www.w3.org/1999/xhtml}li": [
+          {
+            "{http://www.w3.org/1999/xhtml}a": null
+          },
+          {
+            "{http://www.w3.org/1999/xhtml}a": null
+          }
+        ]
+      }
+    }
+  },
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "DRG",
+      "display": "Drug Interaction Alert"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "DRG",
+      "display": "Drug Interaction Alert"
+    }
+  },
+  "severity": {
+    "coding": {
+      "system": "http://hl7.org/fhir/detectedissue-severity",
+      "code": "high",
+      "display": "High"
+    }
+  },
+  "subject": {
+    "reference": "Device/example"
+  },
+  "identifiedDateTime": "2014-01-05",
+  "implicated": [
+    {
+      "reference": "MedicationStatement/example001",
+      "display": "500 mg Acetaminophen tablet 1/day, PRN since 2010"
+    },
+    {
+      "reference": "MedicationRequest/medrx0331",
+      "display": "Warfarin 1 MG TAB prescribed Jan. 15, 2015"
+    }
+  ],
+  "detail": "Risk of internal bleeding.  Those who take acetaminophen along with the widely used blood-thinning drug warfarin may face the risk of serious internal bleeding. People on warfarin who take acetaminophen for at least seven days in a row should be closely watched for bleeding.",
+  "mitigation": {
+    "action": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": 13,
+        "display": "Stopped Concurrent Therapy"
+      },
+      "text": "Asked patient to discontinue regular use of Tylenol and to consult with clinician if they need to resume to allow appropriate INR monitoring"
+    },
+    "date": "2014-01-05",
+    "author": {
+      "reference": "Practitioner/example",
+      "display": "Dr. Adam Careful"
+    }
+  }
+}

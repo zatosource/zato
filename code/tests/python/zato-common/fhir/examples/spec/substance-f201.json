@@ -1,0 +1,14 @@
+{
+  "resourceType": "Substance",
+  "id": "f201",
+  "instance": false,
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 406466009,
+        "display": "House dust allergen"
+      }
+    }
+  }
+}

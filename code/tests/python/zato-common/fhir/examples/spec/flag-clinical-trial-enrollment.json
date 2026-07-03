@@ -1,0 +1,38 @@
+{
+  "resourceType": "Flag",
+  "id": "clinical-trial-enrollment",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "value": "clinical-trial-2024-group-a"
+  },
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/flag-category",
+      "code": "research",
+      "display": "Research"
+    },
+    "text": "Research"
+  },
+  "code": {
+    "coding": {
+      "system": "http://example.org/local",
+      "code": "clinical-trial",
+      "display": "Clinical Trial Enrollment"
+    },
+    "text": "Patients are enrolled in the XYZ123 Clinical Trial."
+  },
+  "subject": {
+    "reference": "Group/102",
+    "display": "Group 102"
+  },
+  "period": {
+    "start": "2024-01-01"
+  },
+  "author": {
+    "display": "ABC Research Institute"
+  }
+}

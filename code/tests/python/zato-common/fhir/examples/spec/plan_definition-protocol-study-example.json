@@ -1,0 +1,692 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "protocol-study-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        }
+      ]
+    }
+  },
+  "contained": {
+    "ActivityDefinition": {
+      "id": "encounter",
+      "status": "draft",
+      "kind": "ServiceRequest"
+    }
+  },
+  "extension": [
+    {
+      "extension": [
+        {
+          "valueString": "0.5 mg Dose"
+        },
+        {
+          "valueString": "Administering 0.5mg of [Drug A]"
+        }
+      ]
+    },
+    {
+      "extension": [
+        {
+          "valueString": "dose2"
+        },
+        {
+          "valueString": "Administering 1.0mg of [Drug A]"
+        }
+      ]
+    },
+    {
+      "extension": {
+        "valueString": "Screening"
+      }
+    },
+    {
+      "extension": {
+        "valueString": "Single blind run-in"
+      }
+    },
+    {
+      "extension": {
+        "valueString": "Treatment"
+      }
+    },
+    {
+      "extension": {
+        "valueString": "Follow up"
+      }
+    }
+  ],
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.11.16"
+  },
+  "type": {
+    "coding": {
+      "code": "protocol"
+    }
+  },
+  "status": "active",
+  "purpose": "Defines the execution of study AD-4833PNFP-341",
+  "action": [
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose1"
+        },
+        {
+          "valueUri": "#epoch-screening"
+        },
+        {
+          "valueInteger": 1
+        }
+      ],
+      "title": "SCRN",
+      "description": "Screen",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Informed Consent",
+          "language": "text/cql-identifier"
+        }
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose1"
+        },
+        {
+          "valueUri": "#epoch-single-blind-run-in"
+        },
+        {
+          "valueInteger": 2
+        },
+        {
+          "valueString": "Randomized to Dose 1"
+        }
+      ],
+      "title": "SBRI",
+      "description": "Single Blind Run-In",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Initial Single Blind Placebo dose",
+          "language": "text/cql-identifier"
+        }
+      },
+      "timingDuration": {
+        "value": 1,
+        "system": "http://unitsofmeasure.org",
+        "code": "wk"
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose1"
+        },
+        {
+          "valueUri": "#epoch-treatment-phase"
+        },
+        {
+          "valueInteger": 3
+        }
+      ],
+      "title": "DOSE 1",
+      "description": "Administer 0.5mg [Drug A] QD",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "First dose of treatment where total drug dose of [Drug A] per day is 0.5 mg.",
+          "language": "text/cql-identifier"
+        }
+      },
+      "timingDuration": {
+        "value": 30,
+        "system": "http://unitsofmeasure.org",
+        "code": "wk"
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose1"
+        },
+        {
+          "valueUri": "#epoch-follow-up"
+        },
+        {
+          "valueInteger": 4
+        }
+      ],
+      "title": "FLWUP",
+      "description": "Follow-Up",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Last dose of treatment",
+          "language": "text/cql-identifier"
+        }
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose2"
+        },
+        {
+          "valueUri": "#epoch-screening"
+        },
+        {
+          "valueInteger": 1
+        }
+      ],
+      "title": "SCRN",
+      "description": "Screen",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Informed Consent",
+          "language": "text/cql-identifier"
+        }
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose2"
+        },
+        {
+          "valueUri": "#epoch-single-blind-run-in"
+        },
+        {
+          "valueInteger": 2
+        },
+        {
+          "valueString": "Randomized to 1.0 mg"
+        }
+      ],
+      "title": "SBRI",
+      "description": "Single Blind Run-In",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "First dose of Single Blind Placebo",
+          "language": "text/cql-identifier"
+        }
+      },
+      "timingDuration": {
+        "value": 1,
+        "system": "http://unitsofmeasure.org",
+        "code": "wk"
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-dose2"
+        },
+        {
+          "valueUri": "#epoch-treatment-phase"
+        },
+        {
+          "valueInteger": 3
+        }
+      ],
+      "title": "1.0 mg Dose",
+      "description": "Administer 1.0 mg [Drug A] QD",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Intial dose of treatment where total drug dose of [Drug A] per day is 1.0 mg.",
+          "language": "text/cql-identifier"
+        }
+      },
+      "timingDuration": {
+        "value": 30,
+        "system": "http://unitsofmeasure.org",
+        "code": "wk"
+      }
+    },
+    {
+      "extension": [
+        {
+          "valueUri": "#arm-pio45mgs"
+        },
+        {
+          "valueUri": "#epoch-follow-up"
+        },
+        {
+          "valueInteger": 4
+        }
+      ],
+      "title": "FLWUP",
+      "description": "Follow-Up",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Last dose of treatment",
+          "language": "text/cql-identifier"
+        }
+      }
+    },
+    {
+      "extension": {
+        "valueInteger": 1
+      },
+      "title": "VISIT 1",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Screening",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 2
+      },
+      "title": "VISIT 2",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "single-blind placebo start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 3
+      },
+      "title": "VISIT 3",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "Treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 4
+      },
+      "title": "VISIT 4",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "5 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 5
+      },
+      "title": "VISIT 5",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "10 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 6
+      },
+      "title": "VISIT 6",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "15 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 7
+      },
+      "title": "VISIT 7",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "20 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 8
+      },
+      "title": "VISIT 8",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "25 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 9
+      },
+      "title": "VISIT 9",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "30 weeks after treatment start",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    },
+    {
+      "extension": {
+        "valueInteger": 10
+      },
+      "title": "VISIT 10",
+      "condition": {
+        "kind": "applicability",
+        "expression": {
+          "description": "start of follow-up",
+          "language": "text/cql-identifier"
+        }
+      },
+      "definitionCanonical": "#encounter"
+    }
+  ]
+}

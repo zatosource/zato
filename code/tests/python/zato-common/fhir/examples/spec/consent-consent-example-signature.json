@@ -1,0 +1,79 @@
+{
+  "resourceType": "Consent",
+  "id": "consent-example-signature",
+  "identifier": {
+    "system": "urn:oid:2.16.840.1.113883.3.72.5.9.1",
+    "value": "urn:uuid:494e0c7a-a69e-4fb4-9d02-6aae747790d7"
+  },
+  "status": "active",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+      "code": "npp"
+    }
+  },
+  "subject": {
+    "reference": "Patient/72"
+  },
+  "date": "2016-05-26",
+  "performer": {
+    "reference": "Patient/72"
+  },
+  "controller": {
+    "reference": "Organization/f001"
+  },
+  "regulatoryBasis": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "OPTIN"
+    }
+  },
+  "provision": {
+    "period": {
+      "start": "2015-10-10",
+      "end": "2016-10-10"
+    },
+    "actor": {
+      "role": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code": "PRCP"
+        }
+      },
+      "reference": {
+        "reference": "Practitioner/13"
+      }
+    },
+    "provision": {
+      "actor": {
+        "role": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "AUT"
+          }
+        },
+        "reference": {
+          "reference": "Practitioner/xcda-author"
+        }
+      },
+      "class": {
+        "system": "urn:ietf:bcp:13",
+        "code": "application/hl7-cda+xml"
+      },
+      "code": [
+        {
+          "coding": {
+            "system": "http://loinc.org",
+            "code": "34133-9"
+          }
+        },
+        {
+          "coding": {
+            "system": "http://loinc.org",
+            "code": "18842-5"
+          }
+        }
+      ]
+    }
+  }
+}

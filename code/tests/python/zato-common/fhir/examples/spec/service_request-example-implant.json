@@ -1,0 +1,33 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "example-implant",
+  "status": "completed",
+  "intent": "order",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 25267002,
+        "display": "Insertion of intracardiac pacemaker (procedure)"
+      },
+      "text": "Implant Pacemaker"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "authoredOn": "2015-03-30",
+  "requester": {
+    "reference": "Practitioner/3ad0687e-f477-468c-afd5-fcc2bf897809",
+    "display": "Dr. Beverly Crusher"
+  },
+  "performer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Cecil Surgeon"
+  },
+  "reason": {
+    "concept": {
+      "text": "Bradycardia"
+    }
+  }
+}

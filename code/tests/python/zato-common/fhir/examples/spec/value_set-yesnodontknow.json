@@ -1,0 +1,64 @@
+{
+  "resourceType": "ValueSet",
+  "id": "yesnodontknow",
+  "url": "http://hl7.org/fhir/ValueSet/yesnodontknow",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3149"
+  },
+  "name": "YesNoDontKnow",
+  "title": "Yes/No/Don't Know",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "For Capturing simple yes-no-don't know answers",
+  "compose": {
+    "include": [
+      {
+        "valueSet": "http://terminology.hl7.org/ValueSet/v2-0136"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+        "concept": {
+          "code": "asked-unknown",
+          "display": "Don't know"
+        }
+      }
+    ]
+  },
+  "expansion": {
+    "identifier": "urn:uuid:bf99fe50-2c2b-41ad-bd63-bee6919810b4",
+    "timestamp": "2015-07-14T10:00:00Z",
+    "contains": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0532",
+        "code": "Y",
+        "display": "Yes"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0532",
+        "code": "N",
+        "display": "No"
+      },
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+        "code": "asked-unknown",
+        "display": "Don't know"
+      }
+    ]
+  }
+}

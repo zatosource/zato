@@ -1,0 +1,55 @@
+{
+  "resourceType": "QuestionnaireResponse",
+  "id": "gcs",
+  "questionnaire": "http://hl7.org/fhir/Questionnaire/gcs",
+  "status": "completed",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter James Chalmers"
+  },
+  "authored": "2014-12-11T04:44:16Z",
+  "source": {
+    "reference": "Practitioner/f007"
+  },
+  "item": [
+    {
+      "linkId": 1.1,
+      "answer": {
+        "valueCoding": {
+          "extension": {
+            "valueDecimal": 4
+          },
+          "system": "http://loinc.org",
+          "code": "LA6560-2",
+          "display": "Confused"
+        }
+      }
+    },
+    {
+      "linkId": 1.2,
+      "answer": {
+        "valueCoding": {
+          "extension": {
+            "valueDecimal": 5
+          },
+          "system": "http://loinc.org",
+          "code": "LA6566-9",
+          "display": "Localizing pain"
+        }
+      }
+    },
+    {
+      "linkId": 1.3,
+      "answer": {
+        "valueCoding": {
+          "extension": {
+            "valueDecimal": 4
+          },
+          "system": "http://loinc.org",
+          "code": "LA6556-0",
+          "display": "Eyes open spontaneously"
+        }
+      }
+    }
+  ]
+}

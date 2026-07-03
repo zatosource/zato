@@ -1,0 +1,114 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "security-structural-roles-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/security-structural-roles-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1800"
+  },
+  "name": "SecurityStructuralRolesExamples",
+  "title": "Example Codes for Security Structural Role",
+  "status": "active",
+  "experimental": true,
+  "date": "2025-11-01",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "This codeSystem contains example structural roles. In general, two types of roles can be distinguished: structural roles and functional roles. Structural Roles reflect human or organizational categories (hierarchies), and describe prerequisites, feasibilities, or competences for actions. Functional roles are bound to the realization or performance of actions..",
+  "copyright": "This is an example set.",
+  "caseSensitive": true,
+  "hierarchyMeaning": "is-a",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "regulated-health-professionals",
+      "display": "Regulated Health Professionals",
+      "definition": "A person who is authorized by a national recognized body to be qualified to perform health services",
+      "concept": [
+        {
+          "code": "general-medicine",
+          "display": "General Medicine",
+          "definition": "The branch of medicine involving the study and treatment of general diseases or those affecting the internal parts of the body, especially those not usually requiring surgical intervention"
+        },
+        {
+          "code": "general-nursing",
+          "display": "General Nursing",
+          "definition": "The branch of healthcare concerned with caring for the sick or injured in any environment."
+        },
+        {
+          "code": "dentist",
+          "display": "Dentist",
+          "definition": "The specialty relating to the function and diseases of the teeth, mouth, and gums."
+        },
+        {
+          "code": "veterinarian",
+          "display": "Veterinarian",
+          "definition": "The specialty relating to non-human subjects."
+        },
+        {
+          "code": "pharmacy",
+          "display": "Pharmacy",
+          "definition": "The branch of medical science that deals with drugs and their uses."
+        },
+        {
+          "code": "dietician",
+          "display": "Dietician",
+          "definition": "The health profession concerned with the practical application of diet in the prophylaxis and treatment of disease."
+        },
+        {
+          "code": "pediatrics",
+          "display": "Pediatrics",
+          "definition": "The medical specialty concerned with the study of treatment of children in health and disease during development from birth through adolescence."
+        }
+      ]
+    },
+    {
+      "code": "non-regulated-health-professionals",
+      "display": "Non-Regulated health Professionals",
+      "definition": "person employed by a healthcare organization who is not a health professional",
+      "concept": [
+        {
+          "code": "receptionist",
+          "display": "Receptionist",
+          "definition": "Medical receptionists are professionals who are responsible for coordinating the daily administration of doctors, staff, visitors, and patinets at a healthcare facility."
+        },
+        {
+          "code": "business-manager",
+          "display": "Business Manager",
+          "definition": "Medical and health services managers plan, direct, and coordinate the business activities of healthcare providers."
+        },
+        {
+          "code": "transcriptionist",
+          "display": "Transcriptionist",
+          "definition": "A medical transcriptionist listens to medical notes from health care professionals and accurately transcribes those audio recordings into written medical documents used for a variety of purposes."
+        },
+        {
+          "code": "claims-adjudicator",
+          "display": "Claims Adjudicator",
+          "definition": "A medical Claims Adjudicator executes the process by which insurance companies review healthcare claims and decide whether they will pay the claim in full, pay a partial amount, or deny the claim altogether."
+        }
+      ]
+    }
+  ]
+}

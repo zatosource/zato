@@ -1,0 +1,15 @@
+{
+  "resourceType": "Organization",
+  "id": "2.16.840.1.113883.19.5",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.19.5"
+  },
+  "name": "Good Health Clinic"
+}

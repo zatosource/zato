@@ -1,0 +1,11 @@
+{
+  "resourceType": "Organization",
+  "id": "hl7pay",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "name": "HL7 Payer network"
+}

@@ -1,0 +1,60 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "options-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "contained": [
+    {
+      "ActivityDefinition": {
+        "id": "activitydefinition-medicationrequest-1",
+        "status": "draft",
+        "kind": "MedicationRequest",
+        "productCodeableConcept": {
+          "text": "Medication 1"
+        }
+      }
+    },
+    {
+      "ActivityDefinition": {
+        "id": "activitydefinition-medicationrequest-2",
+        "status": "draft",
+        "kind": "MedicationRequest",
+        "productCodeableConcept": {
+          "text": "Medication 2"
+        }
+      }
+    }
+  ],
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.11.15"
+  },
+  "name": "ThisExampleIllustratesRelationshipsBetweenActions",
+  "title": "This example illustrates relationships between actions.",
+  "status": "draft",
+  "description": "This example illustrates relationships between actions.",
+  "action": {
+    "groupingBehavior": "logical-group",
+    "selectionBehavior": "all",
+    "action": [
+      {
+        "title": "Administer Medication 1",
+        "definitionCanonical": "#activitydefinition-medicationrequest-1"
+      },
+      {
+        "title": "Administer Medication 2",
+        "relatedAction": {
+          "targetId": "medication-action-1",
+          "relationship": "after-end",
+          "offsetDuration": {
+            "value": 1,
+            "unit": "h"
+          }
+        },
+        "definitionCanonical": "#activitydefinition-medicationrequest-2"
+      }
+    ]
+  }
+}

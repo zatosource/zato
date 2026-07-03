@@ -1,0 +1,145 @@
+{
+  "resourceType": "Device",
+  "id": "Bodimetrics",
+  "identifier": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaDeviceIdentifiers",
+          "code": "SYSID",
+          "display": "System Identifier"
+        }
+      },
+      "system": "urn:oid:1.2.840.10004.1.1.1.0.0.1.0.0.1.2680",
+      "value": "00-00-00-00-00-00-00-00"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/ContinuaDeviceIdentifiers",
+          "code": "BTMAC",
+          "display": "Bluetooth Address"
+        }
+      },
+      "system": "http://hl7.org/fhir/sid/eui-48",
+      "value": "00-17-E9-54-C8-52"
+    }
+  ],
+  "udiCarrier": {
+    "deviceIdentifier": 102698895442,
+    "issuer": "http://hl7.org/fhir/NamingSystem/gs1-di",
+    "jurisdiction": "http://hl7.org/fhir/NamingSystem/fda-udi",
+    "carrierHRF": "(01)102698895442(21)1607124656",
+    "entryType": "unknown"
+  },
+  "manufacturer": "BodiMetrics",
+  "serialNumber": 1607124656,
+  "name": {
+    "value": "BM-88   4656",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "user-friendly-name"
+      }
+    }
+  },
+  "modelNumber": 6611,
+  "type": {
+    "coding": {
+      "system": "urn:iso:std:iso:11073:10101",
+      "code": 65573,
+      "display": "MDC_MOC_VMS_MDS_SIMP"
+    },
+    "text": "MDC_MOC_VMS_MDS_SIMP: Personal Health Device"
+  },
+  "deviceVersion": [
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 531975
+        },
+        "text": "MDC_ID_PROD_SPEC_SW: Software revision"
+      },
+      "value": 20008
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 531974
+        },
+        "text": "MDC_ID_PROD_SPEC_HW: Hardware revision"
+      },
+      "value": "CC"
+    }
+  ],
+  "conformsTo": [
+    {
+      "specification": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 528391
+        },
+        "text": "MDC_DEV_SPEC_PROFILE_BP: Blood Pressure meter"
+      },
+      "version": 1
+    },
+    {
+      "specification": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 528457
+        },
+        "text": "MDC_DEV_SPEC_PROFILE_GENERIC: Generic 20601 device"
+      },
+      "version": 1
+    },
+    {
+      "specification": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 528390
+        },
+        "text": "MDC_DEV_SPEC_PROFILE_MIN_ECG: Electro cardiogram"
+      },
+      "version": 1
+    },
+    {
+      "specification": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 528388
+        },
+        "text": "MDC_DEV_SPEC_PROFILE_PULS_OXIM: Pulse Oximeter"
+      },
+      "version": 1
+    },
+    {
+      "specification": {
+        "coding": {
+          "system": "urn:iso:std:iso:11073:10101",
+          "code": 528392
+        },
+        "text": "MDC_DEV_SPEC_PROFILE_TEMP: Thermometer"
+      },
+      "version": 1
+    }
+  ],
+  "property": {
+    "type": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 68220
+      },
+      "text": "MDC_TIME_SYNC_PROTOCOL: Time synchronization protocol"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "urn:iso:std:iso:11073:10101",
+        "code": 532224
+      },
+      "text": "MDC_TIME_SYNC_NONE: No time synchronization"
+    }
+  }
+}

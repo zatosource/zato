@@ -1,0 +1,629 @@
+{
+  "_meta": {
+    "scenario": "supply_order",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.9j6c22kv",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 류 서준</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN6904377"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9348"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "류",
+        "given": [
+          "서준"
+        ],
+        "text": "류 서준"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "761.630.9363",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "mark26@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1985-08-21",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "6448 Kathryn Mall Suite 068"
+        ],
+        "city": "New Thomasside",
+        "state": "NY",
+        "postalCode": "52983",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.kz5bgcje",
+        "display": "박 성훈"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.gets4uzx",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.gets4uzx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverstone Medical Group</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8765444529"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Riverstone Medical Group",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(451)800-0808x1965",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "8642 Philip Inlet"
+        ],
+        "city": "West Brandon",
+        "state": "AR",
+        "postalCode": "33933",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.vbxdcvbb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply request on 2024-05-11</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9j6c22kv",
+        "display": "류 서준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.kz5bgcje",
+            "display": "박 성훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-11T13:15:00+00:00",
+        "end": "2024-05-11T14:13:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply request"
+            }
+          ],
+          "text": "Supply request"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gets4uzx",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.chpxvbnq",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.7q79aq4c",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply follow-up on 2024-12-23</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9j6c22kv",
+        "display": "류 서준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.kz5bgcje",
+            "display": "박 성훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-23T14:00:00+00:00",
+        "end": "2024-12-23T14:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply follow-up"
+            }
+          ],
+          "text": "Supply follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gets4uzx",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.chpxvbnq",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.g2p3carz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Supply confirmation on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.9j6c22kv",
+        "display": "류 서준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.kz5bgcje",
+            "display": "박 성훈"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:00:00+00:00",
+        "end": "2025-06-15T15:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Supply confirmation"
+            }
+          ],
+          "text": "Supply confirmation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gets4uzx",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.chpxvbnq",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "supply_request": {
+    "resourceType": "SupplyRequest",
+    "id": "sr.6yyzsaga",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyRequest: Adhesive bandages for school clinic</p></div>"
+    },
+    "status": "completed",
+    "category": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supplyrequest-kind",
+          "code": "nonstock",
+          "display": "Non-Stock"
+        }
+      ],
+      "text": "Non-Stock"
+    },
+    "itemCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "412020006",
+          "display": "Adhesive bandage"
+        }
+      ],
+      "text": "Adhesive bandage"
+    },
+    "quantity": {
+      "value": 200,
+      "unit": "unit",
+      "system": "http://unitsofmeasure.org",
+      "code": "{each}"
+    },
+    "occurrenceDateTime": "2025-06-15T09:00:00+00:00",
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Organization/rorg.rcb2qb49",
+      "display": "Riverside School Health Office"
+    },
+    "supplier": [
+      {
+        "reference": "Organization/org.gets4uzx",
+        "display": "Riverstone Medical Group"
+      }
+    ],
+    "deliverFrom": {
+      "reference": "Organization/org.gets4uzx",
+      "display": "Riverstone Medical Group"
+    },
+    "deliverTo": {
+      "reference": "Organization/rorg.rcb2qb49",
+      "display": "Riverside School Health Office"
+    }
+  },
+  "supply_delivery": {
+    "resourceType": "SupplyDelivery",
+    "id": "sd.ksxvqcf2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>SupplyDelivery: Bandages delivered to school clinic</p></div>"
+    },
+    "status": "completed",
+    "basedOn": [
+      {
+        "reference": "SupplyRequest/sr.6yyzsaga"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.9j6c22kv",
+      "display": "류 서준"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/supply-item-type",
+          "code": "device",
+          "display": "Device"
+        }
+      ],
+      "text": "Device"
+    },
+    "suppliedItem": {
+      "quantity": {
+        "value": 200,
+        "unit": "unit",
+        "system": "http://unitsofmeasure.org",
+        "code": "{each}"
+      },
+      "itemCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "412020006",
+            "display": "Adhesive bandage"
+          }
+        ],
+        "text": "Adhesive bandage"
+      }
+    },
+    "occurrenceDateTime": "2025-06-22T14:00:00+00:00",
+    "supplier": {
+      "reference": "Organization/org.gets4uzx",
+      "display": "Riverstone Medical Group"
+    },
+    "destination": {
+      "reference": "Location/loc.chpxvbnq",
+      "display": "Riverstone Medical Group - Main Office"
+    }
+  },
+  "receiving_organization": {
+    "resourceType": "Organization",
+    "id": "rorg.rcb2qb49",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Riverside School Health Office</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "edu",
+            "display": "Educational Institute"
+          }
+        ],
+        "text": "Educational Institute"
+      }
+    ],
+    "name": "Riverside School Health Office",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-734-359-3843x48276",
+        "use": "work"
+      }
+    ]
+  },
+  "organization_affiliation": {
+    "resourceType": "OrganizationAffiliation",
+    "id": "oa.7uy75xbs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OrganizationAffiliation: Riverstone Medical Group supplies Riverside School</p></div>"
+    },
+    "active": true,
+    "organization": {
+      "reference": "Organization/org.gets4uzx",
+      "display": "Riverstone Medical Group"
+    },
+    "participatingOrganization": {
+      "reference": "Organization/rorg.rcb2qb49",
+      "display": "Riverside School Health Office"
+    },
+    "code": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/organization-role",
+            "code": "supplier",
+            "display": "Supplier"
+          }
+        ],
+        "text": "Supplier"
+      }
+    ]
+  }
+}

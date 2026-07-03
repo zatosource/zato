@@ -1,0 +1,19 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "example-constraint",
+  "url": "http://hl7.org/fhir/SearchParameter/example-constraint",
+  "name": "Exampleconstraint",
+  "title": "example-constraint",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "description": "Search Composition Bundle",
+  "code": "example-constraint",
+  "aliasCode": "constraint-example",
+  "base": "Bundle",
+  "type": "reference",
+  "expression": "Bundle.entry[0].resource",
+  "processingMode": "normal",
+  "constraint": "Bundle.type = 'document' and Bundle.entry[0].resource is Composition",
+  "target": "Composition"
+}

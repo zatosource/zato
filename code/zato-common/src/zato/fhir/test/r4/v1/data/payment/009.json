@@ -1,0 +1,372 @@
+{
+  "_meta": {
+    "scenario": "payment",
+    "instance": 9,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.s3p4f83v",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 박 건우</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN9886155"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4270"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "건우"
+        ],
+        "text": "박 건우"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "248-392-4843x6937",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "brenda83@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1964-05-28",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "980 Edward Pine Suite 652"
+        ],
+        "city": "North Mitchell",
+        "state": "GU",
+        "postalCode": "45791",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.aucb9a3f",
+        "display": "이 성현"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.fgmkubbz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Cabinet Medical Soleil</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6324823707"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Cabinet Medical Soleil",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "579-250-0386",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "03022 Robinson Common Suite 837"
+        ],
+        "city": "East Catherine",
+        "state": "NM",
+        "postalCode": "67390",
+        "country": "US"
+      }
+    ]
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.xvwcw4by",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Copay payment received</p></div>"
+    },
+    "status": "active",
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.sywar2k2"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    },
+    "amount": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.sywar2k2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Copay reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-15",
+      "end": "2025-06-15"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "detail": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/payment-type",
+              "code": "payment",
+              "display": "Payment"
+            }
+          ],
+          "text": "Payment"
+        },
+        "amount": {
+          "value": 20,
+          "currency": "USD"
+        },
+        "date": "2025-06-15"
+      }
+    ]
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.rs26dtvr",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Copay invoice for wellness visit</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "copay-invoice",
+          "display": "Copay Invoice"
+        }
+      ],
+      "text": "Copay Invoice"
+    },
+    "subject": {
+      "reference": "Patient/pt.s3p4f83v",
+      "display": "박 건우"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    },
+    "account": {
+      "reference": "Account/acct.xu4xcjss"
+    },
+    "totalNet": {
+      "value": 20,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 20,
+      "currency": "USD"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.xu4xcjss",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for 박 건우</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - 박 건우",
+    "subject": [
+      {
+        "reference": "Patient/pt.s3p4f83v",
+        "display": "박 건우"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.fgmkubbz",
+      "display": "Cabinet Medical Soleil"
+    }
+  }
+}

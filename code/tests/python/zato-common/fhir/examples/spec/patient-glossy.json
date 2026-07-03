@@ -1,0 +1,46 @@
+{
+  "resourceType": "Patient",
+  "id": "glossy",
+  "meta": {
+    "lastUpdated": "2014-11-13T11:41:00+11:00"
+  },
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null
+      ]
+    }
+  },
+  "extension": {
+    "valueCode": "renal"
+  },
+  "identifier": {
+    "use": "usual",
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "code": "MR"
+      }
+    },
+    "system": "http://www.goodhealth.org/identifiers/mrn",
+    "value": 123456
+  },
+  "active": true,
+  "name": {
+    "family": "Levin",
+    "given": "Henry",
+    "suffix": "The 7th"
+  },
+  "gender": "male",
+  "birthDate": "1932-09-24",
+  "generalPractitioner": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "managingOrganization": {
+    "reference": "Organization/2",
+    "display": "Good Health Clinic"
+  }
+}

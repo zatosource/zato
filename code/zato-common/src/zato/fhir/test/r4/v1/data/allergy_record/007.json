@@ -1,0 +1,823 @@
+{
+  "_meta": {
+    "scenario": "allergy_record",
+    "instance": 7,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.ue7dvrwf",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Monica Juarez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN8956929"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-9429"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Juarez",
+        "given": [
+          "Monica"
+        ],
+        "text": "Monica Juarez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "302-550-0734",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "hansonbenjamin@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1997-12-07",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "2366 Gene Tunnel Suite 878"
+        ],
+        "city": "South Katelyn",
+        "state": "MP",
+        "postalCode": "20834",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.2r3wkk5u",
+        "display": "Dr. Paul Doyle"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.hbe2s7d5",
+      "display": "Clinique du Parc"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.2r3wkk5u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Paul Doyle</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "8184322132"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Doyle",
+        "given": [
+          "Paul"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Paul Doyle"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "597.878.9684x66151",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "41852 Aaron Villages Apt. 831"
+        ],
+        "city": "New Tinaside",
+        "state": "NM",
+        "postalCode": "04404",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.hbe2s7d5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Clinique du Parc</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2522216332"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Clinique du Parc",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(698)289-4126x86854",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "25316 Russell Inlet Apt. 866"
+        ],
+        "city": "North Caitlyn",
+        "state": "FL",
+        "postalCode": "79208",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.usjm3nsz",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy assessment on 2024-07-05</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ue7dvrwf",
+        "display": "Monica Juarez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2r3wkk5u",
+            "display": "Dr. Paul Doyle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-05T11:30:00+00:00",
+        "end": "2024-07-05T12:24:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy assessment"
+            }
+          ],
+          "text": "Allergy assessment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.hbe2s7d5",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n9hpa84m",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.mvjhkthg",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Allergy follow-up on 2024-12-07</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ue7dvrwf",
+        "display": "Monica Juarez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2r3wkk5u",
+            "display": "Dr. Paul Doyle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-07T13:00:00+00:00",
+        "end": "2024-12-07T13:39:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Allergy follow-up"
+            }
+          ],
+          "text": "Allergy follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.hbe2s7d5",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n9hpa84m",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.maumzs8m",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Seasonal review on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.ue7dvrwf",
+        "display": "Monica Juarez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.2r3wkk5u",
+            "display": "Dr. Paul Doyle"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:15:00+00:00",
+        "end": "2025-06-15T16:06:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Seasonal review"
+            }
+          ],
+          "text": "Seasonal review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.hbe2s7d5",
+        "display": "Clinique du Parc"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.n9hpa84m",
+            "display": "Clinique du Parc - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "allergy_intolerance": {
+    "resourceType": "AllergyIntolerance",
+    "id": "ai.nu3busb2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AllergyIntolerance: Mild seasonal pollen allergy</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "type": "allergy",
+    "category": [
+      "environment"
+    ],
+    "criticality": "low",
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "256259004",
+          "display": "Pollen"
+        }
+      ],
+      "text": "Pollen"
+    },
+    "patient": {
+      "reference": "Patient/pt.ue7dvrwf",
+      "display": "Monica Juarez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.maumzs8m"
+    },
+    "recordedDate": "2025-06-15",
+    "recorder": {
+      "reference": "Practitioner/pr.2r3wkk5u",
+      "display": "Dr. Paul Doyle"
+    },
+    "reaction": [
+      {
+        "substance": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "256259004",
+              "display": "Pollen"
+            }
+          ],
+          "text": "Pollen"
+        },
+        "manifestation": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "267036007",
+                "display": "Sneezing"
+              }
+            ],
+            "text": "Sneezing"
+          }
+        ],
+        "severity": "mild"
+      }
+    ],
+    "note": [
+      {
+        "text": "Mild seasonal symptoms managed with over-the-counter antihistamine. No history of severe reactions."
+      }
+    ]
+  },
+  "clinical_impression": {
+    "resourceType": "ClinicalImpression",
+    "id": "ci.dt3zhyss",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClinicalImpression: Mild seasonal allergies, well controlled</p></div>"
+    },
+    "status": "completed",
+    "subject": {
+      "reference": "Patient/pt.ue7dvrwf",
+      "display": "Monica Juarez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.maumzs8m"
+    },
+    "effectiveDateTime": "2025-06-15T10:00:00+00:00",
+    "date": "2025-06-15T10:00:00+00:00",
+    "assessor": {
+      "reference": "Practitioner/pr.2r3wkk5u",
+      "display": "Dr. Paul Doyle"
+    },
+    "summary": "Patient presents with mild seasonal allergic rhinitis. Symptoms are well controlled with cetirizine 10 mg daily during pollen season. No escalation needed.",
+    "finding": [
+      {
+        "itemCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J30.1",
+              "display": "Allergic rhinitis due to pollen"
+            }
+          ],
+          "text": "Allergic rhinitis due to pollen"
+        }
+      }
+    ]
+  },
+  "risk_assessment": {
+    "resourceType": "RiskAssessment",
+    "id": "ra.dm8ke7zb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>RiskAssessment: Low risk for severe allergic reaction</p></div>"
+    },
+    "status": "final",
+    "subject": {
+      "reference": "Patient/pt.ue7dvrwf",
+      "display": "Monica Juarez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.maumzs8m"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "condition": {
+      "reference": "AllergyIntolerance/ai.nu3busb2"
+    },
+    "performer": {
+      "reference": "Practitioner/pr.2r3wkk5u",
+      "display": "Dr. Paul Doyle"
+    },
+    "prediction": [
+      {
+        "outcome": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "39579001",
+              "display": "Anaphylaxis"
+            }
+          ],
+          "text": "Anaphylaxis"
+        },
+        "probabilityDecimal": 0.01,
+        "qualitativeRisk": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
+              "code": "low",
+              "display": "Low likelihood"
+            }
+          ],
+          "text": "Low likelihood"
+        },
+        "rationale": "History of mild seasonal symptoms only. No prior anaphylaxis. Low-risk allergen."
+      }
+    ]
+  },
+  "condition": {
+    "resourceType": "Condition",
+    "id": "cond.cac7dv5n",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Condition: Allergic rhinitis due to pollen</p></div>"
+    },
+    "clinicalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+          "code": "active",
+          "display": "Active"
+        }
+      ],
+      "text": "Active"
+    },
+    "verificationStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+          "code": "confirmed",
+          "display": "Confirmed"
+        }
+      ],
+      "text": "Confirmed"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+            "code": "encounter-diagnosis",
+            "display": "Encounter Diagnosis"
+          }
+        ],
+        "text": "Encounter Diagnosis"
+      }
+    ],
+    "severity": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "255604002",
+          "display": "Mild"
+        }
+      ],
+      "text": "Mild"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/sid/icd-10-cm",
+          "code": "J30.1",
+          "display": "Allergic rhinitis due to pollen"
+        }
+      ],
+      "text": "Allergic rhinitis due to pollen"
+    },
+    "subject": {
+      "reference": "Patient/pt.ue7dvrwf",
+      "display": "Monica Juarez"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.maumzs8m"
+    },
+    "onsetDateTime": "2024-07-05",
+    "recorder": {
+      "reference": "Practitioner/pr.2r3wkk5u",
+      "display": "Dr. Paul Doyle"
+    }
+  },
+  "consent": {
+    "resourceType": "Consent",
+    "id": "cons.hhyyrcp2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Consent: Patient consent to share allergy information</p></div>"
+    },
+    "status": "active",
+    "scope": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+          "code": "patient-privacy",
+          "display": "Privacy Consent"
+        }
+      ],
+      "text": "Privacy Consent"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "59284-0",
+            "display": "Patient Consent"
+          }
+        ],
+        "text": "Patient Consent"
+      }
+    ],
+    "patient": {
+      "reference": "Patient/pt.ue7dvrwf",
+      "display": "Monica Juarez"
+    },
+    "dateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "reference": "Patient/pt.ue7dvrwf",
+        "display": "Monica Juarez"
+      }
+    ],
+    "organization": [
+      {
+        "reference": "Organization/org.hbe2s7d5",
+        "display": "Clinique du Parc"
+      }
+    ],
+    "policyRule": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "OPTIN",
+          "display": "opt-in"
+        }
+      ],
+      "text": "opt-in"
+    }
+  }
+}

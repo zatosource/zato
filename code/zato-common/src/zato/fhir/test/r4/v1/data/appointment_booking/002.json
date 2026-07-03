@@ -1,0 +1,811 @@
+{
+  "_meta": {
+    "scenario": "appointment_booking",
+    "instance": 2,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.yuxhmsem",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Théodore Mercier</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN7346381"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4607"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Mercier",
+        "given": [
+          "Théodore"
+        ],
+        "text": "Théodore Mercier"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "573-815-6082",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "johnflores@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1974-10-03",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "98531 Elizabeth Lane Suite 974"
+        ],
+        "city": "Port Mollystad",
+        "state": "SC",
+        "postalCode": "23517",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.r9q55aay",
+        "display": "Dr. Guy Bouchet"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.tgyaxjvg",
+      "display": "Lakeside Wellness Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.r9q55aay",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Guy Bouchet</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6494815757"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Bouchet",
+        "given": [
+          "Guy"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Guy Bouchet"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "408-465-1236x3940",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "664 Jennifer Club"
+        ],
+        "city": "Port Joshuamouth",
+        "state": "CT",
+        "postalCode": "46931",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.tgyaxjvg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Lakeside Wellness Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "2781290318"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Lakeside Wellness Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "532.896.5667x303",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "733 Andrea Harbor Suite 196"
+        ],
+        "city": "Bryanport",
+        "state": "NM",
+        "postalCode": "33642",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.jgnzdygu",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual checkup on 2024-07-05</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yuxhmsem",
+        "display": "Théodore Mercier"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.r9q55aay",
+            "display": "Dr. Guy Bouchet"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-07-05T08:30:00+00:00",
+        "end": "2024-07-05T09:07:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.tgyaxjvg",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.nu7fh35j",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.pph2zevq",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2024-12-04</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yuxhmsem",
+        "display": "Théodore Mercier"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.r9q55aay",
+            "display": "Dr. Guy Bouchet"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-04T10:30:00+00:00",
+        "end": "2024-12-04T11:17:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.tgyaxjvg",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.nu7fh35j",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.vnuajfnn",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Wellness screening on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.yuxhmsem",
+        "display": "Théodore Mercier"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.r9q55aay",
+            "display": "Dr. Guy Bouchet"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T14:00:00+00:00",
+        "end": "2025-06-15T14:46:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.tgyaxjvg",
+        "display": "Lakeside Wellness Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.nu7fh35j",
+            "display": "Lakeside Wellness Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "appointment": {
+    "resourceType": "Appointment",
+    "id": "appt.7b7wqnf5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Appointment: Follow-up wellness visit</p></div>"
+    },
+    "status": "booked",
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "appointmentType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+          "code": "FOLLOWUP",
+          "display": "A follow up visit"
+        }
+      ],
+      "text": "A follow up visit"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "Z00.00",
+            "display": "Annual wellness follow-up"
+          }
+        ],
+        "text": "Annual wellness follow-up"
+      }
+    ],
+    "start": "2025-12-23T15:00:00+00:00",
+    "end": "2025-12-23T15:30:00+00:00",
+    "minutesDuration": 30,
+    "slot": [
+      {
+        "reference": "Slot/slot.gbbsngw9"
+      }
+    ],
+    "created": "2025-06-15",
+    "participant": [
+      {
+        "actor": {
+          "reference": "Patient/pt.yuxhmsem",
+          "display": "Théodore Mercier"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Practitioner/pr.r9q55aay",
+          "display": "Dr. Guy Bouchet"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Location/loc.nu7fh35j",
+          "display": "Lakeside Wellness Center - Main Office"
+        },
+        "required": "required",
+        "status": "accepted"
+      }
+    ]
+  },
+  "appointment_response": {
+    "resourceType": "AppointmentResponse",
+    "id": "ar.hf4crjxb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AppointmentResponse: Patient accepted</p></div>"
+    },
+    "appointment": {
+      "reference": "Appointment/appt.7b7wqnf5"
+    },
+    "start": "2025-12-23T15:00:00+00:00",
+    "end": "2025-12-23T15:30:00+00:00",
+    "participantType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "ATND",
+            "display": "attender"
+          }
+        ],
+        "text": "attender"
+      }
+    ],
+    "actor": {
+      "reference": "Patient/pt.yuxhmsem",
+      "display": "Théodore Mercier"
+    },
+    "participantStatus": "accepted"
+  },
+  "schedule": {
+    "resourceType": "Schedule",
+    "id": "sched.3mavvwam",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Schedule: Dr. Dr. Guy Bouchet availability</p></div>"
+    },
+    "active": true,
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "actor": [
+      {
+        "reference": "Practitioner/pr.r9q55aay",
+        "display": "Dr. Guy Bouchet"
+      },
+      {
+        "reference": "Location/loc.nu7fh35j",
+        "display": "Lakeside Wellness Center - Main Office"
+      },
+      {
+        "reference": "HealthcareService/hs.kt5epcqt"
+      }
+    ],
+    "planningHorizon": {
+      "start": "2025-06-15",
+      "end": "2026-12-31"
+    }
+  },
+  "slot": {
+    "resourceType": "Slot",
+    "id": "slot.gbbsngw9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Slot: Available appointment slot</p></div>"
+    },
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "schedule": {
+      "reference": "Schedule/sched.3mavvwam"
+    },
+    "status": "busy",
+    "start": "2025-12-23T15:00:00+00:00",
+    "end": "2025-12-23T15:30:00+00:00"
+  },
+  "healthcare_service": {
+    "resourceType": "HealthcareService",
+    "id": "hs.kt5epcqt",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HealthcareService: General wellness services at Lakeside Wellness Center</p></div>"
+    },
+    "active": true,
+    "providedBy": {
+      "reference": "Organization/org.tgyaxjvg",
+      "display": "Lakeside Wellness Center"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "name": "General Wellness - Lakeside Wellness Center",
+    "appointmentRequired": true,
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "08:00:00",
+        "availableEndTime": "17:00:00"
+      }
+    ]
+  },
+  "endpoint": {
+    "resourceType": "Endpoint",
+    "id": "ep.dh7nwhh3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Endpoint: FHIR endpoint for Lakeside Wellness Center</p></div>"
+    },
+    "status": "active",
+    "connectionType": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest",
+      "display": "HL7 FHIR"
+    },
+    "name": "Lakeside Wellness Center FHIR Endpoint",
+    "managingOrganization": {
+      "reference": "Organization/org.tgyaxjvg",
+      "display": "Lakeside Wellness Center"
+    },
+    "payloadType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-payload-type",
+            "code": "any",
+            "display": "Any"
+          }
+        ],
+        "text": "Any"
+      }
+    ],
+    "address": "https://fhir.example.org/org.tgyaxjvg"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "resourceType": "EnrollmentRequest",
+  "id": 22345,
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "identifier": {
+    "system": "http://happyvalley.com/enrollmentrequest",
+    "value": "EN22345"
+  },
+  "status": "active",
+  "created": "2014-08-16",
+  "insurer": {
+    "reference": "Organization/2"
+  },
+  "provider": {
+    "reference": "Organization/1"
+  },
+  "candidate": {
+    "reference": "Patient/1"
+  },
+  "coverage": {
+    "reference": "Coverage/9876B1"
+  }
+}

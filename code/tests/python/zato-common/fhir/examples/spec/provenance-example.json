@@ -1,0 +1,54 @@
+{
+  "resourceType": "Provenance",
+  "id": "example",
+  "target": {
+    "reference": "Procedure/example/_history/1"
+  },
+  "occurredPeriod": {
+    "start": "2015-06-27",
+    "end": "2015-06-28"
+  },
+  "recorded": "2015-06-27T08:39:24+10:00",
+  "policy": "http://acme.com/fhir/Consent/25",
+  "location": {
+    "reference": "Location/1"
+  },
+  "activity": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 3457005,
+      "display": "Referral"
+    }
+  },
+  "agent": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code": "AUT"
+        }
+      },
+      "who": {
+        "reference": "Practitioner/xcda-author"
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code": "DEV"
+        }
+      },
+      "who": {
+        "display": "Device/software"
+      }
+    }
+  ],
+  "entity": {
+    "role": "source",
+    "what": {
+      "reference": "DocumentReference/example",
+      "display": "CDA Document in XDS repository"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "resourceType": "Procedure",
+  "id": "HCBS",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}span": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      ]
+    }
+  },
+  "basedOn": {
+    "display": "Peter's Long Term Service and Supports (LTSS) Care Plan"
+  },
+  "status": "completed",
+  "code": {
+    "coding": {
+      "system": "https://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets/Alpha-Numeric-HCPCS.html",
+      "code": "T1019",
+      "display": "Personal care services, per 15 minutes, not for an inpatient or resident of a hospital, nursing facility, icf/mr or imd, part of the individualized plan of treatment."
+    },
+    "text": "Personal care services"
+  },
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter James"
+  },
+  "occurrenceDateTime": "2018-04-05",
+  "performer": {
+    "actor": {
+      "reference": "Practitioner/example",
+      "display": "Adam Careful"
+    }
+  },
+  "location": {
+    "reference": "Location/ph",
+    "display": "Peter's Home"
+  },
+  "note": {
+    "text": "Assisted with bathing and dressing, doing laundry, and meal preparation"
+  }
+}

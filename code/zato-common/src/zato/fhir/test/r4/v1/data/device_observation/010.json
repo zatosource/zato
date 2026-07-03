@@ -1,0 +1,306 @@
+{
+  "_meta": {
+    "scenario": "device_observation",
+    "instance": 10,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.pbptujtp",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Matthew Kent</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4397127"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4180"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Kent",
+        "given": [
+          "Matthew"
+        ],
+        "text": "Matthew Kent"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(880)500-3172x87901",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "tchapman@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1959-11-03",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "58901 Ward Mountains"
+        ],
+        "city": "Barbarashire",
+        "state": "WV",
+        "postalCode": "91759",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.fwqsu4cg",
+        "display": "Dr. Heather Ramsey"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.wn95v545",
+      "display": "Sunrise Family Practice"
+    }
+  },
+  "device": {
+    "resourceType": "Device",
+    "id": "dev.exkmfvnx",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Device: Pulse oximeter</p></div>"
+    },
+    "status": "active",
+    "manufacturer": "Masimo",
+    "deviceName": [
+      {
+        "name": "Rad-97 Pulse Oximeter",
+        "type": "manufacturer-name"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "448703006",
+          "display": "Pulse oximeter"
+        }
+      ],
+      "text": "Pulse oximeter"
+    },
+    "owner": {
+      "reference": "Organization/org.wn95v545",
+      "display": "Sunrise Family Practice"
+    },
+    "serialNumber": "SN202528"
+  },
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "obs.krxv42xm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Oxygen saturation: 98 %</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2708-6",
+            "display": "Oxygen saturation"
+          }
+        ],
+        "text": "Oxygen saturation"
+      },
+      "subject": {
+        "reference": "Patient/pt.pbptujtp"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 98,
+        "unit": "%",
+        "system": "http://unitsofmeasure.org",
+        "code": "%"
+      },
+      "device": {
+        "reference": "Device/dev.exkmfvnx"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "obs.7cfp9mqk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Heart rate: 68 /min</p></div>"
+      },
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs",
+              "display": "Vital Signs"
+            }
+          ],
+          "text": "Vital Signs"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8867-4",
+            "display": "Heart rate"
+          }
+        ],
+        "text": "Heart rate"
+      },
+      "subject": {
+        "reference": "Patient/pt.pbptujtp"
+      },
+      "effectiveDateTime": "2025-06-15T08:00:00+00:00",
+      "valueQuantity": {
+        "value": 68,
+        "unit": "/min",
+        "system": "http://unitsofmeasure.org",
+        "code": "/min"
+      },
+      "device": {
+        "reference": "Device/dev.exkmfvnx"
+      }
+    }
+  ],
+  "group": {
+    "resourceType": "Group",
+    "id": "grp.8m64cja6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Group: Monitored patients group</p></div>"
+    },
+    "active": true,
+    "type": "person",
+    "actual": true,
+    "name": "Pulse Oximetry Monitoring Group",
+    "quantity": 1,
+    "member": [
+      {
+        "entity": {
+          "reference": "Patient/pt.pbptujtp",
+          "display": "Matthew Kent"
+        }
+      }
+    ]
+  }
+}

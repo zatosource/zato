@@ -1,0 +1,124 @@
+{
+  "_meta": {
+    "scenario": "test_execution",
+    "instance": 4,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "test_report": {
+    "resourceType": "TestReport",
+    "id": "tr.pkahqzs7",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>TestReport: All immunization workflow tests passed</p></div>"
+    },
+    "name": "ImmunizationWorkflowTestReport",
+    "status": "completed",
+    "testScript": {
+      "reference": "TestScript/ts.xmtpkt6m"
+    },
+    "result": "pass",
+    "score": 1.0,
+    "tester": "Wellness QA Organization",
+    "issued": "2025-06-15T10:00:00+00:00",
+    "test": [
+      {
+        "name": "Read Patient",
+        "description": "Read a patient resource and verify it exists",
+        "action": [
+          {
+            "operation": {
+              "result": "pass",
+              "message": "Patient resource read successfully"
+            }
+          },
+          {
+            "assert": {
+              "result": "pass",
+              "message": "Response status is 200"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "test_script": {
+    "resourceType": "TestScript",
+    "id": "ts.xmtpkt6m",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>TestScript: Immunization workflow test</p></div>"
+    },
+    "url": "http://example.org/TestScript/ts.xmtpkt6m",
+    "name": "ImmunizationWorkflowTest",
+    "title": "Immunization Workflow Test Script",
+    "status": "active",
+    "date": "2025-06-15",
+    "publisher": "Wellness QA Organization",
+    "description": "Test script to validate the immunization recording workflow.",
+    "test": [
+      {
+        "name": "Read Patient",
+        "description": "Read a patient resource and verify it exists",
+        "action": [
+          {
+            "operation": {
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/testscript-operation-codes",
+                    "code": "read",
+                    "display": "Read"
+                  }
+                ],
+                "text": "Read"
+              },
+              "resource": "Patient",
+              "description": "Read Patient resource"
+            }
+          },
+          {
+            "assert": {
+              "description": "Confirm that the response status is 200",
+              "response": "okay"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "verification_result": {
+    "resourceType": "VerificationResult",
+    "id": "vr.dhqwq4nb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>VerificationResult: Server validation passed</p></div>"
+    },
+    "status": "validated",
+    "statusDate": "2025-06-15T10:00:00+00:00",
+    "validationType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/validation-type",
+          "code": "primary",
+          "display": "Primary Source"
+        }
+      ],
+      "text": "Primary Source"
+    },
+    "validationProcess": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/validation-process",
+            "code": "standalone",
+            "display": "Standalone"
+          }
+        ],
+        "text": "Standalone"
+      }
+    ],
+    "lastPerformed": "2025-06-15T10:00:00+00:00",
+    "nextScheduled": "2026-01-01"
+  }
+}

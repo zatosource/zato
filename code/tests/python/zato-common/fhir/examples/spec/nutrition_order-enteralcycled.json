@@ -1,0 +1,81 @@
+{
+  "resourceType": "NutritionOrder",
+  "id": "enteralcycled",
+  "identifier": {
+    "system": "http://www.acme.org/nutritionorders",
+    "value": 123
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example",
+    "display": "Peter Chalmers"
+  },
+  "encounter": {
+    "reference": "Encounter/example",
+    "display": "Inpatient"
+  },
+  "dateTime": "2014-09-17",
+  "orderer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  },
+  "enteralFormula": {
+    "type": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 441571000124104,
+          "display": "High energy enteral formula with fiber"
+        }
+      }
+    },
+    "baseFormulaType": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 442921000124101,
+          "display": "Adult standard formula (product)"
+        }
+      }
+    },
+    "baseFormulaProductName": "Acme Diabetes Formula",
+    "caloricDensity": {
+      "value": 1.5,
+      "unit": "calories per milliliter",
+      "system": "http://unitsofmeasure.org",
+      "code": "cal/mL"
+    },
+    "routeOfAdministration": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
+        "code": "NGT",
+        "display": "Instillation, nasogastric tube"
+      }
+    },
+    "administration": {
+      "schedule": {
+        "timing": {
+          "repeat": {
+            "boundsPeriod": {
+              "start": "2014-09-17T07:00:00Z"
+            }
+          }
+        }
+      },
+      "rateQuantity": {
+        "value": 60,
+        "unit": "ml/hr",
+        "system": "http://unitsofmeasure.org",
+        "code": "mL/h"
+      }
+    },
+    "maxVolumeToDeliver": {
+      "value": 880,
+      "unit": "milliliter/day",
+      "system": "http://unitsofmeasure.org",
+      "code": "mL/d"
+    },
+    "administrationInstruction": "Hold feedings from 7 pm to 7 am."
+  }
+}

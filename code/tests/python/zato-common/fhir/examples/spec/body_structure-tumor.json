@@ -1,0 +1,34 @@
+{
+  "resourceType": "BodyStructure",
+  "id": "tumor",
+  "identifier": {
+    "system": "http://goodhealth.org/bodystructure/identifiers",
+    "value": 12345
+  },
+  "morphology": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 4147007,
+      "display": "Mass (morphologic abnormality)"
+    },
+    "text": "Splenic mass"
+  },
+  "includedStructure": {
+    "structure": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 78961009,
+        "display": "Splenic structure (body structure)"
+      },
+      "text": "Spleen"
+    }
+  },
+  "description": "7 cm maximum diameter",
+  "image": {
+    "contentType": "application/dicom",
+    "url": "http://imaging.acme.com/wado/server?requestType=WADO&amp;wado_details"
+  },
+  "patient": {
+    "reference": "Patient/example"
+  }
+}

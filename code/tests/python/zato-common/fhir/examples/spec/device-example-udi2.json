@@ -1,0 +1,21 @@
+{
+  "resourceType": "Device",
+  "id": "example-udi2",
+  "identifier": {
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/NamingSystem/iccbba-din"
+      }
+    },
+    "value": "A99971312345600"
+  },
+  "udiCarrier": {
+    "deviceIdentifier": "A9999XYZ100T0474",
+    "issuer": "http://hl7.org/fhir/NamingSystem/iccbba-other",
+    "jurisdiction": "http://hl7.org/fhir/NamingSystem/fda-udi"
+  },
+  "status": "inactive",
+  "manufacturer": "Acme Devices, Inc",
+  "manufactureDate": "2013-02-01",
+  "expirationDate": "2014-02-01"
+}

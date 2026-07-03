@@ -1,0 +1,50 @@
+{
+  "resourceType": "ValueSet",
+  "id": "security-label-example",
+  "extension": [
+    {
+      "valueCode": "sec"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    }
+  ],
+  "url": "http://hl7.org/fhir/ValueSet/security-label-example",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3011"
+  },
+  "version": "2.0.0",
+  "name": "SecurityLabelExamples",
+  "title": "Example set of Security Labels",
+  "status": "active",
+  "experimental": true,
+  "date": "2022-05-10",
+  "publisher": "HL7 International / Security",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/secure"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "A sample of security labels from [Healthcare Privacy and Security Classification System](security-labels.html#hcs) as the combination of data and event codes.",
+  "compose": {
+    "include": [
+      {
+        "valueSet": "http://hl7.org/fhir/ValueSet/security-label-data-example"
+      },
+      {
+        "valueSet": "http://hl7.org/fhir/ValueSet/security-label-event-example"
+      }
+    ]
+  }
+}

@@ -1,0 +1,331 @@
+{
+  "resourceType": "ExampleScenario",
+  "id": "example",
+  "text": {
+    "status": "additional",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": [
+        {
+          "{http://www.w3.org/1999/xhtml}b": null,
+          "{http://www.w3.org/1999/xhtml}a": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}b": null
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}div": {
+        "{http://www.w3.org/1999/xhtml}p": null
+      },
+      "{http://www.w3.org/1999/xhtml}img": null
+    }
+  },
+  "status": "draft",
+  "purpose": "Purpose: this serves to demonstrate the performing of medication administration, by using remote / mobile devices to a) Get the planned medication administrations and b) Record the performing of these administrations without a permanent connection to the EHR.",
+  "actor": [
+    {
+      "key": "Nurse",
+      "type": "person",
+      "title": "Nurse",
+      "description": "The Nurse"
+    },
+    {
+      "key": "MAP",
+      "type": "other",
+      "title": "Nurse's Tablet",
+      "description": "The entity that receives the Administration Requests to show the nurse to perform them"
+    },
+    {
+      "key": "OP",
+      "type": "system",
+      "title": "MAR / Scheduler",
+      "description": "The Medication Administration Order Placer"
+    },
+    {
+      "key": "MAC",
+      "type": "system",
+      "title": "MAR / EHR",
+      "description": "The entity that receives the Medication Administration reports"
+    }
+  ],
+  "instance": [
+    {
+      "key": "iherx001",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Initial Prescription",
+      "description": "The initial prescription which describes \"medication X, 3 times per day\" - the exact scheduling is not   in the initial prescription (it is left for the care teams to decide on the schedule)."
+    },
+    {
+      "key": "iherx001.001",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 1, morning",
+      "description": "The administration request for day 1, morning"
+    },
+    {
+      "key": "iherx001.002",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 1, lunch",
+      "description": "The administration request for day 1, lunch"
+    },
+    {
+      "key": "iherx001.003",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 1, evening",
+      "description": "The administration request for day 1, evening"
+    },
+    {
+      "key": "iherx001.004",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 2, morning",
+      "description": "The administration request for day 2, morning"
+    },
+    {
+      "key": "iherx001.005",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 2, lunch",
+      "description": "The administration request for day 2, lunch"
+    },
+    {
+      "key": "iherx001.006",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Request for day 2, evening",
+      "description": "The administration request for day 2, evening"
+    },
+    {
+      "key": "iheadm001a",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationAdministration"
+      },
+      "title": "Morning meds - taken",
+      "description": "Administration report for day 1, morning: Taken"
+    },
+    {
+      "key": "iheadm001b",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationAdministration"
+      },
+      "title": "Morning meds - not taken",
+      "description": "Administration report for day 1, morning: NOT Taken"
+    },
+    {
+      "key": "iherx001bundle",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationRequest"
+      },
+      "title": "Bundle of Medication Requests",
+      "description": "All the medication Requests for Day 1",
+      "containedInstance": [
+        {
+          "instanceReference": "iherx001.001"
+        },
+        {
+          "instanceReference": "iherx001.002"
+        },
+        {
+          "instanceReference": "iherx001.003"
+        },
+        {
+          "instanceReference": "iherx001.004"
+        },
+        {
+          "instanceReference": "iherx001.005"
+        },
+        {
+          "instanceReference": "iherx001.006"
+        }
+      ]
+    },
+    {
+      "key": "iheadm002",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "MedicationAdministration"
+      },
+      "title": "Lunch meds - taken",
+      "description": "Administration report for day 1, lunch: Taken",
+      "version": [
+        {
+          "key": "iheadm002v1",
+          "title": "Administration - v1",
+          "description": "Medication just taken"
+        },
+        {
+          "key": "iheadm002v2",
+          "title": "Administration - v2",
+          "description": "Medication rejected"
+        }
+      ]
+    },
+    {
+      "key": "iherxqry",
+      "structureType": {
+        "system": "http://hl7.org/fhir/fhir-types",
+        "code": "SearchParameter"
+      },
+      "title": "Search query1",
+      "description": "The search administration request for day 1, morning"
+    }
+  ],
+  "process": {
+    "title": "Mobile Medication Administration",
+    "description": "This scenario demonstrates the process of getting the relevant medication instructions for a patient visit and reporting the results of administration. The scenario is as follows: After the prescription is issued, the institution schedules each individual administration event in the Medication Administration Record (MAR). When preparing for a visit, the nurse queries the MAR for the scheduled administrations, obtaining a bundle of records. The nurse then performs the care activities and registers the results in the device. Upon synchronization of the device and the institution, the results of administration are uploaded to the EHR, thus updating the MAR.",
+    "preConditions": "Medication administration requests are in the EHR / MAR, scheduled for each individual intake.",
+    "postConditions": "Medication administration Reports are submitted, EHR is updated.",
+    "step": [
+      {
+        "number": 1,
+        "operation": {
+          "title": "Get today's schedule",
+          "initiator": "Nurse",
+          "receiver": "MAP"
+        }
+      },
+      {
+        "number": 2,
+        "operation": {
+          "title": "Query administration orders",
+          "initiator": "MAP",
+          "receiver": "OP",
+          "description": "Query for medication administration orders,\\n- For today's shifts\\n- For today's patients",
+          "request": {
+            "instanceReference": "iherxqry"
+          },
+          "response": {
+            "instanceReference": "iherx001bundle"
+          }
+        },
+        "pause": true
+      },
+      {
+        "number": 3,
+        "operation": {
+          "title": "Notify (alert)",
+          "initiator": "MAP",
+          "receiver": "Nurse"
+        }
+      },
+      {
+        "number": 4,
+        "operation": {
+          "title": "Read orders",
+          "initiator": "Nurse",
+          "receiver": "MAP"
+        },
+        "pause": true
+      },
+      {
+        "number": 5,
+        "operation": {
+          "title": "Ask if patient took meds",
+          "initiator": "Nurse",
+          "receiver": "Nurse"
+        }
+      },
+      {
+        "alternative": [
+          {
+            "title": "Patient took meds",
+            "description": "Invoke if patient took medications",
+            "step": {
+              "number": "6a",
+              "operation": {
+                "title": "Register meds taken",
+                "initiator": "Nurse",
+                "receiver": "MAP",
+                "initiatorActive": true
+              }
+            }
+          },
+          {
+            "title": "No drugs",
+            "description": "No, patient did not take meds",
+            "step": {
+              "number": "6b",
+              "operation": {
+                "title": "Register meds NOT taken",
+                "initiator": "Nurse",
+                "receiver": "MAP",
+                "initiatorActive": true
+              }
+            }
+          },
+          {
+            "title": "Not clear",
+            "description": "Unknown whether patient took medications or not"
+          }
+        ],
+        "pause": true
+      },
+      {
+        "number": 7,
+        "operation": {
+          "title": "Administer drug",
+          "initiator": "Nurse",
+          "receiver": "Nurse"
+        }
+      },
+      {
+        "number": 8,
+        "operation": {
+          "title": "Record administration",
+          "initiator": "Nurse",
+          "receiver": "MAP",
+          "initiatorActive": true
+        },
+        "pause": true
+      },
+      {
+        "number": 9,
+        "operation": {
+          "title": "Upload administration reports",
+          "initiator": "Nurse",
+          "receiver": "MAP",
+          "initiatorActive": true,
+          "request": {
+            "instanceReference": "iheadm002",
+            "versionReference": "iheadm002v1"
+          }
+        },
+        "pause": true
+      },
+      {
+        "number": 10,
+        "operation": {
+          "title": "Upload administration reports",
+          "initiator": "MAP",
+          "receiver": "MAC",
+          "description": "The nurse's system uploads the administration results to the server",
+          "request": {
+            "instanceReference": "iheadm001a"
+          }
+        }
+      }
+    ]
+  }
+}

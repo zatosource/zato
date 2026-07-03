@@ -1,0 +1,84 @@
+{
+  "resourceType": "QuestionnaireResponse",
+  "id": "f201",
+  "questionnaire": {
+    "extension": {
+      "valueString": "Lifelines"
+    }
+  },
+  "status": "completed",
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "authored": "2013-06-18T00:00:00+01:00",
+  "author": {
+    "reference": "Practitioner/f201"
+  },
+  "source": {
+    "reference": "Practitioner/f201"
+  },
+  "item": [
+    {
+      "linkId": 1,
+      "text": "Do you have allergies?",
+      "answer": {
+        "valueBoolean": true
+      }
+    },
+    {
+      "linkId": 2,
+      "text": "General questions",
+      "item": [
+        {
+          "linkId": 2.1,
+          "text": "What is your gender?",
+          "answer": {
+            "valueString": "Male"
+          }
+        },
+        {
+          "linkId": 2.2,
+          "text": "What is your date of birth?",
+          "answer": {
+            "valueDate": "1960-03-13"
+          }
+        },
+        {
+          "linkId": 2.3,
+          "text": "What is your country of birth?",
+          "answer": {
+            "valueString": "The Netherlands"
+          }
+        },
+        {
+          "linkId": 2.4,
+          "text": "What is your marital status?",
+          "answer": {
+            "valueString": "married"
+          }
+        }
+      ]
+    },
+    {
+      "linkId": 3,
+      "text": "Intoxications",
+      "item": [
+        {
+          "linkId": 3.1,
+          "text": "Do you smoke?",
+          "answer": {
+            "valueBoolean": false
+          }
+        },
+        {
+          "linkId": 3.2,
+          "text": "Do you drink alchohol?",
+          "answer": {
+            "valueBoolean": false
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "resourceType": "Specimen",
+  "id": "pooled-serum",
+  "identifier": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "ACSN",
+          "display": "Accession ID"
+        }
+      },
+      "system": "https://vetmed.iastate.edu/vdl",
+      "value": "20171120-1234"
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+          "code": "ACSN",
+          "display": "Accession ID"
+        }
+      },
+      "system": "https://vetmed.iastate.edu/vdl",
+      "value": "20171120-1234"
+    }
+  ],
+  "type": {
+    "coding": {
+      "system": "https://vetmed.iastate.edu/vdl",
+      "code": "Serum sample, pooled",
+      "display": "Serum sample, pooled"
+    },
+    "text": "Pooled serum sample"
+  },
+  "subject": {
+    "reference": "Group/herd1"
+  },
+  "combined": "pooled",
+  "collection": {
+    "collector": {
+      "display": "James Herriot, FRCVS"
+    },
+    "collectedDateTime": "2017-11-14"
+  },
+  "container": {
+    "device": {
+      "reference": {
+        "reference": "Device/device-example-specimen-container-red-top-vacutainer"
+      }
+    }
+  },
+  "note": {
+    "text": "Pooled serum sample from 30 individuals"
+  }
+}

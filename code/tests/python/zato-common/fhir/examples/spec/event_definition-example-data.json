@@ -1,0 +1,39 @@
+{
+  "resourceType": "EventDefinition",
+  "id": "example-data",
+  "extension": [
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    },
+    {
+      "valueCode": "cds"
+    },
+    {
+      "valueCanonical": "http://hl7.org/fhir/EventDefinition/ExampleEventDefinitionLogic"
+    }
+  ],
+  "url": "http://hl7.org/fhir/EventDefinition/example-data",
+  "name": "DataEventDefinitionExample",
+  "title": "Data EventDefinition Example",
+  "status": "draft",
+  "experimental": true,
+  "description": "Example of an EventDefinition using the data event approach.",
+  "purpose": "Monitor when 3 consecutive negative stick tests have occurred using a data change event.",
+  "trigger": {
+    "type": "data-changed",
+    "data": {
+      "type": "Observation",
+      "codeFilter": {
+        "path": "code",
+        "valueSet": "http://example.org/ValueSet/stick-test-codes"
+      }
+    },
+    "condition": {
+      "language": "text/cql-expression",
+      "expression": "StickTest.consecutivelyAfter(%context).take(3).negative().count() = 3"
+    }
+  }
+}

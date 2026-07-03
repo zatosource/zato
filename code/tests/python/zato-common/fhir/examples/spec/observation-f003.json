@@ -1,0 +1,54 @@
+{
+  "resourceType": "Observation",
+  "id": "f003",
+  "identifier": {
+    "use": "official",
+    "system": "http://www.bmc.nl/zorgportal/identifiers/observations",
+    "value": 6325
+  },
+  "status": "final",
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "11557-6",
+      "display": "Carbon dioxide [Partial pressure] in Blood"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "effectiveDateTime": "2013-04-02T10:30:10+01:00",
+  "issued": "2013-04-03T15:30:10+01:00",
+  "performer": {
+    "reference": "Practitioner/f005",
+    "display": "A. Langeveld"
+  },
+  "valueQuantity": {
+    "value": 6.2,
+    "unit": "kPa",
+    "system": "http://unitsofmeasure.org",
+    "code": "kPa"
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "H",
+      "display": "High"
+    }
+  },
+  "referenceRange": {
+    "low": {
+      "value": 4.8,
+      "unit": "kPa",
+      "system": "http://unitsofmeasure.org",
+      "code": "kPa"
+    },
+    "high": {
+      "value": 6.0,
+      "unit": "kPa",
+      "system": "http://unitsofmeasure.org",
+      "code": "kPa"
+    }
+  }
+}

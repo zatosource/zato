@@ -1,0 +1,192 @@
+{
+  "resourceType": "Evidence",
+  "id": "example-ASTRAL-12-alteplase-mRS3-6",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "url": "http://hl7.org/fhir/Evidence/example-ASTRAL-12-alteplase-mRS3-6",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.10.2"
+  },
+  "name": "RiskOfMRS36At90DaysAfterAlteplaseForStrokeIfASTRALScore12",
+  "title": "Risk of mRS3-6 at 90 days after Alteplase for Stroke if ASTRAL score 12",
+  "status": "draft",
+  "relatesTo": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/artifact-relationship-type",
+        "code": "cites",
+        "display": "Cites"
+      }
+    },
+    "targetMarkdown": "External Validation of the ASTRAL and DRAGON Scores for Prediction of Functional Outcome in Stroke. <b>Citation:</b> Cooray C, Mazya M, Bottai M, Dorado L, Skoda O, Toni D, Ford GA, Wahlgren N, Ahmed N. External Validation of the ASTRAL and DRAGON Scores for Prediction of Functional Outcome in Stroke. Stroke. 2016 Jun;47(6):1493-9. Epub 2016 May 12. PMID 27174528 <b>URL:</b> https://doi.org/10.1161/STROKEAHA.116.012802"
+  },
+  "description": "5.3% risk of mRS 3-6 at 90 days",
+  "variableDefinition": [
+    {
+      "variableRole": "population",
+      "observed": {
+        "reference": "Group/ASTRAL-Cooray-validation-cohort-and-received-alteplase",
+        "type": "Group",
+        "display": "ASTRAL validation cohort and received alteplase"
+      },
+      "intended": {
+        "reference": "Group/ASTRAL-12-and-received-alteplase",
+        "type": "Group",
+        "display": "patients 0-4.5 hours after acute ischemic stroke onset with ASTRAL score = 12 and received alteplase"
+      }
+    },
+    {
+      "description": "functionally dependent or dead at 3 months",
+      "variableRole": "outcome",
+      "observed": {
+        "reference": "EvidenceVariable/example-mRS3-6-at-90days",
+        "type": "EvidenceVariable",
+        "display": "mRS 3-6 at 90 days"
+      },
+      "intended": {
+        "reference": "EvidenceVariable/example-dead-or-dependent-90day",
+        "type": "EvidenceVariable",
+        "display": "Dead or functionally dependent at 90 days"
+      },
+      "directnessMatch": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/directness",
+          "code": "high",
+          "display": "High quality match between observed and intended variable"
+        }
+      }
+    }
+  ],
+  "studyDesign": {
+    "coding": {
+      "system": "https://fevir.net/sevco",
+      "code": "SEVCO:01016",
+      "display": "Uncontrolled cohort design"
+    }
+  },
+  "statistic": {
+    "description": "5.3% risk",
+    "statisticType": {
+      "coding": {
+        "system": "https://fevir.net/sevco",
+        "code": "STATO:0000607",
+        "display": "proportion"
+      },
+      "text": "derived proportion"
+    },
+    "quantity": {
+      "value": 0.0525
+    },
+    "sampleSize": {
+      "note": {
+        "text": "number of participants describes number in the total study sample, known data count describes number in study sample with ASTRALscore = 12, total number of events describes number of participants with ASTRAL score = 12 and outcome of mRS 3-6 at 90 days"
+      },
+      "numberOfParticipants": 36131
+    }
+  },
+  "certainty": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+        "code": "Overall",
+        "display": "Overall certainty"
+      }
+    },
+    "rating": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+        "code": "high",
+        "display": "High quality"
+      }
+    },
+    "subcomponent": [
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "RiskOfBias",
+            "display": "Risk of bias"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "description": "Estimated risk from validation calibration plot consistent with predicted risk; observed risk in subgroup with ASTRAL score = 12 consistent with validation calibration plot",
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Inconsistency",
+            "display": "Inconsistency"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Indirectness",
+            "display": "Indirectness"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "description": "Narrow confidence interval",
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "Imprecision",
+            "display": "Imprecision"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      },
+      {
+        "type": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-type",
+            "code": "PublicationBias",
+            "display": "Publication bias"
+          }
+        },
+        "rating": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/certainty-rating",
+            "code": "no-concern",
+            "display": "no serious concern"
+          }
+        }
+      }
+    ]
+  }
+}

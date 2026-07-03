@@ -1,0 +1,66 @@
+{
+  "resourceType": "ValueSet",
+  "id": "measure-stratifier-age-range-example",
+  "extension": {
+    "valueCode": "cqi"
+  },
+  "url": "http://hl7.org/fhir/ValueSet/measure-stratifier-age-range-example",
+  "version": "6.0.0",
+  "name": "MeasureStratifierAgeRangeExample",
+  "title": "Measure Stratifier Age Range Example",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Clinical Quality Information Workgroup",
+  "description": "An example value set representing a possible age range stratification.",
+  "compose": {
+    "include": {
+      "system": "http://ohie.org/ValueSet/iso-8601-derived-periods",
+      "concept": [
+        {
+          "code": "P0Y--P1Y",
+          "display": "< 1 year"
+        },
+        {
+          "code": "P1Y--P5Y",
+          "display": "1-4 years"
+        },
+        {
+          "code": "P5Y--P10Y",
+          "display": "5-9 years"
+        },
+        {
+          "code": "P10Y--P15Y",
+          "display": "10-14 years"
+        },
+        {
+          "code": "P15Y--P20Y",
+          "display": "15-19 years"
+        },
+        {
+          "code": "P20Y--P25Y",
+          "display": "20-24 years"
+        },
+        {
+          "code": "P25Y--P30Y",
+          "display": "25-29 years"
+        },
+        {
+          "code": "P30Y--P35Y",
+          "display": "30-34 years"
+        },
+        {
+          "code": "P35Y--P40Y",
+          "display": "35-39 years"
+        },
+        {
+          "code": "P40Y--P50Y",
+          "display": "40-49 years"
+        },
+        {
+          "code": "P50Y--P9999Y",
+          "display": "50+ years"
+        }
+      ]
+    }
+  }
+}

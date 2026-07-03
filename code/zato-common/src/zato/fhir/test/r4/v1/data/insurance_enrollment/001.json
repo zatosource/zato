@@ -1,0 +1,1302 @@
+{
+  "_meta": {
+    "scenario": "insurance_enrollment",
+    "instance": 1,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.e23e895t",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Rebecca Rodriguez</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5446232"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-3897"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Rodriguez",
+        "given": [
+          "Rebecca"
+        ],
+        "text": "Rebecca Rodriguez"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(647)951-2087x99575",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "urivera@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1968-11-04",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "16027 John Walks"
+        ],
+        "city": "South Anthony",
+        "state": "OR",
+        "postalCode": "97555",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "en",
+              "display": "English"
+            }
+          ],
+          "text": "English"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.4md4aa5w",
+        "display": "Dr. Joshua Davidson"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "insorg.eddmqxnj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Valley Choice PPO</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "ins",
+            "display": "Insurance Company"
+          }
+        ],
+        "text": "Insurance Company"
+      }
+    ],
+    "name": "Valley Choice PPO"
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.34wt46gh",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Insurance enrollment on 2024-09-23</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e23e895t",
+        "display": "Rebecca Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4md4aa5w",
+            "display": "Dr. Joshua Davidson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-09-23T13:30:00+00:00",
+        "end": "2024-09-23T14:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gmqzz5wr",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rew32ybh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.nww4qfsb",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Coverage review on 2025-02-12</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e23e895t",
+        "display": "Rebecca Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4md4aa5w",
+            "display": "Dr. Joshua Davidson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-02-12T12:45:00+00:00",
+        "end": "2025-02-12T13:25:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gmqzz5wr",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rew32ybh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.paqyw9kk",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Benefits check on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.e23e895t",
+        "display": "Rebecca Rodriguez"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.4md4aa5w",
+            "display": "Dr. Joshua Davidson"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:15:00+00:00",
+        "end": "2025-06-15T11:02:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.gmqzz5wr",
+        "display": "Green Valley Pharmacy"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.rew32ybh",
+            "display": "Green Valley Pharmacy - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "cov.v35n6szu",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Coverage: Valley Choice PPO for Rebecca Rodriguez</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PPO",
+          "display": "PPO"
+        }
+      ],
+      "text": "PPO"
+    },
+    "subscriber": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "subscriberId": "SUB655122",
+    "beneficiary": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+          "code": "self",
+          "display": "Self"
+        }
+      ],
+      "text": "Self"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "payor": [
+      {
+        "reference": "Organization/insorg.eddmqxnj",
+        "display": "Valley Choice PPO"
+      }
+    ],
+    "class": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "group",
+              "display": "Group"
+            }
+          ],
+          "text": "Group"
+        },
+        "value": "GRP9827",
+        "name": "Employee Group"
+      },
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "plan",
+              "display": "Plan"
+            }
+          ],
+          "text": "Plan"
+        },
+        "value": "PPO",
+        "name": "Valley Choice PPO"
+      }
+    ],
+    "costToBeneficiary": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-copay-type",
+              "code": "copay",
+              "display": "Copay"
+            }
+          ],
+          "text": "Copay"
+        },
+        "valueMoney": {
+          "value": 30,
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "insurance_plan": {
+    "resourceType": "InsurancePlan",
+    "id": "ip.qytdsx97",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>InsurancePlan: Valley Choice PPO</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+            "code": "PPO",
+            "display": "PPO"
+          }
+        ],
+        "text": "PPO"
+      }
+    ],
+    "name": "Valley Choice PPO",
+    "ownedBy": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "administeredBy": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "plan": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+              "code": "PPO",
+              "display": "PPO"
+            }
+          ],
+          "text": "PPO"
+        },
+        "generalCost": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-cost-category",
+                  "code": "deductible",
+                  "display": "Deductible"
+                }
+              ],
+              "text": "Deductible"
+            },
+            "cost": {
+              "value": 1000,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "enrollment_request": {
+    "resourceType": "EnrollmentRequest",
+    "id": "er.q2zt3gfz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentRequest: Request to enroll in insurance plan</p></div>"
+    },
+    "status": "active",
+    "created": "2024-09-23",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "candidate": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "coverage": {
+      "reference": "Coverage/cov.v35n6szu"
+    }
+  },
+  "enrollment_response": {
+    "resourceType": "EnrollmentResponse",
+    "id": "eresp.u97snbkg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentResponse: Enrollment approved</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "EnrollmentRequest/er.q2zt3gfz"
+    },
+    "outcome": "complete",
+    "disposition": "Enrollment approved. Coverage effective immediately.",
+    "created": "2024-09-23",
+    "organization": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    }
+  },
+  "eligibility_request": {
+    "resourceType": "CoverageEligibilityRequest",
+    "id": "cer.sjrzjeab",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityRequest: Check benefits eligibility</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.v35n6szu"
+        }
+      }
+    ]
+  },
+  "eligibility_response": {
+    "resourceType": "CoverageEligibilityResponse",
+    "id": "ceresp.8gvyjg79",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityResponse: Patient eligible</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "created": "2025-06-15",
+    "request": {
+      "reference": "CoverageEligibilityRequest/cer.sjrzjeab"
+    },
+    "outcome": "complete",
+    "disposition": "Patient is eligible for benefits under current coverage.",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.v35n6szu"
+        },
+        "inforce": true
+      }
+    ]
+  },
+  "claim": {
+    "resourceType": "Claim",
+    "id": "clm.bnvkpwcw",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Claim: Wellness visit claim</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "priority": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+          "code": "normal",
+          "display": "Normal"
+        }
+      ],
+      "text": "Normal"
+    },
+    "insurance": [
+      {
+        "sequence": 1,
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.v35n6szu"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "unitPrice": {
+          "value": 211,
+          "currency": "USD"
+        },
+        "net": {
+          "value": 211,
+          "currency": "USD"
+        }
+      }
+    ],
+    "total": {
+      "value": 211,
+      "currency": "USD"
+    }
+  },
+  "claim_response": {
+    "resourceType": "ClaimResponse",
+    "id": "cr.svhgmre3",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClaimResponse: Claim processed</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "request": {
+      "reference": "Claim/clm.bnvkpwcw"
+    },
+    "outcome": "complete",
+    "disposition": "Claim processed successfully.",
+    "item": [
+      {
+        "itemSequence": 1,
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 211,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 181,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 30,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 211,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 181,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/ex-paymenttype",
+            "code": "complete",
+            "display": "Complete"
+          }
+        ],
+        "text": "Complete"
+      },
+      "date": "2025-06-15",
+      "amount": {
+        "value": 181,
+        "currency": "USD"
+      }
+    }
+  },
+  "explanation_of_benefit": {
+    "resourceType": "ExplanationOfBenefit",
+    "id": "eob.t2yud2c2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExplanationOfBenefit: Wellness visit benefit explanation</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "provider": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "outcome": "complete",
+    "insurance": [
+      {
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.v35n6szu"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 211,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 181,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 30,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 211,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 181,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "amount": {
+        "value": 181,
+        "currency": "USD"
+      }
+    }
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.fntnrhy2",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Payment processed for wellness visit</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "Claim/clm.bnvkpwcw"
+    },
+    "response": {
+      "reference": "ClaimResponse/cr.svhgmre3"
+    },
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.n2r3fezs"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "amount": {
+      "value": 181,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.n2r3fezs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Payment reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-01",
+      "end": "2025-06-28"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/insorg.eddmqxnj",
+      "display": "Valley Choice PPO"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 181,
+      "currency": "USD"
+    }
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.ppx85mm6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Wellness visit invoice</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "wellness-visit",
+          "display": "Wellness Visit"
+        }
+      ],
+      "text": "Wellness Visit"
+    },
+    "subject": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "totalNet": {
+      "value": 211,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 211,
+      "currency": "USD"
+    }
+  },
+  "charge_item": {
+    "resourceType": "ChargeItem",
+    "id": "ci.6dpkfucz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItem: Wellness visit charge</p></div>"
+    },
+    "status": "billed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    },
+    "subject": {
+      "reference": "Patient/pt.e23e895t",
+      "display": "Rebecca Rodriguez"
+    },
+    "context": {
+      "reference": "Encounter/enc.paqyw9kk"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Organization/org.gmqzz5wr",
+          "display": "Green Valley Pharmacy"
+        }
+      }
+    ],
+    "performingOrganization": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "requestingOrganization": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    },
+    "quantity": {
+      "value": 1
+    },
+    "priceOverride": {
+      "value": 211,
+      "currency": "USD"
+    },
+    "account": [
+      {
+        "reference": "Account/acct.c4dvc5b4"
+      }
+    ]
+  },
+  "charge_item_definition": {
+    "resourceType": "ChargeItemDefinition",
+    "id": "cid.4s3ynz86",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItemDefinition: Standard wellness visit charge</p></div>"
+    },
+    "url": "http://example.org/ChargeItemDefinition/cid.4s3ynz86",
+    "status": "active",
+    "title": "Wellness Visit Charge Definition",
+    "date": "2025-06-15",
+    "publisher": "Green Valley Pharmacy",
+    "description": "Standard charge definition for preventive wellness visits.",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.c4dvc5b4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for Rebecca Rodriguez</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - Rebecca Rodriguez",
+    "subject": [
+      {
+        "reference": "Patient/pt.e23e895t",
+        "display": "Rebecca Rodriguez"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.gmqzz5wr",
+      "display": "Green Valley Pharmacy"
+    }
+  },
+  "contract": {
+    "resourceType": "Contract",
+    "id": "contract.gf38s7vs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Contract: Insurance coverage agreement</p></div>"
+    },
+    "status": "executed",
+    "issued": "2025-01-01T00:00:00+00:00",
+    "applies": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "subject": [
+      {
+        "reference": "Patient/pt.e23e895t",
+        "display": "Rebecca Rodriguez"
+      }
+    ],
+    "authority": [
+      {
+        "reference": "Organization/insorg.eddmqxnj",
+        "display": "Valley Choice PPO"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/contract-type",
+          "code": "healthinsurance",
+          "display": "Health Insurance"
+        }
+      ],
+      "text": "Health Insurance"
+    }
+  }
+}

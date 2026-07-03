@@ -1,0 +1,23 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "example-extension",
+  "url": "http://hl7.org/fhir/SearchParameter/example-extension",
+  "name": "ExampleSearchParameterOnAnExtension",
+  "title": "Example Search Parameter on an extension",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "contact": {
+    "telecom": {
+      "system": "url",
+      "value": "http://hl7.org/fhir"
+    }
+  },
+  "description": "Search by url for a participation agreement, which is stored as an extension referencing a DocumentReference",
+  "code": "part-agree",
+  "base": "Patient",
+  "type": "reference",
+  "expression": "Patient.extension('http://example.org/fhir/StructureDefinition/participation-agreement').value",
+  "processingMode": "normal",
+  "target": "DocumentReference"
+}

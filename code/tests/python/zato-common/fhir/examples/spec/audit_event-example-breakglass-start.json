@@ -1,0 +1,75 @@
+{
+  "resourceType": "AuditEvent",
+  "id": "example-breakglass-start",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "type": {
+    "coding": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": 110113,
+      "display": "Security Alert"
+    }
+  },
+  "subtype": {
+    "coding": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": 110127,
+      "display": "Emergency Override Started"
+    }
+  },
+  "action": "E",
+  "recorded": "2013-09-22T00:08:00Z",
+  "outcome": {
+    "code": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-outcome",
+      "code": 0,
+      "display": "Success"
+    },
+    "detail": {
+      "text": "Successful  Start of Break-Glass"
+    }
+  },
+  "authorization": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+      "code": "ETREAT",
+      "display": "Emergency Treatment"
+    }
+  },
+  "agent": {
+    "who": {
+      "reference": "Practitioner/f001"
+    },
+    "requestor": true,
+    "location": {
+      "reference": "Location/1"
+    },
+    "networkString": "custodian.net"
+  },
+  "source": {
+    "observer": {
+      "display": "Watchers Accounting of Disclosures Application"
+    },
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+        "code": 4,
+        "display": "Application Server"
+      }
+    }
+  },
+  "entity": {
+    "what": {
+      "reference": "Patient/example"
+    },
+    "role": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/object-role",
+        "code": 1,
+        "display": "Patient"
+      }
+    }
+  }
+}

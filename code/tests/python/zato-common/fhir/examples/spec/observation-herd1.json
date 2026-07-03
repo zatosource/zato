@@ -1,0 +1,56 @@
+{
+  "resourceType": "Observation",
+  "id": "herd1",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "laboratory",
+      "display": "Laboratory"
+    },
+    "text": "Laboratory"
+  },
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "80219-9",
+        "display": "Mycoplasma hyopneumoniae Ab sample/Positive control in Serum by Immunoassay"
+      },
+      {
+        "system": "http://acme.org/devices/clinical-codes",
+        "code": "Mycoplasma",
+        "display": "Mycoplasma"
+      }
+    ],
+    "text": "Mycoplasma hyopneumoniae - MHP"
+  },
+  "subject": {
+    "reference": "Group/herd1"
+  },
+  "encounter": {
+    "display": "part of a health assurance program"
+  },
+  "effectiveDateTime": "2017-11-20",
+  "valueQuantity": {
+    "value": 0.2,
+    "unit": "% (sample/positive control)",
+    "system": "http://unitsofmeasure.org",
+    "code": "%"
+  },
+  "interpretation": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      "code": "NEG",
+      "display": "Negative"
+    },
+    "text": "Negative"
+  },
+  "specimen": {
+    "reference": "Specimen/pooled-serum",
+    "display": "30 serum"
+  },
+  "referenceRange": {
+    "text": ">0.4 Positive; 0.3 to 0.4 Suspect < 0.3 Negative"
+  }
+}

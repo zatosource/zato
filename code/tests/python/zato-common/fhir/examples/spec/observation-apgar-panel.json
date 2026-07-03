@@ -1,0 +1,44 @@
+{
+  "resourceType": "Observation",
+  "id": "apgar-panel",
+  "status": "final",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+      "code": "survey",
+      "display": "Survey"
+    },
+    "text": "Survey"
+  },
+  "code": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "48333-9",
+      "display": "5 minute Apgar panel"
+    }
+  },
+  "subject": {
+    "reference": "Patient/infant"
+  },
+  "effectiveDateTime": "2016-05-18T22:33:22Z",
+  "hasMember": [
+    {
+      "reference": "Observation/color"
+    },
+    {
+      "reference": "Observation/heart-rate"
+    },
+    {
+      "reference": "Observation/reflex-irritability"
+    },
+    {
+      "reference": "Observation/muscle-tone"
+    },
+    {
+      "reference": "Observation/respiratory-effort"
+    },
+    {
+      "reference": "Observation/apgar-score"
+    }
+  ]
+}

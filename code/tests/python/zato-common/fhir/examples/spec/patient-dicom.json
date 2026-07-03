@@ -1,0 +1,40 @@
+{
+  "resourceType": "Patient",
+  "id": "dicom",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "extension": [
+    {
+      "valueQuantity": {
+        "value": 56,
+        "unit": "Y"
+      }
+    },
+    {
+      "valueQuantity": {
+        "value": 1.83,
+        "unit": "m"
+      }
+    },
+    {
+      "valueQuantity": {
+        "value": 72.58,
+        "unit": "kg"
+      }
+    }
+  ],
+  "identifier": {
+    "system": "http://nema.org/examples/patients",
+    "value": "MINT1234"
+  },
+  "active": true,
+  "name": {
+    "family": "MINT_TEST"
+  },
+  "gender": "male",
+  "managingOrganization": {
+    "reference": "Organization/1"
+  }
+}

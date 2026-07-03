@@ -1,0 +1,112 @@
+{
+  "resourceType": "MeasureReport",
+  "id": "general-example-of-report",
+  "contained": {
+    "Patient": {
+      "id": "patient-new",
+      "name": {
+        "use": "official",
+        "family": "Donald",
+        "given": "Duck"
+      },
+      "gender": "male",
+      "birthDate": "1976-05-17",
+      "address": {
+        "use": "home",
+        "line": "1234 Main Street",
+        "city": "DC",
+        "postalCode": 20001,
+        "country": "USA"
+      }
+    }
+  },
+  "status": "complete",
+  "type": "individual",
+  "measure": "http://ohie.org/Measure/hiv-indicators",
+  "subject": {
+    "reference": "#patient-new"
+  },
+  "period": {
+    "start": "2018-01-01",
+    "end": "2018-12-31"
+  },
+  "group": {
+    "code": {
+      "coding": {
+        "code": "QRPH_ADX_ART5_N"
+      }
+    },
+    "measureScoreQuantity": {
+      "value": 1
+    },
+    "stratifier": {
+      "code": {
+        "coding": {
+          "code": "AGE_GROUP:SEX"
+        }
+      },
+      "stratum": [
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P0Y--P20Y:F"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 0
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P0Y--P20Y:M"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 0
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P20Y--P40Y:F"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 0
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P20Y--P40Y:M"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 0
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P40Y--P65Y:F"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 0
+          }
+        },
+        {
+          "valueCodeableConcept": {
+            "coding": {
+              "code": "P40Y--P65Y:M"
+            }
+          },
+          "measureScoreQuantity": {
+            "value": 1
+          }
+        }
+      ]
+    }
+  }
+}

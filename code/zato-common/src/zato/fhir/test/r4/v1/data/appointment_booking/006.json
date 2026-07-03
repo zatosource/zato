@@ -1,0 +1,811 @@
+{
+  "_meta": {
+    "scenario": "appointment_booking",
+    "instance": 6,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.xrtq4zn9",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 김 민준</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "1002-5",
+              "display": "American Indian or Alaska Native"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "American Indian or Alaska Native"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN2969657"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4964"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "김",
+        "given": [
+          "민준"
+        ],
+        "text": "김 민준"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "(977)560-7088",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "zchavez@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1967-08-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "164 Richard Freeway Suite 263"
+        ],
+        "city": "New Andrewhaven",
+        "state": "ID",
+        "postalCode": "66714",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "M",
+          "display": "Married"
+        }
+      ],
+      "text": "Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.fvj82yr4",
+        "display": "박 하윤"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.d57h6s73",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.fvj82yr4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: 박 하윤</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1753249869"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "박",
+        "given": [
+          "하윤"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "박 하윤"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "001-409-568-1071x1350",
+        "use": "work"
+      }
+    ],
+    "gender": "female",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "11128 Ricky Coves Apt. 566"
+        ],
+        "city": "Schneiderbury",
+        "state": "UT",
+        "postalCode": "34991",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.d57h6s73",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Oakwood Family Medicine</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "7238558314"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Oakwood Family Medicine",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "929.396.0520x396",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "403 Johnson Forge"
+        ],
+        "city": "Martinezborough",
+        "state": "CA",
+        "postalCode": "77022",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.8pw32px6",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Annual checkup on 2024-08-26</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xrtq4zn9",
+        "display": "김 민준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fvj82yr4",
+            "display": "박 하윤"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-26T11:15:00+00:00",
+        "end": "2024-08-26T11:56:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Annual checkup"
+            }
+          ],
+          "text": "Annual checkup"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.d57h6s73",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q8x6bany",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.4nsq56ve",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Follow-up visit on 2025-01-30</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xrtq4zn9",
+        "display": "김 민준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fvj82yr4",
+            "display": "박 하윤"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-30T08:30:00+00:00",
+        "end": "2025-01-30T09:17:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Follow-up visit"
+            }
+          ],
+          "text": "Follow-up visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.d57h6s73",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q8x6bany",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.kmv8htch",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Wellness screening on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.xrtq4zn9",
+        "display": "김 민준"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.fvj82yr4",
+            "display": "박 하윤"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T15:30:00+00:00",
+        "end": "2025-06-15T16:26:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Wellness screening"
+            }
+          ],
+          "text": "Wellness screening"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.d57h6s73",
+        "display": "Oakwood Family Medicine"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.q8x6bany",
+            "display": "Oakwood Family Medicine - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "appointment": {
+    "resourceType": "Appointment",
+    "id": "appt.yubup32k",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Appointment: Follow-up wellness visit</p></div>"
+    },
+    "status": "booked",
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "appointmentType": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v2-0276",
+          "code": "FOLLOWUP",
+          "display": "A follow up visit"
+        }
+      ],
+      "text": "A follow up visit"
+    },
+    "reasonCode": [
+      {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "Z00.00",
+            "display": "Annual wellness follow-up"
+          }
+        ],
+        "text": "Annual wellness follow-up"
+      }
+    ],
+    "start": "2025-12-24T12:00:00+00:00",
+    "end": "2025-12-24T12:30:00+00:00",
+    "minutesDuration": 30,
+    "slot": [
+      {
+        "reference": "Slot/slot.5t5rhqwk"
+      }
+    ],
+    "created": "2025-06-15",
+    "participant": [
+      {
+        "actor": {
+          "reference": "Patient/pt.xrtq4zn9",
+          "display": "김 민준"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Practitioner/pr.fvj82yr4",
+          "display": "박 하윤"
+        },
+        "required": "required",
+        "status": "accepted"
+      },
+      {
+        "actor": {
+          "reference": "Location/loc.q8x6bany",
+          "display": "Oakwood Family Medicine - Main Office"
+        },
+        "required": "required",
+        "status": "accepted"
+      }
+    ]
+  },
+  "appointment_response": {
+    "resourceType": "AppointmentResponse",
+    "id": "ar.7tp5fytb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AppointmentResponse: Patient accepted</p></div>"
+    },
+    "appointment": {
+      "reference": "Appointment/appt.yubup32k"
+    },
+    "start": "2025-12-24T12:00:00+00:00",
+    "end": "2025-12-24T12:30:00+00:00",
+    "participantType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code": "ATND",
+            "display": "attender"
+          }
+        ],
+        "text": "attender"
+      }
+    ],
+    "actor": {
+      "reference": "Patient/pt.xrtq4zn9",
+      "display": "김 민준"
+    },
+    "participantStatus": "accepted"
+  },
+  "schedule": {
+    "resourceType": "Schedule",
+    "id": "sched.wp4n45dg",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Schedule: Dr. 박 하윤 availability</p></div>"
+    },
+    "active": true,
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "actor": [
+      {
+        "reference": "Practitioner/pr.fvj82yr4",
+        "display": "박 하윤"
+      },
+      {
+        "reference": "Location/loc.q8x6bany",
+        "display": "Oakwood Family Medicine - Main Office"
+      },
+      {
+        "reference": "HealthcareService/hs.8c8g4svs"
+      }
+    ],
+    "planningHorizon": {
+      "start": "2025-06-15",
+      "end": "2026-12-31"
+    }
+  },
+  "slot": {
+    "resourceType": "Slot",
+    "id": "slot.5t5rhqwk",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Slot: Available appointment slot</p></div>"
+    },
+    "serviceCategory": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "serviceType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "schedule": {
+      "reference": "Schedule/sched.wp4n45dg"
+    },
+    "status": "busy",
+    "start": "2025-12-24T12:00:00+00:00",
+    "end": "2025-12-24T12:30:00+00:00"
+  },
+  "healthcare_service": {
+    "resourceType": "HealthcareService",
+    "id": "hs.8c8g4svs",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>HealthcareService: General wellness services at Oakwood Family Medicine</p></div>"
+    },
+    "active": true,
+    "providedBy": {
+      "reference": "Organization/org.d57h6s73",
+      "display": "Oakwood Family Medicine"
+    },
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-category",
+            "code": "17",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/service-type",
+            "code": "124",
+            "display": "General Practice"
+          }
+        ],
+        "text": "General Practice"
+      }
+    ],
+    "name": "General Wellness - Oakwood Family Medicine",
+    "appointmentRequired": true,
+    "availableTime": [
+      {
+        "daysOfWeek": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri"
+        ],
+        "availableStartTime": "08:00:00",
+        "availableEndTime": "17:00:00"
+      }
+    ]
+  },
+  "endpoint": {
+    "resourceType": "Endpoint",
+    "id": "ep.yb4s5t2d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Endpoint: FHIR endpoint for Oakwood Family Medicine</p></div>"
+    },
+    "status": "active",
+    "connectionType": {
+      "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+      "code": "hl7-fhir-rest",
+      "display": "HL7 FHIR"
+    },
+    "name": "Oakwood Family Medicine FHIR Endpoint",
+    "managingOrganization": {
+      "reference": "Organization/org.d57h6s73",
+      "display": "Oakwood Family Medicine"
+    },
+    "payloadType": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-payload-type",
+            "code": "any",
+            "display": "Any"
+          }
+        ],
+        "text": "Any"
+      }
+    ],
+    "address": "https://fhir.example.org/org.d57h6s73"
+  }
+}

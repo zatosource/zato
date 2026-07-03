@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "summary",
+  "url": "http://hl7.org/fhir/CodeSystem/summary",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.4.1821"
+  },
+  "name": "CodeSystemSummaryExampleACMEBodySites",
+  "title": "Code system summary example for ACME body sites",
+  "status": "draft",
+  "experimental": true,
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "This is an example code system summary for the ACME codes for body site.",
+  "useContext": {
+    "code": {
+      "system": "http://example.org/CodeSystem/contexttype",
+      "code": "species"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 337915000,
+        "display": "Homo sapiens (organism)"
+      }
+    }
+  },
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "CA"
+    }
+  },
+  "caseSensitive": true,
+  "content": "not-present",
+  "count": 92
+}

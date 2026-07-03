@@ -1,0 +1,83 @@
+{
+  "resourceType": "Encounter",
+  "id": "f001",
+  "identifier": {
+    "use": "official",
+    "system": "http://www.amc.nl/zorgportal/identifiers/visits",
+    "value": "v1451"
+  },
+  "status": "completed",
+  "class": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "AMB",
+      "display": "ambulatory"
+    }
+  },
+  "priority": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 310361003,
+      "display": "Non-urgent cardiological admission"
+    }
+  },
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 270427003,
+      "display": "Patient-initiated encounter"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f001",
+    "display": "P. van de Heuvel"
+  },
+  "serviceProvider": {
+    "reference": "Organization/f001",
+    "display": "Burgers University Medical Center"
+  },
+  "participant": {
+    "actor": {
+      "reference": "Practitioner/f002",
+      "display": "P. Voigt"
+    }
+  },
+  "length": {
+    "value": 140,
+    "unit": "min",
+    "system": "http://unitsofmeasure.org",
+    "code": "min"
+  },
+  "reason": {
+    "value": {
+      "concept": {
+        "coding": {
+          "system": "http://snomed.info/sct",
+          "code": 34068001,
+          "display": "Heart valve replacement"
+        }
+      }
+    }
+  },
+  "admission": {
+    "preAdmissionIdentifier": {
+      "use": "official",
+      "system": "http://www.amc.nl/zorgportal/identifiers/pre-admissions",
+      "value": 93042
+    },
+    "admitSource": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 305956004,
+        "display": "Referral by physician"
+      }
+    },
+    "dischargeDisposition": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 306689006,
+        "display": "Discharge to home"
+      }
+    }
+  }
+}

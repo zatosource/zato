@@ -1,0 +1,17 @@
+{
+  "resourceType": "OperationOutcome",
+  "id": "exception",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "issue": {
+    "severity": "error",
+    "code": "exception",
+    "details": {
+      "text": "SQL Link Communication Error (dbx = 34234)"
+    }
+  }
+}

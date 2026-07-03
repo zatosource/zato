@@ -1,0 +1,385 @@
+{
+  "_meta": {
+    "scenario": "audit_trail",
+    "instance": 6,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.uunmy3t3",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 이 현준</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN1229030"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8169"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "이",
+        "given": [
+          "현준"
+        ],
+        "text": "이 현준"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "471-698-3577",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "ashley83@yahoo.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1958-03-18",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "014 Nicholas Plaza"
+        ],
+        "city": "Williamport",
+        "state": "GA",
+        "postalCode": "67461",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.rmqxh9w2",
+        "display": "김 영길"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.kh733p93",
+      "display": "Oakwood Family Medicine"
+    }
+  },
+  "audit_event": {
+    "resourceType": "AuditEvent",
+    "id": "ae.zutsrpaj",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>AuditEvent: Patient record accessed for wellness visit</p></div>"
+    },
+    "type": {
+      "system": "http://dicom.nema.org/resources/ontology/DCM",
+      "code": "110110",
+      "display": "Patient Record"
+    },
+    "subtype": [
+      {
+        "system": "http://hl7.org/fhir/restful-interaction",
+        "code": "R",
+        "display": "read"
+      }
+    ],
+    "action": "R",
+    "period": {
+      "start": "2025-06-15T14:30:00+00:00",
+      "end": "2025-06-15T14:30:00+00:00"
+    },
+    "recorded": "2025-06-15T14:30:00+00:00",
+    "outcome": "0",
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+              "code": "humanuser",
+              "display": "human user"
+            }
+          ],
+          "text": "human user"
+        },
+        "who": {
+          "reference": "Practitioner/pr.rmqxh9w2",
+          "display": "김 영길"
+        },
+        "requestor": true
+      }
+    ],
+    "source": {
+      "observer": {
+        "reference": "Organization/org.kh733p93",
+        "display": "Oakwood Family Medicine"
+      },
+      "type": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type",
+          "code": "4",
+          "display": "Application Server"
+        }
+      ]
+    },
+    "entity": [
+      {
+        "what": {
+          "reference": "Patient/pt.uunmy3t3",
+          "display": "이 현준"
+        },
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+          "code": "1",
+          "display": "Person"
+        },
+        "lifecycle": {
+          "system": "http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle",
+          "code": "6",
+          "display": "Access / Use"
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "resourceType": "Provenance",
+    "id": "prv.d6d4hg4d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance: Record creation</p></div>"
+    },
+    "target": [
+      {
+        "reference": "Patient/pt.uunmy3t3"
+      }
+    ],
+    "occurredDateTime": "2025-06-15T17:00:00+00:00",
+    "recorded": "2025-06-15T17:00:00+00:00",
+    "activity": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+          "code": "CREATE",
+          "display": "create"
+        }
+      ],
+      "text": "create"
+    },
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ],
+          "text": "Author"
+        },
+        "who": {
+          "reference": "Practitioner/pr.rmqxh9w2",
+          "display": "김 영길"
+        },
+        "onBehalfOf": {
+          "reference": "Organization/org.kh733p93"
+        }
+      }
+    ]
+  },
+  "linkage": {
+    "resourceType": "Linkage",
+    "id": "link.mfkrs93r",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Linkage: Links patient record across systems</p></div>"
+    },
+    "active": true,
+    "author": {
+      "reference": "Practitioner/pr.rmqxh9w2",
+      "display": "김 영길"
+    },
+    "item": [
+      {
+        "type": "source",
+        "resource": {
+          "reference": "Patient/pt.uunmy3t3",
+          "display": "이 현준"
+        }
+      },
+      {
+        "type": "alternate",
+        "resource": {
+          "reference": "Patient/pt.uunmy3t3",
+          "display": "이 현준"
+        }
+      }
+    ]
+  },
+  "basic": {
+    "resourceType": "Basic",
+    "id": "basic.gdzs4zkd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Basic: Administrative note</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://example.org/basic-type",
+          "code": "adm-note",
+          "display": "Administrative note"
+        }
+      ],
+      "text": "Administrative note"
+    },
+    "subject": {
+      "reference": "Patient/pt.uunmy3t3",
+      "display": "이 현준"
+    },
+    "created": "2025-06-15",
+    "author": {
+      "reference": "Practitioner/pr.rmqxh9w2",
+      "display": "김 영길"
+    }
+  },
+  "binary": {
+    "resourceType": "Binary",
+    "id": "bin.wbwbzdsw",
+    "contentType": "text/plain",
+    "data": "QXVkaXQgbG9nIGVudHJ5OiBQYXRpZW50IHJlY29yZCBhY2Nlc3NlZCBmb3Igcm91dGluZSByZXZpZXcu"
+  },
+  "parameters": {
+    "resourceType": "Parameters",
+    "id": "params.fhu4wmmy",
+    "parameter": [
+      {
+        "name": "patient",
+        "valueReference": {
+          "reference": "Patient/pt.uunmy3t3",
+          "display": "이 현준"
+        }
+      },
+      {
+        "name": "access-level",
+        "valueString": "read-only"
+      },
+      {
+        "name": "audit-required",
+        "valueBoolean": true
+      }
+    ]
+  },
+  "operation_outcome": {
+    "resourceType": "OperationOutcome",
+    "id": "oo.6tfjeex4",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>OperationOutcome: Operation completed successfully</p></div>"
+    },
+    "issue": [
+      {
+        "severity": "information",
+        "code": "informational",
+        "diagnostics": "Patient record access logged successfully. No issues detected."
+      }
+    ]
+  }
+}

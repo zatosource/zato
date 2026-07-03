@@ -1,0 +1,74 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "devicedefinition-warnings-example",
+  "meta": {
+    "lastUpdated": "2026-03-16T10:01:24.148+11:00"
+  },
+  "extension": [
+    {
+      "valueCode": "oo"
+    },
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 0
+    }
+  ],
+  "url": "http://hl7.org/fhir/devicedefinition-warnings-example",
+  "version": "6.0.0",
+  "name": "DeviceWarningsExample",
+  "title": "Device Warnings",
+  "status": "active",
+  "experimental": true,
+  "date": "2026-03-16T10:01:24+11:00",
+  "publisher": "HL7 (FHIR Project)",
+  "contact": {
+    "telecom": [
+      {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      },
+      {
+        "system": "email",
+        "value": "fhir@lists.hl7.org"
+      }
+    ]
+  },
+  "description": "Hazards of using a device.",
+  "caseSensitive": true,
+  "valueSet": "http://hl7.org/fhir/ValueSet/devicedefinition-warnings-example",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "flammable",
+      "display": "Flammable",
+      "definition": "Flammable - keep away from heat/open flame."
+    },
+    {
+      "code": "electrical-shock-risk",
+      "display": "Electrical Shock Risk",
+      "definition": "Risk of electrical shock - follow grounding/earthing instructions."
+    },
+    {
+      "code": "do-not-submerge",
+      "display": "Do Not Submerge",
+      "definition": "Do not immerse / keep dry."
+    },
+    {
+      "code": "temperature-limit",
+      "display": "Temperature Limit",
+      "definition": "Temperature limits must be observed."
+    },
+    {
+      "code": "requires-training",
+      "display": "Requires Training",
+      "definition": "Operator training required."
+    },
+    {
+      "code": "battery-handling",
+      "display": "Battery Handling",
+      "definition": "Battery handling / charging instructions."
+    }
+  ]
+}

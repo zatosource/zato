@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+COMMUNICATION_PROFICIENCY_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/communication-proficiency"
+ORG_DESCRIPTION_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/org-description"
+PRACTITIONER_PERIOD_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/practitioner-period"
+NETWORK_REFERENCE_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/network-reference"
+VIA_INTERMEDIARY_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/via-intermediary"
+ENDPOINT_USECASE_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/endpoint-usecase"
+QUALIFICATION_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/qualification"
+LOCATION_REFERENCE_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/location-reference"
+DELIVERY_METHOD_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/delivery-method"
+ACCESSIBILITY_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/accessibility"
+CONTACTPOINT_AVAILABLETIME_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/contactpoint-availabletime"
+NEWPATIENTS_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/newpatients"
+PRACTITIONER_QUALIFICATION_URL = "http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/practitioner-qualification"

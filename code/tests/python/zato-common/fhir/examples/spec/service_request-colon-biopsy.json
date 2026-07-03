@@ -1,0 +1,35 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "colon-biopsy",
+  "identifier": {
+    "value": 12345
+  },
+  "requisition": {
+    "system": "http://bumc.org/requisitions",
+    "value": "req12345"
+  },
+  "status": "completed",
+  "intent": "order",
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 76164006,
+        "display": "Biopsy of colon (procedure)"
+      },
+      "text": "Biopsy of colon"
+    }
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "authoredOn": "2017-03-05",
+  "requester": {
+    "reference": "Practitioner/3ad0687e-f477-468c-afd5-fcc2bf897809",
+    "display": "Dr. Beverly Crusher"
+  },
+  "performer": {
+    "reference": "Practitioner/example",
+    "display": "Dr Adam Careful"
+  }
+}

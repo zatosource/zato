@@ -1,0 +1,44 @@
+{
+  "resourceType": "AdverseEvent",
+  "id": "example",
+  "identifier": {
+    "system": "http://acme.com/ids/patients/risks",
+    "value": 49476534
+  },
+  "status": "completed",
+  "actuality": "actual",
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/adverse-event-category",
+      "code": "medication-mishap",
+      "display": "Medication Mishap"
+    }
+  },
+  "code": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 304386008,
+      "display": "O/E - itchy rash"
+    },
+    "text": "This was a mild rash on the left forearm"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "occurrenceDateTime": "2017-01-29T12:34:56+00:00",
+  "seriousness": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/adverse-event-seriousness",
+      "code": "non-serious",
+      "display": "Non-serious"
+    }
+  },
+  "recorder": {
+    "reference": "Practitioner/example"
+  },
+  "suspectEntity": {
+    "instanceReference": {
+      "reference": "Medication/example"
+    }
+  }
+}

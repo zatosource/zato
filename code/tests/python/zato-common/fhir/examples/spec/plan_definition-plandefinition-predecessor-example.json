@@ -1,0 +1,555 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "plandefinition-predecessor-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}table": [
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": null
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}span": {
+                  "{http://www.w3.org/1999/xhtml}b": null,
+                  "{http://www.w3.org/1999/xhtml}span": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null
+              }
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null
+              }
+            }
+          ]
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}p": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "{http://www.w3.org/1999/xhtml}span": {
+            "{http://www.w3.org/1999/xhtml}b": null,
+            "{http://www.w3.org/1999/xhtml}br": null,
+            "{http://www.w3.org/1999/xhtml}span": [
+              {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}span": null,
+                "{http://www.w3.org/1999/xhtml}br": null
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}b": null,
+                "{http://www.w3.org/1999/xhtml}br": null,
+                "{http://www.w3.org/1999/xhtml}span": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null,
+                    "{http://www.w3.org/1999/xhtml}br": null
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}span": null,
+                    "{http://www.w3.org/1999/xhtml}br": null
+                  }
+                ]
+              },
+              {
+                "{http://www.w3.org/1999/xhtml}span": [
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          }
+                        ]
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}br": [
+                            null,
+                            null
+                          ],
+                          "{http://www.w3.org/1999/xhtml}span": [
+                            null,
+                            {
+                              "{http://www.w3.org/1999/xhtml}span": [
+                                {
+                                  "{http://www.w3.org/1999/xhtml}b": null,
+                                  "{http://www.w3.org/1999/xhtml}span": null,
+                                  "{http://www.w3.org/1999/xhtml}br": null
+                                },
+                                {
+                                  "{http://www.w3.org/1999/xhtml}b": null,
+                                  "{http://www.w3.org/1999/xhtml}span": null,
+                                  "{http://www.w3.org/1999/xhtml}br": null
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      null
+                    ]
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          }
+                        ]
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}br": [
+                            null,
+                            null
+                          ],
+                          "{http://www.w3.org/1999/xhtml}span": null
+                        }
+                      },
+                      null
+                    ]
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          }
+                        ]
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}br": [
+                            null,
+                            null
+                          ],
+                          "{http://www.w3.org/1999/xhtml}span": [
+                            null,
+                            {
+                              "{http://www.w3.org/1999/xhtml}span": {
+                                "{http://www.w3.org/1999/xhtml}span": [
+                                  {
+                                    "{http://www.w3.org/1999/xhtml}b": null,
+                                    "{http://www.w3.org/1999/xhtml}span": null,
+                                    "{http://www.w3.org/1999/xhtml}br": null
+                                  },
+                                  {
+                                    "{http://www.w3.org/1999/xhtml}b": null,
+                                    "{http://www.w3.org/1999/xhtml}br": null,
+                                    "{http://www.w3.org/1999/xhtml}span": [
+                                      {
+                                        "{http://www.w3.org/1999/xhtml}b": null,
+                                        "{http://www.w3.org/1999/xhtml}span": null,
+                                        "{http://www.w3.org/1999/xhtml}br": null
+                                      },
+                                      {
+                                        "{http://www.w3.org/1999/xhtml}b": null,
+                                        "{http://www.w3.org/1999/xhtml}span": null,
+                                        "{http://www.w3.org/1999/xhtml}br": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "{http://www.w3.org/1999/xhtml}b": null,
+                                    "{http://www.w3.org/1999/xhtml}span": null,
+                                    "{http://www.w3.org/1999/xhtml}br": null
+                                  }
+                                ]
+                              }
+                            },
+                            null
+                          ]
+                        }
+                      },
+                      null
+                    ]
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          }
+                        ]
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": {
+                          "{http://www.w3.org/1999/xhtml}b": null,
+                          "{http://www.w3.org/1999/xhtml}br": [
+                            null,
+                            null
+                          ],
+                          "{http://www.w3.org/1999/xhtml}span": null
+                        }
+                      },
+                      null
+                    ]
+                  },
+                  {
+                    "{http://www.w3.org/1999/xhtml}b": null,
+                    "{http://www.w3.org/1999/xhtml}br": null,
+                    "{http://www.w3.org/1999/xhtml}span": [
+                      {
+                        "{http://www.w3.org/1999/xhtml}b": null,
+                        "{http://www.w3.org/1999/xhtml}br": null,
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}span": null,
+                            "{http://www.w3.org/1999/xhtml}br": null
+                          }
+                        ]
+                      },
+                      {
+                        "{http://www.w3.org/1999/xhtml}span": [
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}br": null,
+                            "{http://www.w3.org/1999/xhtml}span": [
+                              {
+                                "{http://www.w3.org/1999/xhtml}b": null,
+                                "{http://www.w3.org/1999/xhtml}br": null,
+                                "{http://www.w3.org/1999/xhtml}span": {
+                                  "{http://www.w3.org/1999/xhtml}b": null,
+                                  "{http://www.w3.org/1999/xhtml}br": null,
+                                  "{http://www.w3.org/1999/xhtml}span": [
+                                    null,
+                                    {
+                                      "{http://www.w3.org/1999/xhtml}span": {
+                                        "{http://www.w3.org/1999/xhtml}br": null,
+                                        "{http://www.w3.org/1999/xhtml}span": [
+                                          {
+                                            "{http://www.w3.org/1999/xhtml}b": null,
+                                            "{http://www.w3.org/1999/xhtml}span": null,
+                                            "{http://www.w3.org/1999/xhtml}br": null
+                                          },
+                                          {
+                                            "{http://www.w3.org/1999/xhtml}b": null,
+                                            "{http://www.w3.org/1999/xhtml}br": null,
+                                            "{http://www.w3.org/1999/xhtml}span": [
+                                              {
+                                                "{http://www.w3.org/1999/xhtml}b": null,
+                                                "{http://www.w3.org/1999/xhtml}span": null,
+                                                "{http://www.w3.org/1999/xhtml}br": null
+                                              },
+                                              {
+                                                "{http://www.w3.org/1999/xhtml}b": null,
+                                                "{http://www.w3.org/1999/xhtml}span": null,
+                                                "{http://www.w3.org/1999/xhtml}br": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "{http://www.w3.org/1999/xhtml}b": null,
+                                            "{http://www.w3.org/1999/xhtml}br": null,
+                                            "{http://www.w3.org/1999/xhtml}span": [
+                                              {
+                                                "{http://www.w3.org/1999/xhtml}b": null,
+                                                "{http://www.w3.org/1999/xhtml}span": null,
+                                                "{http://www.w3.org/1999/xhtml}br": null
+                                              },
+                                              {
+                                                "{http://www.w3.org/1999/xhtml}b": null,
+                                                "{http://www.w3.org/1999/xhtml}span": null,
+                                                "{http://www.w3.org/1999/xhtml}br": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "{http://www.w3.org/1999/xhtml}b": null,
+                                            "{http://www.w3.org/1999/xhtml}span": null,
+                                            "{http://www.w3.org/1999/xhtml}br": null
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              null
+                            ]
+                          },
+                          {
+                            "{http://www.w3.org/1999/xhtml}b": null,
+                            "{http://www.w3.org/1999/xhtml}br": null,
+                            "{http://www.w3.org/1999/xhtml}span": {
+                              "{http://www.w3.org/1999/xhtml}b": null,
+                              "{http://www.w3.org/1999/xhtml}br": null,
+                              "{http://www.w3.org/1999/xhtml}span": {
+                                "{http://www.w3.org/1999/xhtml}b": null,
+                                "{http://www.w3.org/1999/xhtml}br": [
+                                  null,
+                                  null
+                                ],
+                                "{http://www.w3.org/1999/xhtml}span": null
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "{http://www.w3.org/1999/xhtml}h2": null
+    }
+  },
+  "url": "http://example.org/PlanDefinition/plandefinition-predecessor-example",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.4.642.11.9"
+    },
+    {
+      "use": "official",
+      "value": "plandefinition-predecessor-example"
+    }
+  ],
+  "version": "1.0.0",
+  "name": "ExampleZikaVirusIntervention",
+  "title": "Example Zika Virus Intervention",
+  "status": "active",
+  "date": "2016-11-14",
+  "description": "Zika Virus Management intervention describing the CDC Guidelines for Zika Virus Reporting and Management.",
+  "topic": {
+    "text": "Zika Virus Management"
+  },
+  "relatedArtifact": [
+    {
+      "type": "derived-from",
+      "document": {
+        "url": "https://www.cdc.gov/mmwr/volumes/65/wr/mm6539e1.htm?s_cid=mm6539e1_w"
+      }
+    },
+    {
+      "type": "successor",
+      "resource": "http://example.org/fhir/PlanDefinition/zika-virus-intervention"
+    }
+  ],
+  "library": "http://example.org/fhir/Library/zika-virus-intervention-logic",
+  "action": {
+    "title": "Zika Virus Assessment",
+    "trigger": {
+      "type": "named-event",
+      "name": "patient-view"
+    },
+    "condition": {
+      "kind": "applicability",
+      "expression": {
+        "language": "text/cql-identifier",
+        "expression": "Is Patient Pregnant"
+      }
+    },
+    "action": [
+      {
+        "condition": {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "Should Administer Zika Virus Exposure Assessment"
+          }
+        },
+        "definitionCanonical": "http://example.org/fhir/ActivityDefinition/administer-zika-virus-exposure-assessment"
+      },
+      {
+        "condition": {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "Should Order Serum + Urine rRT-PCR Test"
+          }
+        },
+        "definitionCanonical": "http://example.org/fhir/ActivityDefinition/order-serum-urine-rrt-pcr-test"
+      },
+      {
+        "condition": {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "Should Order Serum Zika Virus IgM + Dengue Virus IgM"
+          }
+        },
+        "definitionCanonical": "http://example.org/fhir/ActivityDefinition/order-serum-zika-dengue-virus-igm"
+      },
+      {
+        "condition": {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "Should Consider IgM Antibody Testing"
+          }
+        },
+        "definitionCanonical": "http://example.org/fhir/ActivityDefinition/consider-igm-antibody-testing"
+      },
+      {
+        "condition": {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "Should Provide Mosquito Prevention and Contraception Advice"
+          }
+        },
+        "action": [
+          {
+            "definitionCanonical": "http://example.org/fhir/ActivityDefinition/provide-mosquito-prevention-advice"
+          },
+          {
+            "definitionCanonical": "http://example.org/fhir/ActivityDefinition/provide-contraception-advice"
+          }
+        ]
+      }
+    ]
+  }
+}

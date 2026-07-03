@@ -1,0 +1,54 @@
+{
+  "resourceType": "PlanDefinition",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.11.11"
+  },
+  "status": "draft",
+  "action": {
+    "title": "Create an episode of care to link the related events",
+    "trigger": {
+      "type": "named-event",
+      "name": "process-episodes"
+    },
+    "condition": {
+      "kind": "applicability",
+      "expression": {
+        "language": "text/cql-expression",
+        "expression": "ShouldCreateEpisodeOfCare"
+      }
+    },
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/action-type",
+        "code": "create"
+      }
+    },
+    "definitionCanonical": "http://example.org/fhir/ActivityDefinition/episode-of-care",
+    "action": {
+      "title": "Link related encounters",
+      "type": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/action-type",
+          "code": "update"
+        }
+      },
+      "definitionCanonical": {
+        "extension": {
+          "url": "cqf-expression",
+          "valueExpression": {
+            "language": "text/cql-expression",
+            "expression": "RelatedEncounters"
+          }
+        }
+      },
+      "dynamicValue": {
+        "path": "episodeOfCare",
+        "expression": {
+          "language": "text/cql-expression",
+          "expression": "%parent_target"
+        }
+      }
+    }
+  }
+}

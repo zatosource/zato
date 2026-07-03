@@ -1,0 +1,85 @@
+{
+  "resourceType": "Encounter",
+  "id": "f202",
+  "identifier": {
+    "use": "temp",
+    "value": "Encounter_Roel_20130128"
+  },
+  "status": "completed",
+  "class": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code": "AMB",
+      "display": "ambulatory"
+    }
+  },
+  "priority": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 103391001,
+      "display": "Urgent"
+    }
+  },
+  "type": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 367336001,
+      "display": "Chemotherapy"
+    }
+  },
+  "subject": {
+    "reference": "Patient/f201",
+    "display": "Roel"
+  },
+  "serviceProvider": {
+    "reference": "Organization/f201"
+  },
+  "participant": {
+    "actor": {
+      "reference": "Practitioner/f201"
+    }
+  },
+  "length": {
+    "value": 56,
+    "unit": "minutes",
+    "system": "http://unitsofmeasure.org",
+    "code": "min"
+  },
+  "reason": {
+    "value": {
+      "concept": {
+        "text": "The patient is treated for a tumor."
+      }
+    }
+  },
+  "diagnosis": [
+    {
+      "condition": {
+        "concept": {
+          "text": "Complications from Roel's TPF chemotherapy on January 28th, 2013"
+        }
+      },
+      "use": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
+          "code": "AD",
+          "display": "Admission diagnosis"
+        }
+      }
+    },
+    {
+      "condition": {
+        "concept": {
+          "text": "The patient is treated for a tumor"
+        }
+      },
+      "use": {
+        "coding": {
+          "system": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
+          "code": "CC",
+          "display": "Chief complaint"
+        }
+      }
+    }
+  ]
+}

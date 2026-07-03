@@ -1,0 +1,55 @@
+{
+  "resourceType": "ValueSet",
+  "id": "example-cpt-all",
+  "url": "http://hl7.org/fhir/ValueSet/example-cpt-all",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.3.3138"
+  },
+  "name": "AllCPTCodes",
+  "title": "All CPT codes",
+  "status": "active",
+  "experimental": true,
+  "date": "2015-03-12",
+  "publisher": "HL7 International / Terminology Infrastructure",
+  "contact": [
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://hl7.org/fhir"
+      }
+    },
+    {
+      "telecom": {
+        "system": "url",
+        "value": "http://www.hl7.org/Special/committees/Vocab/index.cfm"
+      }
+    }
+  ],
+  "description": "A value set that includes all CPT codes",
+  "useContext": {
+    "code": {
+      "system": "http://example.org/fhir/CodeSystem/use-contexts",
+      "code": "species"
+    },
+    "valueCodeableConcept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 337915000,
+        "display": "Homo sapiens (organism)"
+      }
+    }
+  },
+  "jurisdiction": {
+    "coding": {
+      "system": "urn:iso:std:iso:3166",
+      "code": "US"
+    }
+  },
+  "copyright": "CPT Copyright \u00a9 2014 American Medical Association. All rights reserved.",
+  "compose": {
+    "include": {
+      "system": "http://www.ama-assn.org/go/cpt"
+    }
+  }
+}

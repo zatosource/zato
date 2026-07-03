@@ -1,0 +1,102 @@
+{
+  "resourceType": "EvidenceVariable",
+  "id": "example-fatal-ICH-in-7-days",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null
+    }
+  },
+  "contained": [
+    {
+      "Group": {
+        "id": "Cohort-Definition",
+        "title": "CohortDefinition: Fatal Intracranial Hemorrhage",
+        "membership": "conceptual",
+        "combinationMethod": "all-of",
+        "characteristic": [
+          {
+            "code": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 260905004,
+                "display": "Condition"
+              }
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 1386000,
+                "display": "Intracranial hemorrhage (disorder)"
+              }
+            },
+            "exclude": false,
+            "description": "intracranial hemorrhage"
+          },
+          {
+            "code": {
+              "text": "resulting in"
+            },
+            "valueCodeableConcept": {
+              "coding": {
+                "system": "http://snomed.info/sct",
+                "code": 419620001,
+                "display": "Death (event)"
+              }
+            },
+            "exclude": false,
+            "description": "resulting in death"
+          }
+        ]
+      }
+    },
+    {
+      "Group": {
+        "id": "Definition-Group",
+        "title": "VariableDefinition: Fatal Intracranial Hemorrhage Within Seven Days",
+        "type": "person",
+        "membership": "definitional",
+        "characteristic": {
+          "code": {
+            "coding": {
+              "system": "http://snomed.info/sct",
+              "code": 260905004,
+              "display": "Condition"
+            }
+          },
+          "valueReference": {
+            "reference": "#Cohort-Definition"
+          },
+          "exclude": false,
+          "description": "fatal intracranial hemorrhage within 7 days",
+          "timing": {
+            "contextCode": {
+              "coding": {
+                "system": "http://hl7.org/fhir/evidence-variable-event",
+                "code": "study-start",
+                "display": "Study Start"
+              }
+            },
+            "offsetDuration": {
+              "value": 7,
+              "unit": "days",
+              "system": "http://unitsofmeasure.org",
+              "code": "d"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "name": "FatalIntracranialHemorrhageWithinSevenDays",
+  "title": "Fatal Intracranial Hemorrhage Within Seven Days",
+  "status": "draft",
+  "description": "Fatal Intracranial Hemorrhage Within Seven Days",
+  "actual": true,
+  "definition": {
+    "reference": {
+      "reference": "#Definition-Group"
+    }
+  },
+  "handling": "dichotomous"
+}

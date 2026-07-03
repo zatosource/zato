@@ -1,0 +1,36 @@
+{
+  "resourceType": "FamilyMemberHistory",
+  "id": "mother",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "status": "completed",
+  "patient": {
+    "reference": "Patient/100",
+    "display": "Peter Patient"
+  },
+  "relationship": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+      "code": "MTH",
+      "display": "mother"
+    }
+  },
+  "condition": {
+    "code": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 371041009,
+        "display": "Embolic Stroke"
+      },
+      "text": "Stroke"
+    },
+    "onsetAge": {
+      "value": 56,
+      "unit": "yr",
+      "system": "http://unitsofmeasure.org",
+      "code": "a"
+    }
+  }
+}

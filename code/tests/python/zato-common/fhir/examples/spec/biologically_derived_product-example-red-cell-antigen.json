@@ -1,0 +1,108 @@
+{
+  "resourceType": "BiologicallyDerivedProduct",
+  "id": "example-red-cell-antigen",
+  "meta": {
+    "profile": "http://hl7.org/fhir/StructureDefinition/medicalproductofhumanorigin"
+  },
+  "productCategory": {
+    "coding": {
+      "system": "http://hl7.org/fhir/product-category",
+      "code": "mpho"
+    },
+    "text": "Medical Product of Human Origin"
+  },
+  "productCode": {
+    "coding": {
+      "system": "https://www.isbt128/org/uri/ProductDescriptionCode",
+      "code": "E0398"
+    },
+    "text": " RED BLOOD CELLS|CPD-AS5/450mL/refg|Irradiated|ResLeu: Less than 5E6"
+  },
+  "identifier": {
+    "system": "https://www.isbt128.org/uri/MPHOUniqueIdentifier",
+    "value": "00000E0398A999924123456A00000"
+  },
+  "biologicalSourceEvent": {
+    "system": "https://www.isbt128.org/uri/DonationIdentificationNumber",
+    "value": "A999924123456"
+  },
+  "division": "A00000",
+  "expirationDate": "2024-02-02T23:59:00-05:00",
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri",
+          "code": "RedCellAntigen"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/RedCellAntigen",
+          "code": 40020206,
+          "display": "C+"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri",
+          "code": "RedCellAntigen"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/RedCellAntigen",
+          "code": 40040106,
+          "display": "c-"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri",
+          "code": "RedCellAntigen"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/RedCellAntigen",
+          "code": 40030106,
+          "display": "E-"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri",
+          "code": "RedCellAntigen"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/RedCellAntigen",
+          "code": 40050206,
+          "display": "e+"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri",
+          "code": "RedCellAntigen"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "https://www.isbt128.org/uri/RedCellAntigen",
+          "code": 60010106,
+          "display": "K-"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "resourceType": "EventDefinition",
+  "id": "example",
+  "extension": [
+    {
+      "valueCode": "informative"
+    },
+    {
+      "valueInteger": 6
+    },
+    {
+      "valueCode": "cds"
+    }
+  ],
+  "url": "http://hl7.org/fhir/EventDefinition/example",
+  "name": "EventDefinitionExample",
+  "title": "EventDefinition Example",
+  "status": "draft",
+  "experimental": true,
+  "description": "Example of an EventDefinition for monitoring emergency department admissions.",
+  "purpose": "Monitor all admissions to Emergency",
+  "trigger": {
+    "type": "data-changed",
+    "name": "monitor-emergency-admissions",
+    "data": {
+      "type": "Encounter"
+    },
+    "condition": {
+      "description": "Encounter Location = emergency (active/completed encounters, current or previous)",
+      "language": "text/fhirpath",
+      "expression": "(%current | %previous).location.where(location = 'Location/emergency' and status in {'active', 'completed'}).exists()"
+    }
+  }
+}

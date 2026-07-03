@@ -1,0 +1,64 @@
+{
+  "resourceType": "DeviceRequest",
+  "id": "insulinpump",
+  "identifier": {
+    "value": "ip_request1.1"
+  },
+  "basedOn": {
+    "display": "Homecare - DM follow-up"
+  },
+  "replaces": {
+    "display": "CGM ambulatory"
+  },
+  "groupIdentifier": {
+    "value": "ip_request1"
+  },
+  "status": "active",
+  "intent": "instance-order",
+  "priority": "routine",
+  "productCodeableConcept": {
+    "coding": {
+      "system": "http://loinc.org",
+      "code": "43148-6"
+    },
+    "text": "Insulin delivery device panel"
+  },
+  "subject": {
+    "reference": "Patient/dicom"
+  },
+  "encounter": {
+    "display": "Encounter 1"
+  },
+  "occurrenceDateTime": "2013-05-08T09:33:27+07:00",
+  "authoredOn": "2013-05-08T09:33:27+07:00",
+  "requester": {
+    "reference": "Practitioner/example",
+    "display": "Dr. Adam Careful"
+  },
+  "performer": {
+    "reference": {
+      "display": "Nurse Rossignol"
+    }
+  },
+  "reason": [
+    {
+      "concept": {
+        "text": "gastroparesis"
+      }
+    },
+    {
+      "reference": {
+        "display": "Gastroparesis"
+      }
+    }
+  ],
+  "supportingInfo": {
+    "display": "Previous results"
+  },
+  "note": {
+    "text": "this is the right device brand and model"
+  },
+  "relevantHistory": {
+    "display": "Request for unspecified device"
+  }
+}

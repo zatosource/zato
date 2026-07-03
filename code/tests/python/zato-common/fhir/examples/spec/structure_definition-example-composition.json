@@ -1,0 +1,66 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-composition",
+  "url": "http://hl7.org/fhir/StructureDefinition/example-composition",
+  "identifier": {
+    "system": "urn:ietf:rfc:3986",
+    "value": "urn:oid:2.16.840.1.113883.4.642.5.1040"
+  },
+  "name": "DocumentStructure",
+  "title": "Document Structure (For testing section templates)",
+  "status": "active",
+  "experimental": false,
+  "date": "2018-11-05T17:47:00+11:00",
+  "description": "Document Structure (For testing section templates)",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Composition",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Composition",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "path": "Composition"
+      },
+      {
+        "path": "Composition.section",
+        "slicing": {
+          "discriminator": {
+            "type": "pattern",
+            "path": "code"
+          },
+          "description": "Slice by .section.code",
+          "ordered": true,
+          "rules": "closed"
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "procedure",
+        "min": 1,
+        "type": {
+          "code": "BackboneElement",
+          "profile": "http://hl7.org/fhir/StructureDefinition/example-section-library"
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "medications",
+        "min": 1,
+        "type": {
+          "code": "BackboneElement",
+          "profile": "http://hl7.org/fhir/StructureDefinition/example-section-library"
+        }
+      },
+      {
+        "path": "Composition.section",
+        "sliceName": "plan",
+        "min": 0,
+        "type": {
+          "code": "BackboneElement",
+          "profile": "http://hl7.org/fhir/StructureDefinition/example-section-library"
+        }
+      }
+    ]
+  }
+}

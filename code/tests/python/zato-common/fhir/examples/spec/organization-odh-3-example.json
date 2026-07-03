@@ -1,0 +1,20 @@
+{
+  "resourceType": "Organization",
+  "id": "odh-3-example",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}br": [
+        null,
+        null
+      ]
+    }
+  },
+  "name": "Camp Lejeune",
+  "address": {
+    "city": "Camp Lejeune",
+    "state": "NC",
+    "postalCode": 28547,
+    "country": "USA"
+  }
+}

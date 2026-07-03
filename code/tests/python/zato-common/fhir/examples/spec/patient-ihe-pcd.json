@@ -1,0 +1,15 @@
+{
+  "resourceType": "Patient",
+  "id": "ihe-pcd",
+  "identifier": {
+    "type": {
+      "text": "Internal Identifier"
+    },
+    "value": "AB60001"
+  },
+  "active": true,
+  "name": {
+    "family": "BROOKS",
+    "given": "ALBERT"
+  }
+}

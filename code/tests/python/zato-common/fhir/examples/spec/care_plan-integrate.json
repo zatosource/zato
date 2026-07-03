@@ -1,0 +1,457 @@
+{
+  "resourceType": "CarePlan",
+  "id": "integrate",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": {
+      "{http://www.w3.org/1999/xhtml}p": null,
+      "{http://www.w3.org/1999/xhtml}table": {
+        "{http://www.w3.org/1999/xhtml}thead": {
+          "{http://www.w3.org/1999/xhtml}tr": {
+            "{http://www.w3.org/1999/xhtml}th": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        },
+        "{http://www.w3.org/1999/xhtml}tbody": {
+          "{http://www.w3.org/1999/xhtml}tr": [
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            {
+              "{http://www.w3.org/1999/xhtml}td": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "contained": [
+    {
+      "Condition": {
+        "id": "p1",
+        "clinicalStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "code": "active"
+          }
+        },
+        "verificationStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "code": "confirmed"
+          }
+        },
+        "code": {
+          "text": "GERDS"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Condition": {
+        "id": "p2",
+        "clinicalStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "code": "active"
+          }
+        },
+        "verificationStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "code": "confirmed"
+          }
+        },
+        "code": {
+          "text": "Obesity"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Condition": {
+        "id": "p3",
+        "clinicalStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "code": "active"
+          }
+        },
+        "verificationStatus": {
+          "coding": {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "code": "confirmed"
+          }
+        },
+        "code": {
+          "text": "Psoriasis"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "g1",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Eve will lose weight and reduce her GERDS symptoms by improving her diet"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "g2",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Eve will improve her GERDS symptoms"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "g3",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Eve will increase her energy by being more active"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "g4",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Eve will set up her medications and take as prescribed"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    },
+    {
+      "Goal": {
+        "id": "g5",
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Eve will restart her light treatments"
+        },
+        "subject": {
+          "reference": "Patient/1",
+          "display": "Eve Everywoman"
+        }
+      }
+    }
+  ],
+  "status": "active",
+  "intent": "plan",
+  "subject": {
+    "reference": "Patient/1",
+    "display": "Eve Everywoman"
+  },
+  "addresses": [
+    {
+      "reference": {
+        "reference": "#p1",
+        "display": "GERDS"
+      }
+    },
+    {
+      "reference": {
+        "reference": "#p2",
+        "display": "Obesity"
+      }
+    },
+    {
+      "reference": {
+        "reference": "#p3",
+        "display": "Psoriasis"
+      }
+    }
+  ],
+  "goal": [
+    {
+      "reference": "#g1"
+    },
+    {
+      "reference": "#g2"
+    },
+    {
+      "reference": "#g3"
+    },
+    {
+      "reference": "#g4"
+    },
+    {
+      "reference": "#g5"
+    }
+  ],
+  "activity": [
+    {
+      "progress": {
+        "time": "2012-09-10",
+        "text": "Eve eats one meal a day with her parents"
+      },
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-1"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-2"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "NutritionOrder/activity-3"
+      }
+    },
+    {
+      "progress": [
+        {
+          "time": "2012-08-27",
+          "text": "Eve would like to try for 5 days a week."
+        },
+        {
+          "time": "2012-09-10",
+          "text": "Eve is still walking the dogs."
+        }
+      ],
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-4"
+      }
+    },
+    {
+      "progress": [
+        {
+          "time": "2012-08-13",
+          "text": "Eve walked 4 times the last week."
+        },
+        {
+          "time": "2012-09-10",
+          "text": "Eve did not walk to her parents the last week, but has plans to start again"
+        }
+      ],
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-5"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-6"
+      }
+    },
+    {
+      "progress": [
+        {
+          "time": "2012-08-13",
+          "text": "After restarting the vinegar soaks the psoriasis is improved and Eve plans to treat the remainder with light treatments.  She plans to start this week."
+        },
+        {
+          "time": "2012-08-27",
+          "text": "Since her skin is improved Eve has not been using the light treatment as often, maybe once a week.  She would like to increase to 3 times a week again"
+        }
+      ],
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-7"
+      }
+    },
+    {
+      "progress": {
+        "time": "2012-07-23",
+        "text": "Eve created a chart as a reminer to take the medications that do not fit in her pill box"
+      },
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-8"
+      }
+    },
+    {
+      "progress": [
+        {
+          "time": "2012-07-30",
+          "text": "Will be able to esume exercise."
+        },
+        {
+          "time": "2012-08-13",
+          "text": "Eve prefers to focus on walking at this time"
+        }
+      ],
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-9"
+      }
+    },
+    {
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-10"
+      }
+    },
+    {
+      "progress": {
+        "time": "2012-07-16",
+        "text": "Eve now has some of her medications set up in pill packs by her pharmacist"
+      },
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-11"
+      }
+    },
+    {
+      "progress": [
+        {
+          "time": "2012-07-12",
+          "text": "Eve will be able to resume exercise on 7/30/12"
+        },
+        {
+          "time": "2012-08-13",
+          "text": "hold until \"less busy\""
+        }
+      ],
+      "plannedActivityReference": {
+        "reference": "ServiceRequest/activity-12"
+      }
+    }
+  ],
+  "note": {
+    "text": "Patient family is not ready to commit to goal setting at this time.  Goal setting will be addressed in the future"
+  }
+}

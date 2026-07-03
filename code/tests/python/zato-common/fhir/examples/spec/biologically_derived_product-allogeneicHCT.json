@@ -1,0 +1,14 @@
+{
+  "resourceType": "BiologicallyDerivedProduct",
+  "id": "allogeneicHCT",
+  "request": {
+    "reference": "ServiceRequest/example",
+    "display": "Service Request for HCT Collection"
+  },
+  "collection": {
+    "sourcePatient": {
+      "reference": "Patient/pat2",
+      "display": "HCT Donor"
+    }
+  }
+}

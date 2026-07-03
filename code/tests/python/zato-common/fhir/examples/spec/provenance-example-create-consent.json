@@ -1,0 +1,36 @@
+{
+  "resourceType": "Provenance",
+  "id": "example-create-consent",
+  "target": {
+    "reference": "Consent/consent-example-basic/_history/1"
+  },
+  "recorded": "2021-09-10T07:08:21.722+00:00",
+  "activity": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+      "code": "CREATE",
+      "display": "create"
+    }
+  },
+  "patient": {
+    "reference": "Patient/example"
+  },
+  "agent": {
+    "type": {
+      "coding": {
+        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+        "code": "assembler",
+        "display": "Assembler"
+      }
+    },
+    "who": {
+      "display": "LEAP Consent Management Service"
+    }
+  },
+  "entity": {
+    "role": "source",
+    "what": {
+      "reference": "http://example.org/fhir/QuestionnaireResponse/some-questionnaire-response"
+    }
+  }
+}

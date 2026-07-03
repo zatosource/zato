@@ -1,0 +1,41 @@
+{
+  "resourceType": "Condition",
+  "id": "example2",
+  "text": {
+    "status": "generated",
+    "{http://www.w3.org/1999/xhtml}div": null
+  },
+  "clinicalStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+    }
+  },
+  "verificationStatus": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      "code": "confirmed"
+    }
+  },
+  "category": {
+    "coding": {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+      "code": "problem-list-item",
+      "display": "Problem List Item"
+    }
+  },
+  "severity": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 255604002,
+      "display": "Mild"
+    }
+  },
+  "code": {
+    "text": "Asthma"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "onsetString": "approximately November 2012"
+}

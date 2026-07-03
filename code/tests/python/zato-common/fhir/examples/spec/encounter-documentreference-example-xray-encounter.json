@@ -1,0 +1,11 @@
+{
+  "resourceType": "Encounter",
+  "id": "documentreference-example-xray-encounter",
+  "identifier": {
+    "system": "http://someclinic.org/fhir/NamingSystem/imaging-orders",
+    "value": 111222,
+    "assigner": {
+      "display": "XYZ Medical Clinic"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "resourceType": "Device",
+  "id": "device-example-specimen-container-example-sst-vacutainer",
+  "identifier": {
+    "system": "http://acme.com/containers/id",
+    "value": 345679
+  },
+  "name": {
+    "value": "SST Tube",
+    "type": {
+      "coding": {
+        "system": "http://hl7.org/fhir/device-nametype",
+        "code": "registered-name",
+        "display": "Registered Name"
+      }
+    }
+  },
+  "property": [
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/containers/codes",
+          "code": "container-type",
+          "display": "Container Type"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://acme.com/containers/types",
+          "code": "SST",
+          "display": "SST Tube"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/containers/codes",
+          "code": "amount",
+          "display": "Amount"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://acme.com/containers/capacities",
+          "code": "4.5mL",
+          "display": "4.5 mL"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": {
+          "system": "http://acme.com/containers/codes",
+          "code": "additive",
+          "display": "Additive"
+        }
+      },
+      "valueCodeableConcept": {
+        "coding": {
+          "system": "http://acme.com/containers/additive",
+          "code": "gel",
+          "display": "gel"
+        }
+      }
+    }
+  ]
+}

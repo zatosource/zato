@@ -1,0 +1,503 @@
+{
+  "_meta": {
+    "scenario": "clinical_document",
+    "instance": 8,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.zezn4ufq",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Margaux Weber</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2106-3",
+              "display": "White"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "White"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4513649"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-7071"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Weber",
+        "given": [
+          "Margaux"
+        ],
+        "text": "Margaux Weber"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "270-611-4936",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "angela16@gmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1976-06-15",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "5083 Guerrero Course Apt. 649"
+        ],
+        "city": "Alexanderstad",
+        "state": "AL",
+        "postalCode": "11085",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "S",
+          "display": "Never Married"
+        }
+      ],
+      "text": "Never Married"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.ufhsuyur",
+        "display": "Dr. Geneviève Texier"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.xfrpg693",
+      "display": "Centre de Bien-Etre Lumiere"
+    }
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.zxycn4z2",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document creation on 2024-08-20</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.zezn4ufq",
+        "display": "Margaux Weber"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufhsuyur",
+            "display": "Dr. Geneviève Texier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-08-20T13:15:00+00:00",
+        "end": "2024-08-20T14:10:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document creation"
+            }
+          ],
+          "text": "Document creation"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.xfrpg693",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.xxusjy9u",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.gghs5kkm",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document review on 2025-01-31</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.zezn4ufq",
+        "display": "Margaux Weber"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufhsuyur",
+            "display": "Dr. Geneviève Texier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-01-31T11:00:00+00:00",
+        "end": "2025-01-31T11:44:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document review"
+            }
+          ],
+          "text": "Document review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.xfrpg693",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.xxusjy9u",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.anfds467",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Document update on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.zezn4ufq",
+        "display": "Margaux Weber"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.ufhsuyur",
+            "display": "Dr. Geneviève Texier"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:45:00+00:00",
+        "end": "2025-06-15T11:40:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Document update"
+            }
+          ],
+          "text": "Document update"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.xfrpg693",
+        "display": "Centre de Bien-Etre Lumiere"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.xxusjy9u",
+            "display": "Centre de Bien-Etre Lumiere - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "resourceType": "Composition",
+    "id": "cmp.vqg82fy6",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Composition: Clinical document for Margaux Weber</p></div>"
+    },
+    "status": "final",
+    "type": {
+      "coding": [
+        {
+          "system": "http://loinc.org",
+          "code": "11488-4",
+          "display": "Consult note"
+        }
+      ],
+      "text": "Consult note"
+    },
+    "subject": {
+      "reference": "Patient/pt.zezn4ufq",
+      "display": "Margaux Weber"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.anfds467"
+    },
+    "date": "2025-06-15T16:00:00+00:00",
+    "author": [
+      {
+        "reference": "Practitioner/pr.ufhsuyur",
+        "display": "Dr. Geneviève Texier"
+      }
+    ],
+    "title": "Clinical Document - Margaux Weber",
+    "custodian": {
+      "reference": "Organization/org.xfrpg693",
+      "display": "Centre de Bien-Etre Lumiere"
+    },
+    "section": [
+      {
+        "title": "Reason for Visit",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29299-5",
+              "display": "Reason for visit"
+            }
+          ],
+          "text": "Reason for visit"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient presents for routine wellness visit and documentation review.</p></div>"
+        }
+      },
+      {
+        "title": "Assessment",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "51848-0",
+              "display": "Assessment"
+            }
+          ],
+          "text": "Assessment"
+        },
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient is in good health. All preventive care measures are up to date. No new concerns identified.</p></div>"
+        }
+      }
+    ]
+  },
+  "catalog": {
+    "resourceType": "CatalogEntry",
+    "id": "ce.vvx5mh7f",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CatalogEntry: Wellness visit service catalog entry</p></div>"
+    },
+    "orderable": true,
+    "referencedItem": {
+      "reference": "ActivityDefinition/ad_placeholder.aqvtjmsf"
+    },
+    "type": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/resource-types",
+          "code": "ActivityDefinition",
+          "display": "ActivityDefinition"
+        }
+      ],
+      "text": "ActivityDefinition"
+    },
+    "status": "active",
+    "validityPeriod": {
+      "start": "2025-01-01"
+    }
+  }
+}

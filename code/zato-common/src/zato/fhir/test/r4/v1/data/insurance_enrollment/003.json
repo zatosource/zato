@@ -1,0 +1,1302 @@
+{
+  "_meta": {
+    "scenario": "insurance_enrollment",
+    "instance": 3,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.w55wdff9",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: 최 채원</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2076-8",
+              "display": "Native Hawaiian or Other Pacific Islander"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Native Hawaiian or Other Pacific Islander"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2135-2",
+              "display": "Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "F"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN4427298"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-8684"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "최",
+        "given": [
+          "채원"
+        ],
+        "text": "최 채원"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "7945159650",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "briggsjames@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1995-02-06",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "28764 Jacqueline Vista Suite 284"
+        ],
+        "city": "North Tiffany",
+        "state": "MP",
+        "postalCode": "16381",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "ko",
+              "display": "Korean"
+            }
+          ],
+          "text": "Korean"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.6uuxd374",
+        "display": "김 주원"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "insorg.jd4ca3ta",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Family HMO</p></div>"
+    },
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "ins",
+            "display": "Insurance Company"
+          }
+        ],
+        "text": "Insurance Company"
+      }
+    ],
+    "name": "Meadowbrook Family HMO"
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.gqezvpdx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Insurance enrollment on 2024-05-16</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.w55wdff9",
+        "display": "최 채원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.6uuxd374",
+            "display": "김 주원"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-05-16T15:30:00+00:00",
+        "end": "2024-05-16T16:26:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Insurance enrollment"
+            }
+          ],
+          "text": "Insurance enrollment"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.yv695qph",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2mvyrccv",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.9zaztd6d",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Coverage review on 2024-10-31</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.w55wdff9",
+        "display": "최 채원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.6uuxd374",
+            "display": "김 주원"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-10-31T09:15:00+00:00",
+        "end": "2024-10-31T09:57:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Coverage review"
+            }
+          ],
+          "text": "Coverage review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.yv695qph",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2mvyrccv",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.davttwjv",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Benefits check on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.w55wdff9",
+        "display": "최 채원"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.6uuxd374",
+            "display": "김 주원"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T09:30:00+00:00",
+        "end": "2025-06-15T10:05:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Benefits check"
+            }
+          ],
+          "text": "Benefits check"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.yv695qph",
+        "display": "Riverstone Medical Group"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.2mvyrccv",
+            "display": "Riverstone Medical Group - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "cov.af9tnr3e",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Coverage: Meadowbrook Family HMO for 최 채원</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "HMO",
+          "display": "HMO"
+        }
+      ],
+      "text": "HMO"
+    },
+    "subscriber": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "subscriberId": "SUB266506",
+    "beneficiary": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "relationship": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+          "code": "self",
+          "display": "Self"
+        }
+      ],
+      "text": "Self"
+    },
+    "period": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "payor": [
+      {
+        "reference": "Organization/insorg.jd4ca3ta",
+        "display": "Meadowbrook Family HMO"
+      }
+    ],
+    "class": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "group",
+              "display": "Group"
+            }
+          ],
+          "text": "Group"
+        },
+        "value": "GRP7608",
+        "name": "Employee Group"
+      },
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+              "code": "plan",
+              "display": "Plan"
+            }
+          ],
+          "text": "Plan"
+        },
+        "value": "HMO",
+        "name": "Meadowbrook Family HMO"
+      }
+    ],
+    "costToBeneficiary": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/coverage-copay-type",
+              "code": "copay",
+              "display": "Copay"
+            }
+          ],
+          "text": "Copay"
+        },
+        "valueMoney": {
+          "value": 25,
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "insurance_plan": {
+    "resourceType": "InsurancePlan",
+    "id": "ip.tpruvjqd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>InsurancePlan: Meadowbrook Family HMO</p></div>"
+    },
+    "status": "active",
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+            "code": "HMO",
+            "display": "HMO"
+          }
+        ],
+        "text": "HMO"
+      }
+    ],
+    "name": "Meadowbrook Family HMO",
+    "ownedBy": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "administeredBy": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "plan": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-type",
+              "code": "HMO",
+              "display": "HMO"
+            }
+          ],
+          "text": "HMO"
+        },
+        "generalCost": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/insurance-plan-cost-category",
+                  "code": "deductible",
+                  "display": "Deductible"
+                }
+              ],
+              "text": "Deductible"
+            },
+            "cost": {
+              "value": 600,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "enrollment_request": {
+    "resourceType": "EnrollmentRequest",
+    "id": "er.r5assv7b",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentRequest: Request to enroll in insurance plan</p></div>"
+    },
+    "status": "active",
+    "created": "2024-05-16",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "candidate": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "coverage": {
+      "reference": "Coverage/cov.af9tnr3e"
+    }
+  },
+  "enrollment_response": {
+    "resourceType": "EnrollmentResponse",
+    "id": "eresp.92xgctek",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>EnrollmentResponse: Enrollment approved</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "EnrollmentRequest/er.r5assv7b"
+    },
+    "outcome": "complete",
+    "disposition": "Enrollment approved. Coverage effective immediately.",
+    "created": "2024-05-16",
+    "organization": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    }
+  },
+  "eligibility_request": {
+    "resourceType": "CoverageEligibilityRequest",
+    "id": "cer.7tuwdzar",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityRequest: Check benefits eligibility</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.af9tnr3e"
+        }
+      }
+    ]
+  },
+  "eligibility_response": {
+    "resourceType": "CoverageEligibilityResponse",
+    "id": "ceresp.ets49r2w",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CoverageEligibilityResponse: Patient eligible</p></div>"
+    },
+    "status": "active",
+    "purpose": [
+      "benefits"
+    ],
+    "patient": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "created": "2025-06-15",
+    "request": {
+      "reference": "CoverageEligibilityRequest/cer.7tuwdzar"
+    },
+    "outcome": "complete",
+    "disposition": "Patient is eligible for benefits under current coverage.",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "insurance": [
+      {
+        "coverage": {
+          "reference": "Coverage/cov.af9tnr3e"
+        },
+        "inforce": true
+      }
+    ]
+  },
+  "claim": {
+    "resourceType": "Claim",
+    "id": "clm.tg85tacn",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Claim: Wellness visit claim</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "provider": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "priority": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+          "code": "normal",
+          "display": "Normal"
+        }
+      ],
+      "text": "Normal"
+    },
+    "insurance": [
+      {
+        "sequence": 1,
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.af9tnr3e"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "unitPrice": {
+          "value": 198,
+          "currency": "USD"
+        },
+        "net": {
+          "value": 198,
+          "currency": "USD"
+        }
+      }
+    ],
+    "total": {
+      "value": 198,
+      "currency": "USD"
+    }
+  },
+  "claim_response": {
+    "resourceType": "ClaimResponse",
+    "id": "cr.tq8savrf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ClaimResponse: Claim processed</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "request": {
+      "reference": "Claim/clm.tg85tacn"
+    },
+    "outcome": "complete",
+    "disposition": "Claim processed successfully.",
+    "item": [
+      {
+        "itemSequence": 1,
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 198,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 173,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 25,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 198,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 173,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/ex-paymenttype",
+            "code": "complete",
+            "display": "Complete"
+          }
+        ],
+        "text": "Complete"
+      },
+      "date": "2025-06-15",
+      "amount": {
+        "value": 173,
+        "currency": "USD"
+      }
+    }
+  },
+  "explanation_of_benefit": {
+    "resourceType": "ExplanationOfBenefit",
+    "id": "eob.n7vnsp66",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ExplanationOfBenefit: Wellness visit benefit explanation</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+          "code": "professional",
+          "display": "Professional"
+        }
+      ],
+      "text": "Professional"
+    },
+    "use": "claim",
+    "patient": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "created": "2025-06-15",
+    "insurer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "provider": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "outcome": "complete",
+    "insurance": [
+      {
+        "focal": true,
+        "coverage": {
+          "reference": "Coverage/cov.af9tnr3e"
+        }
+      }
+    ],
+    "item": [
+      {
+        "sequence": 1,
+        "productOrService": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99395",
+              "display": "Preventive visit, established, 18-39 years"
+            }
+          ],
+          "text": "Preventive visit, established, 18-39 years"
+        },
+        "servicedDate": "2025-06-15",
+        "adjudication": [
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "submitted",
+                  "display": "Submitted Amount"
+                }
+              ],
+              "text": "Submitted Amount"
+            },
+            "amount": {
+              "value": 198,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "benefit",
+                  "display": "Benefit Amount"
+                }
+              ],
+              "text": "Benefit Amount"
+            },
+            "amount": {
+              "value": 173,
+              "currency": "USD"
+            }
+          },
+          {
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+                  "code": "copay",
+                  "display": "Copay"
+                }
+              ],
+              "text": "Copay"
+            },
+            "amount": {
+              "value": 25,
+              "currency": "USD"
+            }
+          }
+        ]
+      }
+    ],
+    "total": [
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "submitted",
+              "display": "Submitted Amount"
+            }
+          ],
+          "text": "Submitted Amount"
+        },
+        "amount": {
+          "value": 198,
+          "currency": "USD"
+        }
+      },
+      {
+        "category": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/adjudication",
+              "code": "benefit",
+              "display": "Benefit Amount"
+            }
+          ],
+          "text": "Benefit Amount"
+        },
+        "amount": {
+          "value": 173,
+          "currency": "USD"
+        }
+      }
+    ],
+    "payment": {
+      "amount": {
+        "value": 173,
+        "currency": "USD"
+      }
+    }
+  },
+  "payment_notice": {
+    "resourceType": "PaymentNotice",
+    "id": "pn.x4nnb2k5",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentNotice: Payment processed for wellness visit</p></div>"
+    },
+    "status": "active",
+    "request": {
+      "reference": "Claim/clm.tg85tacn"
+    },
+    "response": {
+      "reference": "ClaimResponse/cr.tq8savrf"
+    },
+    "created": "2025-06-15",
+    "provider": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "payment": {
+      "reference": "PaymentReconciliation/prec.r59nsc5v"
+    },
+    "paymentDate": "2025-06-15",
+    "recipient": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "amount": {
+      "value": 173,
+      "currency": "USD"
+    },
+    "paymentStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/paymentstatus",
+          "code": "paid",
+          "display": "Paid"
+        }
+      ],
+      "text": "Paid"
+    }
+  },
+  "payment_reconciliation": {
+    "resourceType": "PaymentReconciliation",
+    "id": "prec.r59nsc5v",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>PaymentReconciliation: Payment reconciled</p></div>"
+    },
+    "status": "active",
+    "period": {
+      "start": "2025-06-01",
+      "end": "2025-06-28"
+    },
+    "created": "2025-06-15",
+    "paymentIssuer": {
+      "reference": "Organization/insorg.jd4ca3ta",
+      "display": "Meadowbrook Family HMO"
+    },
+    "paymentDate": "2025-06-15",
+    "paymentAmount": {
+      "value": 173,
+      "currency": "USD"
+    }
+  },
+  "invoice": {
+    "resourceType": "Invoice",
+    "id": "inv.5nwvgaph",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Invoice: Wellness visit invoice</p></div>"
+    },
+    "status": "balanced",
+    "type": {
+      "coding": [
+        {
+          "system": "http://example.org/invoice-type",
+          "code": "wellness-visit",
+          "display": "Wellness Visit"
+        }
+      ],
+      "text": "Wellness Visit"
+    },
+    "subject": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "date": "2025-06-15",
+    "issuer": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "totalNet": {
+      "value": 198,
+      "currency": "USD"
+    },
+    "totalGross": {
+      "value": 198,
+      "currency": "USD"
+    }
+  },
+  "charge_item": {
+    "resourceType": "ChargeItem",
+    "id": "ci.gk6ybn9g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItem: Wellness visit charge</p></div>"
+    },
+    "status": "billed",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    },
+    "subject": {
+      "reference": "Patient/pt.w55wdff9",
+      "display": "최 채원"
+    },
+    "context": {
+      "reference": "Encounter/enc.davttwjv"
+    },
+    "occurrenceDateTime": "2025-06-15T10:00:00+00:00",
+    "performer": [
+      {
+        "actor": {
+          "reference": "Organization/org.yv695qph",
+          "display": "Riverstone Medical Group"
+        }
+      }
+    ],
+    "performingOrganization": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "requestingOrganization": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    },
+    "quantity": {
+      "value": 1
+    },
+    "priceOverride": {
+      "value": 198,
+      "currency": "USD"
+    },
+    "account": [
+      {
+        "reference": "Account/acct.scqv5tcz"
+      }
+    ]
+  },
+  "charge_item_definition": {
+    "resourceType": "ChargeItemDefinition",
+    "id": "cid.d2sfak2h",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>ChargeItemDefinition: Standard wellness visit charge</p></div>"
+    },
+    "url": "http://example.org/ChargeItemDefinition/cid.d2sfak2h",
+    "status": "active",
+    "title": "Wellness Visit Charge Definition",
+    "date": "2025-06-15",
+    "publisher": "Riverstone Medical Group",
+    "description": "Standard charge definition for preventive wellness visits.",
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.ama-assn.org/go/cpt",
+          "code": "99395",
+          "display": "Preventive visit, established, 18-39 years"
+        }
+      ],
+      "text": "Preventive visit, established, 18-39 years"
+    }
+  },
+  "account": {
+    "resourceType": "Account",
+    "id": "acct.scqv5tcz",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Account: Patient account for 최 채원</p></div>"
+    },
+    "status": "active",
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "PBILLACCT",
+          "display": "patient billing account"
+        }
+      ],
+      "text": "patient billing account"
+    },
+    "name": "Patient Account - 최 채원",
+    "subject": [
+      {
+        "reference": "Patient/pt.w55wdff9",
+        "display": "최 채원"
+      }
+    ],
+    "servicePeriod": {
+      "start": "2025-01-01"
+    },
+    "owner": {
+      "reference": "Organization/org.yv695qph",
+      "display": "Riverstone Medical Group"
+    }
+  },
+  "contract": {
+    "resourceType": "Contract",
+    "id": "contract.k564qsf9",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Contract: Insurance coverage agreement</p></div>"
+    },
+    "status": "executed",
+    "issued": "2025-01-01T00:00:00+00:00",
+    "applies": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+    },
+    "subject": [
+      {
+        "reference": "Patient/pt.w55wdff9",
+        "display": "최 채원"
+      }
+    ],
+    "authority": [
+      {
+        "reference": "Organization/insorg.jd4ca3ta",
+        "display": "Meadowbrook Family HMO"
+      }
+    ],
+    "type": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/contract-type",
+          "code": "healthinsurance",
+          "display": "Health Insurance"
+        }
+      ],
+      "text": "Health Insurance"
+    }
+  }
+}

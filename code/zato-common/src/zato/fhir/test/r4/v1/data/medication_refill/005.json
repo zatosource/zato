@@ -1,0 +1,801 @@
+{
+  "_meta": {
+    "scenario": "medication_refill",
+    "instance": 5,
+    "dataset_version": "v1",
+    "fhir_version": "r4"
+  },
+  "patient": {
+    "resourceType": "Patient",
+    "id": "pt.uta2yzm7",
+    "meta": {
+      "profile": [
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Patient: Thomas Laroche</p></div>"
+    },
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2054-5",
+              "display": "Black or African American"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Black or African American"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+        "extension": [
+          {
+            "url": "ombCategory",
+            "valueCoding": {
+              "system": "urn:oid:2.16.840.1.113883.6.238",
+              "code": "2186-5",
+              "display": "Not Hispanic or Latino"
+            }
+          },
+          {
+            "url": "text",
+            "valueString": "Not Hispanic or Latino"
+          }
+        ]
+      },
+      {
+        "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+        "valueCode": "M"
+      }
+    ],
+    "identifier": [
+      {
+        "use": "usual",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "MR",
+              "display": "Medical record number"
+            }
+          ],
+          "text": "Medical record number"
+        },
+        "system": "http://example.org/mrn",
+        "value": "MRN5630407"
+      },
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "SS",
+              "display": "Social Security number"
+            }
+          ],
+          "text": "Social Security number"
+        },
+        "system": "http://hl7.org/fhir/sid/us-ssn",
+        "value": "987-65-4792"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Laroche",
+        "given": [
+          "Thomas"
+        ],
+        "text": "Thomas Laroche"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "+1-211-930-5020x663",
+        "use": "home"
+      },
+      {
+        "system": "email",
+        "value": "jorge17@hotmail.com",
+        "use": "home"
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1965-11-22",
+    "address": [
+      {
+        "use": "home",
+        "line": [
+          "8950 Bowen Field"
+        ],
+        "city": "Port Josephfort",
+        "state": "DE",
+        "postalCode": "96212",
+        "country": "US"
+      }
+    ],
+    "maritalStatus": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+          "code": "D",
+          "display": "Divorced"
+        }
+      ],
+      "text": "Divorced"
+    },
+    "communication": [
+      {
+        "language": {
+          "coding": [
+            {
+              "system": "urn:ietf:bcp:47",
+              "code": "fr",
+              "display": "French"
+            }
+          ],
+          "text": "French"
+        },
+        "preferred": true
+      }
+    ],
+    "generalPractitioner": [
+      {
+        "reference": "Practitioner/pr.pjgsrrqf",
+        "display": "Dr. Louis Guilbert"
+      }
+    ],
+    "managingOrganization": {
+      "reference": "Organization/org.rjtabpbb",
+      "display": "Meadowbrook Health Center"
+    }
+  },
+  "practitioner": {
+    "resourceType": "Practitioner",
+    "id": "pr.pjgsrrqf",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Practitioner: Dr. Louis Guilbert</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "1430983645"
+      }
+    ],
+    "name": [
+      {
+        "use": "official",
+        "family": "Guilbert",
+        "given": [
+          "Louis"
+        ],
+        "prefix": [
+          "Dr."
+        ],
+        "text": "Dr. Louis Guilbert"
+      }
+    ],
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "231.925.1271x786",
+        "use": "work"
+      }
+    ],
+    "gender": "male",
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "793 Elizabeth Ridge"
+        ],
+        "city": "North Sharon",
+        "state": "CO",
+        "postalCode": "77847",
+        "country": "US"
+      }
+    ]
+  },
+  "organization": {
+    "resourceType": "Organization",
+    "id": "org.rjtabpbb",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Organization: Meadowbrook Health Center</p></div>"
+    },
+    "identifier": [
+      {
+        "use": "official",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+              "code": "NPI",
+              "display": "National provider identifier"
+            }
+          ],
+          "text": "National provider identifier"
+        },
+        "system": "http://hl7.org/fhir/sid/us-npi",
+        "value": "6109307640"
+      }
+    ],
+    "active": true,
+    "type": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+            "code": "prov",
+            "display": "Healthcare Provider"
+          }
+        ],
+        "text": "Healthcare Provider"
+      }
+    ],
+    "name": "Meadowbrook Health Center",
+    "telecom": [
+      {
+        "system": "phone",
+        "value": "332-387-9288",
+        "use": "work"
+      }
+    ],
+    "address": [
+      {
+        "use": "work",
+        "line": [
+          "5962 Beverly Ports Apt. 393"
+        ],
+        "city": "East Kari",
+        "state": "MS",
+        "postalCode": "32532",
+        "country": "US"
+      }
+    ]
+  },
+  "encounters": [
+    {
+      "resourceType": "Encounter",
+      "id": "enc.cnfe572m",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Prescription review on 2024-06-09</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uta2yzm7",
+        "display": "Thomas Laroche"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.pjgsrrqf",
+            "display": "Dr. Louis Guilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-06-09T11:15:00+00:00",
+        "end": "2024-06-09T12:05:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Prescription review"
+            }
+          ],
+          "text": "Prescription review"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rjtabpbb",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.re8ktxyb",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.sw2rwbdp",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Medication follow-up on 2024-12-06</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uta2yzm7",
+        "display": "Thomas Laroche"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.pjgsrrqf",
+            "display": "Dr. Louis Guilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2024-12-06T16:30:00+00:00",
+        "end": "2024-12-06T17:16:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Medication follow-up"
+            }
+          ],
+          "text": "Medication follow-up"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rjtabpbb",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.re8ktxyb",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "resourceType": "Encounter",
+      "id": "enc.gxzx9hxx",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Encounter: Refill visit on 2025-06-15</p></div>"
+      },
+      "status": "finished",
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185349003",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/pt.uta2yzm7",
+        "display": "Thomas Laroche"
+      },
+      "participant": [
+        {
+          "type": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                  "code": "ATND",
+                  "display": "attender"
+                }
+              ],
+              "text": "attender"
+            }
+          ],
+          "individual": {
+            "reference": "Practitioner/pr.pjgsrrqf",
+            "display": "Dr. Louis Guilbert"
+          }
+        }
+      ],
+      "period": {
+        "start": "2025-06-15T10:45:00+00:00",
+        "end": "2025-06-15T11:22:00+00:00"
+      },
+      "reasonCode": [
+        {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z00.00",
+              "display": "Refill visit"
+            }
+          ],
+          "text": "Refill visit"
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/org.rjtabpbb",
+        "display": "Meadowbrook Health Center"
+      },
+      "location": [
+        {
+          "location": {
+            "reference": "Location/loc.re8ktxyb",
+            "display": "Meadowbrook Health Center - Main Office"
+          },
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "medication_request": {
+    "resourceType": "MedicationRequest",
+    "id": "mr.yjgqbk7d",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationRequest: Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.uta2yzm7",
+      "display": "Thomas Laroche"
+    },
+    "encounter": {
+      "reference": "Encounter/enc.gxzx9hxx"
+    },
+    "authoredOn": "2025-06-15",
+    "requester": {
+      "reference": "Practitioner/pr.pjgsrrqf",
+      "display": "Dr. Louis Guilbert"
+    },
+    "dosageInstruction": [
+      {
+        "text": "Take one tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        },
+        "doseAndRate": [
+          {
+            "doseQuantity": {
+              "value": 1,
+              "unit": "tablet",
+              "system": "http://unitsofmeasure.org",
+              "code": "{tbl}"
+            }
+          }
+        ]
+      }
+    ],
+    "dispenseRequest": {
+      "numberOfRepeatsAllowed": 3,
+      "quantity": {
+        "value": 90,
+        "unit": "tablet",
+        "system": "http://unitsofmeasure.org",
+        "code": "{tbl}"
+      },
+      "expectedSupplyDuration": {
+        "value": 90,
+        "unit": "days",
+        "system": "http://unitsofmeasure.org",
+        "code": "d"
+      }
+    }
+  },
+  "medication_dispense": {
+    "resourceType": "MedicationDispense",
+    "id": "md.gsqabu46",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationDispense: Vitamin D3 1000 IU oral tablet dispensed</p></div>"
+    },
+    "status": "completed",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.uta2yzm7",
+      "display": "Thomas Laroche"
+    },
+    "performer": [
+      {
+        "actor": {
+          "reference": "Practitioner/pr.pjgsrrqf",
+          "display": "Dr. Louis Guilbert"
+        }
+      }
+    ],
+    "authorizingPrescription": [
+      {
+        "reference": "MedicationRequest/mr.yjgqbk7d"
+      }
+    ],
+    "quantity": {
+      "value": 90,
+      "unit": "tablet",
+      "system": "http://unitsofmeasure.org",
+      "code": "{tbl}"
+    },
+    "daysSupply": {
+      "value": 90,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "whenHandedOver": "2025-06-15T14:00:00+00:00"
+  },
+  "medication_statement": {
+    "resourceType": "MedicationStatement",
+    "id": "ms.y97mysqd",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationStatement: Patient taking Vitamin D3 1000 IU oral tablet daily</p></div>"
+    },
+    "status": "active",
+    "medicationCodeableConcept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "subject": {
+      "reference": "Patient/pt.uta2yzm7",
+      "display": "Thomas Laroche"
+    },
+    "effectivePeriod": {
+      "start": "2024-06-09"
+    },
+    "dateAsserted": "2025-06-15",
+    "informationSource": {
+      "reference": "Patient/pt.uta2yzm7",
+      "display": "Thomas Laroche"
+    },
+    "dosage": [
+      {
+        "text": "One tablet by mouth daily",
+        "timing": {
+          "repeat": {
+            "frequency": 1,
+            "period": 1,
+            "periodUnit": "d"
+          }
+        },
+        "route": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "26643006",
+              "display": "Oral route"
+            }
+          ],
+          "text": "Oral route"
+        }
+      }
+    ]
+  },
+  "medication_knowledge": {
+    "resourceType": "MedicationKnowledge",
+    "id": "mk.3zxd6a6u",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>MedicationKnowledge: Vitamin D3 1000 IU oral tablet</p></div>"
+    },
+    "code": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "11253",
+          "display": "Vitamin D3 1000 IU oral tablet"
+        }
+      ],
+      "text": "Vitamin D3 1000 IU oral tablet"
+    },
+    "status": "active",
+    "doseForm": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "385055001",
+          "display": "Tablet"
+        }
+      ],
+      "text": "Tablet"
+    },
+    "amount": {
+      "value": 1000,
+      "unit": "IU",
+      "system": "http://unitsofmeasure.org",
+      "code": "[iU]"
+    },
+    "synonym": [
+      "Vitamin D3 1000 IU oral tablet"
+    ]
+  },
+  "substance": {
+    "resourceType": "Substance",
+    "id": "sub.bcafqvmm",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Substance: Cholecalciferol (Vitamin D3)</p></div>"
+    },
+    "status": "active",
+    "category": [
+      {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/substance-category",
+            "code": "drug",
+            "display": "Drug or Medicament"
+          }
+        ],
+        "text": "Drug or Medicament"
+      }
+    ],
+    "code": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "18414002",
+          "display": "Cholecalciferol"
+        }
+      ],
+      "text": "Cholecalciferol"
+    },
+    "description": "Cholecalciferol (Vitamin D3), used as a dietary supplement"
+  },
+  "detected_issue": {
+    "resourceType": "DetectedIssue",
+    "id": "di.nvkpap4g",
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>DetectedIssue: No drug interactions found</p></div>"
+    },
+    "status": "final",
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "DACT",
+          "display": "drug action detected issue"
+        }
+      ],
+      "text": "drug action detected issue"
+    },
+    "severity": "low",
+    "patient": {
+      "reference": "Patient/pt.uta2yzm7",
+      "display": "Thomas Laroche"
+    },
+    "identifiedDateTime": "2025-06-15",
+    "implicated": [
+      {
+        "reference": "MedicationRequest/mr.yjgqbk7d"
+      }
+    ],
+    "detail": "Automated screening completed. No drug-drug interactions detected for current medication regimen."
+  }
+}

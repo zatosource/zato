@@ -1,0 +1,40 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "education",
+  "status": "completed",
+  "intent": "order",
+  "category": {
+    "coding": {
+      "system": "http://snomed.info/sct",
+      "code": 311401005,
+      "display": "Patient education (procedure)"
+    },
+    "text": "Education"
+  },
+  "code": {
+    "concept": {
+      "coding": {
+        "system": "http://snomed.info/sct",
+        "code": 48023004,
+        "display": "Breast self-examination technique education (procedure)"
+      },
+      "text": "Health education - breast examination"
+    }
+  },
+  "subject": {
+    "display": "Jane Doe"
+  },
+  "occurrenceDateTime": "2014-08-16",
+  "authoredOn": "2016-08-16",
+  "requester": {
+    "display": "Angela Care, MD"
+  },
+  "performer": {
+    "display": "Pamela Educator, RN"
+  },
+  "reason": {
+    "concept": {
+      "text": "early detection of breast mass"
+    }
+  }
+}

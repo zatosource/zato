@@ -1,0 +1,31 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "example-reference",
+  "url": "http://hl7.org/fhir/SearchParameter/example-reference",
+  "name": "ExampleSearchParameter",
+  "title": "Example Search Parameter",
+  "status": "draft",
+  "experimental": true,
+  "date": "2013-10-23",
+  "publisher": "HL7 International / FHIR Infrastructure",
+  "contact": {
+    "name": "[string]",
+    "telecom": {
+      "system": "url",
+      "value": "http://hl7.org/fhir"
+    }
+  },
+  "description": "Search by condition subject",
+  "purpose": "Need to search Condition by subject",
+  "code": "subject",
+  "base": "Condition",
+  "type": "reference",
+  "expression": "Condition.subject",
+  "processingMode": "normal",
+  "target": "Organization",
+  "modifier": "missing",
+  "chain": [
+    "name",
+    "identifier"
+  ]
+}
