@@ -12,6 +12,7 @@ from logging import getLogger
 from threading import Lock
 
 # Zato
+from zato.common.api import HL7
 from zato.common.hl7.mllp.haproxy import find_haproxy_config, reload_haproxy, resolve_internal_port, \
     update_mllp_backend_port
 from zato.common.hl7.mllp.router import HL7MessageRouter
@@ -27,13 +28,72 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Default_Start_Sequence = '0b'
-_Default_End_Sequence   = '1c0d'
-
 _Max_Msg_Size_Multipliers = {
     'kb': 1024,
     'mb': 1048576,
 }
+
+# Default channel config value for max_msg_size, interpreted together with max_msg_size_unit
+_Default_Max_Msg_Size      = 2
+_Default_Max_Msg_Size_Unit = 'mb'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Defaults applied by the config manager when the create path does not supply a field,
+# e.g. when a channel is created directly through zato.generic.connection.create.
+channel_config_defaults:'dict[str, object]' = {
+
+    # Framing and protocol
+    'start_seq': HL7.Default.start_seq,
+    'end_seq': HL7.Default.end_seq,
+    'recv_timeout': HL7.Default.recv_timeout,
+    'max_msg_size': _Default_Max_Msg_Size,
+    'max_msg_size_unit': _Default_Max_Msg_Size_Unit,
+    'read_buffer_size': HL7.Default.read_buffer_size,
+    'default_character_encoding': HL7.Default.data_encoding,
+
+    # Logging
+    'should_log_messages': False,
+    'should_return_errors': False,
+
+    # Tolerance toggles
+    'normalize_line_endings': True,
+    'repair_truncated_msh': True,
+    'split_concatenated_messages': True,
+    'force_standard_delimiters': True,
+    'use_msh18_encoding': True,
+    'normalize_obx2_value_type': True,
+    'replace_invalid_obx2_value_type': True,
+    'normalize_invalid_escape_sequences': True,
+    'normalize_obx8_abnormal_flags': True,
+    'normalize_quadruple_quoted_empty': True,
+    'allow_short_encoding_characters': True,
+    'fix_off_by_one_field_index': False,
+
+    # Deduplication - disabled unless explicitly configured
+    'dedup_ttl_value': 0,
+    'dedup_ttl_unit': '',
+
+    # Routing
+    'msh3_sending_app': '',
+    'msh4_sending_facility': '',
+    'msh5_receiving_app': '',
+    'msh6_receiving_facility': '',
+    'msh9_message_type': '',
+    'msh9_trigger_event': '',
+    'msh11_processing_id': '',
+    'msh12_version_id': '',
+    'is_default': False,
+
+    # REST bridge
+    'use_rest': False,
+    'rest_only': False,
+    'rest_channel_id': 0,
+}
+
+# Config keys that must be integers but may arrive as strings from opaque storage
+channel_int_config_keys = ('recv_timeout', 'max_msg_size', 'read_buffer_size', 'dedup_ttl_value', 'rest_channel_id')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +144,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
         """ Converts max_msg_size and max_msg_size_unit from config into bytes.
         """
         raw_value = self.config.max_msg_size
-        unit = self.config.max_msg_size_unit
+
+        # The dashboard and enmasse send the unit as MB or kB, the multiplier map is keyed lower-case
+        unit = self.config.max_msg_size_unit.lower()
         multiplier = _Max_Msg_Size_Multipliers[unit]
 
         out = raw_value * multiplier
@@ -139,16 +201,16 @@ class ChannelHL7MLLPWrapper(Wrapper):
             should_use_msh18_encoding=asbool(self.config.use_msh18_encoding),
             dedup_ttl_value=dedup_ttl_value,
             dedup_ttl_unit=dedup_ttl_unit,
-            normalize_obx2_value_type=asbool(self.config.get('normalize_obx2_value_type', True)),
-            replace_invalid_obx2_value_type=asbool(self.config.get('replace_invalid_obx2_value_type', True)),
-            normalize_invalid_escape_sequences=asbool(self.config.get('normalize_invalid_escape_sequences', True)),
-            normalize_obx8_abnormal_flags=asbool(self.config.get('normalize_obx8_abnormal_flags', True)),
-            normalize_quadruple_quoted_empty=asbool(self.config.get('normalize_quadruple_quoted_empty', True)),
-            allow_short_encoding_characters=asbool(self.config.get('allow_short_encoding_characters', True)),
-            fix_off_by_one_field_index=asbool(self.config.get('fix_off_by_one_field_index', False)),
+            normalize_obx2_value_type=asbool(self.config.normalize_obx2_value_type),
+            replace_invalid_obx2_value_type=asbool(self.config.replace_invalid_obx2_value_type),
+            normalize_invalid_escape_sequences=asbool(self.config.normalize_invalid_escape_sequences),
+            normalize_obx8_abnormal_flags=asbool(self.config.normalize_obx8_abnormal_flags),
+            normalize_quadruple_quoted_empty=asbool(self.config.normalize_quadruple_quoted_empty),
+            allow_short_encoding_characters=asbool(self.config.allow_short_encoding_characters),
+            fix_off_by_one_field_index=asbool(self.config.fix_off_by_one_field_index),
         )
 
-        spawn_greenlet(_shared_state.server.start)
+        _ = spawn_greenlet(_shared_state.server.start)
 
         # .. update the mllp_backend port in haproxy.cfg so HAProxy routes to the right place ..
         server_base_directory = self.server.base_dir # pyright: ignore[reportOptionalMemberAccess]
@@ -157,7 +219,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         if os.path.exists(haproxy_config_path):
             update_mllp_backend_port(haproxy_config_path, internal_port)
-            reload_haproxy()
+            _ = reload_haproxy()
         else:
             logger.info('HAProxy config not found at %s, skipping HAProxy integration', haproxy_config_path)
 
@@ -184,7 +246,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         with _shared_state.lock:
 
             # .. if rest_only is set, the MLLP listener is not started ..
-            rest_only = getattr(self.config, 'rest_only', False)
+            rest_only = asbool(self.config.rest_only)
 
             if not rest_only:
 
@@ -205,7 +267,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     msh9_trigger_event=self.config.msh9_trigger_event,
                     msh11_processing_id=self.config.msh11_processing_id,
                     msh12_version_id=self.config.msh12_version_id,
-                    is_default=self.config.is_default,
+                    is_default=asbool(self.config.is_default),
                 )
 
             _shared_state.channel_count += 1
@@ -227,7 +289,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 _shared_state.channel_count = 0
 
             # .. clean up the backing REST channel if one exists ..
-            rest_channel_id = getattr(self.config, 'rest_channel_id', 0)
+            rest_channel_id = self.config.rest_channel_id
             if rest_channel_id:
                 try:
                     self.server.invoke('zato.http-soap.delete', { # pyright: ignore[reportOptionalMemberAccess]

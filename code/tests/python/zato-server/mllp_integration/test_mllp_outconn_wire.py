@@ -13,6 +13,9 @@ import time
 # Zato
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
+# Zato - test helpers
+from conftest import wait_for_shared_mllp_port
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -31,8 +34,6 @@ _max_message_size = 2_000_000
 _connection_type_channel = 'channel-hl7-mllp'
 _connection_type_outconn = 'outconn-hl7-mllp'
 _generic_service_name    = 'zato.generic.connection'
-
-_listener_bind_wait_seconds = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,12 +133,16 @@ def _find_free_port() -> 'int':
 
 class TestMLLPOutconnWire:
     """ Wire-level tests for MLLP outbound connections running inside a live Zato server.
+
+    Inbound channels share one MLLP listener - the forward channel is the default route
+    and messages are sent to the shared internal port.
     """
 
     outconn_id:'int' = 0
     forward_channel_id:'int' = 0
     dead_outconn_id:'int' = 0
     dead_channel_id:'int' = 0
+    shared_port:'int' = 0
 
 # ################################################################################################################################
 
@@ -164,7 +169,7 @@ class TestMLLPOutconnWire:
 
 # ################################################################################################################################
 
-    def test_02_create_forward_channel(self, zato_client:'object', forward_channel_port:'int') -> 'None':
+    def test_02_create_forward_channel(self, zato_client:'object') -> 'None':
         """ Creates an MLLP channel that forwards messages through the outconn.
         """
         response = zato_client.create( # type: ignore[union-attr]
@@ -177,22 +182,23 @@ class TestMLLPOutconnWire:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.forward',
-            address=f'127.0.0.1:{forward_channel_port}',
+            is_default=True,
             pool_size=1,
         )
 
         assert 'id' in response
         self.__class__.forward_channel_id = response['id']
 
-        time.sleep(_listener_bind_wait_seconds)
+        # Wait for the shared MLLP listener to bind and remember its port
+        self.__class__.shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
 
 # ################################################################################################################################
 
-    def test_03_forward_via_outconn_gets_aa(self, forward_channel_port:'int') -> 'None':
+    def test_03_forward_via_outconn_gets_aa(self) -> 'None':
         """ Sends a message to the forward channel and verifies AA ACK (backend accepted it).
         """
         message_bytes = _build_adt_a01('FWD-001')
-        ack_bytes = _send_and_receive('127.0.0.1', forward_channel_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')
@@ -274,7 +280,6 @@ class TestMLLPOutconnWire:
         """
 
         dead_port = _find_free_port()
-        dead_channel_port = _find_free_port()
 
         # Create an outconn pointing to the dead port ..
         response = zato_client.create( # type: ignore[union-attr]
@@ -304,18 +309,19 @@ class TestMLLPOutconnWire:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.forward',
-            address=f'127.0.0.1:{dead_channel_port}',
+            is_default=True,
             pool_size=1,
         )
 
         assert 'id' in response
         self.__class__.dead_channel_id = response['id']
 
-        time.sleep(_listener_bind_wait_seconds)
+        # The previous channel was deleted in test_05, so the shared server was restarted on a new port
+        shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
 
         # .. send a message and expect AE ACK ..
         message_bytes = _build_adt_a01('DEAD-001')
-        ack_bytes = _send_and_receive('127.0.0.1', dead_channel_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', shared_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')

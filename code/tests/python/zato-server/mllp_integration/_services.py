@@ -119,6 +119,49 @@ class TestHL7MLLPForward(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+get_port_service_source = '''\
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import json
+
+# Zato
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHL7MLLPGetPort(Service):
+    """ Returns the port of the shared MLLP server, or 0 if the server is not running. Invoked via REST by tests.
+    """
+    name = 'test.hl7.mllp.get-port'
+
+    def handle(self):
+
+        # Read the shared state of the MLLP channel wrapper module ..
+        from zato.server.generic.api.channel_hl7_mllp import _shared_state
+
+        if _shared_state.server:
+            port = _shared_state.internal_port
+        else:
+            port = 0
+
+        out = json.dumps({'port': port})
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 inspect_service_source = '''\
 # -*- coding: utf-8 -*-
 
