@@ -468,6 +468,7 @@ class TestPreprocessingQuirks:
             # Build a message with LF line endings ..
             message_text = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|LF001|P|2.5\n'
+                'EVN|A01|20230101120000\n'
                 'PID|||12345^^^MRN||Doe^John||19800101|M\n'
                 'PV1||I|ICU^Room1'
             )
@@ -496,6 +497,7 @@ class TestPreprocessingQuirks:
             # Build a message with CRLF line endings ..
             message_text = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|CRLF001|P|2.5\r\n'
+                'EVN|A01|20230101120000\r\n'
                 'PID|||12345^^^MRN||Doe^John||19800101|M\r\n'
                 'PV1||I|ICU^Room1'
             )
@@ -524,6 +526,7 @@ class TestPreprocessingQuirks:
             # MSH-2 has only two encoding chars instead of the standard four ..
             message_text = (
                 'MSH|^~|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|SHORT001|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M\r'
                 'PV1||I|ICU^Room1'
             )
@@ -552,6 +555,7 @@ class TestPreprocessingQuirks:
             # All four encoding characters are non-standard ..
             message_text = (
                 'MSH|#!@$|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT#A01|DELIM001|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345###MRN||Doe#John||19800101|M\r'
                 'PV1||I|ICU#Room1'
             )
@@ -579,6 +583,7 @@ class TestPreprocessingQuirks:
             # Missing leading 'M' from MSH ..
             message_text = (
                 'SH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|TRUNC001|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M\r'
                 'PV1||I|ICU^Room1'
             )
@@ -606,6 +611,7 @@ class TestPreprocessingQuirks:
             # Junk bytes before the actual MSH segment ..
             message_text = (
                 'ORU_R01|MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|JUNK001|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M\r'
                 'PV1||I|ICU^Room1'
             )
@@ -634,10 +640,12 @@ class TestPreprocessingQuirks:
             # Two complete messages concatenated inside one MLLP frame ..
             message_one = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|CAT001|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||Doe^John||19800101|M'
             )
             message_two = (
                 '\rMSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|CAT002|P|2.5\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||67890^^^MRN||Smith^Jane||19900515|F'
             )
             combined = message_one + message_two
@@ -672,6 +680,7 @@ class TestPreprocessingQuirks:
             # PID-5 contains German umlauts encoded as ISO-8859-1 bytes.
             message_text = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|ENC001|P|2.5|||||||||8859/1\r'
+                'EVN|A01|20230101120000\r'
                 'PID|||12345^^^MRN||M\xe4ller^H\xf6lzer||19800101|M\r'
                 'PV1||I|ICU^Room1'
             )
