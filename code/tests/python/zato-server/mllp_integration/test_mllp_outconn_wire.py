@@ -14,7 +14,7 @@ import time
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
-from conftest import wait_for_shared_mllp_port
+from conftest import wait_for_port_open
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -135,14 +135,14 @@ class TestMLLPOutconnWire:
     """ Wire-level tests for MLLP outbound connections running inside a live Zato server.
 
     Inbound channels share one MLLP listener - the forward channel is the default route
-    and messages are sent to the shared internal port.
+    and messages are sent to the shared internal port, known upfront through
+    the Zato_HL7_MLLP_Port environment variable.
     """
 
     outconn_id:'int' = 0
     forward_channel_id:'int' = 0
     dead_outconn_id:'int' = 0
     dead_channel_id:'int' = 0
-    shared_port:'int' = 0
 
 # ################################################################################################################################
 
@@ -169,7 +169,7 @@ class TestMLLPOutconnWire:
 
 # ################################################################################################################################
 
-    def test_02_create_forward_channel(self, zato_client:'object') -> 'None':
+    def test_02_create_forward_channel(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Creates an MLLP channel that forwards messages through the outconn.
         """
         response = zato_client.create( # type: ignore[union-attr]
@@ -189,16 +189,16 @@ class TestMLLPOutconnWire:
         assert 'id' in response
         self.__class__.forward_channel_id = response['id']
 
-        # Wait for the shared MLLP listener to bind and remember its port
-        self.__class__.shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
+        # Wait for the shared MLLP listener to bind its port
+        wait_for_port_open(mllp_port)
 
 # ################################################################################################################################
 
-    def test_03_forward_via_outconn_gets_aa(self) -> 'None':
+    def test_03_forward_via_outconn_gets_aa(self, mllp_port:'int') -> 'None':
         """ Sends a message to the forward channel and verifies AA ACK (backend accepted it).
         """
         message_bytes = _build_adt_a01('FWD-001')
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')
@@ -275,7 +275,7 @@ class TestMLLPOutconnWire:
 
 # ################################################################################################################################
 
-    def test_06_outconn_to_dead_port_returns_ae(self, zato_client:'object') -> 'None':
+    def test_06_outconn_to_dead_port_returns_ae(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Creates an outconn pointing to a dead port and verifies AE ACK when the forward service tries to use it.
         """
 
@@ -316,12 +316,12 @@ class TestMLLPOutconnWire:
         assert 'id' in response
         self.__class__.dead_channel_id = response['id']
 
-        # The previous channel was deleted in test_05, so the shared server was restarted on a new port
-        shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
+        # The previous channel was deleted in test_05, so wait until the listener is up again
+        wait_for_port_open(mllp_port)
 
         # .. send a message and expect AE ACK ..
         message_bytes = _build_adt_a01('DEAD-001')
-        ack_bytes = _send_and_receive('127.0.0.1', shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')

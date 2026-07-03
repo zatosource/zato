@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import atexit
-import json
 import os
 import shutil
 import socket
@@ -32,8 +31,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
 # Zato - test services deployed to the server under test
-from _services import echo_service_source, error_service_source, forward_service_source, get_port_service_source, \
-    inspect_service_source
+from _services import echo_service_source, error_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,16 +51,22 @@ _zato_python   = os.path.join(_zato_base_dir, 'code', 'bin', 'python')
 _current_dir = os.path.dirname(__file__)
 _mllp_test_server_path = os.path.join(_current_dir, '..', '..', 'zato-common', 'mllp', 'mllp_test_server.py')
 
+# The file-transfer listener that watches the pickup directory for runtime hot-deploy
+_listener_path = os.path.join(
+    _zato_base_dir, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
+
 _password_suffix = os.urandom(8).hex()
 _password = 'test.invoke.' + _password_suffix
 
 _server_ready_timeout    = 60
 _backend_ready_timeout   = 10
 _hot_deploy_wait_seconds = 5
-_shared_port_timeout     = 10
+_listener_settle_seconds = 2
+_port_wait_timeout       = 10
 
-_server_process = None
-_temp_directory = None
+_server_process   = None
+_listener_process = None
+_temp_directory   = None
 
 # Type aliases for generator-based fixtures
 strobj_dict     = dict[str, object]
@@ -88,53 +92,79 @@ def _find_free_port() -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_shared_mllp_port(zato_client:'ZatoClient') -> 'int':
-    """ Returns the port of the shared MLLP server inside the Zato server under test, or 0 if the server is not running.
+def is_port_open(port:'int') -> 'bool':
+    """ Returns True if the port accepts TCP connections on localhost.
     """
-    response = zato_client.invoke('test.hl7.mllp.get-port')
+    test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    test_socket.settimeout(2.0)
 
-    if isinstance(response, str):
-        data = json.loads(response)
-    else:
-        data = response
-
-    out = data['port']
-    return out
+    try:
+        test_socket.connect(('127.0.0.1', port))
+        test_socket.close()
+        return True
+    except (ConnectionRefusedError, OSError):
+        return False
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_shared_mllp_port(zato_client:'ZatoClient', timeout:'int'=_shared_port_timeout) -> 'int':
-    """ Polls until the shared MLLP server reports a listening port, returning that port.
+def wait_for_port_open(port:'int', timeout:'int'=_port_wait_timeout) -> 'None':
+    """ Polls until the port accepts TCP connections.
     """
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
 
-        port = get_shared_mllp_port(zato_client)
-
-        if port:
-            return port
+        if is_port_open(port):
+            return
 
         time.sleep(0.2)
 
-    raise Exception(f'Shared MLLP server did not start within {timeout}s')
+    raise Exception(f'Port {port} was not open within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_for_port_closed(port:'int', timeout:'int'=_port_wait_timeout) -> 'None':
+    """ Polls until the port no longer accepts TCP connections.
+    """
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+
+        if not is_port_open(port):
+            return
+
+        time.sleep(0.2)
+
+    raise Exception(f'Port {port} was not closed within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _kill_process(process:'subprocess.Popen[bytes] | None') -> 'None':
+
+    if process:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                _ = process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                _ = process.wait(timeout=5)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _kill_server() -> 'None':
-    global _server_process
+    global _server_process, _listener_process
 
-    if _server_process:
-        if _server_process.poll() is None:
-            _server_process.terminate()
-            try:
-                _ = _server_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                _server_process.kill()
-                _ = _server_process.wait(timeout=5)
+    # Stop the file listener first so it does not race the server shutdown ..
+    _kill_process(_listener_process)
+    _listener_process = None
 
+    # .. and now the server itself.
+    _kill_process(_server_process)
     _server_process = None
 
 # ################################################################################################################################
@@ -235,9 +265,13 @@ def zato_server() -> 'strobj_dict_gen':
     # .. start the server in foreground mode ..
     broker_port = _find_free_port()
 
+    # Pick the port for the shared internal MLLP server upfront so tests know it in advance
+    mllp_port = _find_free_port()
+
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
+    server_environment['Zato_HL7_MLLP_Port'] = str(mllp_port)
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
     _server_process = subprocess.Popen(
@@ -275,9 +309,33 @@ def zato_server() -> 'strobj_dict_gen':
         _kill_server()
         raise
 
+    # .. start the file-transfer listener that watches the pickup directory, so that
+    # files dropped at runtime trigger hot-deploy. The server's own boot scan only
+    # covers files present at startup ..
+    global _listener_process
+
+    pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+    web_admin_repo = os.path.join(_temp_directory, 'web-admin', 'config', 'repo')
+
+    listener_env = os.environ.copy()
+    listener_env['Zato_Config_Bind_Port'] = str(port)
+    listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
+    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
+
+    _listener_process = subprocess.Popen(
+        [_zato_python, _listener_path, pickup_directory],
+        env=listener_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    # .. give the listener a moment to initialize its directory watch ..
+    time.sleep(_listener_settle_seconds)
+
     yield {
         'host': host,
         'port': port,
+        'mllp_port': mllp_port,
         'password': _password,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
@@ -307,6 +365,17 @@ def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
     base_url = f'http://{host}:{port}'
 
     out = ZatoClient(base_url, password)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def mllp_port(zato_server:'strobj_dict') -> 'int':
+    """ Returns the port the shared internal MLLP server binds to, chosen upfront
+    and exported to the server via the Zato_HL7_MLLP_Port environment variable.
+    """
+    out = cast_('int', zato_server['mllp_port'])
     return out
 
 # ################################################################################################################################
@@ -405,11 +474,10 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
     os.makedirs(pickup_directory, exist_ok=True)
 
     service_files = {
-        '_test_hl7_mllp_echo.py':     echo_service_source,
-        '_test_hl7_mllp_error.py':    error_service_source,
-        '_test_hl7_mllp_forward.py':  forward_service_source,
-        '_test_hl7_mllp_get_port.py': get_port_service_source,
-        '_test_hl7_mllp_inspect.py':  inspect_service_source,
+        '_test_hl7_mllp_echo.py':    echo_service_source,
+        '_test_hl7_mllp_error.py':   error_service_source,
+        '_test_hl7_mllp_forward.py': forward_service_source,
+        '_test_hl7_mllp_inspect.py': inspect_service_source,
     }
 
     deployed_paths:'strlist' = []

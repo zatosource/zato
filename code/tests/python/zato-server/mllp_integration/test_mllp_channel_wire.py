@@ -15,7 +15,7 @@ import time
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
-from conftest import get_shared_mllp_port, wait_for_shared_mllp_port
+from conftest import wait_for_port_closed, wait_for_port_open
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,18 +118,18 @@ def _find_segment(segments:'list[str]', prefix:'str') -> 'str':
 class TestMLLPChannelWire:
     """ Wire-level tests for MLLP inbound channels running inside a live Zato server.
 
-    All channels share one MLLP listener - the wrapper binds a single server on an internal port
-    and messages are routed to channels by their MSH matching rules, not by port.
+    All channels share one MLLP listener - the wrapper binds a single server on a port known upfront
+    (exported via the Zato_HL7_MLLP_Port environment variable) and messages are routed to channels
+    by their MSH matching rules, not by port.
     The echo channel is the default route, the error channel matches on MSH-3.
     """
 
     created_channel_id:'int' = 0
     error_channel_id:'int' = 0
-    shared_port:'int' = 0
 
 # ################################################################################################################################
 
-    def test_01_create_echo_channel(self, zato_client:'object') -> 'None':
+    def test_01_create_echo_channel(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Creates an MLLP channel bound to the echo service, acting as the default route.
         """
         response = zato_client.create( # type: ignore[union-attr]
@@ -151,16 +151,16 @@ class TestMLLPChannelWire:
 
         self.__class__.created_channel_id = response['id']
 
-        # Wait for the shared MLLP listener to bind and remember its port
-        self.__class__.shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
+        # Wait for the shared MLLP listener to bind its port
+        wait_for_port_open(mllp_port)
 
 # ################################################################################################################################
 
-    def test_02_send_adt_a01_gets_aa_ack(self) -> 'None':
+    def test_02_send_adt_a01_gets_aa_ack(self, mllp_port:'int') -> 'None':
         """ Sends a standard ADT^A01 and verifies the ACK contains AA with correct MSA-2.
         """
         message_bytes = _build_adt_a01('WIRE001')
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         # Verify the MSH segment ..
@@ -206,11 +206,11 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_04_msa2_correlation_matches_msh10(self) -> 'None':
+    def test_04_msa2_correlation_matches_msh10(self, mllp_port:'int') -> 'None':
         """ Verifies MSA-2 in the ACK exactly matches the MSH-10 of the sent message.
         """
         message_bytes = _build_adt_a01('CORR-7890')
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         # Verify the MSA segment contains the exact control ID ..
@@ -226,12 +226,12 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_05_persistent_connection_two_messages(self) -> 'None':
+    def test_05_persistent_connection_two_messages(self, mllp_port:'int') -> 'None':
         """ Sends two messages on the same TCP connection and verifies both get correct ACKs.
         """
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         raw_socket.settimeout(_socket_timeout)
-        raw_socket.connect(('127.0.0.1', self.__class__.shared_port))
+        raw_socket.connect(('127.0.0.1', mllp_port))
 
         try:
             decoder = FrameDecoder(_start_sequence, _end_sequence, _max_message_size)
@@ -275,7 +275,7 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_06_lf_line_endings_normalized(self, zato_client:'object') -> 'None':
+    def test_06_lf_line_endings_normalized(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Sends a message with LF line endings and verifies the ACK and that the service received CR separators.
         """
 
@@ -288,7 +288,7 @@ class TestMLLPChannelWire:
         message_bytes = message_text.encode('utf-8')
 
         # Send and verify ACK ..
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
         msa_segment = _find_segment(segments, 'MSA|')
         assert 'MSA|AA|LFTEST001' in msa_segment
@@ -316,7 +316,7 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_07_concatenated_frames_produce_two_acks(self) -> 'None':
+    def test_07_concatenated_frames_produce_two_acks(self, mllp_port:'int') -> 'None':
         """ Sends two concatenated MLLP frames in one sendall and verifies two ACKs are received.
         """
         message_a = _build_adt_a01('CONCAT-A')
@@ -329,7 +329,7 @@ class TestMLLPChannelWire:
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         raw_socket.settimeout(_socket_timeout)
-        raw_socket.connect(('127.0.0.1', self.__class__.shared_port))
+        raw_socket.connect(('127.0.0.1', mllp_port))
 
         try:
             raw_socket.sendall(concatenated)
@@ -375,7 +375,7 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_08_service_error_returns_ae_ack(self, zato_client:'object') -> 'None':
+    def test_08_service_error_returns_ae_ack(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Creates a channel routing MSH-3 to the error service and verifies AE ACK is returned.
         """
 
@@ -402,7 +402,7 @@ class TestMLLPChannelWire:
 
         # Send a message from the error sender and verify AE ACK ..
         message_bytes = _build_adt_a01('ERR-001', sender_application=_error_sender_application)
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         # Verify MSA shows AE ..
@@ -420,7 +420,7 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_09_large_message_accepted(self) -> 'None':
+    def test_09_large_message_accepted(self, mllp_port:'int') -> 'None':
         """ Sends a ~500 KB HL7 message and verifies it gets an AA ACK.
         """
 
@@ -439,7 +439,7 @@ class TestMLLPChannelWire:
         message_text = '\r'.join(segments_list)
         message_bytes = message_text.encode('utf-8')
 
-        ack_bytes = _send_and_receive('127.0.0.1', self.__class__.shared_port, message_bytes)
+        ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         segments = _parse_ack_segments(ack_bytes)
 
         msa_segment = _find_segment(segments, 'MSA|')
@@ -447,7 +447,7 @@ class TestMLLPChannelWire:
 
 # ################################################################################################################################
 
-    def test_10_delete_channel_closes_port(self, zato_client:'object') -> 'None':
+    def test_10_delete_channel_closes_port(self, zato_client:'object', mllp_port:'int') -> 'None':
         """ Deletes the last channel and verifies the shared MLLP listener is stopped.
         """
         zato_client.delete( # type: ignore[union-attr]
@@ -455,25 +455,8 @@ class TestMLLPChannelWire:
             id=self.__class__.created_channel_id,
         )
 
-        time.sleep(1)
-
-        # The wrapper must report the shared server as stopped ..
-        assert get_shared_mllp_port(zato_client) == 0 # type: ignore[arg-type]
-
-        # .. and the port must no longer accept connections.
-        test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        test_socket.settimeout(2.0)
-
-        connection_refused = False
-
-        try:
-            test_socket.connect(('127.0.0.1', self.__class__.shared_port))
-        except (ConnectionRefusedError, OSError):
-            connection_refused = True
-        finally:
-            test_socket.close()
-
-        assert connection_refused
+        # The port must no longer accept connections
+        wait_for_port_closed(mllp_port)
 
 # ################################################################################################################################
 # ################################################################################################################################
