@@ -4,7 +4,7 @@ import inspect
 
 import pytest
 
-import zato_fhir_r4_0_1_core
+from zato import fhir_r4_0_1_core as rust_core
 import zato.fhir.r4_0_1 as r4
 from zato.fhir.tests.fakers import resources as fakers_module
 
@@ -28,7 +28,7 @@ class TestPythonRustDictParity:
     def test_to_dict_parity(self, name, faker):
         resource = faker()
         py_dict = resource.to_dict()
-        rust_dict = zato_fhir_r4_0_1_core.to_dict(resource)
+        rust_dict = rust_core.to_dict(resource)
         assert py_dict == rust_dict, (
             f'{name}: Python and Rust to_dict differ'
         )
@@ -36,13 +36,13 @@ class TestPythonRustDictParity:
     @pytest.mark.parametrize('name,faker', _FAKER_PAIRS, ids=_FAKER_IDS)
     def test_from_dict_roundtrip_parity(self, name, faker):
         resource = faker()
-        d = zato_fhir_r4_0_1_core.to_dict(resource)
+        d = rust_core.to_dict(resource)
         resource_type = d.get('resourceType', '')
         cls = getattr(r4, resource_type, None)
         if cls is None:
             pytest.skip(f'{resource_type} not in r4 module')
-        restored = zato_fhir_r4_0_1_core.from_dict(d, cls)
-        d2 = zato_fhir_r4_0_1_core.to_dict(restored)
+        restored = rust_core.from_dict(d, cls)
+        d2 = rust_core.to_dict(restored)
         assert d == d2, (
             f'{name}: roundtrip dict mismatch'
         )
@@ -60,7 +60,7 @@ class TestEmptyResourceParity:
         empty = cls()
         empty.id = 'parity-empty-test'
         py_dict = empty.to_dict()
-        rust_dict = zato_fhir_r4_0_1_core.to_dict(empty)
+        rust_dict = rust_core.to_dict(empty)
         assert py_dict == rust_dict, (
             f'{resource_type}: empty resource dicts differ'
         )
@@ -83,7 +83,7 @@ class TestRustHandledResources:
             try:
                 obj = cls()
                 obj.id = 'rust-dispatch-test'
-                zato_fhir_r4_0_1_core.to_dict(obj)
+                rust_core.to_dict(obj)
             except Exception as exc:
                 failures.append(f'{rt}: {exc}')
 

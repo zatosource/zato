@@ -29,7 +29,6 @@ CARGO_ENV := $(HOME)/.cargo/env
 LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
-ZATO_HEALTH_RS := $(CURDIR)/code/zato-common/src/zato
 
 SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
 
@@ -106,16 +105,14 @@ queue-bridge-build:
 	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
 
-# FHIR commented out for now
-#fhir-rust-build:
-#	@echo ">>> Building FHIR Rust extension"
-#	$(LOAD_CARGO_ENV) && \
-#	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-#	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/Cargo.toml
+fhir-rust-build:
+	@echo ">>> Building FHIR Rust extension"
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	$(MAKE) -C $(Zato_Health) fhir-rust-build
 
-# FHIR commented out for now
-#fhir-rust-clean:
-#	rm -rf $(ZATO_HEALTH_RS)/fhir_r4_0_1_core/target
+fhir-rust-clean:
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	rm -rf $(Zato_Health)/rust/target
 
 health-build: ## Build the healthcare Rust extensions and copy .so files into zato-libs.
 	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import zato_fhir_r4_0_1_core as _rust
+import zato.fhir_r4_0_1_core as _rust
 
 
 def get_path(obj: Any, path: str) -> Any:

@@ -79,7 +79,7 @@ def _fhir_setattr(obj: Any, name: str, value: Any) -> None:
         return
 
     if name == 'contained' and isinstance(value, list):
-        import zato_fhir_r4_0_1_core as _rust
+        import zato.fhir_r4_0_1_core as _rust
         typed = _rust.rs_deserialize_contained(value)
         object.__setattr__(obj, name, ListWrapper(list(typed)))
         return
@@ -161,7 +161,7 @@ class FHIRResource:
         (``https://...``), and logical (Reference with identifier) refs
         by searching bundle entries.
         """
-        import zato_fhir_r4_0_1_core as _rust
+        import zato.fhir_r4_0_1_core as _rust
         is_bundle = getattr(self, '_resource_type', '') == 'Bundle'
         if is_bundle:
             result = _rust.rs_resolve_bundle(self, ref)

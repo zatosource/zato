@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterator
 
 from zato.fhir.base import FHIRResource
-from zato_fhir_r4_0_1_core import (
+from zato.fhir_r4_0_1_core import (
     rs_bundle_to_json as _to_json,
     rs_bundle_from_json as _from_json,
     rs_create_bundle as _create_bundle,

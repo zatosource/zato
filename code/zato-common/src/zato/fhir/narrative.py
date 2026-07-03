@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from zato_fhir_r4_0_1_core import (
+from zato.fhir_r4_0_1_core import (
     generate_narrative as _generate_narrative,
     py_pluralize as _pluralize,
     count_with_noun as _count_with_noun,
