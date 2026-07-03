@@ -16,6 +16,9 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
+# Zato - test helpers
+from conftest import get_shared_mllp_port, wait_for_shared_mllp_port
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -153,6 +156,7 @@ class TestMLLPRestBridge:
     rest_channel_id:'int' = 0
     rest_url_path:'str' = '/test/hl7/mllp-rest-bridge'
     rest_channel_name:'str' = 'hl7.rest.test-mllp-rest-bridge'
+    shared_port:'int' = 0
 
 # ################################################################################################################################
 
@@ -182,7 +186,7 @@ class TestMLLPRestBridge:
 
 # ################################################################################################################################
 
-    def test_02_create_mllp_channel_with_rest(self, zato_client:'object', channel_port:'int') -> 'None':
+    def test_02_create_mllp_channel_with_rest(self, zato_client:'object') -> 'None':
         """ Creates an MLLP channel with use_rest=True and rest_only=False,
         referencing the backing REST channel.
         """
@@ -197,7 +201,7 @@ class TestMLLPRestBridge:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.echo',
-            address=f'127.0.0.1:{channel_port}',
+            is_default=True,
             pool_size=1,
             use_rest=True,
             rest_only=False,
@@ -209,22 +213,23 @@ class TestMLLPRestBridge:
 
         self.__class__.mllp_channel_id = response['id']
 
-        time.sleep(_listener_bind_wait_seconds)
+        # Wait for the shared MLLP listener to bind and remember its port
+        self.__class__.shared_port = wait_for_shared_mllp_port(zato_client) # type: ignore[arg-type]
 
 # ################################################################################################################################
 
-    def test_03_mllp_port_is_open(self, channel_port:'int') -> 'None':
+    def test_03_mllp_port_is_open(self) -> 'None':
         """ Verifies the MLLP listener is active since rest_only=False.
         """
-        assert _port_is_open('127.0.0.1', channel_port)
+        assert _port_is_open('127.0.0.1', self.__class__.shared_port)
 
 # ################################################################################################################################
 
-    def test_04_send_via_mllp(self, channel_port:'int') -> 'None':
+    def test_04_send_via_mllp(self) -> 'None':
         """ Sends a message via MLLP and verifies the ACK.
         """
         message_bytes = _build_adt_a01('REST-BRIDGE-MLLP-001')
-        ack_bytes = _send_mllp('127.0.0.1', channel_port, message_bytes)
+        ack_bytes = _send_mllp('127.0.0.1', self.__class__.shared_port, message_bytes)
 
         ack_text = ack_bytes.decode('utf-8')
         assert 'MSA|AA|REST-BRIDGE-MLLP-001' in ack_text
@@ -241,7 +246,7 @@ class TestMLLPRestBridge:
 
         message_bytes = _build_adt_a01('REST-BRIDGE-REST-001')
 
-        _send_rest(host, port, self.__class__.rest_url_path, message_bytes, password)
+        _ = _send_rest(host, port, self.__class__.rest_url_path, message_bytes, password)
 
         time.sleep(0.5)
 
@@ -274,7 +279,7 @@ class TestMLLPRestBridge:
 
 # ################################################################################################################################
 
-    def test_07_delete_mllp_channel_cleans_up_rest(self, zato_client:'object', channel_port:'int') -> 'None':
+    def test_07_delete_mllp_channel_cleans_up_rest(self, zato_client:'object') -> 'None':
         """ Deletes the MLLP channel. Since it has rest_channel_id set,
         the wrapper's _delete should also delete the backing REST channel.
         """
@@ -286,8 +291,9 @@ class TestMLLPRestBridge:
 
         time.sleep(_rest_channel_settle_seconds)
 
-        # .. verify the MLLP port is closed ..
-        assert not _port_is_open('127.0.0.1', channel_port)
+        # .. verify the shared MLLP listener was stopped along with its port ..
+        assert get_shared_mllp_port(zato_client) == 0 # type: ignore[arg-type]
+        assert not _port_is_open('127.0.0.1', self.__class__.shared_port)
 
         # .. verify the backing REST channel was removed by the wrapper ..
         matching = _find_rest_channels_by_name(zato_client, self.__class__.rest_channel_name)
@@ -333,7 +339,7 @@ class TestMLLPRestOnlyMode:
 
 # ################################################################################################################################
 
-    def test_02_create_mllp_channel_rest_only(self, zato_client:'object', forward_channel_port:'int') -> 'None':
+    def test_02_create_mllp_channel_rest_only(self, zato_client:'object') -> 'None':
         """ Creates an MLLP channel with rest_only=True. The MLLP listener should not start.
         """
 
@@ -347,7 +353,6 @@ class TestMLLPRestOnlyMode:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.echo',
-            address=f'127.0.0.1:{forward_channel_port}',
             pool_size=1,
             use_rest=True,
             rest_only=True,
@@ -361,10 +366,10 @@ class TestMLLPRestOnlyMode:
 
 # ################################################################################################################################
 
-    def test_03_mllp_port_is_closed(self, forward_channel_port:'int') -> 'None':
-        """ Verifies the MLLP port is NOT listening since rest_only=True.
+    def test_03_mllp_port_is_closed(self, zato_client:'object') -> 'None':
+        """ Verifies the shared MLLP listener was NOT started since rest_only=True.
         """
-        assert not _port_is_open('127.0.0.1', forward_channel_port)
+        assert get_shared_mllp_port(zato_client) == 0 # type: ignore[arg-type]
 
 # ################################################################################################################################
 
@@ -378,7 +383,7 @@ class TestMLLPRestOnlyMode:
 
         message_bytes = _build_adt_a01('REST-ONLY-001')
 
-        _send_rest(host, port, self.__class__.rest_url_path, message_bytes, password)
+        _ = _send_rest(host, port, self.__class__.rest_url_path, message_bytes, password)
 
         time.sleep(0.5)
 
@@ -454,7 +459,7 @@ class TestMLLPRestBridgePersistence:
 
 # ################################################################################################################################
 
-    def test_01_create_with_rest_fields(self, zato_client:'object', error_channel_port:'int') -> 'None':
+    def test_01_create_with_rest_fields(self, zato_client:'object') -> 'None':
         """ Creates an MLLP channel with REST bridge fields set.
         """
 
@@ -468,7 +473,6 @@ class TestMLLPRestBridgePersistence:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.echo',
-            address=f'127.0.0.1:{error_channel_port}',
             pool_size=1,
             use_rest=True,
             rest_only=False,
@@ -494,7 +498,7 @@ class TestMLLPRestBridgePersistence:
 
 # ################################################################################################################################
 
-    def test_03_edit_to_rest_only(self, zato_client:'object', error_channel_port:'int') -> 'None':
+    def test_03_edit_to_rest_only(self, zato_client:'object') -> 'None':
         """ Edits the channel to set rest_only=True.
         """
 
@@ -509,7 +513,6 @@ class TestMLLPRestBridgePersistence:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.echo',
-            address=f'127.0.0.1:{error_channel_port}',
             pool_size=1,
             use_rest=True,
             rest_only=True,
@@ -532,7 +535,7 @@ class TestMLLPRestBridgePersistence:
 
 # ################################################################################################################################
 
-    def test_05_edit_toggle_off_rest(self, zato_client:'object', error_channel_port:'int') -> 'None':
+    def test_05_edit_toggle_off_rest(self, zato_client:'object') -> 'None':
         """ Edits the channel to set use_rest=False and clears rest_channel_id.
         """
 
@@ -547,7 +550,6 @@ class TestMLLPRestBridgePersistence:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.echo',
-            address=f'127.0.0.1:{error_channel_port}',
             pool_size=1,
             use_rest=False,
             rest_only=False,

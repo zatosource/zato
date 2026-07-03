@@ -42,6 +42,15 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         'force_standard_delimiters': True,
         'use_msh18_encoding': True,
 
+        # Tolerance toggles
+        'normalize_obx2_value_type': True,
+        'replace_invalid_obx2_value_type': True,
+        'normalize_invalid_escape_sequences': True,
+        'normalize_obx8_abnormal_flags': True,
+        'normalize_quadruple_quoted_empty': True,
+        'allow_short_encoding_characters': True,
+        'fix_off_by_one_field_index': False,
+
         # Logging
         'should_log_messages': False,
         'should_return_errors': False,

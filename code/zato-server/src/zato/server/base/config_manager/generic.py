@@ -13,10 +13,12 @@ from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
+from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
-from zato.distlock import PassThrough as PassThroughLock
 from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
+from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
 from zato.server.generic.connection import GenericConnection
 
 # ################################################################################################################################
@@ -124,10 +126,10 @@ class Generic(ConfigManagerImpl):
         # in case this is a broker message rather than a startup one.
         if needs_roundtrip:
             conn = GenericConnection.from_dict(msg, skip)
-            msg = conn.to_sql_dict(True)
+            msg = cast_('stranydict', conn.to_sql_dict(True))
 
         item = GenericConnection.from_bunch(msg)
-        item_dict = item.to_dict(True) # type: stranydict
+        item_dict = cast_('stranydict', item.to_dict(True))
 
         for key in msg:
             if key not in item_dict:
@@ -271,6 +273,43 @@ class Generic(ConfigManagerImpl):
 # ################################################################################################################################
 
     on_config_event_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_channel_hl7_mllp(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply,
+        e.g. when a channel is created directly through zato.generic.connection.create,
+        and coerces numeric fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in channel_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. and make sure numeric fields are integers.
+        for key in channel_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_hl7_mllp(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in outconn_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. and make sure numeric fields are integers.
+        for key in outconn_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
 
 # ################################################################################################################################
 

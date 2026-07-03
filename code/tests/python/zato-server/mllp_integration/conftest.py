@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import atexit
+import json
 import os
 import shutil
 import socket
@@ -31,7 +32,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
 # Zato - test services deployed to the server under test
-from _services import echo_service_source, error_service_source, forward_service_source, inspect_service_source
+from _services import echo_service_source, error_service_source, forward_service_source, get_port_service_source, \
+    inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +59,7 @@ _password = 'test.invoke.' + _password_suffix
 _server_ready_timeout    = 60
 _backend_ready_timeout   = 10
 _hot_deploy_wait_seconds = 5
+_shared_port_timeout     = 10
 
 _server_process = None
 _temp_directory = None
@@ -81,6 +84,41 @@ def _find_free_port() -> 'int':
     temporary_socket.close()
 
     return port
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_shared_mllp_port(zato_client:'ZatoClient') -> 'int':
+    """ Returns the port of the shared MLLP server inside the Zato server under test, or 0 if the server is not running.
+    """
+    response = zato_client.invoke('test.hl7.mllp.get-port')
+
+    if isinstance(response, str):
+        data = json.loads(response)
+    else:
+        data = response
+
+    out = data['port']
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_for_shared_mllp_port(zato_client:'ZatoClient', timeout:'int'=_shared_port_timeout) -> 'int':
+    """ Polls until the shared MLLP server reports a listening port, returning that port.
+    """
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+
+        port = get_shared_mllp_port(zato_client)
+
+        if port:
+            return port
+
+        time.sleep(0.2)
+
+    raise Exception(f'Shared MLLP server did not start within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -275,36 +313,6 @@ def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def channel_port() -> 'int':
-    """ Returns a free port for the MLLP channel to listen on.
-    """
-    out = _find_free_port()
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def forward_channel_port() -> 'int':
-    """ Returns a free port for the forward MLLP channel to listen on.
-    """
-    out = _find_free_port()
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def error_channel_port() -> 'int':
-    """ Returns a free port for the error MLLP channel to listen on.
-    """
-    out = _find_free_port()
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
 def backend_port() -> 'int':
     """ Returns a free port for the standalone MLLP backend to listen on.
     """
@@ -397,10 +405,11 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
     os.makedirs(pickup_directory, exist_ok=True)
 
     service_files = {
-        '_test_hl7_mllp_echo.py':    echo_service_source,
-        '_test_hl7_mllp_error.py':   error_service_source,
-        '_test_hl7_mllp_forward.py': forward_service_source,
-        '_test_hl7_mllp_inspect.py': inspect_service_source,
+        '_test_hl7_mllp_echo.py':     echo_service_source,
+        '_test_hl7_mllp_error.py':    error_service_source,
+        '_test_hl7_mllp_forward.py':  forward_service_source,
+        '_test_hl7_mllp_get_port.py': get_port_service_source,
+        '_test_hl7_mllp_inspect.py':  inspect_service_source,
     }
 
     deployed_paths:'strlist' = []

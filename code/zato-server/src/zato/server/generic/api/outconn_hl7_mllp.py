@@ -11,6 +11,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.api import HL7
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.tcp import parse_address
@@ -31,6 +32,23 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Defaults applied by the config manager when the create path does not supply a field,
+# e.g. when an outconn is created directly through zato.generic.connection.create.
+outconn_config_defaults:'dict[str, object]' = {
+    'start_seq': HL7.Default.start_seq,
+    'end_seq': HL7.Default.end_seq,
+    'recv_timeout': HL7.Default.recv_timeout,
+    'max_msg_size': HL7.Default.max_msg_size,
+    'read_buffer_size': HL7.Default.read_buffer_size,
+    'should_log_messages': False,
+}
+
+# Config keys that must be integers but may arrive as strings from opaque storage
+outconn_int_config_keys = ('recv_timeout', 'max_msg_size', 'read_buffer_size')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
@@ -42,7 +60,8 @@ class _HL7MLLPConnection:
         start_sequence = hex_sequence_to_bytes(config.start_seq) # type: ignore[union-attr]
         end_sequence   = hex_sequence_to_bytes(config.end_seq) # type: ignore[union-attr]
 
-        receive_timeout = int(config.recv_timeout) / 1000.0 # type: ignore[union-attr]
+        # Config recv_timeout is in milliseconds, the client expects seconds
+        receive_timeout = config.recv_timeout / 1000.0 # type: ignore[union-attr]
 
         self.impl = HL7MLLPClient(
             host,
@@ -50,8 +69,8 @@ class _HL7MLLPConnection:
             start_sequence,
             end_sequence,
             receive_timeout=receive_timeout,
-            max_message_size=int(config.max_msg_size), # type: ignore[union-attr]
-            read_buffer_size=int(config.read_buffer_size), # type: ignore[union-attr]
+            max_message_size=config.max_msg_size, # type: ignore[union-attr]
+            read_buffer_size=config.read_buffer_size, # type: ignore[union-attr]
             should_log_messages=config.should_log_messages, # type: ignore[union-attr]
         )
 
@@ -79,7 +98,7 @@ class OutconnHL7MLLPWrapper(Wrapper):
     def add_client(self) -> 'None':
         try:
             connection = _HL7MLLPConnection(self.config)
-            self.client.put_client(connection)
+            _ = self.client.put_client(connection)
         except Exception:
             logger.warning('Error adding HL7 MLLP client (%s); e:`%s`', self.config.name, format_exc())
 
