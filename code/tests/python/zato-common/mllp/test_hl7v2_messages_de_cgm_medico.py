@@ -20,7 +20,19 @@ from zato.hl7v2.v2_9.messages import *  # noqa: F403
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_01 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202603151705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/15|DEU^German^HL70296^^deutsch||2.16.840.1.113883.2.6.9.38^^2.16.840.1.113883.2.6^ISO\rEVN||202603151705||||202603151645\rPID|||5678901^^^Föhren-Klinik^PI||Krämer^Änne^^^^^L^A^^^G~Böhm^^^^^^M^A^^^G~Krämer^^^^Frau^^D^^^^G||19850713|F|||Römerstraße 28&Römerstraße&28^^München^^80331^^H~Bäckerweg 9&Bäckerweg&9^^München^^80331^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||Sankt-Ägidius-Krankenhaus|||DEU^German^HL70171^^deutsch\rPV1|1|I|CHI^302^2^IN^^N^A^4|R|||710201^Schütz^Wölfgang^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN^^G||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202603151645\rPV2|||||||||20250405|4\rZBE|7891^KIS|202603151705||INSERT'
+_Raw_de_cgm_medico_01 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202603151705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/15|DEU^German^HL70296^^deutsch||'
+    '2.16.840.1.113883.2.6.9.38^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202603151705||||202603151645\r'
+    'PID|||5678901^^^Föhren-Klinik^PI||Krämer^Änne^^^^^L^A^^^G~Böhm^^^^^^M^A^^^G~Krämer^^^^Frau^^D^^^^G||19850713|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^80331^^H~Bäckerweg 9&Bäckerweg&9^^München^^80331^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||'
+    'Sankt-Ägidius-Krankenhaus|||DEU^German^HL70171^^deutsch\r'
+    'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||710201^Schütz^Wölfgang^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN^^G||||||||||||4711^^^Föhren-Klinik^VN||||||||||||||||||||||||'
+    '|202603151645\r'
+    'PV2|||||||||20250405|4\r'
+    'ZBE|7891^KIS|202603151705||INSERT'
+)
 
 class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unittest.TestCase):
     """ 1. ADT^A01 - Aufnahme (admission), standard profile
@@ -766,7 +778,10 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.38', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202603151705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/15|DEU^German^HL70296^^deutsch||2.16.840.1.113883.2.6.9.38^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202603151705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/15|DEU^German^HL70296^^deutsch||'
+            '2.16.840.1.113883.2.6.9.38^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -787,10 +802,17 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='5678901', cx_4='Föhren-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Krämer', xpn_2='Änne', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Böhm', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='Krämer', xpn_5='Frau', xpn_8='D', xpn_13='G')]
+        segment.patient_name = [
+            XPN(xpn_1='Krämer', xpn_2='Änne', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Böhm', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Krämer', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+        ]
         segment.date_time_of_birth = '19850713'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_5='80331', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_5='80331', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_5='80331', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_5='80331', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         segment.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -798,7 +820,12 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         segment.citizenship = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70171', cwe_5='deutsch')
 
         serialized = segment.serialize()
-        expected = 'PID|||5678901^^^Föhren-Klinik^PI||Krämer^Änne^^^^^L^A^^^G~Böhm^^^^^^M^A^^^G~Krämer^^^^Frau^^D^^^^G||19850713|F|||Römerstraße 28&Römerstraße&28^^München^^80331^^H~Bäckerweg 9&Bäckerweg&9^^München^^80331^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||Sankt-Ägidius-Krankenhaus|||DEU^German^HL70171^^deutsch'
+        expected = (
+            'PID|||5678901^^^Föhren-Klinik^PI||Krämer^Änne^^^^^L^A^^^G~Böhm^^^^^^M^A^^^G~Krämer^^^^Frau^^D^^^^G||19850713|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^80331^^H~Bäckerweg 9&Bäckerweg&9^^München^^80331^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^German^HL70296^^deutsch|M^married^HL70002^^verheiratet|CAT^catholic^HL70006^^katholisch||||||'
+            'Sankt-Ägidius-Krankenhaus|||DEU^German^HL70171^^deutsch'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -810,12 +837,26 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='CHI', pl_2='302', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='710201', xcn_2='Schütz', xcn_3='Wölfgang', xcn_6='Dr.', xcn_10='Föhren-Klinik', xcn_11='L', xcn_14='DN', xcn_18='DN', xcn_20='G')
+        segment.attending_doctor = XCN(
+            xcn_1='710201',
+            xcn_2='Schütz',
+            xcn_3='Wölfgang',
+            xcn_6='Dr.',
+            xcn_10='Föhren-Klinik',
+            xcn_11='L',
+            xcn_14='DN',
+            xcn_18='DN',
+            xcn_20='G',
+        )
         segment.visit_number = CX(cx_1='4711', cx_4='Föhren-Klinik', cx_5='VN')
         segment.admit_date_time = '202603151645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||710201^Schütz^Wölfgang^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN^^G||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202603151645'
+        expected = (
+            'PV1|1|I|CHI^302^2^IN^^N^A^4|R|||710201^Schütz^Wölfgang^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN^^G||||||||||||4711^^^Föhren-Klinik^VN||||||||||||||'
+            '||||||||||'
+            '|202603151645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -855,10 +896,17 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         message.evn.event_occurred = '202603151645'
 
         message.pid.patient_identifier_list = CX(cx_1='5678901', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Krämer', xpn_2='Änne', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Böhm', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='Krämer', xpn_5='Frau', xpn_8='D', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Krämer', xpn_2='Änne', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Böhm', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Krämer', xpn_5='Frau', xpn_8='D', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19850713'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_5='80331', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_5='80331', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_5='80331', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_5='80331', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_2='German', cwe_3='HL70296', cwe_5='deutsch')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002', cwe_5='verheiratet')
         message.pid.religion = CWE(cwe_1='CAT', cwe_2='catholic', cwe_3='HL70006', cwe_5='katholisch')
@@ -869,7 +917,17 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='CHI', pl_2='302', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(xcn_1='710201', xcn_2='Schütz', xcn_3='Wölfgang', xcn_6='Dr.', xcn_10='Föhren-Klinik', xcn_11='L', xcn_14='DN', xcn_18='DN', xcn_20='G')
+        message.pv1.attending_doctor = XCN(
+            xcn_1='710201',
+            xcn_2='Schütz',
+            xcn_3='Wölfgang',
+            xcn_6='Dr.',
+            xcn_10='Föhren-Klinik',
+            xcn_11='L',
+            xcn_14='DN',
+            xcn_18='DN',
+            xcn_20='G',
+        )
         message.pv1.visit_number = CX(cx_1='4711', cx_4='Föhren-Klinik', cx_5='VN')
         message.pv1.admit_date_time = '202603151645'
 
@@ -883,7 +941,19 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_02 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.39^^2.16.840.1.113883.2.6^ISO\rSFT|KIS System GmbH^L|5.0|A1\rEVN||202604011705||||022604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|URO^301^1^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710211^Pförtner^Kläus^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N\rZBE|7891^KIS|202604011705||INSERT'
+_Raw_de_cgm_medico_02 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.39^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|KIS System GmbH^L|5.0|A1\r'
+    'EVN||202604011705||||022604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|URO^301^1^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710211^Pförtner^Kläus^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
+    '4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N\r'
+    'ZBE|7891^KIS|202604011705||INSERT'
+)
 
 class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.TestCase):
     """ 2. ADT^A01 - Aufnahme (admission), DRG profile
@@ -1643,7 +1713,10 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.39', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.39^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.39^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1680,7 +1753,10 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1688,7 +1764,11 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1708,7 +1788,10 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|URO^301^1^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710211^Pförtner^Kläus^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        expected = (
+            'PV1|1|I|URO^301^1^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710211^Pförtner^Kläus^^^Dr.^^^^L^^^DN^^A^^^G|||||R|||||E|'
+            '4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1755,10 +1838,16 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
         message.evn.event_occurred = '022604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -1789,7 +1878,12 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_03 = 'MSH|^~\\&|RIS||KIS||202604011706||ACK^A01^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.9^^2.16.840.1.113883.2.6^ISO\rSFT|RIS System GmbH^L|3.4|superRIS\rMSA|CA|ADT001'
+_Raw_de_cgm_medico_03 = (
+    'MSH|^~\\&|RIS||KIS||202604011706||ACK^A01^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.9^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|RIS System GmbH^L|3.4|superRIS\r'
+    'MSA|CA|ADT001'
+)
 
 class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(unittest.TestCase):
     """ 3. ACK^A01 - transport acknowledgment for admission
@@ -2029,7 +2123,10 @@ class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(uni
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.9', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|RIS||KIS||202604011706||ACK^A01^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.9^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|RIS||KIS||202604011706||ACK^A01^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.9^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2090,7 +2187,18 @@ class Test_de_cgm_medico_03_3_ACK_A01_transport_acknowledgment_for_admission(uni
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_04 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202606051705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO\rEVN||202606051705||||022606051645\rPID|||67890^^^Lärchen-Krankenhaus^PI||Dörfler^Günther^^^Dr.^^L^A^^^G~Dörfler^Günther^^^Herr Dr.^^D^A^^^G||19720116|F|||Dürener Str. 33&Dürener Str.&33^^Würzburg^^97070^^H||^PRN^PH^^49^931^5671234^^^^^0931/5671234|^WPN^PH^^49^931^98765^^^^^0931/98765|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|HNO^201^2^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Lärchen-Krankenhaus^L^^^^^^DN ||||||||||||831642^^^Lärchen-Krankenhaus^VN|01100000||||C|202401|||||||||||||||||||202606051645\rPV2|||||||||20260615|10\rZBE|83217^KIS|202606051705||INSERT'
+_Raw_de_cgm_medico_04 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202606051705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202606051705||||022606051645\r'
+    'PID|||67890^^^Lärchen-Krankenhaus^PI||Dörfler^Günther^^^Dr.^^L^A^^^G~Dörfler^Günther^^^Herr Dr.^^D^A^^^G||19720116|F|||'
+    'Dürener Str. 33&Dürener Str.&33^^Würzburg^^97070^^H||^PRN^PH^^49^931^5671234^^^^^0931/5671234|^WPN^PH^^49^931^98765^^^^^0931/98765|DEU^^HL70296|'
+    'M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Lärchen-Krankenhaus^L^^^^^^DN ||||||||||||831642^^^Lärchen-Krankenhaus^VN|01100000||||'
+    'C|202401|||||||||||||||||||202606051645\r'
+    'PV2|||||||||20260615|10\r'
+    'ZBE|83217^KIS|202606051705||INSERT'
+)
 
 class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittest.TestCase):
     """ 4. ADT^A01 - Aufnahme (admission), billing profile
@@ -2731,7 +2839,10 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.40', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202606051705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202606051705||ADT^A01^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.40^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2752,7 +2863,10 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='67890', cx_4='Lärchen-Krankenhaus', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [
+            XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         segment.date_time_of_birth = '19720116'
         segment.administrative_sex = CWE(cwe_1='F')
         segment.patient_address = XAD(xad_1='Dürener Str. 33&Dürener Str.&33', xad_3='Würzburg', xad_5='97070', xad_7='H')
@@ -2763,7 +2877,11 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Lärchen-Krankenhaus^PI||Dörfler^Günther^^^Dr.^^L^A^^^G~Dörfler^Günther^^^Herr Dr.^^D^A^^^G||19720116|F|||Dürener Str. 33&Dürener Str.&33^^Würzburg^^97070^^H||^PRN^PH^^49^931^5671234^^^^^0931/5671234|^WPN^PH^^49^931^98765^^^^^0931/98765|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Lärchen-Krankenhaus^PI||Dörfler^Günther^^^Dr.^^L^A^^^G~Dörfler^Günther^^^Herr Dr.^^D^A^^^G||19720116|F|||'
+            'Dürener Str. 33&Dürener Str.&33^^Würzburg^^97070^^H||^PRN^PH^^49^931^5671234^^^^^0931/5671234|^WPN^PH^^49^931^98765^^^^^0931/98765|DEU^^HL70296|'
+            'M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2783,7 +2901,11 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         segment.admit_date_time = '202606051645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Lärchen-Krankenhaus^L^^^^^^DN ||||||||||||831642^^^Lärchen-Krankenhaus^VN|01100000||||C|202401|||||||||||||||||||202606051645'
+        expected = (
+            'PV1|1|I|HNO^201^2^IN^^N^A^4|R|||710203^Köhler^Hëinrich^^^Dr.^^^Lärchen-Krankenhaus^L^^^^^^DN ||||||||||||831642^^^Lärchen-Krankenhaus^VN|'
+            '01100000||||'
+            'C|202401|||||||||||||||||||202606051645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2823,7 +2945,10 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         message.evn.event_occurred = '022606051645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Lärchen-Krankenhaus', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Dr.', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Dörfler', xpn_2='Günther', xpn_5='Herr Dr.', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19720116'
         message.pid.administrative_sex = CWE(cwe_1='F')
         message.pid.patient_address = XAD(xad_1='Dürener Str. 33&Dürener Str.&33', xad_3='Würzburg', xad_5='97070', xad_7='H')
@@ -2837,7 +2962,15 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='HNO', pl_2='201', pl_3='2', pl_4='IN', pl_6='N', pl_7='A', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(xcn_1='710203', xcn_2='Köhler', xcn_3='Hëinrich', xcn_6='Dr.', xcn_10='Lärchen-Krankenhaus', xcn_11='L', xcn_18='DN ')
+        message.pv1.attending_doctor = XCN(
+            xcn_1='710203',
+            xcn_2='Köhler',
+            xcn_3='Hëinrich',
+            xcn_6='Dr.',
+            xcn_10='Lärchen-Krankenhaus',
+            xcn_11='L',
+            xcn_18='DN ',
+        )
         message.pv1.visit_number = CX(cx_1='831642', cx_4='Lärchen-Krankenhaus', cx_5='VN')
         message.pv1.financial_class = FC(fc_1='01100000')
         message.pv1.contract_code = CWE(cwe_1='C')
@@ -2854,7 +2987,18 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_05 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.20^^2.16.840.1.113883.2.6^ISO\rEVN||202604011705||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^B^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius- Krankenhaus|||DEU^^HL70171\rPV1|1|I|CHI^202^1^CH^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||||||||20260405|4\rZBE|7891^KIS|202604011705||REFERENCE'
+_Raw_de_cgm_medico_05 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.20^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011705||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^B^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius- Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|CHI^202^1^CH^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||'
+    '202604011645\r'
+    'PV2|||||||||20260405|4\r'
+    'ZBE|7891^KIS|202604011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_standard_profile(unittest.TestCase):
     """ 5. ADT^A08 - Änderung Patientendaten (update patient), standard profile
@@ -3481,7 +3625,10 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.20', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.20^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.20^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3505,7 +3652,10 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='B', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3513,7 +3663,11 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^B^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius- Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^B^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius- Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3530,7 +3684,10 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|CHI^202^1^CH^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        expected = (
+            'PV1|1|I|CHI^202^1^CH^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||'
+            '202604011645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3570,10 +3727,16 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='B', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='B', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -3598,7 +3761,12 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_06 = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A08^ACK|RIS002|P|2.5^DEU|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.5^^2.16.840.1.113883.2.6^ISO|\rSFT|KIS System GmbH^L|5.0|A1|\rMSA|CA|ADT001|'
+_Raw_de_cgm_medico_06 = (
+    'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A08^ACK|RIS002|P|2.5^DEU|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.5^^2.16.840.1.113883.2.6^ISO|\r'
+    'SFT|KIS System GmbH^L|5.0|A1|\r'
+    'MSA|CA|ADT001|'
+)
 
 class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unittest.TestCase):
     """ 6. ACK^A08 - transport acknowledgment for update
@@ -3847,7 +4015,10 @@ class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unitte
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.5', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A08^ACK|RIS002|P|2.5^DEU|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.5^^2.16.840.1.113883.2.6^ISO|'
+        expected = (
+            'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A08^ACK|RIS002|P|2.5^DEU|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.5^^2.16.840.1.113883.2.6^ISO|'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3910,7 +4081,20 @@ class Test_de_cgm_medico_06_6_ACK_A08_transport_acknowledgment_for_update(unitte
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_07 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.21^^2.16.840.1.113883.2.6^ISO\rEVN||202604011705||||202504011645\rPID|||67890^^^Föhren-Klinik^PI||aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||19840908|M|||Höhenweg 7&Höhenweg&7^^Nürnberg^XA-DE-BY^90402^DEU^H~Grünauer Str. 18&Grünauer Str.&18^^Fürth^^90762^DEU^BDL||^PRN^PH^^49^911^2345678^^^^^0911/2345678|^WPN^PH^^49^911^7654^321^^^^0911/7654-321|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710213^^^^^^^^Föhren-Klinik^^^^DN|||||R||||||9281537^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||||||||20260405|4|||||||||||||||||||||||||||N\rZBE|7891^KIS|202604011705||REFERENCE'
+_Raw_de_cgm_medico_07 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.21^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011705||||202504011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||'
+    'aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||'
+    '19840908|M|||Höhenweg 7&Höhenweg&7^^Nürnberg^XA-DE-BY^90402^DEU^H~Grünauer Str. 18&Grünauer Str.&18^^Fürth^^90762^DEU^BDL||'
+    '^PRN^PH^^49^911^2345678^^^^^0911/2345678|^WPN^PH^^49^911^7654^321^^^^0911/7654-321|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||'
+    'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710213^^^^^^^^Föhren-Klinik^^^^DN|||||R||||||'
+    '9281537^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV2|||||||||20260405|4|||||||||||||||||||||||||||N\r'
+    'ZBE|7891^KIS|202604011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_profile(unittest.TestCase):
     """ 7. ADT^A08 - Änderung Patientendaten (update patient), DRG profile
@@ -4698,7 +4882,10 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.21', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.21^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.21^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4719,10 +4906,17 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='M')
-        segment.patient_address = [XAD(xad_1='Höhenweg 7&Höhenweg&7', xad_3='Nürnberg', xad_4='XA-DE-BY', xad_5='90402', xad_6='DEU', xad_7='H'), XAD(xad_1='Grünauer Str. 18&Grünauer Str.&18', xad_3='Fürth', xad_5='90762', xad_6='DEU', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Höhenweg 7&Höhenweg&7', xad_3='Nürnberg', xad_4='XA-DE-BY', xad_5='90402', xad_6='DEU', xad_7='H'),
+            XAD(xad_1='Grünauer Str. 18&Grünauer Str.&18', xad_3='Fürth', xad_5='90762', xad_6='DEU', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -4730,7 +4924,14 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||19840908|M|||Höhenweg 7&Höhenweg&7^^Nürnberg^XA-DE-BY^90402^DEU^H~Grünauer Str. 18&Grünauer Str.&18^^Fürth^^90762^DEU^BDL||^PRN^PH^^49^911^2345678^^^^^0911/2345678|^WPN^PH^^49^911^7654^321^^^^0911/7654-321|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||'
+            'aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~'
+            'aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||'
+            '19840908|M|||Höhenweg 7&Höhenweg&7^^Nürnberg^XA-DE-BY^90402^DEU^H~Grünauer Str. 18&Grünauer Str.&18^^Fürth^^90762^DEU^BDL||'
+            '^PRN^PH^^49^911^2345678^^^^^0911/2345678|^WPN^PH^^49^911^7654^321^^^^0911/7654-321|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||'
+            'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4749,7 +4950,10 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710213^^^^^^^^Föhren-Klinik^^^^DN|||||R||||||9281537^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        expected = (
+            'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN|710213^^^^^^^^Föhren-Klinik^^^^DN|||||R||||||'
+            '9281537^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4790,10 +4994,17 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
         message.evn.event_occurred = '202504011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='M')
-        message.pid.patient_address = [XAD(xad_1='Höhenweg 7&Höhenweg&7', xad_3='Nürnberg', xad_4='XA-DE-BY', xad_5='90402', xad_6='DEU', xad_7='H'), XAD(xad_1='Grünauer Str. 18&Grünauer Str.&18', xad_3='Fürth', xad_5='90762', xad_6='DEU', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Höhenweg 7&Höhenweg&7', xad_3='Nürnberg', xad_4='XA-DE-BY', xad_5='90402', xad_6='DEU', xad_7='H'),
+            XAD(xad_1='Grünauer Str. 18&Grünauer Str.&18', xad_3='Fürth', xad_5='90762', xad_6='DEU', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -4821,7 +5032,19 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_08 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.22^^2.16.840.1.113883.2.6^ISO\rEVN||202604011705||||202504011645\rPID|||67890^^^Föhren-Klinik^PI||aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||19840908|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|01100001||||C|20260101|||||||||||||||||||202604011645\rPV2|||||||||20260405|4|||||||||||||||||||||||||||N\rZBE|7891^KIS|202604011705||REFERENCE'
+_Raw_de_cgm_medico_08 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.22^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011705||||202504011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||'
+    'aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||'
+    '19840908|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|01100001||||C|20260101|||||||||'
+    '||||||||||202604011645\r'
+    'PV2|||||||||20260405|4|||||||||||||||||||||||||||N\r'
+    'ZBE|7891^KIS|202604011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_billing_profile(unittest.TestCase):
     """ 8. ADT^A08 - Änderung Patientendaten (update patient), billing profile
@@ -5567,7 +5790,10 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.22', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.22^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011705||ADT^A08^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.22^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5588,10 +5814,17 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
         segment = PID()
 
         segment.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        segment.patient_name = [XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G')]
+        segment.patient_name = [
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='M')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -5599,7 +5832,13 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||19840908|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||'
+            'aus dem Brück&aus dem&Brück^Rüdiger^^^^^L^A^^^G~aus dem Brück&aus dem&Brück^Rüdger^^^^^M^A^^^G~'
+            'aus dem Brück&aus dem&Brück^Rüdiger^^^Herr^^D^A^^^G||'
+            '19840908|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5619,7 +5858,11 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|01100001||||C|20260101|||||||||||||||||||202604011645'
+        expected = (
+            'PV1|1|I|IN2^202^1^IN^^N^C^4|R|||710207^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|01100001||||C|'
+            '20260101|||||||||'
+            '||||||||||202604011645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -5660,10 +5903,17 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
         message.evn.event_occurred = '202504011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'), XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdger', xpn_8='M', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='aus dem Brück&aus dem&Brück', xpn_2='Rüdiger', xpn_5='Herr', xpn_8='D', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='M')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -5692,7 +5942,18 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_09 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.47^^2.16.840.1.113883.2.6^ISO\rSFT|KIS System GmbH^L|5.0|A1\rEVN||202504011705||||202504011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|HNO^311^3^IN^^N^B^4|R|||710209^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN ||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\rZBE|7891^KIS|202504011705||REFERENCE'
+_Raw_de_cgm_medico_09 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.47^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|KIS System GmbH^L|5.0|A1\r'
+    'EVN||202504011705||||202504011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||710209^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN ||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||'
+    '||202504011645|202504061100\r'
+    'ZBE|7891^KIS|202504011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unittest.TestCase):
     """ 9. ADT^A03 - Entlassung (discharge), standard profile
@@ -6354,7 +6615,10 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.47', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.47^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.47^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6391,7 +6655,10 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -6399,7 +6666,11 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6411,14 +6682,27 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         segment.patient_class = CWE(cwe_1='I')
         segment.assigned_patient_location = PL(pl_1='HNO', pl_2='311', pl_3='3', pl_4='IN', pl_6='N', pl_7='B', pl_8='4')
         segment.admission_type = CWE(cwe_1='R')
-        segment.attending_doctor = XCN(xcn_1='710209', xcn_2='Köhler', xcn_3='Hëinrich', xcn_6='Dr.', xcn_10='Föhren-Klinik', xcn_11='L', xcn_14='DN', xcn_18='DN ')
+        segment.attending_doctor = XCN(
+            xcn_1='710209',
+            xcn_2='Köhler',
+            xcn_3='Hëinrich',
+            xcn_6='Dr.',
+            xcn_10='Föhren-Klinik',
+            xcn_11='L',
+            xcn_14='DN',
+            xcn_18='DN ',
+        )
         segment.visit_number = CX(cx_1='4711', cx_4='Föhren-Klinik', cx_5='VN')
         segment.discharge_disposition = CWE(cwe_1='011')
         segment.admit_date_time = '202504011645'
         segment.discharge_date_time = '202504061100'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||710209^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN ||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100'
+        expected = (
+            'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||710209^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN^^^DN ||||||||||||4711^^^Föhren-Klinik^VN||||||||||||||||'
+            '|011||||||'
+            '||202504011645|202504061100'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6450,10 +6734,16 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         message.evn.event_occurred = '202504011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -6464,7 +6754,16 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
         message.pv1.patient_class = CWE(cwe_1='I')
         message.pv1.assigned_patient_location = PL(pl_1='HNO', pl_2='311', pl_3='3', pl_4='IN', pl_6='N', pl_7='B', pl_8='4')
         message.pv1.admission_type = CWE(cwe_1='R')
-        message.pv1.attending_doctor = XCN(xcn_1='710209', xcn_2='Köhler', xcn_3='Hëinrich', xcn_6='Dr.', xcn_10='Föhren-Klinik', xcn_11='L', xcn_14='DN', xcn_18='DN ')
+        message.pv1.attending_doctor = XCN(
+            xcn_1='710209',
+            xcn_2='Köhler',
+            xcn_3='Hëinrich',
+            xcn_6='Dr.',
+            xcn_10='Föhren-Klinik',
+            xcn_11='L',
+            xcn_14='DN',
+            xcn_18='DN ',
+        )
         message.pv1.visit_number = CX(cx_1='4711', cx_4='Föhren-Klinik', cx_5='VN')
         message.pv1.discharge_disposition = CWE(cwe_1='011')
         message.pv1.admit_date_time = '202504011645'
@@ -6477,7 +6776,17 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_10 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.48^^2.16.840.1.113883.2.6^ISO\rEVN||202504011705||||202504011645\rPID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg  9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\rPV2|||0102^vollstationär, Arbeitsunfall^GSG0001|||||||4|4|||||||||||||||||||||||||N|N\rZBE|7891^KIS|202504011705||REFERENCE'
+_Raw_de_cgm_medico_10 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.48^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202504011705||||202504011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg  9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||'
+    'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\r'
+    'PV2|||0102^vollstationär, Arbeitsunfall^GSG0001|||||||4|4|||||||||||||||||||||||||N|N\r'
+    'ZBE|7891^KIS|202504011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest.TestCase):
     """ 10. ADT^A03 - Entlassung (discharge), DRG profile
@@ -7097,7 +7406,10 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.48', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.48^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.48^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7121,7 +7433,10 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
         segment.patient_name = XPN(xpn_1='von der Lühe&von der&Lühe', xpn_2='Jörg', xpn_8='L', xpn_9='A', xpn_13='G')
         segment.date_time_of_birth = '19740205'
         segment.administrative_sex = CWE(cwe_1='M')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg  9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg  9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='W', cwe_2='widowed', cwe_3='HL70002', cwe_5='verwitwet')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7129,7 +7444,12 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg  9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg  9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
+            'CAT^^HL70006||||||'
+            'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7193,7 +7513,10 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
         message.pid.patient_name = XPN(xpn_1='von der Lühe&von der&Lühe', xpn_2='Jörg', xpn_8='L', xpn_9='A', xpn_13='G')
         message.pid.date_time_of_birth = '19740205'
         message.pid.administrative_sex = CWE(cwe_1='M')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg  9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg  9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='W', cwe_2='widowed', cwe_3='HL70002', cwe_5='verwitwet')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7222,7 +7545,17 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_11 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.49^^2.16.840.1.113883.2.6^ISO\rEVN||202504011705||||202504011645\rPID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\rPV2||||||||||||||||||||||||||||||||||||N|N\rZBE|7891^KIS|202504011705||REFERENCE'
+_Raw_de_cgm_medico_11 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.49^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202504011705||||202504011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||'
+    'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||011||||||||202504011645|202504061100\r'
+    'PV2||||||||||||||||||||||||||||||||||||N|N\r'
+    'ZBE|7891^KIS|202504011705||REFERENCE'
+)
 
 class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unittest.TestCase):
     """ 11. ADT^A03 - Entlassung (discharge), billing profile
@@ -7807,7 +8140,10 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.49', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.49^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202504011705||ADT^A03^ADT_A03|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.49^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7831,7 +8167,10 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
         segment.patient_name = XPN(xpn_1='von der Lühe&von der&Lühe', xpn_2='Jörg', xpn_8='L', xpn_9='A', xpn_13='G')
         segment.date_time_of_birth = '19740205'
         segment.administrative_sex = CWE(cwe_1='M')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='W', cwe_2='widowed', cwe_3='HL70002', cwe_5='verwitwet')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7839,7 +8178,12 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||von der Lühe&von der&Lühe^Jörg^^^^^L^A^^^G||19740205|M|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||||DEU^^HL70296|W^widowed^HL70002^^verwitwet|'
+            'CAT^^HL70006||||||'
+            'Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -7900,7 +8244,10 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
         message.pid.patient_name = XPN(xpn_1='von der Lühe&von der&Lühe', xpn_2='Jörg', xpn_8='L', xpn_9='A', xpn_13='G')
         message.pid.date_time_of_birth = '19740205'
         message.pid.administrative_sex = CWE(cwe_1='M')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='W', cwe_2='widowed', cwe_3='HL70002', cwe_5='verwitwet')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -7926,7 +8273,12 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_12 = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A03^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.15^^2.16.840.1.113883.2.6^ISO|\rSFT|KIS System GmbH^L|5.0|A1|\rMSA|CA|ADT001|'
+_Raw_de_cgm_medico_12 = (
+    'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A03^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.15^^2.16.840.1.113883.2.6^ISO|\r'
+    'SFT|KIS System GmbH^L|5.0|A1|\r'
+    'MSA|CA|ADT001|'
+)
 
 class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(unittest.TestCase):
     """ 12. ACK^A03 - transport acknowledgment for discharge
@@ -8182,7 +8534,10 @@ class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(un
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.15', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A03^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.15^^2.16.840.1.113883.2.6^ISO|'
+        expected = (
+            'MSH|^~\\&|RIS|ADT|KIS|ADT|202504011706||ACK^A03^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.15^^2.16.840.1.113883.2.6^ISO|'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -8245,7 +8600,19 @@ class Test_de_cgm_medico_12_12_ACK_A03_transport_acknowledgment_for_discharge(un
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_13 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.44^^2.16.840.1.113883.2.6^ISO\rSFT|KIS System GmbH^L|5.0|A1\rEVN||202604011935||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|710213^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||||||||20260405|4\rZBE|3456^KIS|202604011935||INSERT'
+_Raw_de_cgm_medico_13 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.44^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|KIS System GmbH^L|5.0|A1\r'
+    'EVN||202604011935||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|710213^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||'
+    '||||||||||||202604011645\r'
+    'PV2|||||||||20260405|4\r'
+    'ZBE|3456^KIS|202604011935||INSERT'
+)
 
 class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unittest.TestCase):
     """ 13. ADT^A02 - Verlegung (transfer), standard profile
@@ -8949,7 +9316,10 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.44', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.44^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.44^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -8986,7 +9356,10 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -8994,7 +9367,11 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9012,7 +9389,11 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
         segment.admit_date_time = '202604011645'
 
         serialized = segment.serialize()
-        expected = 'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|710213^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645'
+        expected = (
+            'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|710213^Köhler^Hëinrich^^^Dr.^^^Föhren-Klinik^L^^^DN||||||||||||4711^^^Föhren-Klinik^VN|||'
+            '||||||||||'
+            '||||||||||||202604011645'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9056,10 +9437,16 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -9085,7 +9472,18 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_14 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.45^^2.16.840.1.113883.2.6^ISO\rSFT|KIS System GmbH^L|5.0|A1\rEVN||202604011935||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||||||||20260406|5||||||||||||||||||||||||||N|N\rZBE|3456^KIS|202604011935||INSERT'
+_Raw_de_cgm_medico_14 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.45^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|KIS System GmbH^L|5.0|A1\r'
+    'EVN||202604011935||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV2|||||||||20260406|5||||||||||||||||||||||||||N|N\r'
+    'ZBE|3456^KIS|202604011935||INSERT'
+)
 
 class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.TestCase):
     """ 14. ADT^A02 - Verlegung (transfer), DRG profile
@@ -9754,7 +10152,10 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.45', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.45^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A02^ADT_A02|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.45^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9791,7 +10192,10 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -9799,7 +10203,11 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9862,10 +10270,16 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -9892,7 +10306,17 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_15 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO\rEVN||202604011935||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2|||||||||20260405|4\rZBE|3456^KIS|202604011935||DELETE'
+_Raw_de_cgm_medico_15 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011935||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV2|||||||||20260405|4\r'
+    'ZBE|3456^KIS|202604011935||DELETE'
+)
 
 class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(unittest.TestCase):
     """ 15. ADT^A12 - Stornierung Verlegung (cancel transfer)
@@ -10491,7 +10915,10 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.46', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -10515,7 +10942,10 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
         segment.patient_name = XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G')
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -10523,7 +10953,11 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -10583,7 +11017,10 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
         message.pid.patient_name = XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G')
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -10608,7 +11045,17 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_16 = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO\rEVN||202604011935||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645|||||||H\rPV2|||||||||20260405|4\rZBE|3456^KIS|202603301345||DELETE'
+_Raw_de_cgm_medico_16 = (
+    'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011935||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|CHI^303^3^CH^^N^D^4|R||IN1^202^1^IN^^N^D^2|||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645|||||||H\r'
+    'PV2|||||||||20260405|4\r'
+    'ZBE|3456^KIS|202603301345||DELETE'
+)
 
 class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_earlier_transfer(unittest.TestCase):
     """ 16. ADT^A12 - Stornierung früherer Verlegung (cancel earlier transfer)
@@ -11214,7 +11661,10 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.46', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|RIS|ADT|202604011935||ADT^A12^ADT_A12|ADT002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.46^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -11238,7 +11688,10 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
         segment.patient_name = XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G')
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -11246,7 +11699,11 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -11307,7 +11764,10 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
         message.pid.patient_name = XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G')
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -11333,7 +11793,17 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_17 = 'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO\rSFT|KIS System GmbH^L|5.0|A1\rEVN||202604011705||||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|O|^^^AIN^^D^A^1|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rZBE|7891^KIS|202604011705||INSERT'
+_Raw_de_cgm_medico_17 = (
+    'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO\r'
+    'SFT|KIS System GmbH^L|5.0|A1\r'
+    'EVN||202604011705||||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|O|^^^AIN^^D^A^1|R|||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'ZBE|7891^KIS|202604011705||INSERT'
+)
 
 class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_registration(unittest.TestCase):
     """ 17. ADT^A04 - Besuchsmeldung/Registrierung (outpatient registration)
@@ -11904,7 +12374,10 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.51', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -11941,7 +12414,10 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -11949,7 +12425,11 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -11997,10 +12477,16 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -12021,7 +12507,17 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_18 = 'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO\rEVN||202604011705|20260601|||202604011645\rPID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\rPV1|1|I|IN1^^^CH^^N||||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\rPV2||||||||20260601\rZBE|7891^KIS|202604011705||INSERT'
+_Raw_de_cgm_medico_18 = (
+    'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO\r'
+    'EVN||202604011705|20260601|||202604011645\r'
+    'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+    'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+    '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171\r'
+    'PV1|1|I|IN1^^^CH^^N||||||||||||||||4711^^^Föhren-Klinik^VN|||||||||||||||||||||||||202604011645\r'
+    'PV2||||||||20260601\r'
+    'ZBE|7891^KIS|202604011705||INSERT'
+)
 
 class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admission_with_planned_date(unittest.TestCase):
     """ 18. ADT^A04 - Besuchsmeldung/Registrierung (pre-admission with planned date)
@@ -12564,7 +13060,10 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.51', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO'
+        expected = (
+            'MSH|^~\\&|KIS|ADT|KIS|ADT|202604011705||ADT^A04^ADT_A01|ADT001|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -12589,7 +13088,10 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
         segment.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
         segment.date_time_of_birth = '19840908'
         segment.administrative_sex = CWE(cwe_1='F')
-        segment.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        segment.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         segment.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         segment.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         segment.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -12597,7 +13099,11 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
         segment.citizenship = CWE(cwe_1='DEU', cwe_3='HL70171')
 
         serialized = segment.serialize()
-        expected = 'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        expected = (
+            'PID|||67890^^^Föhren-Klinik^PI||Stürmer^Bärbel^^^^^L^A^^^G~Rößler^^^^^^M^A^^^G||19840908|F|||'
+            'Römerstraße 28&Römerstraße&28^^München^^^^H~Bäckerweg 9&Bäckerweg&9^^München^^^^BDL||^PRN^PH^^49^89^3456789^^^^^089/3456789|'
+            '^WPN^PH^^49^89^8765^432^^^^089/8765-432|DEU^^HL70296|M^married^HL70002|CAT^^HL70006||||||Sankt-Ägidius-Krankenhaus|||DEU^^HL70171'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -12652,10 +13158,16 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
         message.evn.event_occurred = '202604011645'
 
         message.pid.patient_identifier_list = CX(cx_1='67890', cx_4='Föhren-Klinik', cx_5='PI')
-        message.pid.patient_name = [XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'), XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G')]
+        message.pid.patient_name = [
+            XPN(xpn_1='Stürmer', xpn_2='Bärbel', xpn_8='L', xpn_9='A', xpn_13='G'),
+            XPN(xpn_1='Rößler', xpn_8='M', xpn_9='A', xpn_13='G'),
+        ]
         message.pid.date_time_of_birth = '19840908'
         message.pid.administrative_sex = CWE(cwe_1='F')
-        message.pid.patient_address = [XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'), XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL')]
+        message.pid.patient_address = [
+            XAD(xad_1='Römerstraße 28&Römerstraße&28', xad_3='München', xad_7='H'),
+            XAD(xad_1='Bäckerweg 9&Bäckerweg&9', xad_3='München', xad_7='BDL'),
+        ]
         message.pid.primary_language = CWE(cwe_1='DEU', cwe_3='HL70296')
         message.pid.marital_status = CWE(cwe_1='M', cwe_2='married', cwe_3='HL70002')
         message.pid.religion = CWE(cwe_1='CAT', cwe_3='HL70006')
@@ -12677,7 +13189,11 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_19 = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202604011706||ACK^A04^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO|\rMSA|CA|ADT001|'
+_Raw_de_cgm_medico_19 = (
+    'MSH|^~\\&|RIS|ADT|KIS|ADT|202604011706||ACK^A04^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+    '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO|\r'
+    'MSA|CA|ADT001|'
+)
 
 class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration(unittest.TestCase):
     """ 19. ACK^A04 - transport acknowledgment for registration
@@ -12905,7 +13421,10 @@ class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration
         segment.message_profile_identifier = EI(ei_1='2.16.840.1.113883.2.6.9.51', ei_3='2.16.840.1.113883.2.6', ei_4='ISO')
 
         serialized = segment.serialize()
-        expected = 'MSH|^~\\&|RIS|ADT|KIS|ADT|202604011706||ACK^A04^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO|'
+        expected = (
+            'MSH|^~\\&|RIS|ADT|KIS|ADT|202604011706||ACK^A04^ACK|RIS002|P|2.5^DEU&&HL70399|||AL|NE|DEU|8859/1|DEU^^HL70296||'
+            '2.16.840.1.113883.2.6.9.51^^2.16.840.1.113883.2.6^ISO|'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -12951,7 +13470,12 @@ class Test_de_cgm_medico_19_19_ACK_A04_transport_acknowledgment_for_registration
 # ################################################################################################################
 # ################################################################################################################
 
-_Raw_de_cgm_medico_20 = 'MSH|^~\\&|KomServer|KOMSERV|samedi-hl7gateway|samedi|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\rEVN|A08|202604061019\rPID|1||4477^^^&www.praxis-süd.de&DNS^PI~287433^^^Röntgen^PI|20000053^^^KÖL^PI|Größe^Fränze||19500327|F|||Blücherstr. 41&Blücherstr. 41^^Göttingen^^37073^DE^L||^^PH^^^^0551-9876543 Büro|^^PH'
+_Raw_de_cgm_medico_20 = (
+    'MSH|^~\\&|KomServer|KOMSERV|samedi-hl7gateway|samedi|20260410123517||ADT^A08|2638150947283|P|2.5|9E72B53F8AC791B||AL|NE||8859/1\r'
+    'EVN|A08|202604061019\r'
+    'PID|1||4477^^^&www.praxis-süd.de&DNS^PI~287433^^^Röntgen^PI|20000053^^^KÖL^PI|Größe^Fränze||19500327|F|||'
+    'Blücherstr. 41&Blücherstr. 41^^Göttingen^^37073^DE^L||^^PH^^^^0551-9876543 Büro|^^PH'
+)
 
 class Test_de_cgm_medico_20_20_ADT_A08_incoming_from_KIS_via_KomServer_integration(unittest.TestCase):
     """ 20. ADT^A08 - incoming from KIS via KomServer integration
@@ -13267,7 +13791,10 @@ class Test_de_cgm_medico_20_20_ADT_A08_incoming_from_KIS_via_KomServer_integrati
         segment.patient_address = XAD(xad_1='Blücherstr. 41&Blücherstr. 41', xad_3='Göttingen', xad_5='37073', xad_6='DE', xad_7='L')
 
         serialized = segment.serialize()
-        expected = 'PID|1||4477^^^&www.praxis-süd.de&DNS^PI~287433^^^Röntgen^PI|20000053^^^KÖL^PI|Größe^Fränze||19500327|F|||Blücherstr. 41&Blücherstr. 41^^Göttingen^^37073^DE^L||^^PH^^^^0551-9876543 Büro|^^PH'
+        expected = (
+            'PID|1||4477^^^&www.praxis-süd.de&DNS^PI~287433^^^Röntgen^PI|20000053^^^KÖL^PI|Größe^Fränze||19500327|F|||'
+            'Blücherstr. 41&Blücherstr. 41^^Göttingen^^37073^DE^L||^^PH^^^^0551-9876543 Büro|^^PH'
+        )
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
