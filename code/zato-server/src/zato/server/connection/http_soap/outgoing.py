@@ -14,7 +14,7 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from time import sleep
 from traceback import format_exc
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 # requests
 from requests import Response as _RequestsResponse
@@ -567,9 +567,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         path_params = {}
         try:
             for name in self.path_params: # type: ignore
-                path_params[name] = params.pop(name)
+                value = params.pop(name)
 
-            return (self.address.format(**path_params), dict(params))
+                # Encode so a value cannot inject extra path segments into the address.
+                path_params[name] = quote(str(value), safe='')
+
+            address = self.address.format(**path_params)
+
+            out = address, dict(params)
+            return out
         except(KeyError, ValueError):
             msg = 'Could not build URL path template `{}`, missing parameters: {}'.format(
                 self.config['address_url_path'],

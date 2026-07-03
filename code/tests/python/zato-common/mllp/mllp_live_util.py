@@ -135,6 +135,7 @@ def sample_adt_a01(control_id:'str'='CTRL001') -> 'bytes':
     """
     message = (
         f'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|{control_id}|P|2.5\r'
+        'EVN|A01|20230101120000\r'
         'PID|||12345^^^MRN||Doe^John||19800101|M\r'
         'PV1||I|ICU^Room1'
     )

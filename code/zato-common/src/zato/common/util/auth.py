@@ -117,6 +117,12 @@ class SecurityException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Reject external entities, network access and DTDs so parsing untrusted XML cannot trigger XXE or entity expansion.
+_xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 Auth_WSSE_No_Data = '0003.0001'
 Auth_WSSE_Validation_Error = '0003.0002'
 
@@ -133,7 +139,7 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
     if not data:
         return AuthResult(False, Auth_WSSE_No_Data)
 
-    request = etree.fromstring(data)
+    request = etree.fromstring(data, _xml_parser)
     try:
         ok, wsse_username = wsse.validate(request, url_config)
     except SecurityException as e:
