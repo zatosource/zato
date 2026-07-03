@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import DftP11
-from zato.hl7v2.v2_9.segments import ACC, DG1, DRG, EVN, FT1, IN1, IN2, MSH, OBR, OBX, ORC, PD1, PID, PR1, PV1, PV2, TQ1, UAC
+from zato.hl7v2.v2_9.messages import DFT_P11
 
 
 class TestDftP11:
     """Comprehensive tests for DftP11 message."""
 
     def test_dft_p11_create(self):
-        msg = DftP11()
+        msg = DFT_P11()
         assert msg._structure_id == "DFT_P11"
 
     def test_dft_p11_segment_access(self):
-        msg = DftP11()
+        msg = DFT_P11()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -48,14 +46,14 @@ class TestDftP11:
         assert msg.in2._segment_id == "IN2"
 
     def test_dft_p11_to_dict(self):
-        msg = DftP11()
+        msg = DFT_P11()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "DFT_P11"
 
     def test_dft_p11_to_json(self):
-        msg = DftP11()
+        msg = DFT_P11()
 
         result = json.loads(msg.to_json())
 

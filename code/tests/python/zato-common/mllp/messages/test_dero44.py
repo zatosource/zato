@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import DerO44
-from zato.hl7v2.v2_9.segments import MSH, OBR, OBX, PD1, PID, PV1, UAC
+from zato.hl7v2.v2_9.messages import DER_O44
 
 
 class TestDerO44:
     """Comprehensive tests for DerO44 message."""
 
     def test_der_o44_create(self):
-        msg = DerO44()
+        msg = DER_O44()
         assert msg._structure_id == "DER_O44"
 
     def test_der_o44_segment_access(self):
-        msg = DerO44()
+        msg = DER_O44()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -26,14 +24,14 @@ class TestDerO44:
         assert msg.obr._segment_id == "OBR"
 
     def test_der_o44_to_dict(self):
-        msg = DerO44()
+        msg = DER_O44()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "DER_O44"
 
     def test_der_o44_to_json(self):
-        msg = DerO44()
+        msg = DER_O44()
 
         result = json.loads(msg.to_json())
 

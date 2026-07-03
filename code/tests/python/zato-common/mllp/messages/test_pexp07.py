@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import PexP07
-from zato.hl7v2.v2_9.segments import CSR, EVN, MSH, NK1, OBX, PCR, PD1, PEO, PES, PID, PV1, PV2, RXA, RXE, RXR, TQ1, UAC
+from zato.hl7v2.v2_9.messages import PEX_P07
 
 
 class TestPexP07:
     """Comprehensive tests for PexP07 message."""
 
     def test_pex_p07_create(self):
-        msg = PexP07()
+        msg = PEX_P07()
         assert msg._structure_id == "PEX_P07"
 
     def test_pex_p07_segment_access(self):
-        msg = PexP07()
+        msg = PEX_P07()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -41,14 +39,14 @@ class TestPexP07:
         assert msg.csr._segment_id == "CSR"
 
     def test_pex_p07_to_dict(self):
-        msg = PexP07()
+        msg = PEX_P07()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "PEX_P07"
 
     def test_pex_p07_to_json(self):
-        msg = PexP07()
+        msg = PEX_P07()
 
         result = json.loads(msg.to_json())
 

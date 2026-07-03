@@ -17,37 +17,46 @@ import tempfile
 import threading
 import time
 from collections.abc import Generator
+from http.client import OK
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-# PyPI
+# pytest
 import pytest
 
 # Zato
+from zato.common.test.client import AdminClient as ZatoClient
+from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
-# Local
-from zato.common.test.client import AdminClient as ZatoClient
+# Zato - test services deployed to the server under test
 from _services import echo_service_source, error_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_ZATO_BASE = os.environ['ZATO_TEST_BASE_DIR']
-_ZATO_BIN = os.path.join(_ZATO_BASE, 'code', 'bin', 'zato')
-_ZATO_PYTHON = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
+if 0:
+    from zato.common.typing_ import any_, strlist
+    any_ = any_
+    strlist = strlist
 
-_MLLP_TEST_SERVER_PATH = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'zato-common', 'mllp', 'mllp_test_server.py'
-)
+# ################################################################################################################################
+# ################################################################################################################################
 
-_PASSWORD = 'test.invoke.' + os.urandom(8).hex()
+_zato_base_dir = os.environ['ZATO_TEST_BASE_DIR']
+_zato_bin      = os.path.join(_zato_base_dir, 'code', 'bin', 'zato')
+_zato_python   = os.path.join(_zato_base_dir, 'code', 'bin', 'python')
 
-_SERVER_READY_TIMEOUT = 60
-_BACKEND_READY_TIMEOUT = 10
-_HOT_DEPLOY_WAIT_SECONDS = 5
-_LISTENER_BIND_WAIT_SECONDS = 2
+_current_dir = os.path.dirname(__file__)
+_mllp_test_server_path = os.path.join(_current_dir, '..', '..', 'zato-common', 'mllp', 'mllp_test_server.py')
+
+_password_suffix = os.urandom(8).hex()
+_password = 'test.invoke.' + _password_suffix
+
+_server_ready_timeout    = 60
+_backend_ready_timeout   = 10
+_hot_deploy_wait_seconds = 5
 
 _server_process = None
 _temp_directory = None
@@ -83,10 +92,10 @@ def _kill_server() -> 'None':
         if _server_process.poll() is None:
             _server_process.terminate()
             try:
-                _server_process.wait(timeout=5)
+                _ = _server_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 _server_process.kill()
-                _server_process.wait(timeout=5)
+                _ = _server_process.wait(timeout=5)
 
     _server_process = None
 
@@ -104,13 +113,13 @@ def _cleanup() -> 'None':
 
     _temp_directory = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host:'str', port:'int', timeout:'int'=_SERVER_READY_TIMEOUT) -> 'None':
-    """ Polls GET /zato/ping until the server responds with 200.
+def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_ready_timeout) -> 'None':
+    """ Polls GET /zato/ping until the server responds with 200 OK.
     """
 
     url = f'http://{host}:{port}/zato/ping'
@@ -126,16 +135,15 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_SERVER_READY_TIMEOUT
         try:
             request = Request(url, method='GET')
             with urlopen(request, timeout=5) as response:
-                if response.status == 200:
+                if response.status == OK:
                     print(f'[TIMING] ping OK after {elapsed:.1f}s (attempt {attempt})')
                     return
         except Exception as exception:
-            error_text = str(exception)[:80]
-            print(f'[TIMING] ping attempt {attempt} at {elapsed:.1f}s: {error_text}')
+            print(f'[TIMING] ping attempt {attempt} at {elapsed:.1f}s: {exception}')
 
         time.sleep(0.5)
 
-    raise RuntimeError(f'Server at {host}:{port} did not respond within {timeout}s')
+    raise Exception(f'Server at {host}:{port} did not respond within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,20 +161,20 @@ def zato_server() -> 'strobj_dict_gen':
 
     # Create the quickstart environment ..
     quickstart_environment = os.environ.copy()
-    quickstart_environment.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
-        _ZATO_BIN, 'quickstart', 'create', _temp_directory,
+        _zato_bin, 'quickstart', 'create', _temp_directory,
         '--servers', '1',
-        '--password', _PASSWORD,
-        '--server-api-client-for-scheduler-password', _PASSWORD,
+        '--password', _password,
+        '--server-api-client-for-scheduler-password', _password,
         '--no-scheduler',
     ]
 
     result = subprocess.run(quickstart_command, capture_output=True, text=True, timeout=120, env=quickstart_environment)
 
     if result.returncode != 0:
-        raise RuntimeError(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
+        raise Exception(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
     after_quickstart = time.monotonic()
     print(f'\n[TIMING] quickstart create: {after_quickstart - start_time:.1f}s')
@@ -176,8 +184,12 @@ def zato_server() -> 'strobj_dict_gen':
     repository_location = os.path.join(server_directory, 'config', 'repo')
 
     config = get_config_object(repository_location, 'server.conf')
-    config['main']['port'] = str(port) # type: ignore[index]
-    update_config_file(config, repository_location, 'server.conf') # type: ignore[arg-type]
+    config = cast_('any_', config)
+
+    main_config = config['main']
+    main_config['port'] = str(port)
+
+    update_config_file(config, repository_location, 'server.conf')
 
     after_patch = time.monotonic()
     print(f'[TIMING] config patch: {after_patch - after_quickstart:.1f}s')
@@ -188,10 +200,10 @@ def zato_server() -> 'strobj_dict_gen':
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_environment.pop('COVERAGE_PROCESS_START', None)
+    _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
     _server_process = subprocess.Popen(
-        [_ZATO_BIN, 'start', server_directory, '--fg'],
+        [_zato_bin, 'start', server_directory, '--fg'],
         env=server_environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -201,8 +213,10 @@ def zato_server() -> 'strobj_dict_gen':
     print(f'[TIMING] Popen started: {after_popen - after_patch:.1f}s')
 
     # .. stream server stdout in a background thread ..
+    server_process = cast_('any_', _server_process)
+
     def _stream_server_output() -> 'None':
-        for line in iter(_server_process.stdout.readline, b''): # type: ignore[union-attr]
+        for line in iter(server_process.stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - after_popen
             print(f'[SERVER {elapsed:6.1f}s] {text}')
@@ -226,7 +240,7 @@ def zato_server() -> 'strobj_dict_gen':
     yield {
         'host': host,
         'port': port,
-        'password': _PASSWORD,
+        'password': _password,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
     }
@@ -244,15 +258,17 @@ def zato_server() -> 'strobj_dict_gen':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def zato_client(zato_server:'dict[str, object]') -> 'object':
+def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
     """ Creates a ZatoClient connected to the test server.
     """
 
-    host = str(zato_server['host'])
-    port = int(zato_server['port']) # type: ignore[arg-type]
-    password = str(zato_server['password'])
+    host     = cast_('str', zato_server['host'])
+    port     = cast_('int', zato_server['port'])
+    password = cast_('str', zato_server['password'])
 
-    out = ZatoClient(host, port, password)
+    base_url = f'http://{host}:{port}'
+
+    out = ZatoClient(base_url, password)
     return out
 
 # ################################################################################################################################
@@ -315,10 +331,10 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
 
     handle = BackendHandle()
 
-    server_script = os.path.normpath(_MLLP_TEST_SERVER_PATH)
+    server_script = os.path.normpath(_mllp_test_server_path)
 
     command = [
-        _ZATO_PYTHON, server_script,
+        _zato_python, server_script,
         '--host', '127.0.0.1',
         '--port', str(backend_port),
         '--callback-mode', 'echo',
@@ -332,8 +348,10 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
     )
 
     # .. capture stdout lines in a background thread ..
+    process = cast_('any_', handle.process)
+
     def _capture_output() -> 'None':
-        for line in iter(handle.process.stdout.readline, b''): # type: ignore[union-attr]
+        for line in iter(process.stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             handle.received_lines.append(text)
             print(f'[BACKEND] {text}')
@@ -342,7 +360,7 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
     capture_thread.start()
 
     # .. wait for the READY signal ..
-    deadline = time.monotonic() + _BACKEND_READY_TIMEOUT
+    deadline = time.monotonic() + _backend_ready_timeout
 
     while time.monotonic() < deadline:
 
@@ -351,33 +369,30 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
                 yield handle
 
                 # .. teardown ..
-                if handle.process:
-                    if handle.process.poll() is None:
-                        handle.process.terminate()
-                        try:
-                            handle.process.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            handle.process.kill()
-                            handle.process.wait(timeout=5)
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        _ = process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        _ = process.wait(timeout=5)
                 return
 
         time.sleep(0.2)
 
-    # .. backend did not become ready ..
-    if handle.process:
-        handle.process.kill()
-
-    raise RuntimeError(f'MLLP backend did not produce READY signal within {_BACKEND_READY_TIMEOUT}s')
+    # .. the backend did not become ready in time.
+    process.kill()
+    raise Exception(f'MLLP backend did not produce READY signal within {_backend_ready_timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture(scope='session', autouse=True)
-def hot_deploy_services(zato_server:'dict[str, object]', zato_client:'object') -> 'none_gen':
+def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 'none_gen':
     """ Writes the test service files into the pickup directory and waits for Zato to register them.
     """
 
-    server_directory = str(zato_server['server_directory'])
+    server_directory = cast_('str', zato_server['server_directory'])
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     os.makedirs(pickup_directory, exist_ok=True)
 
@@ -388,18 +403,18 @@ def hot_deploy_services(zato_server:'dict[str, object]', zato_client:'object') -
         '_test_hl7_mllp_inspect.py': inspect_service_source,
     }
 
-    deployed_paths = []
+    deployed_paths:'strlist' = []
 
     for filename, source in service_files.items():
         file_path = os.path.join(pickup_directory, filename)
         with open(file_path, 'w') as file_handle:
-            file_handle.write(source)
+            _ = file_handle.write(source)
         deployed_paths.append(file_path)
         print(f'[DEPLOY] Wrote {file_path}')
 
     # .. wait for Zato to pick up the services ..
-    print(f'[DEPLOY] Waiting {_HOT_DEPLOY_WAIT_SECONDS}s for pickup ...')
-    time.sleep(_HOT_DEPLOY_WAIT_SECONDS)
+    print(f'[DEPLOY] Waiting {_hot_deploy_wait_seconds}s for pickup ...')
+    time.sleep(_hot_deploy_wait_seconds)
 
     yield None
 

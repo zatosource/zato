@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OmqO57
-from zato.hl7v2.v2_9.segments import BLG, CTD, GT1, IN1, IN2, IN3, MSH, OBR, OBX, ORC, PD1, PID, PRT, PV1, PV2, TQ1, TXA, UAC
+from zato.hl7v2.v2_9.messages import OMQ_O57
 
 
 class TestOmqO57:
     """Comprehensive tests for OmqO57 message."""
 
     def test_omq_o57_create(self):
-        msg = OmqO57()
+        msg = OMQ_O57()
         assert msg._structure_id == "OMQ_O57"
 
     def test_omq_o57_segment_access(self):
-        msg = OmqO57()
+        msg = OMQ_O57()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -45,14 +43,14 @@ class TestOmqO57:
         assert msg.blg._segment_id == "BLG"
 
     def test_omq_o57_to_dict(self):
-        msg = OmqO57()
+        msg = OMQ_O57()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OMQ_O57"
 
     def test_omq_o57_to_json(self):
-        msg = OmqO57()
+        msg = OMQ_O57()
 
         result = json.loads(msg.to_json())
 

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import CcuI20
-from zato.hl7v2.v2_9.segments import ACC, AIG, AIL, AIP, AIS, AL1, DB1, DG1, DRG, GOL, IAM, IN1, IN2, IN3, MSH, OBR, OBX, ODS, ORC, PD1, PDA, PID, PR1, PRB, PRD, PRT, PTH, PV1, PV2, RF1, RGS, RMI, RXA, RXE, RXO, RXR, SCH, UAC
+from zato.hl7v2.v2_9.messages import CCU_I20
 
 
 class TestCcuI20:
     """Comprehensive tests for CcuI20 message."""
 
     def test_ccu_i20_create(self):
-        msg = CcuI20()
+        msg = CCU_I20()
         assert msg._structure_id == "CCU_I20"
 
     def test_ccu_i20_segment_access(self):
-        msg = CcuI20()
+        msg = CCU_I20()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -73,14 +71,14 @@ class TestCcuI20:
         assert msg.obx._segment_id == "OBX"
 
     def test_ccu_i20_to_dict(self):
-        msg = CcuI20()
+        msg = CCU_I20()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "CCU_I20"
 
     def test_ccu_i20_to_json(self):
-        msg = CcuI20()
+        msg = CCU_I20()
 
         result = json.loads(msg.to_json())
 

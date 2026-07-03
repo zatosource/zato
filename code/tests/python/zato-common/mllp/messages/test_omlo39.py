@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OmlO39
-from zato.hl7v2.v2_9.segments import BLG, CTD, DEV, GT1, IN1, IN2, IN3, MSH, NK1, OBR, OBX, OH3, ORC, PAC, PD1, PID, PV1, PV2, REL, SAC, SHP, SPM, TCD, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OML_O39
 
 
 class TestOmlO39:
     """Comprehensive tests for OmlO39 message."""
 
     def test_oml_o39_create(self):
-        msg = OmlO39()
+        msg = OML_O39()
         assert msg._structure_id == "OML_O39"
 
     def test_oml_o39_segment_access(self):
-        msg = OmlO39()
+        msg = OML_O39()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -49,14 +47,14 @@ class TestOmlO39:
         assert msg.dev._segment_id == "DEV"
 
     def test_oml_o39_to_dict(self):
-        msg = OmlO39()
+        msg = OML_O39()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OML_O39"
 
     def test_oml_o39_to_json(self):
-        msg = OmlO39()
+        msg = OML_O39()
 
         result = json.loads(msg.to_json())
 

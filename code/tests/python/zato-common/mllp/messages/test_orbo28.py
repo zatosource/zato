@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OrbO28
-from zato.hl7v2.v2_9.segments import BPO, MSA, MSH, ORC, PID, TQ1, UAC
+from zato.hl7v2.v2_9.messages import ORB_O28
 
 
 class TestOrbO28:
     """Comprehensive tests for OrbO28 message."""
 
     def test_orb_o28_create(self):
-        msg = OrbO28()
+        msg = ORB_O28()
         assert msg._structure_id == "ORB_O28"
 
     def test_orb_o28_segment_access(self):
-        msg = OrbO28()
+        msg = ORB_O28()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
@@ -26,14 +24,14 @@ class TestOrbO28:
         assert msg.bpo._segment_id == "BPO"
 
     def test_orb_o28_to_dict(self):
-        msg = OrbO28()
+        msg = ORB_O28()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "ORB_O28"
 
     def test_orb_o28_to_json(self):
-        msg = OrbO28()
+        msg = ORB_O28()
 
         result = json.loads(msg.to_json())
 

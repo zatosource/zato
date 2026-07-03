@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import SrrS01
-from zato.hl7v2.v2_9.segments import AIG, AIL, AIP, AIS, MSA, MSH, PID, PV1, PV2, RGS, SCH
+from zato.hl7v2.v2_9.messages import SRR_S01
 
 
 class TestSrrS01:
     """Comprehensive tests for SrrS01 message."""
 
     def test_srr_s01_create(self):
-        msg = SrrS01()
+        msg = SRR_S01()
         assert msg._structure_id == "SRR_S01"
 
     def test_srr_s01_segment_access(self):
-        msg = SrrS01()
+        msg = SRR_S01()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
@@ -30,14 +28,14 @@ class TestSrrS01:
         assert msg.aip._segment_id == "AIP"
 
     def test_srr_s01_to_dict(self):
-        msg = SrrS01()
+        msg = SRR_S01()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "SRR_S01"
 
     def test_srr_s01_to_json(self):
-        msg = SrrS01()
+        msg = SRR_S01()
 
         result = json.loads(msg.to_json())
 

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RspZnn
-from zato.hl7v2.v2_9.segments import DSC, ERR, MSA, MSH, QAK, QPD, UAC
+from zato.hl7v2.v2_9.messages import RSP_Znn
 
 
 class TestRspZnn:
     """Comprehensive tests for RspZnn message."""
 
     def test_rsp_znn_create(self):
-        msg = RspZnn()
+        msg = RSP_Znn()
         assert msg._structure_id == "RSP_Znn"
 
     def test_rsp_znn_segment_access(self):
-        msg = RspZnn()
+        msg = RSP_Znn()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -26,14 +24,14 @@ class TestRspZnn:
         assert msg.dsc._segment_id == "DSC"
 
     def test_rsp_znn_to_dict(self):
-        msg = RspZnn()
+        msg = RSP_Znn()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RSP_Znn"
 
     def test_rsp_znn_to_json(self):
-        msg = RspZnn()
+        msg = RSP_Znn()
 
         result = json.loads(msg.to_json())
 

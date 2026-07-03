@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import CcmI21
-from zato.hl7v2.v2_9.segments import ACC, AIG, AIL, AIP, AIS, AL1, DB1, DG1, DRG, GOL, IAM, IN1, IN2, IN3, MSH, OBR, OBX, ODS, ORC, PD1, PDA, PID, PR1, PRB, PRD, PRT, PTH, PV1, PV2, RF1, RGS, RMI, RXE, RXO, RXR, SCH, UAC
+from zato.hl7v2.v2_9.messages import CCM_I21
 
 
 class TestCcmI21:
     """Comprehensive tests for CcmI21 message."""
 
     def test_ccm_i21_create(self):
-        msg = CcmI21()
+        msg = CCM_I21()
         assert msg._structure_id == "CCM_I21"
 
     def test_ccm_i21_segment_access(self):
-        msg = CcmI21()
+        msg = CCM_I21()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -70,14 +68,14 @@ class TestCcmI21:
         assert msg.obx._segment_id == "OBX"
 
     def test_ccm_i21_to_dict(self):
-        msg = CcmI21()
+        msg = CCM_I21()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "CCM_I21"
 
     def test_ccm_i21_to_json(self):
-        msg = CcmI21()
+        msg = CCM_I21()
 
         result = json.loads(msg.to_json())
 

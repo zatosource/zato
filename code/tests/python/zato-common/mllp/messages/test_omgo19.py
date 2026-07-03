@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OmgO19
-from zato.hl7v2.v2_9.segments import BLG, CTD, DEV, GT1, IN1, IN2, IN3, MSH, NK1, OBR, OBX, OH3, ORC, PD1, PID, PRT, PV1, PV2, REL, SAC, SGH, SGT, SPM, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OMG_O19
 
 
 class TestOmgO19:
     """Comprehensive tests for OmgO19 message."""
 
     def test_omg_o19_create(self):
-        msg = OmgO19()
+        msg = OMG_O19()
         assert msg._structure_id == "OMG_O19"
 
     def test_omg_o19_segment_access(self):
-        msg = OmgO19()
+        msg = OMG_O19()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -56,14 +54,14 @@ class TestOmgO19:
         assert msg.dev._segment_id == "DEV"
 
     def test_omg_o19_to_dict(self):
-        msg = OmgO19()
+        msg = OMG_O19()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OMG_O19"
 
     def test_omg_o19_to_json(self):
-        msg = OmgO19()
+        msg = OMG_O19()
 
         result = json.loads(msg.to_json())
 

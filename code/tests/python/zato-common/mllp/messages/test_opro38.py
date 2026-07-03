@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OprO38
-from zato.hl7v2.v2_9.segments import MSA, MSH, OBR, OBX, ORC, PID, SPM, TQ1, UAC
+from zato.hl7v2.v2_9.messages import OPR_O38
 
 
 class TestOprO38:
     """Comprehensive tests for OprO38 message."""
 
     def test_opr_o38_create(self):
-        msg = OprO38()
+        msg = OPR_O38()
         assert msg._structure_id == "OPR_O38"
 
     def test_opr_o38_segment_access(self):
-        msg = OprO38()
+        msg = OPR_O38()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
@@ -28,14 +26,14 @@ class TestOprO38:
         assert msg.tq1._segment_id == "TQ1"
 
     def test_opr_o38_to_dict(self):
-        msg = OprO38()
+        msg = OPR_O38()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OPR_O38"
 
     def test_opr_o38_to_json(self):
-        msg = OprO38()
+        msg = OPR_O38()
 
         result = json.loads(msg.to_json())
 

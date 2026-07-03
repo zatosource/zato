@@ -12,7 +12,7 @@ import socket
 import sys
 
 # Zato
-from conftest import start_sequence, end_sequence, sample_wellness_oru
+from mllp_live_util import end_sequence, sample_wellness_oru, start_sequence
 
 # ################################################################################################################################
 # ################################################################################################################################

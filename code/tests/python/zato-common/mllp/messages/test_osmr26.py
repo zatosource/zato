@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OsmR26
-from zato.hl7v2.v2_9.segments import MSH, OBX, PAC, PID, PV1, SAC, SHP, SPM, UAC
+from zato.hl7v2.v2_9.messages import OSM_R26
 
 
 class TestOsmR26:
     """Comprehensive tests for OsmR26 message."""
 
     def test_osm_r26_create(self):
-        msg = OsmR26()
+        msg = OSM_R26()
         assert msg._structure_id == "OSM_R26"
 
     def test_osm_r26_segment_access(self):
-        msg = OsmR26()
+        msg = OSM_R26()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -33,14 +31,14 @@ class TestOsmR26:
         assert msg.pid._segment_id == "PID"
 
     def test_osm_r26_to_dict(self):
-        msg = OsmR26()
+        msg = OSM_R26()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "OSM_R26"
 
     def test_osm_r26_to_json(self):
-        msg = OsmR26()
+        msg = OSM_R26()
 
         result = json.loads(msg.to_json())
 

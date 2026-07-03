@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import AdtA38
-from zato.hl7v2.v2_9.segments import DRG, EVN, MSH, OBX, PD1, PID, PV1, PV2, UAC
+from zato.hl7v2.v2_9.messages import ADT_A38
 
 
 class TestAdtA38:
     """Comprehensive tests for AdtA38 message."""
 
     def test_adt_a38_create(self):
-        msg = AdtA38()
+        msg = ADT_A38()
         assert msg._structure_id == "ADT_A38"
 
     def test_adt_a38_segment_access(self):
-        msg = AdtA38()
+        msg = ADT_A38()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -28,14 +26,14 @@ class TestAdtA38:
         assert msg.drg._segment_id == "DRG"
 
     def test_adt_a38_to_dict(self):
-        msg = AdtA38()
+        msg = ADT_A38()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "ADT_A38"
 
     def test_adt_a38_to_json(self):
-        msg = AdtA38()
+        msg = ADT_A38()
 
         result = json.loads(msg.to_json())
 

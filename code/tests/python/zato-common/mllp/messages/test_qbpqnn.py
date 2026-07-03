@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import QbpQnn
-from zato.hl7v2.v2_9.segments import DSC, MSH, QPD, RCP, RDF, UAC
+from zato.hl7v2.v2_9.messages import QBP_Qnn
 
 
 class TestQbpQnn:
     """Comprehensive tests for QbpQnn message."""
 
     def test_qbp_qnn_create(self):
-        msg = QbpQnn()
+        msg = QBP_Qnn()
         assert msg._structure_id == "QBP_Qnn"
 
     def test_qbp_qnn_segment_access(self):
-        msg = QbpQnn()
+        msg = QBP_Qnn()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -25,14 +23,14 @@ class TestQbpQnn:
         assert msg.dsc._segment_id == "DSC"
 
     def test_qbp_qnn_to_dict(self):
-        msg = QbpQnn()
+        msg = QBP_Qnn()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "QBP_Qnn"
 
     def test_qbp_qnn_to_json(self):
-        msg = QbpQnn()
+        msg = QBP_Qnn()
 
         result = json.loads(msg.to_json())
 

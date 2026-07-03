@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RspK22
-from zato.hl7v2.v2_9.segments import DSC, ERR, MSA, MSH, PD1, PID, QAK, QPD, QRI, UAC
+from zato.hl7v2.v2_9.messages import RSP_K22
 
 
 class TestRspK22:
     """Comprehensive tests for RspK22 message."""
 
     def test_rsp_k22_create(self):
-        msg = RspK22()
+        msg = RSP_K22()
         assert msg._structure_id == "RSP_K22"
 
     def test_rsp_k22_segment_access(self):
-        msg = RspK22()
+        msg = RSP_K22()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -29,14 +27,14 @@ class TestRspK22:
         assert msg.dsc._segment_id == "DSC"
 
     def test_rsp_k22_to_dict(self):
-        msg = RspK22()
+        msg = RSP_K22()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RSP_K22"
 
     def test_rsp_k22_to_json(self):
-        msg = RspK22()
+        msg = RSP_K22()
 
         result = json.loads(msg.to_json())
 

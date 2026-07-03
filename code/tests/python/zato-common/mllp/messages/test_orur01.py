@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OruR01
-from zato.hl7v2.v2_9.segments import CTD, DEV, DSC, IN1, IN2, IN3, MSH, NK1, OBR, OBX, OH3, ORC, PD1, PID, PRT, PV1, PV2, SPM, TQ1, TXA, UAC
+from zato.hl7v2.v2_9.messages import ORU_R01
 
 
 class TestOruR01:
     """Comprehensive tests for OruR01 message."""
 
     def test_oru_r01_create(self):
-        msg = OruR01()
+        msg = ORU_R01()
         assert msg._structure_id == "ORU_R01"
 
     def test_oru_r01_segment_access(self):
-        msg = OruR01()
+        msg = ORU_R01()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -44,14 +42,14 @@ class TestOruR01:
         assert msg.dsc._segment_id == "DSC"
 
     def test_oru_r01_to_dict(self):
-        msg = OruR01()
+        msg = ORU_R01()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "ORU_R01"
 
     def test_oru_r01_to_json(self):
-        msg = OruR01()
+        msg = ORU_R01()
 
         result = json.loads(msg.to_json())
 

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import RpaI08
-from zato.hl7v2.v2_9.segments import ACC, AUT, CTD, IN1, IN2, IN3, MSA, MSH, OBR, OBX, PID, PR1, PRD, PV1, PV2, RF1, UAC
+from zato.hl7v2.v2_9.messages import RPA_I08
 
 
 class TestRpaI08:
     """Comprehensive tests for RpaI08 message."""
 
     def test_rpa_i08_create(self):
-        msg = RpaI08()
+        msg = RPA_I08()
         assert msg._structure_id == "RPA_I08"
 
     def test_rpa_i08_segment_access(self):
-        msg = RpaI08()
+        msg = RPA_I08()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -38,14 +36,14 @@ class TestRpaI08:
         assert msg.pv2._segment_id == "PV2"
 
     def test_rpa_i08_to_dict(self):
-        msg = RpaI08()
+        msg = RPA_I08()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "RPA_I08"
 
     def test_rpa_i08_to_json(self):
-        msg = RpaI08()
+        msg = RPA_I08()
 
         result = json.loads(msg.to_json())
 

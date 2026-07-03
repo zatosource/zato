@@ -21,7 +21,7 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.retry import RetryEngine
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 
-from conftest import sample_adt_a01, sample_oru_r01, start_sequence, end_sequence, start_server, stop_server
+from mllp_live_util import end_sequence, sample_adt_a01, sample_oru_r01, start_sequence, start_server, stop_server
 
 # ################################################################################################################################
 # ################################################################################################################################

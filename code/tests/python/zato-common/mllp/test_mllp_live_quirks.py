@@ -12,7 +12,7 @@ import socket
 # Zato
 from zato.common.hl7.mllp.codec import frame_encode
 
-from conftest import start_sequence, end_sequence, start_server, stop_server
+from mllp_live_util import end_sequence, start_sequence, start_server, stop_server
 
 # ################################################################################################################################
 # ################################################################################################################################

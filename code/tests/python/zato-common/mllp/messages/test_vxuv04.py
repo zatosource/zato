@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import VxuV04
-from zato.hl7v2.v2_9.segments import IN1, IN2, IN3, MSH, OBX, ORC, PD1, PID, PV1, PV2, RXA, RXR, TQ1, UAC
+from zato.hl7v2.v2_9.messages import VXU_V04
 
 
 class TestVxuV04:
     """Comprehensive tests for VxuV04 message."""
 
     def test_vxu_v04_create(self):
-        msg = VxuV04()
+        msg = VXU_V04()
         assert msg._structure_id == "VXU_V04"
 
     def test_vxu_v04_segment_access(self):
-        msg = VxuV04()
+        msg = VXU_V04()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -34,14 +32,14 @@ class TestVxuV04:
         assert msg.obx._segment_id == "OBX"
 
     def test_vxu_v04_to_dict(self):
-        msg = VxuV04()
+        msg = VXU_V04()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "VXU_V04"
 
     def test_vxu_v04_to_json(self):
-        msg = VxuV04()
+        msg = VXU_V04()
 
         result = json.loads(msg.to_json())
 

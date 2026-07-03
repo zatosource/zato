@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import BtsO31
-from zato.hl7v2.v2_9.segments import BPO, BTX, MSH, ORC, PD1, PID, PV1, PV2, TQ1, UAC
+from zato.hl7v2.v2_9.messages import BTS_O31
 
 
 class TestBtsO31:
     """Comprehensive tests for BtsO31 message."""
 
     def test_bts_o31_create(self):
-        msg = BtsO31()
+        msg = BTS_O31()
         assert msg._structure_id == "BTS_O31"
 
     def test_bts_o31_segment_access(self):
-        msg = BtsO31()
+        msg = BTS_O31()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.uac._segment_id == "UAC"
@@ -29,14 +27,14 @@ class TestBtsO31:
         assert msg.btx._segment_id == "BTX"
 
     def test_bts_o31_to_dict(self):
-        msg = BtsO31()
+        msg = BTS_O31()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "BTS_O31"
 
     def test_bts_o31_to_json(self):
-        msg = BtsO31()
+        msg = BTS_O31()
 
         result = json.loads(msg.to_json())
 

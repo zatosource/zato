@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import json
-import pytest
 
-from zato.hl7v2.v2_9.messages import OrlO55
-from zato.hl7v2.v2_9.segments import MSA, MSH, OBR, OBX, ORC, PID, SAC, SPM, TQ1, UAC
+from zato.hl7v2.v2_9.messages import ORL_O55
 
 
 class TestOrlO55:
     """Comprehensive tests for OrlO55 message."""
 
     def test_orl_o55_create(self):
-        msg = OrlO55()
+        msg = ORL_O55()
         assert msg._structure_id == "ORL_O55"
 
     def test_orl_o55_segment_access(self):
-        msg = OrlO55()
+        msg = ORL_O55()
 
         assert msg.msh._segment_id == "MSH"
         assert msg.msa._segment_id == "MSA"
@@ -29,14 +27,14 @@ class TestOrlO55:
         assert msg.obr._segment_id == "OBR"
 
     def test_orl_o55_to_dict(self):
-        msg = OrlO55()
+        msg = ORL_O55()
 
         result = msg.to_dict()
 
         assert result["_structure_id"] == "ORL_O55"
 
     def test_orl_o55_to_json(self):
-        msg = OrlO55()
+        msg = ORL_O55()
 
         result = json.loads(msg.to_json())
 
