@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import socket
+import ssl
 from logging import getLogger
 from traceback import format_exc
 
@@ -19,7 +20,7 @@ from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
 
-from zato.hl7v2 import parse_hl7
+from zato.hl7v2 import HL7ValidationError, parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,12 +96,14 @@ class HL7MLLPServer:
         normalize_quadruple_quoted_empty:'bool' = True,
         allow_short_encoding_characters:'bool' = True,
         fix_off_by_one_field_index:'bool' = False,
+        ssl_context:'ssl.SSLContext | None' = None,
         ) -> 'None':
 
         self.address = address
         self.router  = router
         self.start_sequence = start_sequence
         self.end_sequence   = end_sequence
+        self.ssl_context    = ssl_context
 
         self.receive_timeout  = receive_timeout
         self.max_message_size = max_message_size
@@ -174,6 +177,20 @@ class HL7MLLPServer:
             except OSError:
                 break
 
+            # If TLS is configured, run the handshake before any MLLP data is read ..
+            if self.ssl_context:
+
+                # .. bound the handshake with the receive timeout so a silent client cannot stall the accept loop ..
+                client_socket.settimeout(self.receive_timeout)
+
+                # .. a failed handshake (e.g. a required client certificate is missing) only drops this connection ..
+                try:
+                    client_socket = self.ssl_context.wrap_socket(client_socket, server_side=True)
+                except (ssl.SSLError, socket.timeout, OSError):
+                    logger.warning('TLS handshake failed with %s:%s; e:`%s`', peer_address[0], peer_address[1], format_exc())
+                    client_socket.close()
+                    continue
+
             try:
                 self._handle_connection(client_socket, peer_address)
             except Exception:
@@ -222,7 +239,10 @@ class HL7MLLPServer:
                     chunk = client_socket.recv(self.read_buffer_size)
                 except socket.timeout:
                     continue
-                except (ConnectionResetError, BrokenPipeError):
+
+                # .. an ssl.SSLError means a TLS-level failure on an encrypted connection,
+                # .. e.g. the peer aborted mid-record, and the connection cannot continue ..
+                except (ConnectionResetError, BrokenPipeError, ssl.SSLError):
                     break
 
                 # .. remote end disconnected ..
@@ -461,7 +481,7 @@ class HL7MLLPServer:
 
                     # .. parsing or validation failed - send an AE reject ACK
                     # .. back to the sender and skip this message ..
-                    except ValueError:
+                    except (ValueError, HL7ValidationError):
                         logger.warning('Parse/validation error for channel `%s` from %s:%d; e:`%s`',
                             matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
                         ack_code = 'AE'

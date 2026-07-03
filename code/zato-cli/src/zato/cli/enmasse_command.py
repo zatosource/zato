@@ -50,6 +50,8 @@ class Enmasse(ZatoCommand):
         {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--output', 'help':'Path to a file to export data to', 'action':'store'},
 
+        {'name':'--include-type', 'help':'Comma-separated list of object types to limit the export to'},
+
         {'name':'--ignore-missing-includes', 'help':'Ignore include files that do not exist', 'action':'store_true'},
         {'name':'--exit-on-missing-file', 'help':'If input file does not exist, exit with status code 0', 'action':'store_true'},
 
@@ -121,6 +123,12 @@ class Enmasse(ZatoCommand):
                 # Export to dictionary
                 exporter = EnmasseYAMLExporter()
                 data_dict: 'stranydict' = exporter.export_to_dict(session)
+
+                # If requested, limit the export to specific object types only,
+                # e.g. --include-type channel_hl7_mllp or a comma-separated list of types.
+                if args.include_type:
+                    include_types = {item.strip() for item in args.include_type.split(',')}
+                    data_dict = {key: value for key, value in data_dict.items() if key in include_types}
 
                 file_writer = FileWriter(args.output)
                 file_writer.write(data_dict)

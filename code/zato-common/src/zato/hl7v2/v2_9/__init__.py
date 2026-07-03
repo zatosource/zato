@@ -1601,13 +1601,14 @@ from zato.hl7v2.v2_9.messages import (
     VXU_V04,
 )
 
-from zato.hl7v2.base import HL7Message
+from zato.hl7v2.base import HL7Message, HL7ValidationError
 from zato.hl7v2_rs import parse_hl7 as _rust_parse, validate as _rust_validate, serialize as _rust_serialize, ValidationResult, ValidationError
-from zato.hl7v2_rs import apply_tolerance as _apply_tolerance, ToleranceConfig
+from zato.hl7v2_rs import apply_tolerance as _apply_tolerance, validate_parsed as _rust_validate_parsed, ToleranceConfig
 from zato.hl7v2.batch import parse_batch, parse_file, parse_batch_or_file
 
 __all__ = [
     "HL7Message",
+    "HL7ValidationError",
     "ToleranceConfig",
     "ValidationError",
     "ValidationResult",
@@ -3219,6 +3220,15 @@ def parse_hl7(raw: str, validate: bool = True, tolerance: 'ToleranceConfig | Non
         raise ValueError(f"Unknown structure: {raw_message.structure_id}")
     msg = message_class.__new__(message_class)
     msg._raw_message = raw_message
+
+    # Field-level validation (required fields, datatype formats) runs on the parsed
+    # message, while the structural required-segment check always runs at parse time.
+    if validate:
+        result = _rust_validate_parsed(raw_message)
+        if not result.is_valid:
+            details = "; ".join(f"{error.path}: {error.message}" for error in result.errors)
+            raise HL7ValidationError(f"Message validation failed: {details}")
+
     return msg
 
 

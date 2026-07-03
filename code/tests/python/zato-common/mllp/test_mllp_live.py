@@ -357,9 +357,10 @@ class TestFramingEdgeCases:
 
             raw_socket.sendall(framed_one + framed_two)
 
-            # .. read two separate ACK frames ..
-            ack_one = _read_one_framed_response(raw_socket)
-            ack_two = _read_one_framed_response(raw_socket)
+            # .. read two ACK frames through a single decoder, because both frames
+            # .. may arrive in one recv chunk and a per-call decoder would discard
+            # .. the bytes of the second frame ..
+            ack_one, ack_two = _read_two_framed_responses(raw_socket)
 
             assert b'MSA|AA|BATCH001' in ack_one
             assert b'MSA|AA|BATCH002' in ack_two

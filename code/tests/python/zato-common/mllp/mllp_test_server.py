@@ -160,11 +160,11 @@ def main() -> 'None':
 
     address = f'{host}:{port}'
 
-    # Build TLS context if cert is provided (not yet wired to HL7MLLPServer)
-    _ssl_context = None
+    # Build the TLS context if a certificate is provided
+    ssl_context = None
 
     if args.tls_cert:
-        _ssl_context = build_server_ssl_context(
+        ssl_context = build_server_ssl_context(
             cert_file=args.tls_cert,
             key_file=args.tls_key,
             ca_file=args.tls_ca,
@@ -202,6 +202,7 @@ def main() -> 'None':
         default_character_encoding=args.default_character_encoding,
         dedup_ttl_value=args.dedup_ttl_value,
         dedup_ttl_unit=args.dedup_ttl_unit,
+        ssl_context=ssl_context,
     )
 
     # Register SIGTERM handler for clean shutdown
