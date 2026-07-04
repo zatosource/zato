@@ -49,6 +49,9 @@ outgoing_hl7_mllp:
     logging_level: DEBUG
     max_retries: 3
     backoff_base_seconds: 2
+    tls_ca_path: /path/to/ca.pem
+    tls_cert_path: /path/to/client.pem
+    tls_key_path: /path/to/client.key
 
 """
 
@@ -136,6 +139,9 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
             self.assertEqual(connections_by_name[connection_3_name]['logging_level'], 'DEBUG')
             self.assertEqual(connections_by_name[connection_3_name]['max_retries'], 3)
             self.assertEqual(connections_by_name[connection_3_name]['backoff_base_seconds'], 2)
+            self.assertEqual(connections_by_name[connection_3_name]['tls_ca_path'], '/path/to/ca.pem')
+            self.assertEqual(connections_by_name[connection_3_name]['tls_cert_path'], '/path/to/client.pem')
+            self.assertEqual(connections_by_name[connection_3_name]['tls_key_path'], '/path/to/client.key')
 
             # .. now reimport the exported file to confirm idempotency ..
             _ = self.invoke_enmasse(export_path)
