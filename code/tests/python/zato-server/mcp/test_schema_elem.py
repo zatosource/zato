@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
-from zato.input_output import AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, Secret, Text, UTC, UUID  # pyright: ignore[reportAttributeAccessIssue]
+from zato.input_output import AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Elem, Float, Int, List, Secret, \
+    Text, UTC, UUID
 from zato.server.connection.mcp.schema import _get_elem_json_schema
 
 # ################################################################################################################################
@@ -22,12 +23,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _CustomElem:
-    """ A custom class not in the elem mapping, simulating an unknown Elem type.
+class _CustomElem(Elem):
+    """ A custom Elem subclass not in the elem mapping, simulating an unknown Elem type.
     """
-
-    def __init__(self, name:'str') -> 'None':
-        self.name = name
 
 # ################################################################################################################################
 # ################################################################################################################################
