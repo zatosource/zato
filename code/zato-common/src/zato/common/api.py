@@ -699,6 +699,7 @@ class GENERIC:
             OUTCONN_GRAPHQL = 'outconn-graphql'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
+            OUTCONN_SFTP = 'outconn-sftp'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -824,6 +825,44 @@ class MONGODB:
 
         def __iter__(self):
             return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SFTP:
+
+    class DEFAULT:
+        BANDWIDTH_LIMIT = 10
+        BUFFER_SIZE = 32768
+        COMMAND_SFTP = 'sftp'
+        COMMAND_PING = 'ls .'
+        PORT = 22
+
+    class LOG_LEVEL:
+        LEVEL0 = NameId('0', '0')
+        LEVEL1 = NameId('1', '1')
+        LEVEL2 = NameId('2', '2')
+        LEVEL3 = NameId('3', '3')
+        LEVEL4 = NameId('4', '4')
+
+        def __iter__(self):
+            return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
+
+    class IP_TYPE:
+        IPV4 = NameId('IPv4', 'ipv4')
+        IPV6 = NameId('IPv6', 'ipv6')
+
+        def __iter__(self):
+            return iter((self.IPV4, self.IPV6))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # We need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

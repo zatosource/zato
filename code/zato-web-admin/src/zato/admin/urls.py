@@ -39,6 +39,7 @@ from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
+from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
@@ -413,6 +414,30 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. SFTP
+
+    url(r'^zato/outgoing/sftp/$',
+        login_required(out_sftp.Index()), name=out_sftp.Index.url_name),
+    url(r'^zato/outgoing/sftp/create/$',
+        login_required(out_sftp.Create()), name=out_sftp.Create.url_name),
+    url(r'^zato/outgoing/sftp/edit/$',
+        login_required(out_sftp.Edit()), name=out_sftp.Edit.url_name),
+    url(r'^zato/outgoing/sftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sftp.Delete()), name=out_sftp.Delete.url_name),
+    url(r'^zato/outgoing/sftp/change-password/$',
+        login_required(out_sftp.change_password), name='out-sftp-change-password'),
+    url(r'^zato/outgoing/sftp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sftp.ping), name='out-sftp-ping'),
+    url(r'^zato/outgoing/sftp/command-shell/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_sftp.command_shell), name='out-sftp-command-shell'),
+    url(r'^zato/outgoing/sftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_sftp.command_shell_action), name='out-sftp-command-shell-action'),
     ]
 
 # ################################################################################################################################

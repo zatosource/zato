@@ -30,6 +30,7 @@ from requests import \
 # Zato
 from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
+from zato.server.connection.sftp import SFTPConnection
 
 ################################################################################################################################
 ################################################################################################################################
@@ -484,6 +485,32 @@ class MLLPFacade:
     def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
         self._outconn_hl7_mllp[name]
         return HL7MLLPInvoker(name, self._outconn_hl7_mllp)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SFTPFacade:
+    """ Provides dict-like access to SFTP outgoing connections from services via self.sftp.
+    """
+    cid: 'str'
+    _outconn_sftp: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_sftp = config_manager.outconn_sftp
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'SFTPConnection':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._outconn_sftp[name]
+
+        # The wrapper holds a queue with the underlying SFTP client
+        wrapper = item['conn']
+
+        out = SFTPConnection(self.cid, wrapper)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
