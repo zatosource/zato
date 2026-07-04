@@ -6,6 +6,8 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+import time
+
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
@@ -110,7 +112,55 @@ class TestOutgoingLDAP:
         assert 'test-out-ldap-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        from _ping_stubs import start_ldap_stub
+        port, server = start_ldap_stub()
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                cluster_id=1,
+                name='test-out-ldap-ping-live',
+                type_=TYPE,
+                is_active=True,
+                is_internal=False,
+                is_channel=False,
+                is_outconn=True,
+                address=f'ldap://127.0.0.1:{port}',
+                username='cn=admin,dc=test,dc=com',
+                password='test-password',
+                pool_size=1,
+                pool_max_cycles=1,
+                pool_keep_alive=30,
+                use_auto_range=True,
+                use_tls=False,
+                sasl_mechanism='',
+                server_list=f'ldap://127.0.0.1:{port}',
+                is_tls_enabled=False,
+                get_info='NO_INFO',
+                connect_timeout=5,
+                ip_mode='IP_SYSTEM_DEFAULT',
+                pool_ha_strategy='ROUND_ROBIN',
+                pool_exhaust_timeout=5,
+                auto_bind=False,
+                should_check_names=True,
+                is_read_only=False,
+                pool_name='',
+                pool_lifetime=30,
+                should_return_empty_attrs=True,
+            )
+            ping_id = resp['id']
+            try:
+                # The connection queue is built asynchronously so retry until a client is available
+                deadline = time.time() + 30
+                while True:
+                    result = client.invoke('zato.generic.connection.ping', {'id': ping_id})
+                    if not result['is_success'] and 'No free connections' in result['info'] and time.time() < deadline:
+                        time.sleep(0.25)
+                        continue
+                    break
+                assert result['is_success'] is True, result['info']
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

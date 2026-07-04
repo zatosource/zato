@@ -97,9 +97,6 @@ class TestCloudMicrosoft365:
         assert 'test-ms365-1-edited' in names
         assert 'test-ms365-1' not in names
 
-    def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
-
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)
         client.delete(f'{SERVICE}.delete', id=item_id)

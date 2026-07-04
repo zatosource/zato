@@ -6,6 +6,8 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+import time
+
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
@@ -88,7 +90,64 @@ class TestOutgoingOdoo:
         assert 'test-out-odoo-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        import json
+        from _ping_stubs import start_http_stub
+
+        def handler(method, path, body_bytes):
+            request = json.loads(body_bytes)
+            params = request['params']
+            service = params['service']
+            rpc_method = params['method']
+
+            if service == 'common' and rpc_method in ('login', 'authenticate'):
+                result = 1
+            elif service == 'object':
+                # execute_kw args: (db, uid, password, model, method, args...)
+                model_method = params['args'][4]
+                if model_method == 'search':
+                    result = [1]
+                elif model_method == 'read':
+                    result = [{'id': 1, 'login': 'admin'}]
+                else:
+                    result = True
+            else:
+                result = True
+
+            return {'jsonrpc': '2.0', 'id': request['id'], 'result': result}
+
+        port, server = start_http_stub(handler)
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                cluster_id=1,
+                name='test-out-odoo-ping-live',
+                is_active=True,
+                host='127.0.0.1',
+                port=port,
+                user='admin',
+                password='admin',
+                database='testdb',
+                protocol='jsonrpc',
+                pool_size=1,
+            )
+            ping_id = resp['id']
+            try:
+                # The connection queue is built asynchronously so retry until a client is available
+                deadline = time.time() + 30
+                while True:
+                    try:
+                        result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
+                    except Exception as e:
+                        if 'No free connections' in str(e) and time.time() < deadline:
+                            time.sleep(0.25)
+                            continue
+                        raise
+                    else:
+                        break
+                assert 'Ping OK' in result['info']
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)
