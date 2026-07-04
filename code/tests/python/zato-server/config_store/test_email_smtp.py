@@ -20,7 +20,7 @@ class TestEmailSMTP:
     created_ids = []
 
     def test_01_get_list_empty(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         assert isinstance(data, list)
 
     def test_02_create_one(self, client):
@@ -41,7 +41,7 @@ class TestEmailSMTP:
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         names = [item['name'] for item in data]
         assert 'test-smtp-1' in names
 
@@ -63,7 +63,7 @@ class TestEmailSMTP:
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-smtp-')]
         assert len(test_items) >= 5
 
@@ -85,7 +85,7 @@ class TestEmailSMTP:
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         names = [item['name'] for item in data]
         assert 'test-smtp-1-edited' in names
         assert 'test-smtp-1' not in names
@@ -98,7 +98,7 @@ class TestEmailSMTP:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-smtp-')]
         assert len(test_items) >= 4
 
@@ -108,6 +108,6 @@ class TestEmailSMTP:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-smtp-')]
         assert len(test_items) == 0
