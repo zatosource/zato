@@ -134,7 +134,7 @@ class TestOutgoingGraphQL:
             ping_id = response['id']
             self.__class__.created_ids.append(ping_id)
 
-            ping_result = client.invoke(f'{SERVICE}.ping', id=ping_id)
+            ping_result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
             assert ping_result is not None
         finally:
             server.shutdown()

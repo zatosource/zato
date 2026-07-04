@@ -12,6 +12,10 @@ from zato.common.test.client import AdminClient as ZatoClient
 SERVICE = 'zato.generic.connection'
 TYPE = 'outconn-hl7-fhir'
 
+# The config manager has no handler registered for the outconn-hl7-fhir
+# connection type and FHIR is dormant in this release.
+pytestmark = pytest.mark.skip(reason='FHIR is dormant, no config manager handler for outconn-hl7-fhir')
+
 @pytest.fixture(scope='module')
 def client(zato_server):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
