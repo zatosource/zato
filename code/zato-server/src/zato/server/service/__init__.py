@@ -44,7 +44,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
+from zato.server.connection.facade import FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
     SchedulerFacade, SFTPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
@@ -482,6 +482,9 @@ class Service:
         # REST facade for outgoing connections
         self.rest = RESTFacade()
 
+        # FHIR facade for outgoing connections
+        self.fhir = FHIRFacade()
+
         # MLLP facade for outgoing connections
         self.mllp = MLLPFacade()
 
@@ -600,6 +603,9 @@ class Service:
 
         # GraphQL facade
         self.out.graphql.init(self._config_manager)
+
+        # FHIR facade
+        self.fhir.init(self._config_manager)
 
         # MLLP facade
         self.mllp.init(self._config_manager)
