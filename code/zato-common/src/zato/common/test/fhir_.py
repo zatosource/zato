@@ -328,11 +328,19 @@ class _FHIRStore:
         leaves:'strlist' = []
         _collect_string_leaves(field_value, leaves)
 
+        leaves_lower = [leaf.lower() for leaf in leaves]
+
+        # A token search in the system|code form, per the spec's search.html#token,
+        # matches when both the system and the code appear in the element searched.
+        if '|' in value:
+            system, code = value.split('|', 1)
+            out = system.lower() in leaves_lower and code.lower() in leaves_lower
+            return out
+
         # .. and checking each one for a case-insensitive prefix match.
         value_lower = value.lower()
 
-        for leaf in leaves:
-            leaf_lower = leaf.lower()
+        for leaf_lower in leaves_lower:
             if leaf_lower.startswith(value_lower):
                 out = True
                 break
