@@ -922,7 +922,7 @@ class ConnectorAMQP(Connector):
             self._create_outconn(config)
 
         old_name = f' ({config.old_name})' if config.old_name != config.name else ''
-        logger.info(f'Updated outconn `{config.name}`{old_name} in AMQP connector `{config.def_name}`')
+        logger.info(f'Updated outconn `{config.name}`{old_name} in AMQP connector `{self.config.name}`')
 
 # ################################################################################################################################
 
