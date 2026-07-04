@@ -115,7 +115,7 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
         'conn_id': conn_id,
         'conn_name': conn_name,
         'conn_slug': conn_slug,
-        'conn_type': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
+        'conn_type': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR,
         'timeout': max_wait_time,
         'cluster_id': req.zato.cluster_id,
     }

@@ -9,8 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime
 from traceback import format_exc
+from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
@@ -571,23 +571,40 @@ class Invoke(AdminService):
 
         # Local aliases
         response = None
+        conn_type = self.request.input.conn_type
+        request_data = self.request.input.request_data
 
         # Maps all known connection types to their implementation ..
         conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.server.config_manager.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.server.config_manager.outconn_hl7_mllp,
         }
 
         # .. get the actual implementation ..
-        container = conn_type_to_container[self.request.input.conn_type]
+        container = conn_type_to_container[conn_type]
 
         # .. and invoke it.
         with container[self.request.input.conn_name].conn.client() as client:
 
             try:
-                response = client.invoke(self.request.input.request_data)
+                # FHIR connections treat the request as a path to GET, e.g. /Patient?_count=1 ..
+                if conn_type == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR:
 
-                # Results are objects, e.g. an AckResult for MLLP, and the caller needs text
-                response = str(response)
+                    # .. the query string, if any, must go to the client separately from the path ..
+                    path, _, query = request_data.partition('?')
+                    params = dict(parse_qsl(query))
+
+                    response = client.execute(path=path, method='get', params=params)
+
+                    # The response is JSON and the caller needs text
+                    response = dumps(response, indent=2)
+
+                # .. other connections, e.g. MLLP, send the request as a message.
+                else:
+                    response = client.invoke(request_data)
+
+                    # Results are objects, e.g. an AckResult for MLLP, and the caller needs text
+                    response = str(response)
             except Exception:
                 exc = format_exc()
                 response = exc
