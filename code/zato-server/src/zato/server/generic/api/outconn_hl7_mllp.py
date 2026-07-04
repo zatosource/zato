@@ -13,6 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import HL7
 from zato.common.hl7.mllp.client import HL7MLLPClient
+from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.tcp import parse_address
 from zato.server.connection.queue import Wrapper
@@ -41,6 +42,11 @@ outconn_config_defaults:'dict[str, object]' = {
     'max_msg_size': HL7.Default.max_msg_size,
     'read_buffer_size': HL7.Default.read_buffer_size,
     'should_log_messages': False,
+
+    # TLS is off by default - it turns on when a CA bundle is configured
+    'tls_ca_path': '',
+    'tls_cert_path': '',
+    'tls_key_path': '',
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
@@ -63,6 +69,17 @@ class _HL7MLLPConnection:
         # Config recv_timeout is in milliseconds, the client expects seconds
         receive_timeout = config.recv_timeout / 1000.0 # type: ignore[union-attr]
 
+        # TLS turns on when a CA bundle is configured - the client then always verifies
+        # the server against it, and a cert/key pair, if also configured, enables mTLS.
+        if config.tls_ca_path: # type: ignore[union-attr]
+            ssl_context = build_client_ssl_context(
+                ca_file=config.tls_ca_path, # type: ignore[union-attr]
+                cert_file=config.tls_cert_path, # type: ignore[union-attr]
+                key_file=config.tls_key_path, # type: ignore[union-attr]
+            )
+        else:
+            ssl_context = None
+
         self.impl = HL7MLLPClient(
             host,
             port,
@@ -72,6 +89,7 @@ class _HL7MLLPConnection:
             max_message_size=config.max_msg_size, # type: ignore[union-attr]
             read_buffer_size=config.read_buffer_size, # type: ignore[union-attr]
             should_log_messages=config.should_log_messages, # type: ignore[union-attr]
+            ssl_context=ssl_context,
         )
 
     def invoke(self, data:'str | bytes') -> 'object':

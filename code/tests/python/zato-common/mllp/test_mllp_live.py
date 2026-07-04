@@ -43,6 +43,7 @@ _oversized_message_byte_count    = 500
 _slow_callback_delay_seconds     = 5
 _client_receive_timeout_seconds  = 1.0
 _circuit_breaker_reset_seconds   = 0.1
+_outconn_recv_timeout_ms         = 5000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -832,6 +833,69 @@ class TestTlsAndMtls:
 
         finally:
             stop_server(process)
+
+# ################################################################################################################################
+
+    def test_outconn_tls_from_config_paths(self, mllp_tls_server:'int', tls_certs:'dict[str, str]') -> 'None':
+        """ The outgoing-connection wrapper must build its TLS context from the tls_*_path
+        config fields on its own - services only ever go through self.mllp, so TLS has
+        to work without anyone instantiating an ssl.SSLContext by hand. The server here
+        requires mTLS, so a successful ACK proves both the CA bundle and the client
+        cert/key pair were wired through.
+        """
+
+        # Zato
+        from zato.common.ext.bunch import Bunch
+        from zato.server.generic.api.outconn_hl7_mllp import _HL7MLLPConnection
+
+        config = Bunch()
+        config.address = f'127.0.0.1:{mllp_tls_server}'
+        config.start_seq = '0b'
+        config.end_seq = '1c 0d'
+        config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_msg_size = _max_message_size
+        config.read_buffer_size = _recv_buffer_size
+        config.should_log_messages = False
+        config.tls_ca_path = tls_certs['ca']
+        config.tls_cert_path = tls_certs['client_cert']
+        config.tls_key_path = tls_certs['client_key']
+
+        connection = _HL7MLLPConnection(config)
+        result = connection.invoke(sample_adt_a01('OUTTLS01'))
+
+        assert isinstance(result, AckResult)
+        assert result.is_accepted is True
+        assert result.ack_code == 'AA'
+
+# ################################################################################################################################
+
+    def test_outconn_plaintext_when_no_ca_configured(self, mllp_server:'int') -> 'None':
+        """ With no CA bundle configured the outgoing-connection wrapper must not build
+        any TLS context and must keep sending in plaintext.
+        """
+
+        # Zato
+        from zato.common.ext.bunch import Bunch
+        from zato.server.generic.api.outconn_hl7_mllp import _HL7MLLPConnection
+
+        config = Bunch()
+        config.address = f'127.0.0.1:{mllp_server}'
+        config.start_seq = '0b'
+        config.end_seq = '1c 0d'
+        config.recv_timeout = _outconn_recv_timeout_ms
+        config.max_msg_size = _max_message_size
+        config.read_buffer_size = _recv_buffer_size
+        config.should_log_messages = False
+        config.tls_ca_path = ''
+        config.tls_cert_path = ''
+        config.tls_key_path = ''
+
+        connection = _HL7MLLPConnection(config)
+        result = connection.invoke(sample_adt_a01('OUTPLAIN1'))
+
+        assert isinstance(result, AckResult)
+        assert result.is_accepted is True
+        assert result.ack_code == 'AA'
 
 # ################################################################################################################################
 # ################################################################################################################################

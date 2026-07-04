@@ -46,6 +46,9 @@ Outgoing_Optional_Fields = [
     'circuit_breaker_threshold_percent',
     'circuit_breaker_window_seconds',
     'circuit_breaker_reset_seconds',
+    'tls_ca_path',
+    'tls_cert_path',
+    'tls_key_path',
 ]
 
 # ################################################################################################################################

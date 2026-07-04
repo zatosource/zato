@@ -49,6 +49,11 @@ class OutgoingHL7MLLPImporter(GenericConnectionImporter):
         'circuit_breaker_threshold_percent': HL7.Default.circuit_breaker_threshold_percent,
         'circuit_breaker_window_seconds': HL7.Default.circuit_breaker_window_seconds,
         'circuit_breaker_reset_seconds': HL7.Default.circuit_breaker_reset_seconds,
+
+        # TLS is off by default - it turns on when a CA bundle is configured
+        'tls_ca_path': '',
+        'tls_cert_path': '',
+        'tls_key_path': '',
     }
 
     connection_secret_keys:'list' = []
