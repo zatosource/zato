@@ -63,6 +63,7 @@ from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
+from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
@@ -189,6 +190,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
 
+        # Generic connections - HL7 FHIR outconns
+        self.outconn_hl7_fhir = {}
+
         # Generic connections - HL7 MLLP outconns
         self.outconn_hl7_mllp = {}
 
@@ -249,6 +253,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: self.channel_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: self.outconn_kafka,
@@ -266,6 +271,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: ChannelKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: OutconnKafkaWrapper,
@@ -801,6 +807,7 @@ class ConfigManager(_ConfigManagerBase):
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
+        outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
@@ -818,6 +825,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_microsoft_365_map,
             cloud_salesforce_map,
             outconn_graphql_map,
+            outconn_hl7_fhir_map,
             outconn_hl7_mllp_map,
             outconn_kafka_map,
             outconn_ldap_map,
@@ -826,6 +834,7 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         password_maps = [
+            outconn_hl7_fhir_map,
             outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,

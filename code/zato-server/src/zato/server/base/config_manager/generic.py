@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
+from zato.common.api import GENERIC as COMMON_GENERIC, HL7, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
 from zato.common.typing_ import cast_
@@ -18,6 +18,7 @@ from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
+from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys
@@ -36,6 +37,10 @@ if 0:
 # ################################################################################################################################
 
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
+
+# The auth types a FHIR outgoing connection's security definition can resolve to
+_fhir_auth_type_basic = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
+_fhir_auth_type_oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -294,6 +299,45 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_hl7_fhir(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply, coerces numeric fields
+        that may arrive as strings from opaque storage and resolves the connection's security definition
+        into the fields the FHIR client reads.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in outconn_fhir_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. the Dashboard sends this marker when no security definition was selected ..
+        if config['security_id'] == ZATO_NONE:
+            config['security_id'] = 0
+
+        # .. make sure numeric fields are integers ..
+        for key in outconn_fhir_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. without a security definition, there is nothing more to resolve.
+        security_id = config['security_id']
+        if not security_id:
+            return
+
+        # A Basic Auth definition maps to the username and password the client sends ..
+        if sec_def := self.basic_auth_get_by_id(security_id):
+            config['auth_type'] = _fhir_auth_type_basic
+            config['username'] = sec_def['username']
+            config['secret'] = sec_def['password']
+
+        # .. anything else is an OAuth one - the client needs the auth type only
+        # .. because tokens are obtained per request through the bearer token manager.
+        else:
+            config['auth_type'] = _fhir_auth_type_oauth
 
 # ################################################################################################################################
 

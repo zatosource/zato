@@ -17,12 +17,14 @@ from email.utils import formatdate
 from http.client import BAD_REQUEST, CREATED, GONE, NO_CONTENT, NOT_FOUND, OK, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from logging import getLogger
-from time import sleep
+from time import sleep, time
 from typing import NamedTuple
 from urllib.parse import parse_qsl, urlsplit
 from uuid import uuid4
 
 # Zato
+from zato.common.api import HL7
+from zato.common.typing_ import cast_
 from zato.common.util.tcp import get_free_port
 
 # ################################################################################################################################
@@ -46,6 +48,9 @@ resource_list = list['stranydict']
 # Search parameters as a list of name/value pairs
 search_parameter_list = list[tuple[str, str]]
 
+# Maps issued OAuth tokens to their expiration time as a Unix timestamp
+token_dict = dict[str, float]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,6 +65,9 @@ _fhir_version = '4.0.1'
 # The media type for FHIR JSON, per the spec's http.html#mime-type
 _fhir_content_type = 'application/fhir+json; charset=utf-8'
 
+# The media type for OAuth token responses, per RFC 6749
+_json_content_type = 'application/json; charset=utf-8'
+
 # The version ID assigned to the first version of each resource
 _first_version_id = '1'
 
@@ -68,6 +76,19 @@ _start_timeout = 10.0
 
 # How long to sleep between connection attempts while waiting for the server, in seconds
 _start_sleep_time = 0.1
+
+# The auth types the server supports, the same IDs the FHIR outgoing connection uses
+_auth_type_basic = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
+_auth_type_oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
+
+# Where OAuth tokens are issued, per RFC 6749's client credentials grant
+_token_path = '/oauth/token'
+
+# How long issued OAuth tokens are valid for, in seconds
+_token_lifetime = 3600
+
+# The only grant type the token endpoint implements
+_grant_type_client_credentials = 'client_credentials'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -403,8 +424,61 @@ class _FHIRStore:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _OAuthTokenIssuer:
+    """ Issues and validates OAuth bearer tokens for the client credentials grant of RFC 6749.
+    """
+    def __init__(self, client_id:'str', client_secret:'str') -> 'None':
+
+        # The only credentials the token endpoint accepts
+        self._client_id = client_id
+        self._client_secret = client_secret
+
+        # All the tokens issued so far, together with when they expire
+        self._tokens:'token_dict' = {}
+
+        # Serializes access to the token dictionary
+        self._lock = threading.Lock()
+
+# ################################################################################################################################
+
+    def issue(self, client_id:'str', client_secret:'str') -> 'strnone':
+        """ Issues a new token if the credentials are correct, otherwise returns None.
+        """
+        if client_id != self._client_id:
+            return None
+
+        if client_secret != self._client_secret:
+            return None
+
+        token = uuid4().hex
+        expiration_time = time() + _token_lifetime
+
+        with self._lock:
+            self._tokens[token] = expiration_time
+
+        out = token
+        return out
+
+# ################################################################################################################################
+
+    def validate(self, token:'str') -> 'bool':
+        """ Returns True if the token was issued by this server and has not expired yet.
+        """
+        with self._lock:
+            expiration_time = self._tokens.get(token)
+
+        if expiration_time is None:
+            out = False
+        else:
+            out = time() < expiration_time
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _FHIRHTTPServer(ThreadingHTTPServer):
-    """ ThreadingHTTPServer subclass that carries the store and the optional Basic Auth credentials.
+    """ ThreadingHTTPServer subclass that carries the store and the optional authentication configuration.
     """
     def __init__(
         self,
@@ -412,12 +486,16 @@ class _FHIRHTTPServer(ThreadingHTTPServer):
         handler:'type',
         store:'_FHIRStore',
         base_address:'str',
-        auth_header:'strnone'
+        auth_type:'str',
+        auth_header:'strnone',
+        token_issuer:'_OAuthTokenIssuer | None'
         ) -> 'None':
         super().__init__(address, handler)
         self.store = store
         self.base_address = base_address
+        self.auth_type = auth_type
         self.auth_header = auth_header
+        self.token_issuer = token_issuer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -438,14 +516,26 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
-    def _send_json(self, status:'int', payload:'stranydict', extra_headers:'strstrdict | None'=None) -> 'None':
-        """ Sends a JSON payload with the FHIR media type and any extra headers.
+    def _send_json(
+        self,
+        status:'int',
+        payload:'stranydict',
+        extra_headers:'strstrdict | None'=None,
+        is_fhir:'bool'=True
+        ) -> 'None':
+        """ Sends a JSON payload with the FHIR media type, or the plain JSON one for OAuth responses,
+        and any extra headers.
         """
         body = json.dumps(payload)
         body = body.encode('utf8')
 
+        if is_fhir:
+            content_type = _fhir_content_type
+        else:
+            content_type = _json_content_type
+
         self.send_response(status)
-        self.send_header('Content-Type', _fhir_content_type)
+        self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(body)))
 
         if extra_headers:
@@ -482,36 +572,65 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
+    def _send_unauthorized(self, scheme:'str') -> 'None':
+        """ Sends a 401 response with the challenge for the given scheme.
+        """
+        self.send_response(UNAUTHORIZED)
+        self.send_header('WWW-Authenticate', f'{scheme} realm="Zato FHIR test server"')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
+# ################################################################################################################################
+
     def _check_auth(self) -> 'bool':
-        """ Verifies Basic Auth if the server was started with credentials. The capabilities
-        interaction is exempt because the spec recommends it be accessible without authorization.
+        """ Verifies Basic Auth or an OAuth bearer token, depending on how the server was started.
+        The capabilities interaction and the token endpoint are exempt - the spec recommends
+        the former be accessible without authorization and the latter is where tokens come from.
         """
 
-        # No credentials configured means everything is open ..
-        expected = self.server.auth_header
-        if not expected:
+        # No authentication configured means everything is open ..
+        auth_type = self.server.auth_type
+        if not auth_type:
             out = True
             return out
 
-        # .. the capability statement is always open ..
+        # .. the capability statement and the token endpoint are always open ..
         path = urlsplit(self.path).path
-        if path == '/metadata':
+        if path in ('/metadata', _token_path):
             out = True
             return out
 
-        # .. anything else must carry the exact expected header.
         received = self.headers.get('Authorization')
 
-        if received == expected:
-            out = True
-        else:
-            self.send_response(UNAUTHORIZED)
-            self.send_header('WWW-Authenticate', 'Basic realm="Zato FHIR test server"')
-            self.send_header('Content-Length', '0')
-            self.end_headers()
-            out = False
+        # .. Basic Auth must carry the exact expected header ..
+        if auth_type == _auth_type_basic:
 
-        return out
+            if received == self.server.auth_header:
+                out = True
+            else:
+                self._send_unauthorized('Basic')
+                out = False
+
+            return out
+
+        # .. and OAuth must carry a bearer token this server has issued.
+        else:
+
+            # The issuer is always configured when the auth type is OAuth
+            token_issuer = cast_('_OAuthTokenIssuer', self.server.token_issuer)
+
+            if received:
+                if received.startswith('Bearer '):
+                    token = received.split(' ', 1)[1]
+
+                    if token_issuer.validate(token):
+                        out = True
+                        return out
+
+            self._send_unauthorized('Bearer')
+
+            out = False
+            return out
 
 # ################################################################################################################################
 
@@ -724,10 +843,82 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
+    def _handle_token_request(self) -> 'None':
+        """ Implements the token endpoint for the client credentials grant of RFC 6749,
+        accepting both form-encoded and JSON requests, which is what Zato's BearerTokenManager sends.
+        """
+
+        # The issuer is always configured when this endpoint is reachable
+        token_issuer = cast_('_OAuthTokenIssuer', self.server.token_issuer)
+
+        # Read the raw body ..
+        content_length = self.headers.get('Content-Length')
+        if content_length is None:
+            content_length = '0'
+        content_length = int(content_length)
+
+        body = self.rfile.read(content_length)
+
+        # .. parse it according to its content type ..
+        content_type = self.headers.get('Content-Type')
+        if content_type is None:
+            content_type = ''
+
+        if 'json' in content_type:
+            try:
+                request = json.loads(body)
+            except json.JSONDecodeError:
+                self._send_json(BAD_REQUEST, {'error': 'invalid_request'}, is_fhir=False)
+                return
+        else:
+            request = dict(parse_qsl(body.decode('utf8')))
+
+        # .. this grant type is the only one the server implements ..
+        grant_type = request.get('grant_type')
+        if grant_type != _grant_type_client_credentials:
+            self._send_json(BAD_REQUEST, {'error': 'unsupported_grant_type'}, is_fhir=False)
+            return
+
+        # .. issue a token if the client credentials are correct ..
+        client_id = request.get('client_id')
+        client_secret = request.get('client_secret')
+
+        if client_id is None:
+            client_id = ''
+
+        if client_secret is None:
+            client_secret = ''
+
+        token = token_issuer.issue(client_id, client_secret)
+
+        if token is None:
+            self._send_json(BAD_REQUEST, {'error': 'invalid_client'}, is_fhir=False)
+            return
+
+        # .. and return it the way RFC 6749 specifies.
+        response = {
+            'access_token': token,
+            'token_type': 'Bearer',
+            'expires_in': _token_lifetime,
+        }
+
+        self._send_json(OK, response, is_fhir=False)
+
+# ################################################################################################################################
+
     def do_POST(self) -> 'None': # noqa: N802
-        """ Handles the create interaction - POST to a resource type endpoint.
+        """ Handles the create interaction and, if OAuth is configured, the token endpoint.
         """
         if not self._check_auth():
+            return
+
+        # The token endpoint exists only when the server was started with OAuth
+        path = urlsplit(self.path).path
+        if path == _token_path:
+            if self.server.token_issuer:
+                self._handle_token_request()
+            else:
+                self._send_outcome(NOT_FOUND, 'not-found', f'Unrecognized path -> {self.path}')
             return
 
         segments, _ = self._split_path()
@@ -863,17 +1054,27 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 class FHIRTestServer:
     """ An in-memory FHIR R4 server for use in tests, listening on the loopback interface only.
     It implements the spec's RESTful API - capabilities, create, read, vread, update, delete and search -
-    with resource versioning, searchset Bundles, OperationOutcome errors and optional Basic Auth.
+    with resource versioning, searchset Bundles and OperationOutcome errors. Authentication is optional
+    and matches what the FHIR outgoing connection supports - Basic Auth, or OAuth bearer tokens issued
+    by the server's own RFC 6749 token endpoint, with the credentials acting as client_id and client_secret.
     """
-    def __init__(self, username:'str'='', password:'str'='') -> 'None':
+    def __init__(self, username:'str'='', password:'str'='', auth_type:'str'='') -> 'None':
 
         # Connection details for clients
         self.host = '127.0.0.1'
         self.port = get_free_port()
 
-        # Optional Basic Auth credentials - empty means the server is open
+        # Optional credentials - empty means the server is open. With Basic Auth they are
+        # the username and password, with OAuth they are the client ID and client secret.
         self.username = username
         self.password = password
+
+        # Credentials without an explicit auth type mean Basic Auth
+        if username:
+            if not auth_type:
+                auth_type = _auth_type_basic
+
+        self.auth_type = auth_type
 
         # Where all the resources live
         self.store = _FHIRStore()
@@ -893,10 +1094,20 @@ class FHIRTestServer:
 
 # ################################################################################################################################
 
-    def _build_auth_header(self) -> 'strnone':
-        """ Builds the exact Authorization header value the server expects, or None if auth is off.
+    @property
+    def token_endpoint(self) -> 'str':
+        """ The URL OAuth tokens are issued at - this is what a Bearer token security definition
+        points its auth_server_url to.
         """
-        if not self.username:
+        out = f'{self.address}{_token_path}'
+        return out
+
+# ################################################################################################################################
+
+    def _build_auth_header(self) -> 'strnone':
+        """ Builds the exact Authorization header the server expects for Basic Auth, or None otherwise.
+        """
+        if self.auth_type != _auth_type_basic:
             return None
 
         credentials = f'{self.username}:{self.password}'
@@ -905,6 +1116,17 @@ class FHIRTestServer:
         credentials = credentials.decode('ascii')
 
         out = f'Basic {credentials}'
+        return out
+
+# ################################################################################################################################
+
+    def _build_token_issuer(self) -> '_OAuthTokenIssuer | None':
+        """ Builds the OAuth token issuer, or None if the server does not use OAuth.
+        """
+        if self.auth_type != _auth_type_oauth:
+            return None
+
+        out = _OAuthTokenIssuer(self.username, self.password)
         return out
 
 # ################################################################################################################################
@@ -930,9 +1152,11 @@ class FHIRTestServer:
         """ Starts the HTTP server in a daemon thread and waits until it accepts connections.
         """
         auth_header = self._build_auth_header()
+        token_issuer = self._build_token_issuer()
 
         address = (self.host, self.port)
-        server = _FHIRHTTPServer(address, _FHIRRequestHandler, self.store, self.address, auth_header)
+        server = _FHIRHTTPServer(
+            address, _FHIRRequestHandler, self.store, self.address, self.auth_type, auth_header, token_issuer)
 
         self._server = server
 

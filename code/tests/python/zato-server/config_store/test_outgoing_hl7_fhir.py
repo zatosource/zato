@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 import pytest
+from zato.common.api import GENERIC
 from zato.common.test.client import AdminClient as ZatoClient
 
 SERVICE = 'zato.generic.connection'
-TYPE = 'outconn-hl7-fhir'
+TYPE = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR
 
 # The config manager has no handler registered for the outconn-hl7-fhir
 # connection type and FHIR is dormant in this release.
