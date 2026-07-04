@@ -99,7 +99,10 @@ class TestChannelAMQP:
         assert edited[0]['pool_size'] == 2
 
     def test_08_ping(self, client):
-        pytest.skip('No ping service for AMQP channels')
+        # There is no ping service for AMQP channels so invoking it is an error
+        item_id = self.__class__.created_ids[0]
+        with pytest.raises(Exception, match='returned HTTP'):
+            _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

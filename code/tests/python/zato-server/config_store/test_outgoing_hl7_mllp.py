@@ -92,7 +92,10 @@ class TestOutgoingHL7MLLP:
         assert 'test-out-hl7mllp-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        # HL7 MLLP outgoing connections have no ping implementation so a failure is reported
+        item_id = self.__class__.created_ids[0]
+        result = client.invoke('zato.generic.connection.ping', {'id': item_id})
+        assert result['is_success'] is False
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

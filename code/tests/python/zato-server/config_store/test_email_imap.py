@@ -97,7 +97,31 @@ class TestEmailIMAP:
         assert 'test-imap-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        from _ping_stubs import start_imap_stub
+        port, server = start_imap_stub()
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                cluster_id=1,
+                name='test-imap-ping-live',
+                is_active=True,
+                host='127.0.0.1',
+                port=port,
+                timeout=30,
+                debug_level=0,
+                mode='plain',
+                get_criteria='UNSEEN',
+                username='testuser',
+                tenant_id='',
+                client_id='',
+            )
+            ping_id = resp['id']
+            try:
+                result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
+                assert 'Ping NOOP submitted' in result['info']
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

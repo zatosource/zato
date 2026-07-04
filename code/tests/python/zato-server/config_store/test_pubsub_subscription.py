@@ -133,7 +133,10 @@ class TestPubSubSubscription:
         assert len(data) >= 5
 
     def test_08_ping(self, client:'ZatoClient') -> 'None':
-        pytest.skip('No ping service for pub/sub subscriptions')
+        # There is no ping service for pub/sub subscriptions so invoking it is an error
+        item_id = self.__class__.created_ids[0]
+        with pytest.raises(Exception, match='returned HTTP'):
+            _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
 
     def test_09_delete_one(self, client:'ZatoClient') -> 'None':
         _ = self.__class__.created_sub_keys.pop(0)

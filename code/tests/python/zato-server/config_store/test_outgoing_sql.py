@@ -88,7 +88,31 @@ class TestOutgoingSQL:
         assert 'test-out-sql-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        import os
+        import tempfile
+
+        sqlite_fd, sqlite_path = tempfile.mkstemp(prefix='zato-test-sql-ping-', suffix='.db')
+        os.close(sqlite_fd)
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                cluster_id=1,
+                name='test-out-sql-ping-live',
+                is_active=True,
+                engine='sqlite',
+                host='',
+                port=0,
+                db_name=sqlite_path,
+                username='',
+                pool_size=1,
+            )
+            ping_id = resp['id']
+            try:
+                result = client.invoke(f'{SERVICE}.ping', {'id': ping_id, 'should_raise_on_error': True})
+                assert 'response_time' in result
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            os.unlink(sqlite_path)
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

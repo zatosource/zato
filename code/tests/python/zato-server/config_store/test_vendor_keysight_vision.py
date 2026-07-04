@@ -83,7 +83,26 @@ class TestVendorKeysightVision:
         assert 'test-keysight-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        from _ping_stubs import start_http_stub
+        port, server = start_http_stub()
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                name='test-keysight-ping-live',
+                is_active=True,
+                is_internal=False,
+                host=f'http://127.0.0.1:{port}',
+                username='admin',
+                password='secret',
+                wrapper_type=WRAPPER_TYPE,
+            )
+            ping_id = resp['id']
+            try:
+                result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
+                assert result['is_success'] is True
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

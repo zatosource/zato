@@ -199,6 +199,11 @@ def zato_server(request):
     config['main']['port'] = str(port)
     update_config_file(config, repo_location, 'server.conf')
 
+    # Add SQLite to sql.conf so SQL ping tests can use a file-based database
+    sql_conf_path = os.path.join(repo_location, 'sql.conf')
+    with open(sql_conf_path, 'a') as f:
+        _ = f.write('\n[sqlite]\ndisplay_name=SQLite\nping_query=SELECT 1\n')
+
     t2 = time.monotonic()
     print(f'[TIMING] config patch: {t2 - t1:.1f}s')
 

@@ -85,7 +85,10 @@ class TestSecurityOAuth:
         assert 'test-oauth-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No ping service for OAuth')
+        # There is no ping service for OAuth so invoking it is an error
+        item_id = self.__class__.created_ids[0]
+        with pytest.raises(Exception, match='returned HTTP'):
+            _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

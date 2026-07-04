@@ -105,7 +105,10 @@ class TestChannelHL7REST:
         assert 'test-ch-hl7rest-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('Ping is for outgoing connections only')
+        # Ping is for outgoing connections only so pinging a channel reports a failure
+        item_id = self.__class__.created_ids[0]
+        result = client.invoke(f'{SERVICE}.ping', {'id': item_id})
+        assert result['is_success'] is False
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)

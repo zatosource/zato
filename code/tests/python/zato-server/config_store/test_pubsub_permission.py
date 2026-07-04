@@ -96,7 +96,10 @@ class TestPubSubPermission:
         assert any('topic-a-edited' in pattern for pattern in patterns)
 
     def test_08_ping(self, client:'ZatoClient') -> 'None':
-        pytest.skip('No ping service for pub/sub permissions')
+        # There is no ping service for pub/sub permissions so invoking it is an error
+        item_id = self.__class__.created_ids[0]
+        with pytest.raises(Exception, match='returned HTTP'):
+            _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
 
     def test_09_delete_one(self, client:'ZatoClient') -> 'None':
         item_id = self.__class__.created_ids.pop(0)

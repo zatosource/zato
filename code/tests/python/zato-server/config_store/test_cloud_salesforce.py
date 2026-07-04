@@ -95,7 +95,39 @@ class TestCloudSalesforce:
         assert 'test-salesforce-1' not in names
 
     def test_08_ping(self, client):
-        pytest.skip('No live backend to ping in test quickstart')
+        from _ping_stubs import start_http_stub
+
+        def handler(method, path, body_bytes):
+            # The token endpoint and the ping request both accept this shape
+            return {'access_token': 'test-token'}
+
+        port, server = start_http_stub(handler)
+        try:
+            resp = client.create(f'{SERVICE}.create',
+                cluster_id=1,
+                name='test-salesforce-ping-live',
+                type_=TYPE,
+                is_active=True,
+                is_internal=False,
+                is_channel=False,
+                is_outgoing=True,
+                is_outconn=False,
+                address=f'http://127.0.0.1:{port}',
+                username='test@test.com',
+                password='test-password',
+                api_version='58.0',
+                consumer_key='test-key',
+                consumer_secret='test-secret',
+                pool_size=1,
+            )
+            ping_id = resp['id']
+            try:
+                result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
+                assert result['is_success'] is True, result['info']
+            finally:
+                client.delete(f'{SERVICE}.delete', id=ping_id)
+        finally:
+            server.shutdown()
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)
