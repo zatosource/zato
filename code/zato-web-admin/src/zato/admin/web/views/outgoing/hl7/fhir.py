@@ -11,8 +11,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.outgoing.hl7.fhir import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    invoke_action_handler, method_allowed, ping_connection, SecurityList
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, \
+    extract_security_id, Index as _Index, invoke_action_handler, method_allowed, ping_connection, SecurityList
 from zato.common.api import GENERIC, generic_attrs, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7FHIRConfigObject
 
@@ -75,6 +75,7 @@ class _CreateEdit(CreateEdit):
 
     def pre_process_input_dict(self, input_dict):
         input_dict['pool_size'] = int(input_dict['pool_size'])
+        input_dict['security_id'] = extract_security_id(input_dict)
 
 # ################################################################################################################################
 

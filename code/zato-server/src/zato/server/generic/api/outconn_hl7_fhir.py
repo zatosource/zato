@@ -11,30 +11,27 @@ from base64 import b64encode
 from logging import getLogger
 from traceback import format_exc
 
+# fhirpy
+from fhirpy import SyncFHIRClient
+
 # Zato
 from zato.common.api import HL7
-
-try:
-    from fhirpy import SyncFHIRClient
-except ImportError:
-    SyncFHIRClient = None  # type: ignore[assignment,misc]
-from zato.server.connection.queue import Wrapper
 from zato.common.typing_ import cast_
+from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strnone
+    from zato.common.ext.bunch import Bunch
+    from zato.common.typing_ import stranydict
     from zato.server.base.parallel import ParallelServer
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-if SyncFHIRClient is None:
-    logger.warning('HL7 is not available (outconn_hl7_fhir)')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,14 +42,30 @@ _oauth = HL7.Const.FHIR_Auth_Type.OAuth.id
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Defaults applied by the config manager when the create path does not supply a field,
+# e.g. when an outconn is created directly through zato.generic.connection.create.
+outconn_fhir_config_defaults:'dict[str, object]' = {
+    'auth_type': HL7.Const.FHIR_Auth_Type.No_Auth.id,
+    'security_id': 0,
+    'username': '',
+    'secret': '',
+    'pool_size': HL7.Default.pool_size,
+}
+
+# Config keys that must be integers but may arrive as strings from opaque storage
+outconn_fhir_int_config_keys = ('security_id', 'pool_size')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _HL7FHIRConnection(SyncFHIRClient):
     zato_config: 'stranydict'
 
     def __init__(self, config:'stranydict') -> 'None':
 
         self.zato_config = config
-        self.zato_security_id = self.zato_config.get('security_id') or 0
-        self.zato_auth_type = self.zato_config.get('auth_type')
+        self.zato_security_id = self.zato_config['security_id']
+        self.zato_auth_type = self.zato_config['auth_type']
 
         # This can be built in advance in case we are using Basic Auth
         if self.zato_auth_type == _basic_auth:
@@ -111,10 +124,26 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def zato_get_oauth_header(self) -> 'strnone':
+    def zato_get_oauth_header(self) -> 'str':
+
+        # The server gives us access to security definitions and the bearer token manager
         server = self.zato_config['server'] # type: ParallelServer
-        auth_header = server.oauth_store.get_auth_header(self.zato_security_id)
-        return auth_header
+
+        # Each OAuth definition specifies its own data format and scopes ..
+        sec_def = server.security_facade.get_bearer_token_by_id(self.zato_security_id)
+        data_format = sec_def['data_format']
+
+        if scopes := sec_def.get('scopes'):
+            scopes = ' '.join(scopes.splitlines())
+        else:
+            scopes = ''
+
+        # .. this returns the token from the server's cache or fetches a new one from the auth server ..
+        result = server.bearer_token_manager.get_bearer_token_info_by_sec_def_id(self.zato_security_id, scopes, data_format)
+
+        # .. and now the header can be built.
+        out = f'Bearer {result.info.token}'
+        return out
 
 # ################################################################################################################################
 
@@ -127,25 +156,25 @@ class _HL7FHIRConnection(SyncFHIRClient):
 class OutconnHL7FHIRWrapper(Wrapper):
     """ Wraps a queue of connections to HL7 FHIR servers.
     """
-    def __init__(self, config, server):
+    def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config.auth_url = config.address
         config.server = server
         super(OutconnHL7FHIRWrapper, self).__init__(config, 'HL7 FHIR', server)
 
 # ################################################################################################################################
 
-    def add_client(self):
+    def add_client(self) -> 'None':
 
         try:
             conn = _HL7FHIRConnection(self.config)
-            self.client.put_client(conn)
+            _ = self.client.put_client(conn)
         except Exception:
             logger.warning('Caught an exception while adding an HL7 FHIR client (%s); e:`%s`',
                 self.config['name'], format_exc())
 
 # ################################################################################################################################
 
-    def ping(self):
+    def ping(self) -> 'None':
         with self.client() as client:
             client = cast_('_HL7FHIRConnection', client)
             client.zato_ping()
