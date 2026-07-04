@@ -36,6 +36,12 @@ class TestOutgoingLDAP:
             address='ldap://localhost:389',
             username='cn=admin,dc=test,dc=com',
             pool_size=1,
+            pool_max_cycles=1,
+            pool_keep_alive=30,
+            use_auto_range=True,
+            use_tls=False,
+            sasl_mechanism='',
+            server_list='ldap://localhost:389',
         )
         assert 'id' in resp
         assert resp['name'] == 'test-out-ldap-1'
@@ -59,6 +65,12 @@ class TestOutgoingLDAP:
                 address='ldap://localhost:389',
                 username=f'cn=admin{i},dc=test,dc=com',
                 pool_size=1,
+                pool_max_cycles=1,
+                pool_keep_alive=30,
+                use_auto_range=True,
+                use_tls=False,
+                sasl_mechanism='',
+                server_list='ldap://localhost:389',
             )
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
@@ -82,6 +94,12 @@ class TestOutgoingLDAP:
             address='ldap://localhost:389',
             username='cn=admin,dc=test,dc=com',
             pool_size=2,
+            pool_max_cycles=1,
+            pool_keep_alive=30,
+            use_auto_range=True,
+            use_tls=False,
+            sasl_mechanism='',
+            server_list='ldap://localhost:389',
         )
         assert resp['id'] == item_id
 

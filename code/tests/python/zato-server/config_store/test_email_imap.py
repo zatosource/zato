@@ -20,7 +20,7 @@ class TestEmailIMAP:
     created_ids = []
 
     def test_01_get_list_empty(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         assert isinstance(data, list)
 
     def test_02_create_one(self, client):
@@ -35,13 +35,15 @@ class TestEmailIMAP:
             mode='ssl',
             get_criteria='UNSEEN',
             username='testuser',
+            tenant_id='',
+            client_id='',
         )
         assert 'id' in resp
         assert resp['name'] == 'test-imap-1'
         self.__class__.created_ids.append(resp['id'])
 
     def test_03_get_list_after_create(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         names = [item['name'] for item in data]
         assert 'test-imap-1' in names
 
@@ -58,12 +60,14 @@ class TestEmailIMAP:
                 mode='ssl',
                 get_criteria='UNSEEN',
                 username='testuser',
+                tenant_id='',
+                client_id='',
             )
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
 
     def test_05_get_list_batch(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-imap-')]
         assert len(test_items) >= 5
 
@@ -81,11 +85,13 @@ class TestEmailIMAP:
             mode='ssl',
             get_criteria='UNSEEN',
             username='testuser',
+            tenant_id='',
+            client_id='',
         )
         assert resp['id'] == item_id
 
     def test_07_get_list_after_edit(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         names = [item['name'] for item in data]
         assert 'test-imap-1-edited' in names
         assert 'test-imap-1' not in names
@@ -98,7 +104,7 @@ class TestEmailIMAP:
         client.delete(f'{SERVICE}.delete', id=item_id)
 
     def test_10_get_list_after_delete(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-imap-')]
         assert len(test_items) >= 4
 
@@ -108,6 +114,6 @@ class TestEmailIMAP:
             self.__class__.created_ids.remove(item_id)
 
     def test_12_get_list_final(self, client):
-        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, cur_page=1, paginate=False)
         test_items = [item for item in data if item['name'].startswith('test-imap-')]
         assert len(test_items) == 0

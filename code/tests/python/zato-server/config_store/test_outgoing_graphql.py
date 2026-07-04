@@ -74,6 +74,7 @@ class TestOutgoingGraphQL:
         item_id = self.__class__.created_ids[0]
         response = client.edit(f'{SERVICE}.edit',
             id=item_id,
+            cluster_id=1,
             name='test-graphql-1-edited',
             is_active=True,
             type_='outconn-graphql',
