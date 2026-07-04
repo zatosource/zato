@@ -13,9 +13,12 @@ import os
 import shutil
 import socket
 import ssl
+import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from typing import Generator
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 # cryptography
 from cryptography import x509
