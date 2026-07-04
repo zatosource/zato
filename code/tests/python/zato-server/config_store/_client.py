@@ -43,7 +43,10 @@ class ZatoClient:
         try:
             with urlopen(req) as resp:
                 raw = resp.read()
-                headers = dict(resp.headers)
+
+                # HTTP header names are case-insensitive and the server sends them
+                # in lowercase, so normalize the keys for the callers.
+                headers = {key.lower(): value for key, value in resp.headers.items()}
         except HTTPError as e:
             raw = e.read()
             logger.error('<- %s HTTP %s: %s', service_name, e.code, raw.decode('utf-8', errors='replace'))
@@ -76,13 +79,13 @@ class ZatoClient:
         response, headers = self._invoke(service_name, params or None)
 
         meta = {}
-        if cur_page := headers.get('X-Zato-Page-Current'):
+        if cur_page := headers.get('x-zato-page-current'):
             meta['cur_page'] = cur_page
-        if page_size := headers.get('X-Zato-Page-Size'):
+        if page_size := headers.get('x-zato-page-size'):
             meta['page_size'] = page_size
-        if num_pages := headers.get('X-Zato-Page-Total'):
+        if num_pages := headers.get('x-zato-page-total'):
             meta['num_pages'] = num_pages
-        if total := headers.get('X-Zato-Result-Total'):
+        if total := headers.get('x-zato-result-total'):
             meta['total'] = total
 
         if isinstance(response, list):

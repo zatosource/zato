@@ -18,6 +18,7 @@ from zato.common.ext.bunch import bunchify
 # Zato
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
+from zato.common.util.tcp import get_free_port
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.generic.api.outconn_sftp import SFTPClient
 
@@ -273,9 +274,14 @@ class OutconnSFTPTestCase(TestCase):
         # Create the remote file first ..
         conn.write('Initial data', remote_path)
 
-        # .. and now expect an exception because the location already exists.
-        with self.assertRaises(Exception) as ctx:
-            _ = conn.upload('/etc/hostname', remote_path, overwrite=False)
+        # .. prepare a local file to upload ..
+        with NamedTemporaryFile('w+', suffix='-zato-test-sftp.txt') as local_file:
+            _ = local_file.write('New data')
+            local_file.flush()
+
+            # .. and now expect an exception because the remote location already exists.
+            with self.assertRaises(Exception) as ctx:
+                _ = conn.upload(local_file.name, remote_path, overwrite=False)
 
         self.assertIn('already exists', str(ctx.exception))
 
@@ -440,8 +446,8 @@ class OutconnSFTPTestCase(TestCase):
 
         config = self.get_config('test_bad_host_is_reported')
 
-        # This port is free, so nothing listens on it
-        config.port = 1
+        # Nothing listens on this port, so the connection attempt must fail
+        config.port = get_free_port()
 
         client = SFTPClient(config, cast_('any_', None))
         out = client.ping()

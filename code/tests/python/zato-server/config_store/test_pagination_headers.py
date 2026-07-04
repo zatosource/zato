@@ -64,16 +64,16 @@ class TestPaginationHeaders:
         # .. the response body must be a bare list ..
         assert isinstance(response, list), f'Expected list, got {type(response).__name__}'
 
-        # .. pagination headers must be present ..
-        assert 'X-Zato-Page-Current' in headers, f'Missing X-Zato-Page-Current, headers: {headers}'
-        assert 'X-Zato-Page-Size' in headers, f'Missing X-Zato-Page-Size, headers: {headers}'
-        assert 'X-Zato-Page-Total' in headers, f'Missing X-Zato-Page-Total, headers: {headers}'
-        assert 'X-Zato-Result-Total' in headers, f'Missing X-Zato-Result-Total, headers: {headers}'
-        assert 'X-Zato-Page-Has-Next' in headers, f'Missing X-Zato-Page-Has-Next, headers: {headers}'
-        assert 'X-Zato-Page-Has-Previous' in headers, f'Missing X-Zato-Page-Has-Previous, headers: {headers}'
+        # .. pagination headers must be present - the client lowercases all header names ..
+        assert 'x-zato-page-current' in headers, f'Missing x-zato-page-current, headers: {headers}'
+        assert 'x-zato-page-size' in headers, f'Missing x-zato-page-size, headers: {headers}'
+        assert 'x-zato-page-total' in headers, f'Missing x-zato-page-total, headers: {headers}'
+        assert 'x-zato-result-total' in headers, f'Missing x-zato-result-total, headers: {headers}'
+        assert 'x-zato-page-has-next' in headers, f'Missing x-zato-page-has-next, headers: {headers}'
+        assert 'x-zato-page-has-previous' in headers, f'Missing x-zato-page-has-previous, headers: {headers}'
 
         # .. the total must be at least the number of items we created ..
-        total = int(headers['X-Zato-Result-Total'])
+        total = int(headers['x-zato-result-total'])
         assert total >= 5
 
     def test_03_get_list_no_meta_in_body(self, client):

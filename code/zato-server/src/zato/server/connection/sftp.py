@@ -11,7 +11,6 @@ from datetime import date, datetime
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import strptime
-from traceback import format_exc
 
 # gevent
 from gevent.fileobject import FileObjectThread
@@ -721,9 +720,6 @@ class SFTPConnection:
             try:
                 # Data written out, we can now upload it to the remote location
                 _ = self.upload(local_path.name, remote_path, False, overwrite, log_level, False)
-
-            except Exception:
-                logger.warning('Exception in SFTP write method `%s`', format_exc())
 
             finally:
                 # Now we can close the file too
