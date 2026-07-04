@@ -647,7 +647,8 @@ class SFTPConnection:
             _ = self.download_file(remote_path, local_path.name, log_level)
 
             # .. and read it in using a separate thread so as not to block the event loop.
-            thread_file = FileObjectThread(local_path)
+            # .. The mode is passed explicitly, otherwise the file would be reopened in text mode.
+            thread_file = FileObjectThread(local_path, mode)
             data = thread_file.read()
             thread_file.close()
 
