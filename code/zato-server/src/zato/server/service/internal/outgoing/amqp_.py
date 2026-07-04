@@ -107,6 +107,9 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
+                # The connector needs the newly assigned ID in the config event
+                input.id = item.id
+
                 input.action = OUTGOING.AMQP_CREATE.value
                 self.config_dispatcher.publish(input)
 
