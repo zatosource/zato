@@ -29,21 +29,39 @@ def _ensure_topic(client:'ZatoClient', name:'str') -> 'str':
     return name
 
 def _get_or_create_sec_def(client:'ZatoClient') -> 'int':
-    """Get the first available security definition ID for subscriptions."""
+    """Get or create a dedicated security definition for subscriptions."""
+    sec_name = 'test-pubsub-sub-sec'
     data, _ = client.get_list('zato.security.basic-auth.get-list', cluster_id=1)
-    if data:
-        return data[0]['id']
+    for item in data:
+        if item['name'] == sec_name:
+            return item['id']
 
     response = client.create('zato.security.basic-auth.create',
-        name='test-pubsub-sub-sec',
+        cluster_id=1,
+        name=sec_name,
         is_active=True,
         username='subtestuser',
         realm='testrealm',
     )
     return response['id']
 
+def _ensure_permission(client:'ZatoClient', sec_base_id:'int') -> 'None':
+    """Make sure the security definition can subscribe to the test topics."""
+    data, _ = client.get_list('zato.pubsub.permission.get-list', cluster_id=1)
+    for item in data:
+        if item['sec_base_id'] == sec_base_id and item['pattern'] == 'sub=/test/sub/topic/**':
+            return
+
+    _ = client.create('zato.pubsub.permission.create',
+        cluster_id=1,
+        sec_base_id=sec_base_id,
+        pattern='sub=/test/sub/topic/**',
+        access_type='publisher-subscriber',
+    )
+
 class TestPubSubSubscription:
     created_sub_keys = []
+    created_ids = []
     topic_name = None
     sec_id = None
 
@@ -54,6 +72,7 @@ class TestPubSubSubscription:
     def test_02_create_one(self, client:'ZatoClient') -> 'None':
         self.__class__.topic_name = _ensure_topic(client, '/test/sub/topic/1')
         self.__class__.sec_id = _get_or_create_sec_def(client)
+        _ensure_permission(client, self.__class__.sec_id)
 
         response = client.create(f'{SERVICE}.create',
             cluster_id=1,
@@ -63,9 +82,10 @@ class TestPubSubSubscription:
             is_delivery_active=True,
             is_pub_active=True,
         )
-        sub_key = response.get('sub_key') or response.get('id')
+        sub_key = response['sub_key']
         assert sub_key
         self.__class__.created_sub_keys.append(sub_key)
+        self.__class__.created_ids.append(response['id'])
 
     def test_03_get_list_after_create(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
@@ -82,9 +102,10 @@ class TestPubSubSubscription:
                 is_delivery_active=True,
                 is_pub_active=True,
             )
-            sub_key = response.get('sub_key') or response.get('id')
+            sub_key = response['sub_key']
             assert sub_key
             self.__class__.created_sub_keys.append(sub_key)
+            self.__class__.created_ids.append(response['id'])
 
     def test_05_get_list_batch(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
@@ -95,7 +116,12 @@ class TestPubSubSubscription:
         _ = client.edit(f'{SERVICE}.edit',
             sub_key=sub_key,
             cluster_id=1,
-            topic_name_list=[self.__class__.topic_name],
+            # Edit expects a list of dicts, unlike Create which also accepts strings
+            topic_name_list=[{
+                'topic_name': self.__class__.topic_name,
+                'is_pub_enabled': True,
+                'is_delivery_enabled': True,
+            }],
             sec_base_id=self.__class__.sec_id,
             delivery_type='pull',
             is_delivery_active=True,
@@ -110,17 +136,19 @@ class TestPubSubSubscription:
         pytest.skip('No ping service for pub/sub subscriptions')
 
     def test_09_delete_one(self, client:'ZatoClient') -> 'None':
-        sub_key = self.__class__.created_sub_keys.pop(0)
-        _ = client.delete(f'{SERVICE}.delete', sub_key=sub_key)
+        _ = self.__class__.created_sub_keys.pop(0)
+        sub_id = self.__class__.created_ids.pop(0)
+        _ = client.delete(f'{SERVICE}.delete', id=sub_id)
 
     def test_10_get_list_after_delete(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
         assert isinstance(data, list)
 
     def test_11_delete_rest(self, client:'ZatoClient') -> 'None':
-        for sub_key in self.__class__.created_sub_keys[:]:
-            _ = client.delete(f'{SERVICE}.delete', sub_key=sub_key)
-            self.__class__.created_sub_keys.remove(sub_key)
+        for sub_id in self.__class__.created_ids[:]:
+            _ = client.delete(f'{SERVICE}.delete', id=sub_id)
+            self.__class__.created_ids.remove(sub_id)
+        self.__class__.created_sub_keys.clear()
 
     def test_12_get_list_final(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
