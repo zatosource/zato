@@ -30,6 +30,7 @@ from requests import \
 # Zato
 from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
+from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
 
 ################################################################################################################################
@@ -42,8 +43,12 @@ if 0:
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+    from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
     from zato.server.queue_bridge.client import QueueBridgeClient
     from zato.server.service import Service
+    _HL7FHIRConnection = _HL7FHIRConnection
+    Response = Response
+    Service = Service
 
 ################################################################################################################################
 ################################################################################################################################
@@ -54,6 +59,10 @@ _utz_utc = timezone.utc
 ################################################################################################################################
 
 _http_methods = {'delete', 'get', 'head', 'patch', 'post', 'put'}
+
+# How many seconds to wait for a pooled FHIR client, which covers the window
+# while the connection queue is still being built at startup.
+_fhir_block_timeout = 30
 
 ################################################################################################################################
 ################################################################################################################################
@@ -136,7 +145,7 @@ class SchedulerFacade:
         )
 
         # .. check if we shouldn't go further to extract the actual response ..
-        if not 'id' in response:
+        if 'id' not in response:
             response = response['zato_scheduler_job_create_response']
 
         # .. and return its ID to the caller.
@@ -485,6 +494,31 @@ class MLLPFacade:
     def __getitem__(self, name:'str') -> 'HL7MLLPInvoker':
         self._outconn_hl7_mllp[name]
         return HL7MLLPInvoker(name, self._outconn_hl7_mllp)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FHIRFacade:
+    """ Provides dict-like access to HL7 FHIR outgoing connections from services via self.fhir.
+    """
+    _outconn_hl7_fhir: 'anydict'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_hl7_fhir = config_manager.outconn_hl7_fhir
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> '_HL7FHIRConnection':
+
+        # This will raise a KeyError if there is no such connection
+        wrapper = self._outconn_hl7_fhir[name].conn
+
+        # Take a pooled client, blocking to cover the window while the queue is still being built,
+        # and put it right back - the client is safe for concurrent use so all callers share the one object.
+        with wrapper.client(should_block=True, block_timeout=_fhir_block_timeout) as client:
+            out = cast_('_HL7FHIRConnection', client)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

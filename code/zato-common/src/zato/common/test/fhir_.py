@@ -480,6 +480,10 @@ class _OAuthTokenIssuer:
 class _FHIRHTTPServer(ThreadingHTTPServer):
     """ ThreadingHTTPServer subclass that carries the store and the optional authentication configuration.
     """
+
+    # A deep listen backlog so bursts of concurrent clients connect without resets
+    request_queue_size = 128
+
     def __init__(
         self,
         address:'anytuple',
