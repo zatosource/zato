@@ -460,8 +460,12 @@ class HL7MLLPInvoker:
     def send(self, data:'str | bytes') -> 'object':
         """ Sends an HL7 message through the named outgoing connection and returns an AckResult.
         """
-        conn = self._outconn_hl7_mllp[self._conn_name].conn
-        out = conn.invoke(data)
+        wrapper = self._outconn_hl7_mllp[self._conn_name].conn
+
+        # Take a pooled connection for the duration of the send, it goes back to the pool afterwards
+        with wrapper.client() as connection:
+            out = connection.invoke(data)
+
         return out
 
 # ################################################################################################################################

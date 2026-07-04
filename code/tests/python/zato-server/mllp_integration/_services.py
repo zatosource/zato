@@ -117,13 +117,8 @@ class TestHL7MLLPForward(Service):
 
     def handle(self):
 
-        # Get the outconn wrapper from the config manager ..
-        outconn_entry = self.server.config_manager.outconn_hl7_mllp[_outconn_name]
-        wrapper = outconn_entry.conn
-
-        # .. get a connection from the pool and send the message ..
-        with wrapper.client() as connection:
-            connection.invoke(self.request.raw_request)
+        # Send the message through the outgoing connection, the same way user services do
+        _ = self.mllp[_outconn_name].send(self.request.raw_request)
 
 # ################################################################################################################################
 # ################################################################################################################################
