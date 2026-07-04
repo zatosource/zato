@@ -24,6 +24,7 @@ from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
+from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
@@ -69,6 +70,7 @@ class EnmasseYAMLExporter:
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
+        self.outgoing_hl7_mllp_exporter = OutgoingHL7MLLPExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
         self.channel_mcp_exporter = ChannelMCPExporter(self)
@@ -175,6 +177,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         channel_hl7_mllp_list = self.channel_hl7_mllp_exporter.export(session, self.cluster_id)
         return channel_hl7_mllp_list
+
+# ################################################################################################################################
+
+    def export_outgoing_hl7_mllp(self, session:'SASession') -> 'list':
+        """ Exports outgoing HL7 MLLP definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_hl7_mllp_list = self.outgoing_hl7_mllp_exporter.export(session, self.cluster_id)
+        return outgoing_hl7_mllp_list
 
 # ################################################################################################################################
 
@@ -365,6 +376,11 @@ class EnmasseYAMLExporter:
         channel_hl7_mllp_defs = self.export_channel_hl7_mllp(session)
         if channel_hl7_mllp_defs:
             output_dict['channel_hl7_mllp'] = channel_hl7_mllp_defs
+
+        # Export outgoing HL7 MLLP definitions
+        outgoing_hl7_mllp_defs = self.export_outgoing_hl7_mllp(session)
+        if outgoing_hl7_mllp_defs:
+            output_dict['outgoing_hl7_mllp'] = outgoing_hl7_mllp_defs
 
         # Export Kafka channel definitions
         channel_kafka_defs = self.export_channel_kafka(session)
