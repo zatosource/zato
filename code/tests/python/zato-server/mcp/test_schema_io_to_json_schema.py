@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
-from zato.input_output import IOProcessor  # pyright: ignore[reportAttributeAccessIssue]
+from zato.input_output import IOProcessor
 from zato.server.connection.mcp.schema import io_to_json_schema
 
 # ################################################################################################################################
