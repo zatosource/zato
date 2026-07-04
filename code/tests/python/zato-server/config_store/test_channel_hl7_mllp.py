@@ -95,10 +95,10 @@ class TestChannelHL7MLLP:
         assert 'test-ch-hl7mllp-1' not in names
 
     def test_08_ping(self, client):
-        # HL7 MLLP channels have no ping implementation so a failure is reported
+        # The HL7 MLLP channel wrapper implements a no-op ping so it always succeeds
         item_id = self.__class__.created_ids[0]
         result = client.invoke('zato.generic.connection.ping', {'id': item_id})
-        assert result['is_success'] is False
+        assert result['is_success'] is True, result['info']
 
     def test_09_delete_one(self, client):
         item_id = self.__class__.created_ids.pop(0)
