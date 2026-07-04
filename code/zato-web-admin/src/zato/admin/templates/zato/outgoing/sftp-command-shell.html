@@ -1,0 +1,63 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}SFTP command shell{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} SFTP {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Outgoing SFTP command shell</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>Send commands using SFTP connection `{{ conn_name }}`</td>
+        </tr>
+        <tr>
+            <td>
+                <form novalidate id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
+                {% csrf_token %}
+                    {{ form.data }}
+                    <br/><br/>
+
+                    <input type="hidden" id="id" name="id" value="{{ conn_id }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+
+                    <div style="text-align:right">
+                        <span class="form_hint">Log level:</span> {{ form.log_level }}
+                        <input type="submit" value="Submit" />
+                    </div>
+
+                    Stdout:
+                    <br/>
+                    {{ form.stdout }}
+
+                    <br/>
+                    <br/>
+                    Stderr:
+                    <br/>
+                    {{ form.stderr }}
+
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+{% endblock %}

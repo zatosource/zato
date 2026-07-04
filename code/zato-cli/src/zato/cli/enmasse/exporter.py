@@ -22,6 +22,7 @@ from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
+from zato.cli.enmasse.exporters.sftp import SFTPExporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
@@ -77,6 +78,7 @@ class EnmasseYAMLExporter:
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
+        self.sftp_exporter = SFTPExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
@@ -261,6 +263,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_sftp(self, session:'SASession') -> 'list':
+        """ Exports SFTP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        sftp_list = self.sftp_exporter.export(session, self.cluster_id)
+        return sftp_list
+
+# ################################################################################################################################
+
     def export_microsoft_365(self, session:'SASession') -> 'list':
         """ Exports Microsoft 365 connection definitions.
         """
@@ -421,6 +432,11 @@ class EnmasseYAMLExporter:
         ldap_defs = self.export_ldap(session)
         if ldap_defs:
             output_dict['ldap'] = ldap_defs
+
+        # Export SFTP connection definitions
+        sftp_defs = self.export_sftp(session)
+        if sftp_defs:
+            output_dict['sftp'] = sftp_defs
 
         # Export Microsoft 365 connection definitions
         microsoft_365_defs = self.export_microsoft_365(session)

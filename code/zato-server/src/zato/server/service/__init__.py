@@ -44,7 +44,8 @@ from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, SchedulerFacade
+from zato.server.connection.facade import KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
+    SchedulerFacade, SFTPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -484,6 +485,9 @@ class Service:
         # MLLP facade for outgoing connections
         self.mllp = MLLPFacade()
 
+        # SFTP facade for outgoing connections
+        self.sftp = SFTPFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -599,6 +603,9 @@ class Service:
 
         # MLLP facade
         self.mllp.init(self._config_manager)
+
+        # SFTP facade
+        self.sftp.init(self.cid, self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()

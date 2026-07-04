@@ -340,6 +340,7 @@
                                             {% if 0 %}
                                             <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP RFC</a></li>
                                             {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
                                         </ul>
