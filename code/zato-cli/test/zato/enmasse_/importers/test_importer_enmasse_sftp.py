@@ -161,8 +161,8 @@ class TestEnmasseSFTPFromYAML(TestCase):
             'name': instance.name,
             'is_active': True,
             'host': opaque.host,
-            'port': opaque.port,
-            'username': opaque.username,
+            'port': instance.port,
+            'username': instance.username,
             'secret': instance.secret,
             'sftp_command': opaque.sftp_command,
             'ping_command': opaque.ping_command,
@@ -207,9 +207,9 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         opaque = parse_instance_opaque_attr(key_based)
 
-        self.assertEqual(key_based.host, self.sftp_server.host)
-        self.assertEqual(opaque.port, self.sftp_server.port)
-        self.assertEqual(opaque.username, self.sftp_server.username)
+        self.assertEqual(opaque.host, self.sftp_server.host)
+        self.assertEqual(key_based.port, self.sftp_server.port)
+        self.assertEqual(key_based.username, self.sftp_server.username)
         self.assertEqual(opaque.identity_file, self.sftp_server.client_key_path)
 
         # Verify the password-based connection stored its password as the secret
@@ -265,7 +265,9 @@ class TestEnmasseSFTPFromYAML(TestCase):
         # Create the SFTP definition
         instance = self.sftp_importer.create_definition(sftp_def, self.session)
         self.session.commit()
-        self.assertEqual(instance.host, self.sftp_server.host)
+
+        opaque = parse_instance_opaque_attr(instance)
+        self.assertEqual(opaque.host, self.sftp_server.host)
 
         # Prepare an update definition based on the existing one
         update_def = {
@@ -282,8 +284,8 @@ class TestEnmasseSFTPFromYAML(TestCase):
         # Verify the update was applied
         opaque = parse_instance_opaque_attr(updated_instance)
 
-        self.assertEqual(updated_instance.host, 'sftp.updated.example.com')
-        self.assertEqual(opaque.username, 'updated-username')
+        self.assertEqual(opaque.host, 'sftp.updated.example.com')
+        self.assertEqual(updated_instance.username, 'updated-username')
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)

@@ -24,7 +24,8 @@ _TYPE = 'channel-hl7-mllp'
 
 @pytest.fixture(scope='module')
 def client(zato_server:'dict') -> 'ZatoClient':
-    return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
+    base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
+    return ZatoClient(base_url, zato_server['password'])
 
 # ################################################################################################################################
 # ################################################################################################################################
