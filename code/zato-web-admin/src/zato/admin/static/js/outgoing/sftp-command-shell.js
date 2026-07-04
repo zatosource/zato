@@ -11,12 +11,8 @@ $(document).ready(function() {
         $.fn.zato.user_message(success, msg);
 
         if(success) {
-            if(data.stdout) {
-                $('#id_stdout').text(data.stdout);
-            };
-            if(data.stderr) {
-                $('#id_stderr').text(data.stderr);
-            }
+            $('#id_stdout').text(data.stdout);
+            $('#id_stderr').text(data.stderr);
         }
     }
 

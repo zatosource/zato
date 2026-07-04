@@ -14,7 +14,8 @@ GROUP_TYPE = 'api-clients'
 
 @pytest.fixture(scope='module')
 def client(zato_server):
-    return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
+    base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
+    return ZatoClient(base_url, zato_server['password'])
 
 class TestSecurityGroups:
     created_ids = []
