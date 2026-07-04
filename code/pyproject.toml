@@ -3,7 +3,7 @@ markers = [
     "perftest: long-running performance tests, skipped by default",
     "expect_log_errors: test intentionally triggers server log errors matching the given patterns",
 ]
-addopts = "-m 'not perftest'"
+addopts = "-m 'not perftest' --import-mode=importlib"
 log_cli = true
 log_cli_level = "DEBUG"
 log_cli_format = "%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s"
