@@ -573,7 +573,9 @@ class Invoke(AdminService):
         response = None
 
         # Maps all known connection types to their implementation ..
-        conn_type_to_container = {}
+        conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.server.config_manager.outconn_hl7_mllp,
+        }
 
         # .. get the actual implementation ..
         container = conn_type_to_container[self.request.input.conn_type]
@@ -583,6 +585,9 @@ class Invoke(AdminService):
 
             try:
                 response = client.invoke(self.request.input.request_data)
+
+                # Results are objects, e.g. an AckResult for MLLP, and the caller needs text
+                response = str(response)
             except Exception:
                 exc = format_exc()
                 response = exc
