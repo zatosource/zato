@@ -225,7 +225,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         if os.path.exists(haproxy_config_path):
             update_mllp_backend_port(haproxy_config_path, internal_port)
-            _ = reload_haproxy()
+            _ = reload_haproxy(haproxy_config_path)
         else:
             logger.info('HAProxy config not found at %s, skipping HAProxy integration', haproxy_config_path)
 

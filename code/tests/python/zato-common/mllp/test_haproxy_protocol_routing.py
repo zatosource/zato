@@ -25,6 +25,7 @@ import pytest
 # Zato
 from mllp_live_util import end_sequence, sample_wellness_oru, start_sequence
 from rest_echo_server import HTTPEchoHandler
+from zato.common.hl7.mllp.haproxy import reload_haproxy, update_mllp_backend_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,7 +162,10 @@ def _build_test_haproxy_cfg(
     config_text = re.sub(r'(?m)^listen stats.*', '', config_text, flags=re.DOTALL)
 
     # .. replace the main frontend port ..
-    config_text = config_text.replace('bind 0.0.0.0:11223', f'bind 127.0.0.1:{frontend_port}')
+    config_text = config_text.replace('bind 0.0.0.0:${Zato_Port_Load_Balancer}', f'bind 127.0.0.1:{frontend_port}')
+
+    # .. replace the inspect delay placeholder with the production default ..
+    config_text = config_text.replace('${Zato_Load_Balancer_Inspect_Delay}', '5s')
 
     # .. replace the http_internal loopback port ..
     config_text = config_text.replace('127.0.0.1:11225 send-proxy', f'127.0.0.1:{http_loopback_port} send-proxy')
@@ -169,7 +173,7 @@ def _build_test_haproxy_cfg(
 
     # .. replace the HTTP backend server port ..
     config_text = re.sub(
-        r'server server1 127\.0\.0\.1:\d+ check.*',
+        r'server server1 127\.0\.0\.1:\S+ check.*',
         f'server server1 127.0.0.1:{http_backend_port}',
         config_text,
     )
@@ -207,6 +211,7 @@ class RoutingEnv:
     """ Holds all the ports and server references for a test run.
     """
     frontend_port:'int'
+    config_path:'str'
     http_backend:'_TrackingTCPServer'
     mllp_backend:'_TrackingTCPServer'
     haproxy_process:'subprocess.Popen[bytes]'
@@ -246,10 +251,12 @@ def haproxy_routing_env() -> 'routing_env_gen':
     config_path = _build_test_haproxy_cfg(
         tmp_dir, frontend_port, http_loopback_port, http_backend_port, mllp_backend_port,
     )
+    env.config_path = config_path
 
-    # .. start HAProxy ..
+    # .. start HAProxy in master-worker mode, the same way production does,
+    # so that configuration reloads via SIGHUP work ..
     haproxy_process = subprocess.Popen(
-        ['haproxy', '-f', config_path, '-db'],
+        ['haproxy', '-W', '-f', config_path, '-db'],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
@@ -379,6 +386,55 @@ class TestProtocolRouting:
         received = mllp_backend.received_messages[-1]
         assert b'MSH|' in received
         assert b'OBX|1|NM|8310-5^Body temperature^LN||36.8|Cel|36.1-37.2|N|||F' in received
+
+# ################################################################################################################################
+
+    def test_mllp_delayed_first_byte_routed_to_mllp_backend(self, haproxy_routing_env:'RoutingEnv') -> 'None':
+        """ A client that connects and only sends its first byte after a delay,
+        as any remote sender does after one network round-trip, must still be
+        routed to the MLLP backend rather than falling through to HTTP.
+        """
+
+        framed = start_sequence + _wellness_message_bytes + end_sequence
+
+        count_before = haproxy_routing_env.mllp_backend.request_count
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(_connect_timeout_seconds)
+        sock.connect(('127.0.0.1', haproxy_routing_env.frontend_port))
+
+        # .. wait a full second before sending anything, which is far beyond
+        # the previous 10ms inspect delay but well within the current one ..
+        time.sleep(1)
+        sock.sendall(framed)
+
+        response = b''
+        sock.settimeout(_recv_timeout_seconds)
+
+        while True:
+            try:
+                chunk = sock.recv(_recv_buffer_size)
+                if not chunk:
+                    break
+                response += chunk
+                if end_sequence in response:
+                    break
+            except socket.timeout:
+                break
+        sock.close()
+
+        # .. verify the MLLP backend received the message despite the delay ..
+        assert haproxy_routing_env.mllp_backend.request_count > count_before, \
+            'MLLP backend did not receive the delayed message'
+
+        # .. verify we got a valid ACK back ..
+        ack_start = response.find(start_sequence)
+        ack_end = response.find(end_sequence)
+
+        assert ack_start != -1 and ack_end != -1, f'No MLLP-framed ACK received: {response!r}'
+
+        ack_text = response[ack_start + len(start_sequence):ack_end].decode('utf-8')
+        assert 'MSA|AA|WLN001' in ack_text, f'ACK missing MSA|AA|WLN001: {ack_text}'
 
 # ################################################################################################################################
 
@@ -535,6 +591,81 @@ class TestProtocolRouting:
 
         assert haproxy_routing_env.http_backend.request_count == count_before, \
             'HTTP backend received traffic from an MLLP message'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestConfigReload:
+    """ Verifies the runtime reload path used by MLLP channels - the configuration file
+    is rewritten with a new backend port and the HAProxy master process is signaled
+    to reload, after which MLLP traffic must reach the new backend.
+
+    This class must run after TestProtocolRouting because it modifies
+    the shared HAProxy configuration.
+    """
+
+# ################################################################################################################################
+
+    def test_reload_switches_mllp_backend(self, haproxy_routing_env:'RoutingEnv') -> 'None':
+        """ After update_mllp_backend_port and reload_haproxy, new MLLP connections
+        must be forwarded to the new backend port.
+        """
+
+        # Start a second MLLP backend on a fresh port ..
+        new_backend_port = _find_free_port()
+
+        new_backend = _TrackingTCPServer(('127.0.0.1', new_backend_port), _MllpEchoHandler)
+        new_backend_thread = threading.Thread(target=new_backend.serve_forever, daemon=True)
+        new_backend_thread.start()
+
+        # .. rewrite the configuration the same way the channel code does at runtime ..
+        update_mllp_backend_port(haproxy_routing_env.config_path, new_backend_port)
+
+        # .. signal the HAProxy master to reload ..
+        was_signaled = reload_haproxy(haproxy_routing_env.config_path)
+        assert was_signaled, 'reload_haproxy did not signal any process'
+
+        framed = start_sequence + _wellness_message_bytes + end_sequence
+
+        # .. keep sending until the new backend sees the message - the reload
+        # takes a moment and the frontend may briefly refuse connections ..
+        deadline = time.monotonic() + _haproxy_startup_timeout_seconds
+
+        while time.monotonic() < deadline:
+
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(_connect_timeout_seconds)
+                sock.connect(('127.0.0.1', haproxy_routing_env.frontend_port))
+                sock.sendall(framed)
+
+                # .. drain the ACK so the connection completes cleanly ..
+                sock.settimeout(_recv_timeout_seconds)
+                response = b''
+
+                while True:
+                    try:
+                        chunk = sock.recv(_recv_buffer_size)
+                        if not chunk:
+                            break
+                        response += chunk
+                        if end_sequence in response:
+                            break
+                    except socket.timeout:
+                        break
+                sock.close()
+
+            except (ConnectionRefusedError, OSError):
+                pass
+
+            if new_backend.request_count >= 1:
+                break
+
+            time.sleep(0.2)
+
+        assert new_backend.request_count >= 1, 'New MLLP backend did not receive any messages after the reload'
+
+        new_backend.shutdown()
 
 # ################################################################################################################################
 # ################################################################################################################################
