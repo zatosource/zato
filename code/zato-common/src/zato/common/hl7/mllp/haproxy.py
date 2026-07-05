@@ -71,14 +71,19 @@ def update_mllp_backend_port(config_path:'str', internal_port:'int') -> 'None':
 
 # ################################################################################################################################
 
-def reload_haproxy() -> 'bool':
-    """ Sends SIGHUP to the running HAProxy process for a graceful configuration reload.
+def reload_haproxy(config_path:'str') -> 'bool':
+    """ Sends SIGHUP to the HAProxy master process for a graceful configuration reload.
+    HAProxy must run in master-worker mode (the -W flag) - only the master process
+    reloads the configuration on SIGHUP, a standalone process merely dumps its state.
     Returns True if the signal was sent successfully.
     """
 
-    # Find the HAProxy process ..
+    # Find the HAProxy master process running with our configuration file - matching
+    # on the full path makes sure we do not signal an unrelated HAProxy instance,
+    # and the -o flag returns the oldest matching process, which is the master
+    # because workers are forked from it after startup ..
     result = subprocess.run(
-        ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+        ['pgrep', '-o', '-f', f'haproxy.*{config_path}'],
         capture_output=True,
         text=True,
     )
@@ -87,31 +92,27 @@ def reload_haproxy() -> 'bool':
         logger.warning('Could not find a running HAProxy process to reload')
         return False
 
-    if not result.stdout.strip():
+    pid = result.stdout.strip()
+
+    if not pid:
         logger.warning('pgrep returned empty output when looking for HAProxy')
         return False
 
-    # .. send SIGHUP to each matching process ..
-    pid_list = result.stdout.strip().split('\n')
-    has_signaled = False
+    pid = int(pid)
 
-    for pid_string in pid_list:
+    # .. and send SIGHUP to the master so it re-reads the configuration and replaces its workers.
+    try:
+        os.kill(pid, signal.SIGHUP)
+        logger.info('Sent SIGHUP to HAProxy master process %d', pid)
+        out = True
+    except ProcessLookupError:
+        logger.warning('HAProxy process %d no longer exists', pid)
+        out = False
+    except PermissionError:
+        logger.warning('No permission to signal HAProxy process %d', pid)
+        out = False
 
-        if not pid_string.strip():
-            continue
-
-        pid = int(pid_string.strip())
-
-        try:
-            os.kill(pid, signal.SIGHUP)
-            logger.info('Sent SIGHUP to HAProxy process %d', pid)
-            has_signaled = True
-        except ProcessLookupError:
-            logger.warning('HAProxy process %d no longer exists', pid)
-        except PermissionError:
-            logger.warning('No permission to signal HAProxy process %d', pid)
-
-    return has_signaled
+    return out
 
 # ################################################################################################################################
 
