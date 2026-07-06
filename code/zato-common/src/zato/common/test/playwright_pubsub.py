@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import time
 
+# Playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,13 +78,32 @@ def open_create_dialog_via_js(page:'Page', namespace:'str') -> 'None':
 
 def submit_create_form(page:'Page', timeout:'int'=10000) -> 'None':
     """ Clicks submit on the create form and waits for the dialog to close.
+    If the dialog does not close in time, any alert messages the page showed are included in the error,
+    which makes client-side validation failures diagnosable instead of a bare timeout.
     """
 
-    # Click submit ..
-    page.click('#create-div input[type="submit"]')
+    # Alert messages the page may show, e.g. client-side validation errors that block the submission
+    alert_messages = [] # type: list
 
-    # .. and wait for the dialog to close.
-    page.wait_for_selector('#create-div', state='hidden', timeout=timeout)
+    def handle_dialog(dialog:'any_') -> 'None':
+        alert_messages.append(dialog.message)
+        dialog.accept()
+
+    # Capture alerts for as long as the form is being submitted ..
+    page.on('dialog', handle_dialog)
+
+    try:
+        # .. click submit ..
+        page.click('#create-div input[type="submit"]')
+
+        # .. and wait for the dialog to close.
+        page.wait_for_selector('#create-div', state='hidden', timeout=timeout)
+
+    except PlaywrightTimeoutError as e:
+        raise Exception(f'Create dialog did not close within {timeout} ms, alert messages: {alert_messages}') from e
+
+    finally:
+        page.remove_listener('dialog', handle_dialog)
 
 # ################################################################################################################################
 
