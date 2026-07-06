@@ -10,6 +10,15 @@ from __future__ import annotations
 
 from zato.hl7v2.base import HL7Group
 
+class AdrA19QueryResponse(HL7Group):
+    _group_name = "QUERY_RESPONSE"
+
+class AdrA19Procedure(HL7Group):
+    _group_name = "PROCEDURE"
+
+class AdrA19Insurance(HL7Group):
+    _group_name = "INSURANCE"
+
 class AdtA01NextOfKin(HL7Group):
     _group_name = "NEXT_OF_KIN"
 

@@ -615,7 +615,7 @@ class HL7SegmentAttr(Generic[T]):
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'T') -> 'None':
+    def __set__(self, instance:'any_', value:'T | list[T]') -> 'None':
         instance.__dict__[self.attr_name] = value
 
 # ################################################################################################################################
@@ -694,7 +694,7 @@ class HL7GroupAttr(Generic[T]):
 
 # ################################################################################################################################
 
-    def __set__(self, instance:'any_', value:'T') -> 'None':
+    def __set__(self, instance:'any_', value:'T | list[T]') -> 'None':
         instance.__dict__[self.attr_name] = value
 
 # ################################################################################################################################
@@ -1239,6 +1239,10 @@ class HL7Message:
     _structure_id:'str'       = ''
     _registry:'dict[str, type[HL7Message]]'  = {}  # noqa: RUF012
     _raw_message:'any_'        = None
+
+    # Trailing segments the message structure does not claim (e.g. Z-segments),
+    # set on messages built from scratch and serialized after all declared attributes.
+    extra_segments:'anylist'
 
 # ################################################################################################################################
 

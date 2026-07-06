@@ -67,6 +67,8 @@ from zato.hl7v2.v2_9.segments import (
     QAK,
     QID,
     QPD,
+    QRD,
+    QRF,
     RCP,
     RDF,
     REL,
@@ -87,6 +89,7 @@ from zato.hl7v2.v2_9.segments import (
     URS,
 )
 from zato.hl7v2.v2_9.groups import (
+    AdrA19QueryResponse,
     AdtA01Insurance,
     AdtA01NextOfKin,
     AdtA01Observation,
@@ -433,6 +436,19 @@ class ACK(HL7Message):
     msa = HL7SegmentAttr[MSA](segment_id="MSA", optional=False, repeatable=False)
     err = HL7SegmentAttr[ERR](segment_id="ERR", optional=True, repeatable=True)
 
+class ADR_A19(HL7Message):
+    _structure_id = "ADR_A19"
+
+    msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
+    msa = HL7SegmentAttr[MSA](segment_id="MSA", optional=False, repeatable=False)
+    err = HL7SegmentAttr[ERR](segment_id="ERR", optional=True, repeatable=False)
+    qak = HL7SegmentAttr[QAK](segment_id="QAK", optional=True, repeatable=False)
+    qrd = HL7SegmentAttr[QRD](segment_id="QRD", optional=False, repeatable=False)
+    qrf = HL7SegmentAttr[QRF](segment_id="QRF", optional=True, repeatable=False)
+    query_response = \
+        HL7GroupAttr[AdrA19QueryResponse](name="QUERY_RESPONSE", optional=False, repeatable=True)
+    dsc = HL7SegmentAttr[DSC](segment_id="DSC", optional=True, repeatable=False)
+
 class ADT_A01(HL7Message):
     _structure_id = "ADT_A01"
 
@@ -447,16 +463,16 @@ class ADT_A01(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     next_of_kin = \
         HL7GroupAttr[AdtA01NextOfKin](name="NEXT_OF_KIN", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA01Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -488,14 +504,14 @@ class ADT_A02(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA02Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -515,16 +531,16 @@ class ADT_A03(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     next_of_kin = \
         HL7GroupAttr[AdtA03NextOfKin](name="NEXT_OF_KIN", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     al1 = HL7SegmentAttr[AL1](segment_id="AL1", optional=True, repeatable=True)
     iam = HL7SegmentAttr[IAM](segment_id="IAM", optional=True, repeatable=True)
@@ -554,16 +570,16 @@ class ADT_A05(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     next_of_kin = \
         HL7GroupAttr[AdtA05NextOfKin](name="NEXT_OF_KIN", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA05Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -594,7 +610,7 @@ class ADT_A06(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     mrg = HL7SegmentAttr[MRG](segment_id="MRG", optional=True, repeatable=False)
@@ -602,9 +618,9 @@ class ADT_A06(HL7Message):
         HL7GroupAttr[AdtA06NextOfKin](name="NEXT_OF_KIN", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA06Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -665,14 +681,14 @@ class ADT_A15(HL7Message):
     evn = HL7SegmentAttr[EVN](segment_id="EVN", optional=False, repeatable=False)
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=False, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=False, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA15Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -691,16 +707,16 @@ class ADT_A16(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     next_of_kin = \
         HL7GroupAttr[AdtA16NextOfKin](name="NEXT_OF_KIN", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    arv_3 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation = \
         HL7GroupAttr[AdtA16Observation](name="OBSERVATION", optional=True, repeatable=True)
@@ -730,11 +746,11 @@ class ADT_A17(HL7Message):
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation_result_1 = \
         HL7GroupAttr[AdtA17ObservationResult1](name="OBSERVATION_RESULT_1", optional=True, repeatable=True)
-    pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
-    pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
-    pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
-    pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
+    pid_2 = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
+    pd1_2 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
+    pv1_2 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
+    pv2_2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
+    db1_2 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
     observation_result_2 = \
         HL7GroupAttr[AdtA17ObservationResult2](name="OBSERVATION_RESULT_2", optional=True, repeatable=True)
 
@@ -775,10 +791,19 @@ class ADT_A24(HL7Message):
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
+    pid_2 = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
+    pd1_2 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
+    pv1_2 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
+    db1_2 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
+
+class ADT_A30(HL7Message):
+    _structure_id = "ADT_A30"
+
+    msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
+    evn = HL7SegmentAttr[EVN](segment_id="EVN", optional=False, repeatable=False)
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
-    pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
-    db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
+    mrg = HL7SegmentAttr[MRG](segment_id="MRG", optional=False, repeatable=False)
 
 class ADT_A37(HL7Message):
     _structure_id = "ADT_A37"
@@ -792,10 +817,10 @@ class ADT_A37(HL7Message):
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
     db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
-    pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
-    pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
-    pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
-    db1 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
+    pid_2 = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
+    pd1_2 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
+    pv1_2 = HL7SegmentAttr[PV1](segment_id="PV1", optional=True, repeatable=False)
+    db1_2 = HL7SegmentAttr[DB1](segment_id="DB1", optional=True, repeatable=True)
 
 class ADT_A38(HL7Message):
     _structure_id = "ADT_A38"
@@ -901,8 +926,8 @@ class ADT_A54(HL7Message):
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
 
 class ADT_A60(HL7Message):
     _structure_id = "ADT_A60"
@@ -913,7 +938,7 @@ class ADT_A60(HL7Message):
     uac = HL7SegmentAttr[UAC](segment_id="UAC", optional=True, repeatable=False)
     evn = HL7SegmentAttr[EVN](segment_id="EVN", optional=False, repeatable=False)
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     visit_group = \
         HL7GroupAttr[AdtA60VisitGroup](name="VISIT_GROUP", optional=True, repeatable=False)
     adverse_reaction_group = \
@@ -932,8 +957,8 @@ class ADT_A61(HL7Message):
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
-    rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    rol_2 = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv2 = HL7SegmentAttr[PV2](segment_id="PV2", optional=True, repeatable=False)
 
 class BAR_P01(HL7Message):
@@ -1022,7 +1047,7 @@ class BAR_P12(HL7Message):
     procedure = \
         HL7GroupAttr[BarP12Procedure](name="PROCEDURE", optional=True, repeatable=True)
     obx = HL7SegmentAttr[OBX](segment_id="OBX", optional=True, repeatable=False)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
 
 class BPS_O29(HL7Message):
     _structure_id = "BPS_O29"
@@ -1043,7 +1068,7 @@ class BRP_O30(HL7Message):
     msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
     arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     msa = HL7SegmentAttr[MSA](segment_id="MSA", optional=False, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     err = HL7SegmentAttr[ERR](segment_id="ERR", optional=True, repeatable=True)
     sft = HL7SegmentAttr[SFT](segment_id="SFT", optional=True, repeatable=True)
     uac = HL7SegmentAttr[UAC](segment_id="UAC", optional=True, repeatable=False)
@@ -1057,7 +1082,7 @@ class BRT_O32(HL7Message):
     msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
     arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     msa = HL7SegmentAttr[MSA](segment_id="MSA", optional=False, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     err = HL7SegmentAttr[ERR](segment_id="ERR", optional=True, repeatable=True)
     sft = HL7SegmentAttr[SFT](segment_id="SFT", optional=True, repeatable=True)
     uac = HL7SegmentAttr[UAC](segment_id="UAC", optional=True, repeatable=False)
@@ -1367,7 +1392,7 @@ class DFT_P11(HL7Message):
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     rol = HL7SegmentAttr[ROL](segment_id="ROL", optional=True, repeatable=True)
     visit = \
         HL7GroupAttr[DftP11Visit](name="VISIT", optional=True, repeatable=False)
@@ -1642,7 +1667,7 @@ class MDM_T01(HL7Message):
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     common_order = \
         HL7GroupAttr[MdmT01CommonOrder](name="COMMON_ORDER", optional=True, repeatable=True)
     txa = HL7SegmentAttr[TXA](segment_id="TXA", optional=False, repeatable=False)
@@ -1659,7 +1684,7 @@ class MDM_T02(HL7Message):
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     pv1 = HL7SegmentAttr[PV1](segment_id="PV1", optional=False, repeatable=False)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     common_order = \
         HL7GroupAttr[MdmT02CommonOrder](name="COMMON_ORDER", optional=True, repeatable=True)
     txa = HL7SegmentAttr[TXA](segment_id="TXA", optional=False, repeatable=False)
@@ -2336,16 +2361,16 @@ class ORU_R30(HL7Message):
     oh2 = HL7SegmentAttr[OH2](segment_id="OH2", optional=True, repeatable=True)
     oh3 = HL7SegmentAttr[OH3](segment_id="OH3", optional=True, repeatable=False)
     oh4 = HL7SegmentAttr[OH4](segment_id="OH4", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     patient_observation = \
         HL7GroupAttr[OruR30PatientObservation](name="PATIENT_OBSERVATION", optional=True, repeatable=True)
     visit = \
         HL7GroupAttr[OruR30Visit](name="VISIT", optional=True, repeatable=False)
     orc = HL7SegmentAttr[ORC](segment_id="ORC", optional=False, repeatable=False)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_2 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     obr = HL7SegmentAttr[OBR](segment_id="OBR", optional=False, repeatable=False)
     nte = HL7SegmentAttr[NTE](segment_id="NTE", optional=True, repeatable=True)
-    prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
+    prt_3 = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     timing_qty = \
         HL7GroupAttr[OruR30TimingQty](name="TIMING_QTY", optional=True, repeatable=True)
     observation = \
@@ -2386,7 +2411,7 @@ class OSU_O51(HL7Message):
     nte = HL7SegmentAttr[NTE](segment_id="NTE", optional=True, repeatable=True)
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=True, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     order_status = \
         HL7GroupAttr[OsuO51OrderStatus](name="ORDER_STATUS", optional=False, repeatable=True)
 
@@ -2402,7 +2427,7 @@ class OSU_O52(HL7Message):
     nte = HL7SegmentAttr[NTE](segment_id="NTE", optional=True, repeatable=True)
     patient = \
         HL7GroupAttr[OsuO52Patient](name="PATIENT", optional=True, repeatable=False)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     order_status = \
         HL7GroupAttr[OsuO52OrderStatus](name="ORDER_STATUS", optional=False, repeatable=True)
 
@@ -2466,7 +2491,7 @@ class PEX_P07(HL7Message):
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=False, repeatable=False)
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     nte = HL7SegmentAttr[NTE](segment_id="NTE", optional=True, repeatable=True)
     visit = \
         HL7GroupAttr[PexP07Visit](name="VISIT", optional=True, repeatable=False)
@@ -2654,7 +2679,7 @@ class QBP_Q13(HL7Message):
     pid = HL7SegmentAttr[PID](segment_id="PID", optional=True, repeatable=False)
     rdf = HL7SegmentAttr[RDF](segment_id="RDF", optional=True, repeatable=False)
     rcp = HL7SegmentAttr[RCP](segment_id="RCP", optional=False, repeatable=False)
-    rdf = HL7SegmentAttr[RDF](segment_id="RDF", optional=True, repeatable=False)
+    rdf_2 = HL7SegmentAttr[RDF](segment_id="RDF", optional=True, repeatable=False)
     dsc = HL7SegmentAttr[DSC](segment_id="DSC", optional=True, repeatable=False)
 
 class QBP_Q15(HL7Message):
@@ -2697,6 +2722,13 @@ class QBP_Z73(HL7Message):
     uac = HL7SegmentAttr[UAC](segment_id="UAC", optional=True, repeatable=False)
     qpd = HL7SegmentAttr[QPD](segment_id="QPD", optional=False, repeatable=False)
     rcp = HL7SegmentAttr[RCP](segment_id="RCP", optional=False, repeatable=False)
+
+class QRY_A19(HL7Message):
+    _structure_id = "QRY_A19"
+
+    msh = HL7SegmentAttr[MSH](segment_id="MSH", optional=False, repeatable=False)
+    qrd = HL7SegmentAttr[QRD](segment_id="QRD", optional=False, repeatable=False)
+    qrf = HL7SegmentAttr[QRF](segment_id="QRF", optional=True, repeatable=False)
 
 class QCN_J01(HL7Message):
     _structure_id = "QCN_J01"
@@ -3518,7 +3550,7 @@ class VXU_V04(HL7Message):
     pd1 = HL7SegmentAttr[PD1](segment_id="PD1", optional=True, repeatable=False)
     prt = HL7SegmentAttr[PRT](segment_id="PRT", optional=True, repeatable=True)
     nk1 = HL7SegmentAttr[NK1](segment_id="NK1", optional=True, repeatable=True)
-    arv = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
+    arv_2 = HL7SegmentAttr[ARV](segment_id="ARV", optional=True, repeatable=True)
     patient_visit = \
         HL7GroupAttr[VxuV04PatientVisit](name="PATIENT_VISIT", optional=True, repeatable=False)
     gt1 = HL7SegmentAttr[GT1](segment_id="GT1", optional=True, repeatable=True)
