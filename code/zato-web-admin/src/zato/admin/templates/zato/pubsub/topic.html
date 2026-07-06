@@ -25,6 +25,43 @@
             pointer-events: none;
             animation: zatoFadeIn 0.25s ease-in;
         }
+
+        /* ------------------------------------------------------------ */
+        /* Topic backend - AMQP rows and hints                           */
+        /* ------------------------------------------------------------ */
+
+        .zato-topic-amqp-row-create,
+        .zato-topic-amqp-row-edit {
+            display: none;
+        }
+
+        .zato-topic-form-hint {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.8em;
+            font-style: italic;
+            color: #666666;
+        }
+
+        .zato-topic-backend-badge {
+            font-size: 0.8em;
+            font-weight: bold;
+            padding: 0.05rem 0.5rem;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        .zato-topic-backend-badge-builtin {
+            background-color: rgba(9, 54, 213, 0.08);
+            color: #0936d5;
+            border: 1px solid rgba(9, 54, 213, 0.2);
+        }
+
+        .zato-topic-backend-badge-amqp {
+            background-color: rgba(255, 102, 0, 0.1);
+            color: #b35900;
+            border: 1px solid rgba(255, 102, 0, 0.25);
+        }
     </style>
 {% endblock %}
 
@@ -55,6 +92,7 @@
             '_selection',
             'name',
 
+            '_backend',
             '_description',
             '_publishers',
             '_subscribers',
@@ -70,6 +108,12 @@
             'publisher_count',
 
             'subscriber_count',
+            'backend_type',
+            'amqp_outconn_name',
+
+            'amqp_exchange',
+            'amqp_routing_key',
+            'amqp_channel_name',
         ]
     }
     </script>
@@ -102,6 +146,7 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
 
+                        <th style="text-align:center"><a href="#">Backend</a></th>
                         <th><a href="#">Description</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Publishers</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Subscribers</a></th>
@@ -116,6 +161,12 @@
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -127,6 +178,13 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
 
+                        <td style="text-align:center">
+                            {% if item.backend_type == 'amqp' %}
+                                <span class="zato-topic-backend-badge zato-topic-backend-badge-amqp">AMQP</span>
+                            {% else %}
+                                <span class="zato-topic-backend-badge zato-topic-backend-badge-builtin">Built-in</span>
+                            {% endif %}
+                        </td>
                         <td>{{ item.description|no_value_indicator }}</td>
                         <td class='ignore' style="text-align:center">{{ item.publisher_count }}</td>
                         <td class='ignore' style="text-align:center">{{ item.subscriber_count }}</td>
@@ -142,6 +200,12 @@
                         <td class='ignore'>{{ item.publisher_count }}</td>
 
                         <td class='ignore'>{{ item.subscriber_count }}</td>
+                        <td class='ignore'>{{ item.backend_type }}</td>
+                        <td class='ignore'>{{ item.amqp_outconn_name }}</td>
+
+                        <td class='ignore'>{{ item.amqp_exchange }}</td>
+                        <td class='ignore'>{{ item.amqp_routing_key }}</td>
+                        <td class='ignore'>{{ item.amqp_channel_name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -168,6 +232,32 @@
                             <td style="vertical-align:middle"><label for="id_description">Description</label></td>
                             <td>{{ create_form.description }} </td>
                         </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_backend_type">Backend</label></td>
+                            <td>{{ create_form.backend_type }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-create">
+                            <td style="vertical-align:middle"><label for="id_amqp_outconn_name">Connection</label></td>
+                            <td>{{ create_form.amqp_outconn_name }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-create">
+                            <td style="vertical-align:middle"><label for="id_amqp_exchange">Exchange</label></td>
+                            <td>{{ create_form.amqp_exchange }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-create">
+                            <td style="vertical-align:middle"><label for="id_amqp_routing_key">Routing key</label></td>
+                            <td>
+                                {{ create_form.amqp_routing_key }}
+                                <span class="zato-topic-form-hint">Optional, the topic name is used if empty</span>
+                            </td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-create">
+                            <td style="vertical-align:middle"><label for="id_amqp_channel_name">Channel</label></td>
+                            <td>
+                                {{ create_form.amqp_channel_name }}
+                                <span class="zato-topic-form-hint">Optional, messages from this channel are delivered to the topic's subscribers</span>
+                            </td>
+                        </tr>
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -193,6 +283,32 @@
                         <tr>
                             <td style="vertical-align:middle"><label for="id_edit-description">Description</label></td>
                             <td>{{ edit_form.description }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-backend_type">Backend</label></td>
+                            <td>{{ edit_form.backend_type }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-edit">
+                            <td style="vertical-align:middle"><label for="id_edit-amqp_outconn_name">Connection</label></td>
+                            <td>{{ edit_form.amqp_outconn_name }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-edit">
+                            <td style="vertical-align:middle"><label for="id_edit-amqp_exchange">Exchange</label></td>
+                            <td>{{ edit_form.amqp_exchange }}</td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-edit">
+                            <td style="vertical-align:middle"><label for="id_edit-amqp_routing_key">Routing key</label></td>
+                            <td>
+                                {{ edit_form.amqp_routing_key }}
+                                <span class="zato-topic-form-hint">Optional, the topic name is used if empty</span>
+                            </td>
+                        </tr>
+                        <tr class="zato-topic-amqp-row-edit">
+                            <td style="vertical-align:middle"><label for="id_edit-amqp_channel_name">Channel</label></td>
+                            <td>
+                                {{ edit_form.amqp_channel_name }}
+                                <span class="zato-topic-form-hint">Optional, messages from this channel are delivered to the topic's subscribers</span>
+                            </td>
                         </tr>
 
                         <tr>

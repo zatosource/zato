@@ -2,6 +2,22 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.topic.config = {
+    backendTypeBuiltin: 'builtin',
+    backendTypeAMQP: 'amqp',
+    backendBadgeLabels: {
+        'builtin': 'Built-in',
+        'amqp': 'AMQP',
+    },
+    backendBadgeClasses: {
+        'builtin': 'zato-topic-backend-badge zato-topic-backend-badge-builtin',
+        'amqp': 'zato-topic-backend-badge zato-topic-backend-badge-amqp',
+    },
+    requiredFieldMessage: 'This field is required',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.PubSubTopic = new Class({
     toString: function() {
         var template = '<PubSubTopic id:{0} name:{1} description:{2} publisher_count:{3} subscriber_count:{4}>';
@@ -30,6 +46,15 @@ $(document).ready(function() {
     $.fn.zato.pubsub.topic.wireNameValidation('#id_name');
     $.fn.zato.pubsub.topic.wireNameValidation('#id_edit-name');
 
+    // .. show or hide the AMQP fields whenever the backend type changes ..
+    $('#id_backend_type').on('change', function() {
+        $.fn.zato.pubsub.topic.toggleAMQPRows('create');
+    });
+
+    $('#id_edit-backend_type').on('change', function() {
+        $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
+    });
+
     // .. and block form submission when the name is invalid.
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.beforeSubmitHook;
 })
@@ -38,12 +63,31 @@ $(document).ready(function() {
 
 $.fn.zato.pubsub.topic.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub topic', null);
+
+    // The form may have been reset since it was last open, so sync the AMQP rows with the select.
+    $.fn.zato.pubsub.topic.toggleAMQPRows('create');
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.topic.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit pub/sub topic', id);
+
+    // The form was just populated with this topic's data, so sync the AMQP rows with the select.
+    $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.toggleAMQPRows = function(action) {
+
+    // Read the current backend type from the form the action refers to ..
+    var prefix = action === 'edit' ? 'edit-' : '';
+    var backendType = $('#id_' + prefix + 'backend_type').val();
+
+    // .. and show the AMQP rows only when the AMQP backend is selected.
+    var isAMQP = backendType === $.fn.zato.pubsub.topic.config.backendTypeAMQP;
+    $('.zato-topic-amqp-row-' + action).toggle(isAMQP);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -57,9 +101,17 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true
 
+    // Build the backend badge from the topic's backend type ..
+    var config = $.fn.zato.pubsub.topic.config;
+    var backendBadgeLabel = config.backendBadgeLabels[item.backend_type];
+    var backendBadgeClass = config.backendBadgeClasses[item.backend_type];
+    var backendBadge = String.format('<span class="{0}">{1}</span>', backendBadgeClass, backendBadgeLabel);
+
+    // .. and assemble the whole row.
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
+    row += String.format("<td style='text-align:center'>{0}</td>", backendBadge);
     row += String.format('<td>{0}</td>', item.description || $.fn.zato.empty_value);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.subscriber_count);
@@ -72,6 +124,11 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.description);
     row += String.format("<td class='ignore'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore'>{0}</td>", item.subscriber_count);
+    row += String.format("<td class='ignore'>{0}</td>", item.backend_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.amqp_outconn_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.amqp_exchange);
+    row += String.format("<td class='ignore'>{0}</td>", item.amqp_routing_key);
+    row += String.format("<td class='ignore'>{0}</td>", item.amqp_channel_name);
 
     if(include_tr) {
         row += '</tr>';
@@ -188,6 +245,53 @@ $.fn.zato.pubsub.topic.clearNameInvalid = function(field) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.topic.showFieldRequired = function(field) {
+
+    // Remove any existing indicator first ..
+    $.fn.zato.pubsub.topic.clearNameInvalid(field);
+
+    // .. create and insert the indicator.
+    var message = $.fn.zato.pubsub.topic.config.requiredFieldMessage;
+    var indicator = String.format('<span class="zato-name-invalid">{0}</span>', message);
+    field.after(indicator);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.validateAMQPFields = function(prefix) {
+
+    // Only the AMQP backend has required fields to check ..
+    var backendType = $('#id_' + prefix + 'backend_type').val();
+    var isAMQP = backendType === $.fn.zato.pubsub.topic.config.backendTypeAMQP;
+
+    if(!isAMQP) {
+        return true;
+    }
+
+    // .. the connection and exchange are both required ..
+    var isValid = true;
+    var requiredFields = ['amqp_outconn_name', 'amqp_exchange'];
+
+    $.each(requiredFields, function(fieldIdx, fieldName) {
+
+        var field = $('#id_' + prefix + fieldName);
+        var value = field.val().trim();
+
+        // .. clear any previous indicator ..
+        $.fn.zato.pubsub.topic.clearNameInvalid(field);
+
+        // .. and flag the field if it is empty.
+        if(!value) {
+            $.fn.zato.pubsub.topic.showFieldRequired(field);
+            isValid = false;
+        }
+    });
+
+    return isValid;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.topic.beforeSubmitHook = function(form) {
 
     var formId = form.attr('id');
@@ -227,7 +331,10 @@ $.fn.zato.pubsub.topic.beforeSubmitHook = function(form) {
         return false;
     }
 
-    return true;
+    // .. with the name valid, check the AMQP fields too.
+    var isAMQPValid = $.fn.zato.pubsub.topic.validateAMQPFields(prefix);
+
+    return isAMQPValid;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
