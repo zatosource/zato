@@ -14,6 +14,47 @@ $.fn.zato.pubsub.topic.config = {
         'amqp': 'zato-topic-backend-badge zato-topic-backend-badge-amqp',
     },
     requiredFieldMessage: 'This field is required',
+    createNewValue: 'zato-create-new',
+    createOutconnURL: '/zato/outgoing/amqp/?cluster=1&create=1',
+    createChannelURL: '/zato/channel/amqp/?cluster=1&create=1',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.highlight = function(text) {
+    return '<span class="how-it-works-highlight">' + text + '</span>';
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.topic.fieldDescriptions = {
+
+    'id_name': 'A unique name for this topic.<br>' +
+        $.fn.zato.pubsub.topic.highlight('Publishers and subscribers refer to the topic by this name') + '.',
+
+    'id_description': 'An optional, free-form description.<br>' +
+        $.fn.zato.pubsub.topic.highlight('It has no effect on how messages flow') + '.',
+
+    'id_backend_type': 'Where messages of this topic live.<br>' +
+        'Built-in keeps them inside Zato.<br>' +
+        'AMQP hands them over to an external broker.<br>' +
+        $.fn.zato.pubsub.topic.highlight('Publishers and subscribers use the topic the same way in both cases') + '.',
+
+    'id_amqp_outconn_name': 'The outgoing AMQP connection that publishes<br>' +
+        'messages of this topic to the broker.<br>' +
+        $.fn.zato.pubsub.topic.highlight('Required for AMQP topics') + '.',
+
+    'id_amqp_exchange': 'The exchange in the broker that messages<br>' +
+        'of this topic are published to.<br>' +
+        $.fn.zato.pubsub.topic.highlight('The exchange must already exist in the broker') + '.',
+
+    'id_amqp_routing_key': 'The routing key the broker uses to route<br>' +
+        'messages of this topic to queues.<br>' +
+        $.fn.zato.pubsub.topic.highlight('The topic name is used when this is empty') + '.',
+
+    'id_amqp_channel_name': 'An AMQP channel that consumes messages<br>' +
+        'from a queue in the broker.<br>' +
+        $.fn.zato.pubsub.topic.highlight("Messages received by the channel are delivered to this topic's subscribers") + '.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -55,17 +96,55 @@ $(document).ready(function() {
         $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
     });
 
+    // .. let the create-new option in the AMQP selects open the relevant page ..
+    var config = $.fn.zato.pubsub.topic.config;
+
+    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_amqp_outconn_name', config.createOutconnURL);
+    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_edit-amqp_outconn_name', config.createOutconnURL);
+    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_amqp_channel_name', config.createChannelURL);
+    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_edit-amqp_channel_name', config.createChannelURL);
+
     // .. and block form submission when the name is invalid.
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.beforeSubmitHook;
 })
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.topic.wireCreateNewOption = function(fieldId, url) {
+
+    $(fieldId).on('change', function() {
+
+        // Only the create-new option is of interest here ..
+        var select = $(this);
+        var isCreateNew = select.val() === $.fn.zato.pubsub.topic.config.createNewValue;
+
+        if(!isCreateNew) {
+            return;
+        }
+
+        // .. open the page where the definition can be created in a new tab ..
+        window.open(url, '_blank');
+
+        // .. and reset the select back to its empty option.
+        select.val('');
+        select.trigger('chosen:updated');
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.topic.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub topic', null);
 
-    // The form may have been reset since it was last open, so sync the AMQP rows with the select.
+    // The form may have been reset since it was last open, so sync the AMQP rows with the select ..
     $.fn.zato.pubsub.topic.toggleAMQPRows('create');
+
+    // .. and wire up the field help badge.
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.pubsub.topic.fieldDescriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -73,8 +152,15 @@ $.fn.zato.pubsub.topic.create = function() {
 $.fn.zato.pubsub.topic.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit pub/sub topic', id);
 
-    // The form was just populated with this topic's data, so sync the AMQP rows with the select.
+    // The form was just populated with this topic's data, so sync the AMQP rows with the select ..
     $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
+
+    // .. and wire up the field help badge.
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.pubsub.topic.fieldDescriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -85,9 +171,16 @@ $.fn.zato.pubsub.topic.toggleAMQPRows = function(action) {
     var prefix = action === 'edit' ? 'edit-' : '';
     var backendType = $('#id_' + prefix + 'backend_type').val();
 
-    // .. and show the AMQP rows only when the AMQP backend is selected.
+    // .. show the AMQP rows only when the AMQP backend is selected ..
     var isAMQP = backendType === $.fn.zato.pubsub.topic.config.backendTypeAMQP;
-    $('.zato-topic-amqp-row-' + action).toggle(isAMQP);
+    var rows = $('.zato-topic-amqp-row-' + action);
+    rows.toggle(isAMQP);
+
+    // .. and let any Chosen selects in the rows recompute their width,
+    // .. they render with no width when initialized while hidden.
+    if(isAMQP) {
+        rows.find('select').trigger('chosen:updated');
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////

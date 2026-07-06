@@ -555,6 +555,12 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
     var rows = activePanel.querySelectorAll(rowSelector);
 
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+
+        // .. skip rows that are currently hidden, e.g. fields shown only for some selections ..
+        if (rows[rowIndex].offsetParent === null) {
+            continue;
+        }
+
         var label = rows[rowIndex].querySelector('label[for]');
         if (!label) {
             continue;
