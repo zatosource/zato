@@ -383,7 +383,7 @@ class TestPubSubTopicAMQPBridge:
     and delivered to the topic's push subscribers.
     """
 
-    def test_43_rest_push_subscriber_receives_broker_message(
+    def test_rest_push_subscriber_receives_broker_message(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -396,8 +396,8 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the pipeline and a REST push subscriber via forms ..
-        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '43', _Default_Channel_Service)
-        _add_rest_push_subscriber(page, base_url, '43', pipeline['topic_name'], webhook_receiver.port)
+        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'restsub', _Default_Channel_Service)
+        _add_rest_push_subscriber(page, base_url, 'restsub', pipeline['topic_name'], webhook_receiver.port)
 
         # .. inject a message the way an external AMQP producer would ..
         marker = 'bridge-rest-' + new_cid()
@@ -413,7 +413,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_44_service_push_subscriber_receives_broker_message(
+    def test_service_push_subscriber_receives_broker_message(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -425,12 +425,12 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # A hot-deployed service writes each received message to a file ..
-        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], '44')
+        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], 'servicesub')
 
         try:
             # .. configure the pipeline and a service push subscriber via forms ..
-            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '44', _Default_Channel_Service)
-            _add_service_push_subscriber(page, base_url, '44', pipeline['topic_name'], writer['service_name'])
+            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'servicesub', _Default_Channel_Service)
+            _add_service_push_subscriber(page, base_url, 'servicesub', pipeline['topic_name'], writer['service_name'])
 
             # .. inject a message ..
             marker = 'bridge-service-' + new_cid()
@@ -452,7 +452,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_45_multiple_push_subscribers_all_receive(
+    def test_multiple_push_subscribers_all_receive(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -473,16 +473,16 @@ class TestPubSubTopicAMQPBridge:
         second_receiver.start()
 
         # .. and a hot-deployed service that writes to a file.
-        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], '45')
+        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], 'multi')
 
         try:
             # Configure the pipeline and all three subscribers via forms ..
-            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '45', _Default_Channel_Service)
+            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'multi', _Default_Channel_Service)
             topic_name = pipeline['topic_name']
 
-            _add_rest_push_subscriber(page, base_url, '45a', topic_name, webhook_receiver.port)
-            _add_rest_push_subscriber(page, base_url, '45b', topic_name, second_port)
-            _add_service_push_subscriber(page, base_url, '45c', topic_name, writer['service_name'])
+            _add_rest_push_subscriber(page, base_url, 'multi-a', topic_name, webhook_receiver.port)
+            _add_rest_push_subscriber(page, base_url, 'multi-b', topic_name, second_port)
+            _add_service_push_subscriber(page, base_url, 'multi-c', topic_name, writer['service_name'])
 
             # .. inject one message ..
             marker = 'bridge-multi-' + new_cid()
@@ -512,7 +512,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_46_fifty_messages_delivered_exactly_once(
+    def test_fifty_messages_delivered_exactly_once(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -528,8 +528,8 @@ class TestPubSubTopicAMQPBridge:
         message_count = 50
 
         # Configure the pipeline and a REST push subscriber via forms ..
-        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '46', _Default_Channel_Service)
-        _add_rest_push_subscriber(page, base_url, '46', pipeline['topic_name'], webhook_receiver.port)
+        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'fifty', _Default_Channel_Service)
+        _add_rest_push_subscriber(page, base_url, 'fifty', pipeline['topic_name'], webhook_receiver.port)
 
         # .. inject 50 distinct messages ..
         markers = [] # type: list
@@ -559,7 +559,7 @@ class TestPubSubTopicAMQPBridge:
 # ################################################################################################################################
 
     @pytest.mark.expect_log_errors('503', 'Service Unavailable', 'on-amqp-message', 'amqp')
-    def test_47_failed_delivery_not_acked_broker_redelivers(
+    def test_failed_delivery_not_acked_broker_redelivers(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -573,8 +573,8 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the pipeline and a REST push subscriber via forms ..
-        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '47', _Default_Channel_Service)
-        _add_rest_push_subscriber(page, base_url, '47', pipeline['topic_name'], webhook_receiver.port)
+        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'redelivery', _Default_Channel_Service)
+        _add_rest_push_subscriber(page, base_url, 'redelivery', pipeline['topic_name'], webhook_receiver.port)
 
         # .. the receiver rejects the first delivery and recovers afterwards ..
         webhook_receiver.behavior.set_reject_503(auto_recover_after=1)
@@ -606,7 +606,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_48_original_channel_service_suppressed_while_overridden(
+    def test_original_channel_service_suppressed_while_overridden(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -620,12 +620,12 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # The channel's original service writes a marker file when invoked ..
-        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], '48')
+        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], 'suppressed')
 
         try:
             # .. the channel points at the marker service, the topic then overrides it ..
-            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '48', writer['service_name'])
-            _add_rest_push_subscriber(page, base_url, '48', pipeline['topic_name'], webhook_receiver.port)
+            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'suppressed', writer['service_name'])
+            _add_rest_push_subscriber(page, base_url, 'suppressed', pipeline['topic_name'], webhook_receiver.port)
 
             # .. inject a message ..
             marker = 'bridge-suppressed-' + new_cid()
@@ -650,7 +650,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_49_edit_removing_channel_restores_original_service(
+    def test_edit_removing_channel_restores_original_service(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -664,12 +664,12 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # The channel's original service writes a marker file when invoked ..
-        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], '49')
+        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], 'restored')
 
         try:
             # .. the channel points at the marker service, the topic then overrides it ..
-            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '49', writer['service_name'])
-            _add_rest_push_subscriber(page, base_url, '49', pipeline['topic_name'], webhook_receiver.port)
+            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'restored', writer['service_name'])
+            _add_rest_push_subscriber(page, base_url, 'restored', pipeline['topic_name'], webhook_receiver.port)
 
             # .. the subscriber helper left the browser on the subscriptions page,
             # .. so go back to the topics page where the edit function exists ..
@@ -707,7 +707,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_50_delete_restores_original_service(
+    def test_delete_restores_original_service(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -720,11 +720,11 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # The channel's original service writes a marker file when invoked ..
-        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], '50')
+        writer = _deploy_file_writer_service(zato_dashboard['server_dir'], 'deleted')
 
         try:
             # .. the channel points at the marker service, the topic then overrides it ..
-            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '50', writer['service_name'])
+            pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'deleted', writer['service_name'])
             topic_name = pipeline['topic_name']
 
             # .. delete the topic via the dashboard ..
@@ -757,7 +757,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_51_full_round_trip_publish_to_receiver(
+    def test_full_round_trip_publish_to_receiver(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -772,13 +772,13 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the pipeline and a REST push subscriber via forms ..
-        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '51', _Default_Channel_Service)
+        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'roundtrip', _Default_Channel_Service)
         topic_name = pipeline['topic_name']
 
-        _add_rest_push_subscriber(page, base_url, '51', topic_name, webhook_receiver.port)
+        _add_rest_push_subscriber(page, base_url, 'roundtrip', topic_name, webhook_receiver.port)
 
         # .. hot-deploy the publisher service and reach it through a REST channel ..
-        publisher = _deploy_publisher_service(zato_dashboard['server_dir'], '51')
+        publisher = _deploy_publisher_service(zato_dashboard['server_dir'], 'roundtrip')
 
         try:
             channel_name = _Test_Name_Prefix + 'channel.rest.51'
@@ -809,7 +809,7 @@ class TestPubSubTopicAMQPBridge:
 
 # ################################################################################################################################
 
-    def test_52_payload_fidelity_dict_and_string(
+    def test_payload_fidelity_dict_and_string(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -823,13 +823,13 @@ class TestPubSubTopicAMQPBridge:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the pipeline and a REST push subscriber via forms ..
-        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '52', _Default_Channel_Service)
+        pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, 'fidelity', _Default_Channel_Service)
         topic_name = pipeline['topic_name']
 
-        _add_rest_push_subscriber(page, base_url, '52', topic_name, webhook_receiver.port)
+        _add_rest_push_subscriber(page, base_url, 'fidelity', topic_name, webhook_receiver.port)
 
         # .. hot-deploy the publisher service and reach it through a REST channel ..
-        publisher = _deploy_publisher_service(zato_dashboard['server_dir'], '52')
+        publisher = _deploy_publisher_service(zato_dashboard['server_dir'], 'fidelity')
 
         try:
             channel_name = _Test_Name_Prefix + 'channel.rest.52'

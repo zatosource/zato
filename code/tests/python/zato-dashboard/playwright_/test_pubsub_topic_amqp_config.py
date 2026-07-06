@@ -54,7 +54,7 @@ class TestPubSubTopicAMQPConfig:
     """ Dashboard configuration tests for AMQP-backed pub/sub topics.
     """
 
-    def test_24_create_outgoing_amqp_via_form(
+    def test_create_outgoing_amqp_via_form(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -88,7 +88,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_25_create_amqp_channel_via_form(
+    def test_create_amqp_channel_via_form(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -128,7 +128,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_26_create_dialog_defaults_to_builtin(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_create_dialog_defaults_to_builtin(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ The topic create dialog defaults to the built-in backend
         and all four AMQP inputs are hidden.
         """
@@ -152,7 +152,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_27_backend_select_toggles_amqp_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_backend_select_toggles_amqp_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Selecting AMQP reveals the AMQP inputs, switching back to built-in hides them.
         """
         page = logged_in_page
@@ -182,7 +182,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_28_create_amqp_topic_via_form(
+    def test_create_amqp_topic_via_form(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -194,7 +194,7 @@ class TestPubSubTopicAMQPConfig:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '28'
+        suffix = 'create'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -224,7 +224,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_29_empty_routing_key_shows_topic_name_on_edit(
+    def test_empty_routing_key_shows_topic_name_on_edit(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -236,7 +236,7 @@ class TestPubSubTopicAMQPConfig:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '29'
+        suffix = 'defaultkey'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -257,7 +257,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_30_missing_outconn_blocks_submission(
+    def test_missing_outconn_blocks_submission(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -301,7 +301,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_31_missing_exchange_blocks_submission(
+    def test_missing_exchange_blocks_submission(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -313,7 +313,7 @@ class TestPubSubTopicAMQPConfig:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '31'
+        suffix = 'noexchange'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -351,7 +351,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_32_edit_builtin_to_amqp_and_back(
+    def test_edit_builtin_to_amqp_and_back(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -363,7 +363,7 @@ class TestPubSubTopicAMQPConfig:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '32'
+        suffix = 'editback'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
 
         exchange = rabbitmq_broker['exchange']
@@ -411,7 +411,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_33_full_crud_with_error_monitoring(
+    def test_full_crud_with_error_monitoring(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -430,7 +430,7 @@ class TestPubSubTopicAMQPConfig:
         collect_console_errors(page, console_errors)
         collect_http_errors(page, http_errors)
 
-        suffix = '33'
+        suffix = 'crud'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -468,7 +468,7 @@ class TestPubSubTopicAMQPConfig:
 
 # ################################################################################################################################
 
-    def test_34_builtin_create_flow_unaffected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_builtin_create_flow_unaffected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ The plain built-in create flow still works with the new form elements present
         and built-in topics never show AMQP inputs.
         """
@@ -476,7 +476,7 @@ class TestPubSubTopicAMQPConfig:
         base_url = zato_dashboard['dashboard_url']
 
         # Create a built-in topic exactly like the pre-AMQP flow does ..
-        topic_info = create_topic(page, base_url, _Test_Name_Prefix + 'topic.builtin.', '34', 'A built-in topic')
+        topic_info = create_topic(page, base_url, _Test_Name_Prefix + 'topic.builtin.', 'builtin', 'A built-in topic')
         topic_name = topic_info['name']
         item_id = topic_info['item_id']
 

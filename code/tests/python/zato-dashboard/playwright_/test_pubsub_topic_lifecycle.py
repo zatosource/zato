@@ -225,7 +225,7 @@ class TestPubSubTopicLifecycle:
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
         row = page.query_selector(row_selector)
         cells = row.query_selector_all('td')
-        desc_text = cells[3].inner_text().strip()
+        desc_text = cells[4].inner_text().strip()
         assert desc_text == '---', f'Expected "---" for empty description, got: "{desc_text}"'
 
         # .. edit to add a description ..
@@ -239,7 +239,7 @@ class TestPubSubTopicLifecycle:
         # .. verify the description cell is updated.
         row = page.query_selector(row_selector)
         cells = row.query_selector_all('td')
-        desc_text = cells[3].inner_text().strip()
+        desc_text = cells[4].inner_text().strip()
         assert desc_text == 'Added description', \
             f'Expected "Added description", got: "{desc_text}"'
 
@@ -263,7 +263,7 @@ class TestPubSubTopicLifecycle:
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
         row = page.query_selector(row_selector)
         cells = row.query_selector_all('td')
-        desc_text = cells[3].inner_text().strip()
+        desc_text = cells[4].inner_text().strip()
         assert desc_text == 'Has a description', \
             f'Expected "Has a description", got: "{desc_text}"'
 
@@ -278,8 +278,8 @@ class TestPubSubTopicLifecycle:
         # .. verify the description cell now shows the form_hint placeholder.
         row = page.query_selector(row_selector)
         cells = row.query_selector_all('td')
-        desc_text = cells[3].inner_text().strip()
-        desc_html = cells[3].inner_html()
+        desc_text = cells[4].inner_text().strip()
+        desc_html = cells[4].inner_html()
 
         assert desc_text == '---', \
             f'Expected "---" for cleared description, got: "{desc_text}"'

@@ -97,7 +97,7 @@ class TestPubSubTopicCreate:
         cells = row.query_selector_all('td')
 
         name_cell_text = cells[2].inner_text().strip()
-        description_cell_text = cells[3].inner_text().strip()
+        description_cell_text = cells[4].inner_text().strip()
 
         # .. verify each cell has the correct value.
         assert name_cell_text == topic_name, \
@@ -146,7 +146,7 @@ class TestPubSubTopicCreate:
             cells = row.query_selector_all('td')
 
             name_cell_text = cells[2].inner_text().strip()
-            description_cell_text = cells[3].inner_text().strip()
+            description_cell_text = cells[4].inner_text().strip()
 
             assert name_cell_text == name, \
                 f'Expected name "{name}", got: "{name_cell_text}"'
@@ -340,8 +340,8 @@ class TestPubSubTopicCreate:
 
         # .. verify description cell shows the form_hint placeholder.
         cells = row.query_selector_all('td')
-        description_cell_text = cells[3].inner_text().strip()
-        description_cell_html = cells[3].inner_html()
+        description_cell_text = cells[4].inner_text().strip()
+        description_cell_html = cells[4].inner_html()
 
         assert description_cell_text == '---', \
             f'Expected "---" for empty description, got: "{description_cell_text}"'

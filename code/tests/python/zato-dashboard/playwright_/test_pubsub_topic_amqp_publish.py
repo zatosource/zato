@@ -181,7 +181,7 @@ class TestPubSubTopicAMQPPublish:
     """ Publish-side tests for AMQP-backed pub/sub topics against a real RabbitMQ broker.
     """
 
-    def test_35_overlay_publish_lands_on_queue(
+    def test_overlay_publish_lands_on_queue(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -196,7 +196,7 @@ class TestPubSubTopicAMQPPublish:
         _ = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'], timeout=1)
 
         # .. configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, '35')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'overlay')
 
         # .. publish through the overlay ..
         payload = 'overlay-payload-' + new_cid()
@@ -212,7 +212,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_36_rest_publish_lands_on_queue(
+    def test_rest_publish_lands_on_queue(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -228,11 +228,11 @@ class TestPubSubTopicAMQPPublish:
         _ = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'], timeout=1)
 
         # .. configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, '36')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'rest')
         topic_name = topic_info['topic_name']
 
         # .. the external publisher needs a security definition and a publisher permission ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, '36')
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'rest')
         _ = create_permission(page, base_url, sec_info['name'], 'publisher', 'pub', topic_name)
 
         # .. publish as an external REST client would ..
@@ -254,7 +254,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_37_self_publish_lands_on_queue(
+    def test_self_publish_lands_on_queue(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -271,7 +271,7 @@ class TestPubSubTopicAMQPPublish:
         _ = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'], timeout=1)
 
         # .. configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, '37')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'selfpub')
         topic_name = topic_info['topic_name']
 
         # .. the publisher service is reached through a REST channel created in the dashboard ..
@@ -303,7 +303,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_38_overlay_history_shows_msg_id(
+    def test_overlay_history_shows_msg_id(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -315,7 +315,7 @@ class TestPubSubTopicAMQPPublish:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, '38')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'history')
 
         # .. publish through the overlay ..
         open_publish_overlay(page, topic_info['item_id'])
@@ -343,7 +343,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_39_custom_routing_key_honored(
+    def test_custom_routing_key_honored(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -355,7 +355,7 @@ class TestPubSubTopicAMQPPublish:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '39'
+        suffix = 'customkey'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -395,7 +395,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_40_default_routing_key_is_topic_name(
+    def test_default_routing_key_is_topic_name(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -406,7 +406,7 @@ class TestPubSubTopicAMQPPublish:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        suffix = '40'
+        suffix = 'defaultkey'
         outconn_name = _Test_Name_Prefix + 'outconn.' + suffix
         topic_name = _Test_Name_Prefix + 'topic.' + suffix
 
@@ -438,7 +438,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_41_no_redis_stream_keys_for_amqp_topic(
+    def test_no_redis_stream_keys_for_amqp_topic(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -453,7 +453,7 @@ class TestPubSubTopicAMQPPublish:
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, '41')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'noredis')
         topic_name = topic_info['topic_name']
 
         # .. publish through the overlay ..
@@ -481,7 +481,7 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_42_builtin_topic_still_delivered_via_redis_push(
+    def test_builtin_topic_still_delivered_via_redis_push(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -501,7 +501,7 @@ class TestPubSubTopicAMQPPublish:
 
         try:
             # .. sec def, built-in topic and subscriber permission via forms ..
-            prereqs = create_all_subscription_prerequisites(page, base_url, _Test_Name_Prefix, '42')
+            prereqs = create_all_subscription_prerequisites(page, base_url, _Test_Name_Prefix, 'builtinpush')
             topic_name = prereqs['topic_name']
             sec_name = prereqs['sec_name']
 
