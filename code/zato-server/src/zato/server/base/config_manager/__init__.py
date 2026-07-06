@@ -32,6 +32,7 @@ from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -83,9 +84,9 @@ if 0:
     from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
-    from zato.server.config import ConfigStore
+    from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
     from zato.server.store import BaseAPI
@@ -708,7 +709,7 @@ class ConfigManager(_ConfigManagerBase):
         action_name,   # type: str
         sec_type,      # type: str
         visit_wrapper, # type: callable_
-        keys=None      # type: tupnone
+        keys:'tupnone'=None
     ) -> 'None':
         """ A common method for updating auth-related configuration.
         """
@@ -868,7 +869,7 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _notify_queue_bridge_channel(self, action, msg):
+    def _notify_queue_bridge_channel(self, action:'str', msg:'any_') -> 'None':
         bridge = getattr(self.server, '_queue_bridge', None)
         if not bridge:
             return
@@ -884,7 +885,7 @@ class ConfigManager(_ConfigManagerBase):
         except Exception:
             self.logger.warning('Could not notify queue bridge about channel %s=%s: %s', action, msg.get('name', ''), format_exc())
 
-    def _notify_queue_bridge_outconn(self, action, msg):
+    def _notify_queue_bridge_outconn(self, action:'str', msg:'any_') -> 'None':
         bridge = getattr(self.server, '_queue_bridge', None)
         if not bridge:
             return
@@ -900,27 +901,27 @@ class ConfigManager(_ConfigManagerBase):
         except Exception:
             self.logger.warning('Could not notify queue bridge about outconn %s=%s: %s', action, msg.get('name', ''), format_exc())
 
-    def _create_kafka_channel(self, msg, *args, **kwargs):
+    def _create_kafka_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._create_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_channel('create', msg)
 
-    def _edit_kafka_channel(self, msg, *args, **kwargs):
+    def _edit_kafka_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._edit_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_channel('edit', msg)
 
-    def _delete_kafka_channel(self, msg, *args, **kwargs):
+    def _delete_kafka_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._delete_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_channel('delete', msg)
 
-    def _create_kafka_outconn(self, msg, *args, **kwargs):
+    def _create_kafka_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._create_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_outconn('create', msg)
 
-    def _edit_kafka_outconn(self, msg, *args, **kwargs):
+    def _edit_kafka_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._edit_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_outconn('edit', msg)
 
-    def _delete_kafka_outconn(self, msg, *args, **kwargs):
+    def _delete_kafka_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._delete_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_outconn('delete', msg)
 
@@ -935,7 +936,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # Enrich the body with our own metadata ..
         _zato_meta = body['_zato_meta'] = {}
-        _zato_meta['sub_key'] = config.queue
+        _zato_meta['sub_key'] = config['queue']
         _zato_meta['delivery_count'] = delivery_count
 
         # .. our delivery service - it will decide how to deliver the message ..
@@ -1220,7 +1221,7 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def pubsub_publish_to_amqp(self, backend_config:'strdict', data:'any_') -> 'PublishResult':
+    def pubsub_publish_to_amqp(self, backend_config:'strdict', data:'any_', topic_name:'str', cid:'str') -> 'PublishResult':
         """ Publishes a message to the AMQP broker configured for a topic. Returns the same
         result shape as the built-in Redis backend so the caller-facing API is identical.
         """
@@ -1234,6 +1235,29 @@ class ConfigManager(_ConfigManagerBase):
         # The broker does not return any identifier so a new one is generated here.
         result = PublishResult()
         result.msg_id = new_msg_id()
+
+        # The audit log stores payloads as text so free-text search covers them.
+        if isinstance(data, str):
+            audit_data = data
+        else:
+            audit_data = dumps(data).decode('utf-8')
+
+        # The publish target, in one field, so it reads like an address.
+        endpoint = '{} -> {} -> {}'.format(
+            backend_config['amqp_outconn_name'],
+            backend_config['amqp_exchange'],
+            backend_config['amqp_routing_key'],
+        )
+
+        # Record the publish in the audit log.
+        self.server.pubsub_redis.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
+            cid=cid,
+            msg_id=result.msg_id,
+            endpoint=endpoint,
+            size=len(audit_data),
+            outcome=AuditOutcome.OK,
+            data=audit_data,
+        )
 
         return result
 
@@ -1250,7 +1274,7 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def pubsub_deliver_amqp_message(self, topic_name:'str', body:'any_') -> 'None':
+    def pubsub_deliver_amqp_message(self, topic_name:'str', body:'any_', cid:'str') -> 'None':
         """ Delivers a message consumed from an AMQP channel directly to all push subscribers
         of its topic, without Redis involvement. Any delivery failure propagates to the caller
         so the AMQP message is not acked and the broker redelivers it.
@@ -1261,6 +1285,14 @@ class ConfigManager(_ConfigManagerBase):
         _push_type_service = PubSub.Push_Type.Service
         _push_type_rest = PubSub.Push_Type.REST
 
+        audit_log = self.server.pubsub_redis.audit_log
+
+        # The audit log stores payloads as text so free-text search covers them.
+        if isinstance(body, str):
+            audit_data = body
+        else:
+            audit_data = json_dumps(body)
+
         for config_list in self._push_subs.values():
             for sub_config in config_list:
 
@@ -1268,23 +1300,53 @@ class ConfigManager(_ConfigManagerBase):
                 if sub_config['topic_name'] != topic_name:
                     continue
 
+                # The delivery target is either a service or a REST endpoint.
                 if sub_config['push_type'] == _push_type_service:
-                    _ = self.server.invoke(sub_config['push_service_name'], body)
+                    endpoint = sub_config['push_service_name']
+                else:
+                    endpoint = sub_config['rest_push_url']
 
-                elif sub_config['push_type'] == _push_type_rest:
+                # Deliver the message, recording the outcome in the audit log either way.
+                # A failed delivery re-raises so the AMQP message is not acked and the broker redelivers it.
+                try:
+                    if sub_config['push_type'] == _push_type_service:
+                        _ = self.server.invoke(sub_config['push_service_name'], body)
 
-                    # Dicts are serialized to JSON, strings and bytes go out as they are.
-                    if isinstance(body, (dict, list)):
-                        payload = json_dumps(body)
-                    else:
-                        payload = body
+                    elif sub_config['push_type'] == _push_type_rest:
 
-                    response = requests_post(
-                        sub_config['rest_push_url'],
-                        data=payload,
-                        headers={'Content-Type': 'application/json'},
+                        # Dicts are serialized to JSON, strings and bytes go out as they are.
+                        if isinstance(body, (dict, list)):
+                            payload = json_dumps(body)
+                        else:
+                            payload = body
+
+                        response = requests_post(
+                            sub_config['rest_push_url'],
+                            data=payload,
+                            headers={'Content-Type': 'application/json'},
+                        )
+                        response.raise_for_status()
+
+                except Exception:
+                    audit_log.insert(AuditSource.PubSub, AuditEvent.Delivery_Failed, topic_name,
+                        cid=cid,
+                        endpoint=endpoint,
+                        sub_key=sub_config['sub_key'],
+                        size=len(audit_data),
+                        outcome=AuditOutcome.Error,
+                        data=audit_data,
                     )
-                    response.raise_for_status()
+                    raise
+
+                else:
+                    audit_log.insert(AuditSource.PubSub, AuditEvent.Delivered, topic_name,
+                        cid=cid,
+                        endpoint=endpoint,
+                        sub_key=sub_config['sub_key'],
+                        size=len(audit_data),
+                        outcome=AuditOutcome.OK,
+                        data=audit_data,
+                    )
 
 # ################################################################################################################################
 
@@ -1804,7 +1866,7 @@ class ConfigManager(_ConfigManagerBase):
     def _delete_config_close_wrapper(
         self,
         name,        # type: str
-        config_dict, # type: ConfigDict
+        config_dict:'ConfigDict',
         conn_type,   # type: str
         log_func     # type: callable_
     ) -> 'None':
@@ -2046,7 +2108,7 @@ class ConfigManager(_ConfigManagerBase):
         self,
         msg,          # type: Bunch
         conn_type,    # type: str
-        config_dict,  # type: ConfigDict
+        config_dict:'ConfigDict',
         wrapper_class # type: any_
     ) -> 'bunch_':
 
@@ -2581,7 +2643,7 @@ class ConfigManager(_ConfigManagerBase):
             server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
             # .. remove push delivery config ..
-            self._push_subs.pop(sub_key, None)
+            _ = self._push_subs.pop(sub_key, None)
 
             # .. stop the delivery greenlet for this sub_key ..
             server.pubsub_push_delivery.stop_sub_key(sub_key)

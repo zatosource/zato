@@ -21,6 +21,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.util.api import utcnow
 
@@ -29,8 +30,7 @@ from zato.common.util.api import utcnow
 
 if 0:
     from gevent import Greenlet
-    from redis import Redis
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -72,24 +72,23 @@ class RedisPushDelivery:
         preventing BLOCK races with gevent cooperative scheduling.
         """
         from redis import Redis
-        from redis.connection import Connection
         from redis.connection import ConnectionPool
 
         class _SingleConnPool(ConnectionPool):
             """ A connection pool that reuses exactly one connection. """
-            def __init__(self, **kwargs):
+            def __init__(self, **kwargs:'any_') -> 'None':
                 super().__init__(max_connections=1, **kwargs)
                 self._sole_conn = None
                 self._get_count = 0
 
-            def get_connection(self, *args, **kwargs):
+            def get_connection(self, *args:'any_', **kwargs:'any_') -> 'any_':
                 self._get_count += 1
                 if self._sole_conn is None:
                     self._sole_conn = super().get_connection(*args, **kwargs)
 
                 return self._sole_conn
 
-            def release(self, connection):
+            def release(self, connection:'any_') -> 'None':
                 pass
 
         pool = _SingleConnPool(**self._redis_conn_params)
@@ -247,6 +246,10 @@ class RedisPushDelivery:
                 msg += f', msg_id `{msg_id}` after {attempt} attempts'
                 logger.error(msg)
 
+        # .. record the delivery outcome in the audit log, using the CID stored
+        # .. at publish time so all deliveries cross-reference their publish ..
+        self._insert_audit_event(message, sub_config, sub_key, backend, delivered, expired)
+
         # .. if the message expired, only ack the stream entry so it is not re-fetched,
         # .. but leave the disk file and custom pending sets intact - other subscribers
         # .. may still need this message (it only expired for this subscriber's delivery
@@ -256,7 +259,66 @@ class RedisPushDelivery:
             _ = backend.redis.xack(stream_name, sub_key, redis_message_id)
         else:
             # .. otherwise do a full ack which cleans up disk and pending state.
-            backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+            _ = backend.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+
+# ################################################################################################################################
+
+    def _insert_audit_event(
+        self,
+        message:'anydict',
+        sub_config:'anydict',
+        sub_key:'str',
+        backend:'RedisPubSubBackend',
+        delivered:'bool',
+        expired:'bool'
+    ) -> 'None':
+        """ Writes one audit event describing the outcome of a push delivery attempt.
+        """
+
+        # The backend has no audit log in unit tests only.
+        if not backend.audit_log:
+            return
+
+        # Map the delivery outcome to an event type ..
+        if delivered:
+            event_type = AuditEvent.Delivered
+            outcome = AuditOutcome.OK
+        elif expired:
+            event_type = AuditEvent.Expired
+            outcome = AuditOutcome.Expired
+        else:
+            event_type = AuditEvent.Delivery_Failed
+            outcome = AuditOutcome.Error
+
+        # .. the delivery target is either a service or a REST endpoint ..
+        if sub_config['push_type'] == PubSub.Push_Type.Service:
+            endpoint = sub_config['push_service_name']
+        else:
+            endpoint = sub_config['rest_push_url']
+
+        # .. messages published before CIDs were carried inside them have no CID stored ..
+        message_cid = message.get('cid')
+        if message_cid is None:
+            message_cid = ''
+
+        # .. and the same goes for correlation IDs, which are optional at publish time ..
+        correl_id = message.get('correl_id')
+        if correl_id is None:
+            correl_id = ''
+
+        # .. now, write out the event.
+        backend.audit_log.insert(AuditSource.PubSub, event_type, message['topic_name'],
+            cid=message_cid,
+            msg_id=message['msg_id'],
+            correl_id=correl_id,
+            pub_time_iso=message['pub_time_iso'],
+            endpoint=endpoint,
+            sub_key=sub_key,
+            size=int(message['data_size']),
+            priority=message['priority'],
+            outcome=outcome,
+            data=message['data'],
+        )
 
 # ################################################################################################################################
 

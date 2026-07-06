@@ -36,6 +36,9 @@ class _ConfigManagerStub:
         self._push_subs = {}
         self.amqp_invoke = MagicMock()
 
+        # The AMQP publish path writes audit events through server.pubsub_redis.audit_log
+        self.server = MagicMock()
+
 # ################################################################################################################################
 # ################################################################################################################################
 

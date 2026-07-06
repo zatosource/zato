@@ -17,7 +17,7 @@ from zato.common.api import PubSub
 
 if 0:
     from zato.common.pubsub.redis_backend import PublishResult
-    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -98,7 +98,13 @@ class PubSubFacade:
 
             # .. AMQP-backed topics go to the broker through their outgoing connection.
             if backend_config:
-                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data)
+
+                # The CID is optional on input so it is normalized to a string here.
+                cid = kwargs.get('cid')
+                if cid is None:
+                    cid = ''
+
+                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
                 return out
 
         # .. remap 'cid' to 'correl_id' for the Redis backend ..

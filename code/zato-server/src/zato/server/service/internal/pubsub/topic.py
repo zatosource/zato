@@ -29,7 +29,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +86,7 @@ class GetList(AdminService):
     output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count', '-backend_type', \
         '-amqp_outconn_name', '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name'
 
-    def get_data(self, session):
+    def get_data(self, session:'any_') -> 'any_':
         result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
         data = []
 
@@ -323,7 +323,7 @@ class Delete(AdminService):
                 # .. delete subscriptions that have no remaining topics ..
                 self._delete_subscriptions_without_topics(session, linked_subs)
 
-    def _delete_subscriptions_without_topics(self, session:'object', linked_subs:'list') -> 'None':
+    def _delete_subscriptions_without_topics(self, session:'any_', linked_subs:'anylist') -> 'None':
         """ Deletes subscriptions that no longer have any topics after the topic was removed.
         """
         for sub in linked_subs:
@@ -471,10 +471,11 @@ class OnAMQPMessage(Service):
         # .. map the channel to its AMQP-backed topic ..
         topic_name = config_manager.get_pubsub_topic_by_amqp_channel(channel_name)
 
-        # .. and hand the message over to all of the topic's push subscribers. Any delivery
-        # .. failure propagates from this call, which means the AMQP message is not acked
-        # .. and the broker will redeliver it.
-        config_manager.pubsub_deliver_amqp_message(topic_name, body)
+        # .. and hand the message over to all of the topic's push subscribers, with this
+        # .. invocation's CID so all deliveries of one broker message share it in the audit log.
+        # .. Any delivery failure propagates from this call, which means the AMQP message
+        # .. is not acked and the broker will redeliver it.
+        config_manager.pubsub_deliver_amqp_message(topic_name, body, self.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################

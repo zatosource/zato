@@ -56,6 +56,7 @@ from zato.admin.web.views.pubsub import queue as pubsub_queue
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+from zato.admin.web.views import audit_log
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import scheduler_dashboard
 from zato.admin.web.views.check_attr import check_attr_exists
@@ -277,6 +278,15 @@ urlpatterns += [
         login_required(scheduler_dashboard.job_detail), name='scheduler-job-detail'),
     path('zato/scheduler/dashboard/job/<int:job_id>/run/<int:run_number>/',
         login_required(scheduler_dashboard.run_detail), name='scheduler-run-detail'),
+
+    # Audit log
+
+    url(r'^zato/audit-log/$',
+        login_required(audit_log.object_index), name='audit-log'),
+    url(r'^zato/audit-log/poll/$',
+        login_required(audit_log.poll), name='audit-log-poll'),
+    path('zato/audit-log/cid/<str:cid>/',
+        login_required(audit_log.cid_index), name='audit-log-cid'),
 
     # Scheduler import demo config
 
