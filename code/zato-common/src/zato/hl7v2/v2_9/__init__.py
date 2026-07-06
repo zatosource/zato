@@ -296,6 +296,9 @@ from zato.hl7v2.v2_9.segments import (
     Zxx,
 )
 from zato.hl7v2.v2_9.groups import (
+    AdrA19QueryResponse,
+    AdrA19Procedure,
+    AdrA19Insurance,
     AdtA01NextOfKin,
     AdtA01Observation,
     AdtA01Procedure,
@@ -1392,6 +1395,7 @@ from zato.hl7v2.v2_9.groups import (
 from zato.hl7v2.v2_9.messages import (
     anyHL7Segment,
     ACK,
+    ADR_A19,
     ADT_A01,
     ADT_A02,
     ADT_A03,
@@ -1405,6 +1409,7 @@ from zato.hl7v2.v2_9.messages import (
     ADT_A20,
     ADT_A21,
     ADT_A24,
+    ADT_A30,
     ADT_A37,
     ADT_A38,
     ADT_A39,
@@ -1548,6 +1553,7 @@ from zato.hl7v2.v2_9.messages import (
     QBP_Q21,
     QBP_Qnn,
     QBP_Z73,
+    QRY_A19,
     QCN_J01,
     QSB_Q16,
     QVR_Q17,
@@ -1907,6 +1913,9 @@ __all__ = [
     "VND",
     "ZL7",
     "Zxx",
+    "AdrA19QueryResponse",
+    "AdrA19Procedure",
+    "AdrA19Insurance",
     "AdtA01NextOfKin",
     "AdtA01Observation",
     "AdtA01Procedure",
@@ -3001,6 +3010,7 @@ __all__ = [
     "VxuV04Observation",
     "anyHL7Segment",
     "ACK",
+    "ADR_A19",
     "ADT_A01",
     "ADT_A02",
     "ADT_A03",
@@ -3014,6 +3024,7 @@ __all__ = [
     "ADT_A20",
     "ADT_A21",
     "ADT_A24",
+    "ADT_A30",
     "ADT_A37",
     "ADT_A38",
     "ADT_A39",
@@ -3157,6 +3168,7 @@ __all__ = [
     "QBP_Q21",
     "QBP_Qnn",
     "QBP_Z73",
+    "QRY_A19",
     "QCN_J01",
     "QSB_Q16",
     "QVR_Q17",
@@ -3283,6 +3295,15 @@ def serialize(msg: HL7Message) -> str:
                     line = group.serialize()
                     if line:
                         lines.append(line)
+
+    # Trailing segments the structure does not claim (e.g. Z-segments) are carried
+    # in an instance-level list on built messages and serialized after everything else.
+    extra_segments = msg.__dict__.get("extra_segments")
+    if extra_segments is not None:
+        for item in extra_segments:
+            line = item.serialize()
+            if line:
+                lines.append(line)
 
     if not lines:
         raise ValueError("Message has no data to serialize")

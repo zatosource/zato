@@ -17,7 +17,9 @@ _test_data_dir = current / 'tests' / 'messages' / 'hl7v2' / 'live'
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Headers come in two forms - "## 1. ORM^O01 - wellness checkup order" and a bare "## 1"
 _header_pattern = re.compile(r'^## (\d+)\.\s+(\S+)\s*-\s*(.+)$')
+_bare_header_pattern = re.compile(r'^## (\d+)\s*$')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,38 +56,50 @@ def extract_messages(md_path:'Path') -> 'live_message_list':
     while line_idx < line_count:
         line = lines[line_idx]
         match = _header_pattern.match(line)
+        bare_match = _bare_header_pattern.match(line)
 
         if match:
 
-            # We found a header like "## 1. ORM^O01 - CT abdomen order" ..
+            # We found a header like "## 1. ORM^O01 - wellness checkup order" ..
             message = LiveMessage()
             message.number = int(match.group(1))
             message.message_type = match.group(2)
             message.description = match.group(3).strip()
 
-            # .. now find the next fenced code block ..
+        elif bare_match:
+
+            # .. or a bare header like "## 1" with no message type or description ..
+            message = LiveMessage()
+            message.number = int(bare_match.group(1))
+            message.message_type = ''
+            message.description = ''
+
+        else:
+            line_idx += 1
+            continue
+
+        # .. now find the next fenced code block ..
+        line_idx += 1
+
+        while line_idx < line_count:
+            if lines[line_idx].startswith('```'):
+                line_idx += 1
+                break
             line_idx += 1
 
-            while line_idx < line_count:
-                if lines[line_idx].startswith('```'):
-                    line_idx += 1
-                    break
-                line_idx += 1
+        # .. collect the ER7 lines until the closing fence ..
+        er7_lines:'list[str]' = []
 
-            # .. collect the ER7 lines until the closing fence ..
-            er7_lines:'list[str]' = []
+        while line_idx < line_count:
+            if lines[line_idx].startswith('```'):
+                break
+            er7_lines.append(lines[line_idx])
+            line_idx += 1
 
-            while line_idx < line_count:
-                if lines[line_idx].startswith('```'):
-                    break
-                er7_lines.append(lines[line_idx])
-                line_idx += 1
+        raw = '\n'.join(er7_lines).strip().replace('\n', '\r')
+        message.raw_er7 = raw
 
-            raw = '\n'.join(er7_lines).strip().replace('\n', '\r')
-            message.raw_er7 = raw
-
-            out.append(message)
-
+        out.append(message)
         line_idx += 1
 
     return out
