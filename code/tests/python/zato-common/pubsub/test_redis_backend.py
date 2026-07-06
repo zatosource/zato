@@ -12,7 +12,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # cryptography
 from cryptography.fernet import Fernet
@@ -420,7 +420,9 @@ class TestRedisPubSubBackend(unittest.TestCase):
         mock_server = MagicMock()
         mock_server.encrypt_at_rest = True
 
-        encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store, server=mock_server)
+        # The audit log is mocked out so the test does not touch the shared audit database
+        with patch('zato.common.pubsub.redis_backend.AuditLog'):
+            encrypted_backend = RedisPubSubBackend(self.redis_mock, encrypted_store, server=mock_server)
 
         topic_name = 'test.topic'
         data = 'sensitive payload'

@@ -18,6 +18,7 @@ from redis.exceptions import ResponseError
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.typing_ import cast_
@@ -446,6 +447,14 @@ class RedisPubSubBackend:
         self.redis = redis_client
         self.disk_store = disk_store
         self.server = server
+
+        # The audit log needs the server name so it is created only when a server is given,
+        # which is always the case outside of unit tests.
+        if server:
+            self.audit_log = AuditLog(server.name)
+        else:
+            self.audit_log = None
+
         self.lua_subscribe:'str'                     = cast_('str', self.redis.script_load(_lua_subscribe)) # noqa: E222
         self.lua_unsubscribe_and_clean_pending:'str' = cast_('str', self.redis.script_load(_lua_unsubscribe_and_clean_pending))
         self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
@@ -506,6 +515,7 @@ class RedisPubSubBackend:
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
         pub_time:'strnone'=None,
+        cid:'strnone'=None,
     ) -> 'PublishResult':
         """ Publish a message to a topic stream.
         """
@@ -578,6 +588,11 @@ class RedisPubSubBackend:
         if publisher:
             message['publisher'] = publisher
 
+        # .. the publishing request's CID travels inside the message so a publish
+        # .. and all its deliveries share one CID in the audit log ..
+        if cid:
+            message['cid'] = cid
+
         # .. atomically populate pending sets and add to stream via Lua ..
         stream_key = self._get_stream_key(topic_name)
         topic_subs_key = self._get_topic_subs_key(topic_name)
@@ -627,6 +642,32 @@ class RedisPubSubBackend:
         # .. no subscribers exist - delete the disk file since nothing references it.
         else:
             self.disk_store.delete(data_ref)
+
+        # .. record the publish in the audit log ..
+        if self.audit_log:
+
+            # These are all optional on input so they are normalized to strings here.
+            if cid is None:
+                cid = ''
+            if correl_id is None:
+                correl_id = ''
+            if ext_client_id is None:
+                ext_client_id = ''
+            if publisher is None:
+                publisher = ''
+
+            self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
+                cid=cid,
+                msg_id=message_id,
+                correl_id=correl_id,
+                ext_client_id=ext_client_id,
+                pub_time_iso=pub_time_iso,
+                endpoint=publisher,
+                size=len(serialized_data),
+                priority=priority,
+                outcome=AuditOutcome.OK,
+                data=serialized_data,
+            )
 
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
@@ -977,6 +1018,26 @@ class RedisPubSubBackend:
 
             # .. acknowledge and clean up the disk file ..
             _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
+
+            # .. record the pull-based reception in the audit log, using the CID stored
+            # .. at publish time so the reception cross-references the publish ..
+            if self.audit_log:
+
+                # Messages published before CIDs were carried inside them have no CID stored.
+                message_cid = message.get('cid')
+                if message_cid is None:
+                    message_cid = ''
+
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
+                    cid=message_cid,
+                    msg_id=message['msg_id'],
+                    pub_time_iso=pub_time_iso,
+                    sub_key=sub_key,
+                    size=data_size,
+                    priority=message['priority'],
+                    outcome=AuditOutcome.OK,
+                    data=data_raw,
+                )
 
             # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])

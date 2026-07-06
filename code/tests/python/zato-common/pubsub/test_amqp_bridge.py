@@ -102,7 +102,7 @@ class TestBridgeDelivery(unittest.TestCase):
 
         with patch('requests.post') as mock_post:
             mock_post.return_value.raise_for_status = MagicMock()
-            self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body')
+            self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body', 'test-cid-001')
 
         # The push service got the body as-is ..
         self.stub.server.invoke.assert_called_once_with('my.push.service', 'message body')
@@ -117,7 +117,7 @@ class TestBridgeDelivery(unittest.TestCase):
 
         with patch('requests.post') as mock_post:
             mock_post.return_value.raise_for_status = MagicMock()
-            self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body')
+            self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body', 'test-cid-001')
 
         mock_post.assert_called_once()
 
@@ -134,7 +134,7 @@ class TestBridgeDelivery(unittest.TestCase):
 
         with patch('requests.post') as mock_post:
             mock_post.return_value.raise_for_status = MagicMock()
-            self.stub.pubsub_deliver_amqp_message('topic.amqp', body)
+            self.stub.pubsub_deliver_amqp_message('topic.amqp', body, 'test-cid-001')
 
         call_args = mock_post.call_args
 
@@ -149,7 +149,7 @@ class TestBridgeDelivery(unittest.TestCase):
             mock_post.return_value.raise_for_status.side_effect = Exception('HTTP 500')
 
             with self.assertRaises(Exception):
-                self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body')
+                self.stub.pubsub_deliver_amqp_message('topic.amqp', 'message body', 'test-cid-001')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,13 +165,15 @@ class TestBridgeService(unittest.TestCase):
 
         service = MagicMock()
         service.channel.name = 'channel.1'
+        service.cid = 'test-cid-001'
         service.request.raw_request = 'inbound body'
         service.server.config_manager.get_pubsub_topic_by_amqp_channel.return_value = 'topic.amqp'
 
         OnAMQPMessage.handle(service)
 
         service.server.config_manager.get_pubsub_topic_by_amqp_channel.assert_called_once_with('channel.1')
-        service.server.config_manager.pubsub_deliver_amqp_message.assert_called_once_with('topic.amqp', 'inbound body')
+        service.server.config_manager.pubsub_deliver_amqp_message.assert_called_once_with(
+            'topic.amqp', 'inbound body', 'test-cid-001')
 
 # ################################################################################################################################
 # ################################################################################################################################

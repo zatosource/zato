@@ -21,7 +21,7 @@ from zato.server.service import AsIs, Int, Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -212,7 +212,7 @@ class Publish(PubSubRESTService):
         backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
 
         if backend_config:
-            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data)
+            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
         else:
             result = self.server.pubsub_redis.publish(
                 topic_name,
@@ -224,6 +224,7 @@ class Publish(PubSubRESTService):
                 ext_client_id=ext_client_id,
                 publisher=username,
                 pub_time=pub_time,
+                cid=cid,
             )
 
         # Build response

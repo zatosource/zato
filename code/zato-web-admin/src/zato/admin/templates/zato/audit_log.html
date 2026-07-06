@@ -1,0 +1,91 @@
+{% extends "zato/detail_base.html" %}
+
+{% block page_title %}Audit log{% endblock %}
+
+{% block detail_css %}
+<style nonce="{{ CSP_NONCE }}">
+img.help-icon[id=""] { display: none; }
+
+.audit-log-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.audit-log-search-input {
+    width: 24rem;
+}
+
+.audit-log-data-preview {
+    font-family: monospace;
+    word-break: break-all;
+}
+</style>
+{% endblock %}
+
+{% block section_title %}
+<span id="detail-section-title">Audit log <span class="detail-component-pill">{{ section_title }}</span></span>
+{% endblock %}
+{% block help_icon_id %}{% endblock %}
+
+{% block detail_page_class %}detail-page-audit-log{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.audit_log.init({
+        poll_url: '{{ poll_url }}',
+        source: '{{ source }}',
+        object_name: '{{ object_name }}',
+        cid: '{{ cid }}',
+        is_cid_page: {{ is_cid_page|yesno:"true,false" }}
+    });
+});
+</script>
+{% endblock %}
+
+{% block stat_cards %}{% endblock %}
+
+{% block actions %}{% endblock %}
+
+{% block tabs %}
+    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="events" role="tab" aria-selected="true">Events</button>
+{% endblock %}
+
+{% block tab_panels %}
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
+
+    <form class="audit-log-search-form" id="audit-log-search-form">
+        <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search ..">
+        <button type="submit" class="action-button">Search</button>
+    </form>
+
+    <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
+    <table class="detail-table" id="audit-log-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>CID</th>
+                {% if is_cid_page %}
+                <th>Source</th>
+                {% endif %}
+                <th>Event</th>
+                <th>Message id</th>
+                <th>Endpoint</th>
+                <th>Server</th>
+                <th style="text-align:right">Size</th>
+                <th>Data preview</th>
+            </tr>
+        </thead>
+        <tbody id="audit-log-table-body">
+            <tr class="detail-loading-row">
+                <td colspan="9">
+                    <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="detail-pagination-controls" id="audit-log-pagination-bottom"></div>
+</div>
+{% endblock %}
