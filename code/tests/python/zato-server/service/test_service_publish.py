@@ -17,7 +17,43 @@ from unittest.mock import MagicMock
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.disk_store import DiskMessageStore
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.typing_ import anydict
 from zato.server.base.parallel.delivery import RedisPushDelivery
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The publish Lua script receives (sha, numkeys, 4 key names, 5 fixed ARGV items) before the flattened
+# key-value pairs of the message itself, so the message fields start at this positional index.
+_evalsha_message_fields_start = 11
+
+# What the publish Lua script returns - the stream ID and the subscriber count.
+_evalsha_publish_result = ['1234567890-0', 1]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _extract_published_message(mock_redis:'MagicMock') -> 'anydict':
+    """ Rebuilds the message dict from the flattened key-value pairs passed to the publish Lua script.
+    """
+
+    # Get the positional arguments of the evalsha call that published the message ..
+    evalsha_call_args = mock_redis.evalsha.call_args
+    positional_args = evalsha_call_args[0]
+
+    # .. the message fields are the trailing key, value, key, value, ... pairs ..
+    message_fields = positional_args[_evalsha_message_fields_start:]
+    field_count = len(message_fields)
+
+    # .. rebuild the message dict from the pairs.
+    out:'anydict' = {}
+
+    for field_idx in range(0, field_count, 2):
+        field_key = message_fields[field_idx]
+        field_value = message_fields[field_idx + 1]
+        out[field_key] = field_value
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,13 +76,13 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
     def _publish_and_deliver(self, data:'object') -> 'object':
         """ Publishes data through RedisPubSubBackend with a mock Redis client,
-        captures the xadd message, then feeds it into _deliver_to_service
-        with a mock server.invoke to return what the subscriber receives.
+        captures the message passed to the publish Lua script, then feeds it into
+        _deliver_to_service with a mock server.invoke to return what the subscriber receives.
         """
 
-        # Set up the backend with a mock Redis that captures xadd calls ..
+        # Set up the backend with a mock Redis that captures the publish Lua call ..
         mock_redis = MagicMock()
-        mock_redis.xadd.return_value = b'1234567890-0'
+        mock_redis.evalsha.return_value = _evalsha_publish_result
 
         disk_store = DiskMessageStore(self.test_dir)
         backend = RedisPubSubBackend(mock_redis, disk_store)
@@ -54,9 +90,8 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         # .. publish the data ..
         _ = backend.publish('test.topic', data, publisher='test.publisher')
 
-        # .. extract the message dict that was passed to xadd ..
-        xadd_call_args = mock_redis.xadd.call_args
-        captured_message = xadd_call_args[0][1]
+        # .. extract the message dict that was passed to the publish Lua script ..
+        captured_message = _extract_published_message(mock_redis)
 
         # .. load the payload from disk, just like fetch_messages does ..
         data_ref = captured_message['data_ref']
@@ -190,7 +225,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         data_class with the fully-qualified class name.
         """
         mock_redis = MagicMock()
-        mock_redis.xadd.return_value = b'1234567890-0'
+        mock_redis.evalsha.return_value = _evalsha_publish_result
 
         disk_store = DiskMessageStore(self.test_dir)
         backend = RedisPubSubBackend(mock_redis, disk_store)
@@ -201,8 +236,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
         _ = backend.publish('test.topic', request, publisher='test.publisher')
 
-        xadd_call_args = mock_redis.xadd.call_args
-        captured_message = xadd_call_args[0][1]
+        captured_message = _extract_published_message(mock_redis)
 
         data_ref = captured_message['data_ref']
         load_result = disk_store.load(data_ref)

@@ -431,7 +431,7 @@ class TestNoStalePendingEntriesAfterDelete:
 
         # .. record stream length before publishing ..
         stream_key_before = f'{_Stream_Prefix}{_topic_target}'
-        stream_len_before = redis.xlen(stream_key_before)
+        stream_len_before = cast_('int', redis.xlen(stream_key_before))
 
         # .. publish 5 messages (pending sets will be populated for the subscriber) ..
         for _ in range(5):
@@ -492,8 +492,8 @@ class TestMultiTopicSubscriberSurvivorTopicIntact:
         redis = _get_redis()
 
         # .. record stream lengths before publishing ..
-        stream_len_target_before = redis.xlen(f'{_Stream_Prefix}{_topic_target}')
-        stream_len_survivor_before = redis.xlen(f'{_Stream_Prefix}{_topic_survivor}')
+        stream_len_target_before = cast_('int', redis.xlen(f'{_Stream_Prefix}{_topic_target}'))
+        stream_len_survivor_before = cast_('int', redis.xlen(f'{_Stream_Prefix}{_topic_survivor}'))
 
         # .. publish 3 messages to each topic ..
         for _ in range(3):
