@@ -19,7 +19,7 @@
 	geiger geiger-zato \
 	rust-lint lint \
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
-	quickstart dashboard server listener haproxy dev
+	quickstart dashboard server listener haproxy dev sbom
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -254,6 +254,25 @@ ruff:
 pyright:
 	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/ tests/python/"
 	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/ tests/python/
+
+CYCLONEDX_BOM_VERSION := 7.3.0
+
+sbom: ## Generate a CycloneDX SBOM of the Python environment.
+	@echo ">>> Generating CycloneDX SBOM (cyclonedx-bom $(CYCLONEDX_BOM_VERSION))"
+	mkdir -p $(CURDIR)/sbom
+	$(CURDIR)/code/support-linux/bin/uvx --from cyclonedx-bom==$(CYCLONEDX_BOM_VERSION) cyclonedx-py environment \
+		$(CURDIR)/code/bin/python \
+		--output-format json \
+		--spec-version 1.6 \
+		--mc-type application \
+		--output-file $(CURDIR)/sbom/zato.cdx.json
+	@$(CURDIR)/code/bin/python -c "\
+	import json; \
+	sbom = json.load(open('$(CURDIR)/sbom/zato.cdx.json')); \
+	components = sbom['components']; \
+	suffix = 'component' if len(components) == 1 else 'components'; \
+	print(f'>>> Wrote $(CURDIR)/sbom/zato.cdx.json ({len(components)} {suffix})'); \
+	"
 
 help:
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
