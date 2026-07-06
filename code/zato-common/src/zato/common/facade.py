@@ -91,6 +91,16 @@ class PubSubFacade:
         if is_service:
             topic_name = self._ensure_service_topic(topic_name)
 
+        # .. service auto-topics always use the built-in backend so the backend registry
+        # .. is consulted only for regular topics ..
+        if not topic_name.startswith(_service_topic_prefix):
+            backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
+
+            # .. AMQP-backed topics go to the broker through their outgoing connection.
+            if backend_config:
+                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data)
+                return out
+
         # .. remap 'cid' to 'correl_id' for the Redis backend ..
         if 'cid' in kwargs:
             kwargs['correl_id'] = kwargs.pop('cid')

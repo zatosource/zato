@@ -367,6 +367,7 @@ test-pubsub: ## All pub/sub tests.
 _test-pubsub:
 	ruff check \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
@@ -384,6 +385,7 @@ _test-pubsub:
 		2>&1 | $(TS)
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
@@ -401,6 +403,7 @@ _test-pubsub:
 		2>&1 | $(TS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
@@ -485,6 +488,22 @@ test-ui-pubsub:
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_subscription_create.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_config.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_publish.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_bridge.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_restart.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
