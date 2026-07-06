@@ -67,6 +67,7 @@ class Create(AdminService):
 
         input.delivery_mode = _resolve_delivery_mode(input.delivery_mode)
         input.priority = int(input.priority)
+        input.pool_size = int(input.pool_size)
         input.expiration = int(input.expiration) if input.expiration else None
 
         input.frame_max = 131072
@@ -141,6 +142,7 @@ class Edit(AdminService):
 
         input.delivery_mode = _resolve_delivery_mode(input.delivery_mode)
         input.priority = int(input.priority)
+        input.pool_size = int(input.pool_size)
         input.expiration = int(input.expiration) if input.expiration else None
 
         if not(input.priority >= 0 and input.priority <= 9):

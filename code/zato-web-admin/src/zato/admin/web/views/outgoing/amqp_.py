@@ -32,6 +32,15 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The ODB stores delivery modes as AMQP integers, the forms use these string names
+_delivery_mode_by_id = {
+    1: 'non_persistent',
+    2: 'persistent',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
@@ -84,6 +93,9 @@ class Index(_Index):
         edit_form = EditForm(prefix='edit')
 
         for item in self.items:
+
+            # The get-list service returns the AMQP integer, map it back to the string name first
+            item.delivery_mode = _delivery_mode_by_id[item.delivery_mode]
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]
 
         return {
@@ -116,7 +128,7 @@ def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
         req.zato.client.invoke('zato.outgoing.amqp.edit', request)
-        delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
+        delivery_mode_text = delivery_friendly_name[req.POST['edit-delivery_mode']]
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], delivery_mode_text)
     except Exception:

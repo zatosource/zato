@@ -53,6 +53,9 @@ class Create(AdminService):
 
             input = self.request.input
 
+            input.pool_size = int(input.pool_size)
+            input.prefetch_count = int(input.prefetch_count)
+
             input.frame_max = 131072
             input.heartbeat = 30
 
@@ -124,6 +127,9 @@ class Edit(AdminService):
     def handle(self):
 
         input = self.request.input
+
+        input.pool_size = int(input.pool_size)
+        input.prefetch_count = int(input.prefetch_count)
 
         with closing(self.odb.session()) as session:
             # Let's see if we already have an account of that name before committing

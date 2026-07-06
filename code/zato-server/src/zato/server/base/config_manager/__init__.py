@@ -2167,6 +2167,11 @@ class ConfigManager(_ConfigManagerBase):
             # .. receive messages published after this point.
             self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
+        # .. and if this is a push subscription, its delivery greenlet needs to run
+        # .. from the moment the subscription exists, without waiting for an edit or a restart.
+        if delivery_type == PubSub.Delivery_Type.Push:
+            self._setup_push_delivery(sub_key, msg)
+
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
 
         sub_key = msg.sub_key
@@ -2200,42 +2205,48 @@ class ConfigManager(_ConfigManagerBase):
         _ = self._push_subs.pop(sub_key, None)
 
         # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15).
-        if delivery_type == 'push':
+        if delivery_type == PubSub.Delivery_Type.Push:
+            self._setup_push_delivery(sub_key, msg)
 
-            push_type = getattr(msg, 'push_type', None)
-            push_service_name = getattr(msg, 'push_service_name', None)
-            rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
+# ################################################################################################################################
 
-            # .. resolve the REST endpoint URL from ODB if needed ..
-            rest_push_url = ''
+    def _setup_push_delivery(self, sub_key:'str', msg:'bunch_') -> 'None':
+        """ Fills in _push_subs for a push subscription and starts its delivery greenlet.
+        """
+        push_type = getattr(msg, 'push_type', None)
+        push_service_name = getattr(msg, 'push_service_name', None)
+        rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
 
-            if push_type == 'rest':
-                if rest_push_endpoint_id:
-                    from contextlib import closing as closing_
-                    from zato.common.odb.model import HTTPSOAP
-                    with closing_(self.server.odb.session()) as session:
-                        endpoint = session.query(HTTPSOAP).filter(
-                            HTTPSOAP.id == rest_push_endpoint_id
-                        ).first()
-                        if endpoint:
-                            host = endpoint.host or ''
-                            rest_push_url = host + endpoint.url_path
+        # .. resolve the REST endpoint URL from ODB if needed ..
+        rest_push_url = ''
 
-            self._push_subs[sub_key] = []
+        if push_type == PubSub.Push_Type.REST:
+            if rest_push_endpoint_id:
+                from contextlib import closing as closing_
+                from zato.common.odb.model import HTTPSOAP
+                with closing_(self.server.odb.session()) as session:
+                    endpoint = session.query(HTTPSOAP).filter(
+                        HTTPSOAP.id == rest_push_endpoint_id
+                    ).first()
+                    if endpoint:
+                        host = endpoint.host or ''
+                        rest_push_url = host + endpoint.url_path
 
-            for topic_item in msg.topic_name_list:
-                topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
-                sub_config = {
-                    'sub_key': sub_key,
-                    'topic_name': topic_name,
-                    'push_type': push_type,
-                    'push_service_name': push_service_name,
-                    'rest_push_endpoint_id': rest_push_endpoint_id,
-                    'rest_push_url': rest_push_url,
-                }
-                self._push_subs[sub_key].append(sub_config)
+        self._push_subs[sub_key] = []
 
-            self.server.pubsub_push_delivery.start_sub_key(sub_key)
+        for topic_item in msg.topic_name_list:
+            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+            sub_config = {
+                'sub_key': sub_key,
+                'topic_name': topic_name,
+                'push_type': push_type,
+                'push_service_name': push_service_name,
+                'rest_push_endpoint_id': rest_push_endpoint_id,
+                'rest_push_url': rest_push_url,
+            }
+            self._push_subs[sub_key].append(sub_config)
+
+        self.server.pubsub_push_delivery.start_sub_key(sub_key)
 
     def cleanup_subscription(self, sub_key:'str', username:'str') -> 'None':
         """ Cleans up all in-memory and Redis state for a single subscription.

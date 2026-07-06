@@ -53,6 +53,10 @@ _poll_interval = 0.5
 # What the enabled-plugins file contains - no plugins at all, for faster startup and no extra ports
 _no_plugins = '[].'
 
+# Debian and Ubuntu install the real rabbitmqctl here - the /usr/sbin wrapper on PATH
+# refuses to run for regular users, printing "Only root or rabbitmq should run rabbitmqctl"
+_debian_rabbitmqctl = '/usr/lib/rabbitmq/bin/rabbitmqctl'
+
 # Default timeout for draining queues in tests
 _drain_timeout = 5.0
 
@@ -73,12 +77,16 @@ class RabbitMQProcess:
         self.amqp_port = find_free_port()
         self.dist_port = find_free_port()
 
-        # A unique node name so parallel brokers never clash either
+        # A unique node name so parallel brokers never clash either. No explicit host part,
+        # both rabbitmq-server and rabbitmqctl then resolve the local hostname the same way.
         cid = new_cid()
-        self.nodename = f'zato-test-{cid}@localhost'
+        self.nodename = f'zato-test-{cid}'
 
         # The URL AMQP clients connect with
         self.amqp_url = f'amqp://{_default_username}:{_default_password}@127.0.0.1:{self.amqp_port}//'
+
+        # Where the node writes its pid, used as the last-resort kill switch
+        self.pid_file = os.path.join(self.base_directory, 'rabbitmq.pid')
 
         # The enabled-plugins file needs to exist before the node starts
         self.enabled_plugins_file = os.path.join(self.base_directory, 'enabled_plugins')
@@ -104,7 +112,7 @@ class RabbitMQProcess:
             'RABBITMQ_DIST_PORT': str(self.dist_port),
             'RABBITMQ_MNESIA_BASE': os.path.join(self.base_directory, 'mnesia'),
             'RABBITMQ_LOG_BASE': os.path.join(self.base_directory, 'logs'),
-            'RABBITMQ_PID_FILE': os.path.join(self.base_directory, 'rabbitmq.pid'),
+            'RABBITMQ_PID_FILE': self.pid_file,
             'RABBITMQ_ENABLED_PLUGINS_FILE': self.enabled_plugins_file,
             'HOME': self.base_directory,
         }
@@ -156,15 +164,25 @@ class RabbitMQProcess:
             environment = dict(os.environ)
             environment.update(self.get_environment())
 
-            _ = subprocess.run(
-                ['rabbitmqctl', '-n', self.nodename, 'shutdown'],
+            # Prefer the real binary over the wrapper that rejects non-root users
+            if os.path.exists(_debian_rabbitmqctl):
+                rabbitmqctl = _debian_rabbitmqctl
+            else:
+                rabbitmqctl = 'rabbitmqctl'
+
+            result = subprocess.run(
+                [rabbitmqctl, '-n', self.nodename, 'shutdown'],
                 env=environment,
                 capture_output=True,
                 timeout=_shutdown_timeout,
             )
 
+            if result.returncode != 0:
+                logger.warning('rabbitmqctl shutdown failed for `%s` - %s', self.nodename, result.stderr.decode('utf8'))
+
             # Wait until the AMQP port stops accepting connections
             deadline = time.monotonic() + _shutdown_timeout
+            is_port_closed = False
 
             while time.monotonic() < deadline:
                 try:
@@ -172,7 +190,12 @@ class RabbitMQProcess:
                         _ = connection.ensure_connection(max_retries=1, timeout=1)
                     time.sleep(_poll_interval)
                 except Exception:
+                    is_port_closed = True
                     break
+
+            # If rabbitmqctl could not stop the node, kill the beam process through its pid file
+            if not is_port_closed:
+                self._kill_via_pid_file()
 
             self.is_running = False
 
@@ -180,6 +203,28 @@ class RabbitMQProcess:
         if os.path.exists(self.base_directory):
             shutil.rmtree(self.base_directory, ignore_errors=True)
             logger.info('Removed RabbitMQ base directory %s', self.base_directory)
+
+# ################################################################################################################################
+
+    def _kill_via_pid_file(self) -> 'None':
+        """ The last resort when rabbitmqctl cannot reach the node - kill the beam process directly.
+        """
+        import signal
+
+        if not os.path.exists(self.pid_file):
+            logger.warning('No pid file at %s, cannot kill node `%s`', self.pid_file, self.nodename)
+            return
+
+        with open(self.pid_file, 'r') as pid_source:
+            pid = int(pid_source.read().strip())
+
+        logger.warning('Killing RabbitMQ node `%s` via pid %d', self.nodename, pid)
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            # Already gone, which is what was needed anyway
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################

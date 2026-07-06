@@ -2082,6 +2082,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'outgoing_soap': 'http_soap',
             'channel_rest': 'http_soap',
             'channel_soap': 'http_soap',
+            'outgoing_amqp': 'out_amqp',
         }
 
         # The http_soap table stores channels and outgoing connections together,
