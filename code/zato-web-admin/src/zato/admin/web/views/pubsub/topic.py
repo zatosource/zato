@@ -51,13 +51,14 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
-    output_optional = 'description', 'publisher_count', 'subscriber_count',
+    output_optional = 'description', 'publisher_count', 'subscriber_count', 'backend_type', 'amqp_outconn_name', \
+        'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name'
     output_repeated = True
 
     def handle(self) -> 'anydict':
         out = {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(req=self.req),
+            'edit_form': EditForm(prefix='edit', req=self.req),
             'show_search_form': True,
         }
 
@@ -73,7 +74,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_active'
-    input_optional = 'description',
+    input_optional = 'description', 'backend_type', 'amqp_outconn_name', 'amqp_exchange', 'amqp_routing_key', \
+        'amqp_channel_name'
     output_required = 'id', 'name'
 
     def success_message(self, item:'any_') -> 'str':

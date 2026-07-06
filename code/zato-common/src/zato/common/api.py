@@ -1313,6 +1313,12 @@ class PubSub:
         Pull = 'pull'
         Push = 'push'
 
+    class Backend_Type:
+        Builtin = 'builtin'
+        AMQP = 'amqp'
+
+    Backend_Type_Default = Backend_Type.Builtin
+
     class Push_Type:
         REST = 'rest'
         Service = 'service'
