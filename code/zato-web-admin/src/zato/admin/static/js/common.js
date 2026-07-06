@@ -812,6 +812,23 @@ $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// Opens the page's create form when the URL carries create=1, e.g. when another page
+// links here so that a missing definition can be created right away.
+$.fn.zato.data_table.maybe_open_create_form = function(create_func) {
+
+    // Only act when the URL explicitly asks for it ..
+    var should_create = $(document).getUrlParam('create');
+
+    if(should_create != '1') {
+        return;
+    }
+
+    // .. and open the create form.
+    create_func();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
 
     let instance = new $.fn.zato.data_table.class_();

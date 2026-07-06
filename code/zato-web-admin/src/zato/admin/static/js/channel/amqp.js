@@ -23,6 +23,9 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
     });
+
+    // Open the create form right away when the URL asks for it.
+    $.fn.zato.data_table.maybe_open_create_form($.fn.zato.channel.amqp.create);
 })
 
 $.fn.zato.channel.amqp.create = function() {

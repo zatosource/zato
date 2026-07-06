@@ -5,6 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
@@ -27,20 +28,12 @@
         }
 
         /* ------------------------------------------------------------ */
-        /* Topic backend - AMQP rows and hints                           */
+        /* Topic backend - AMQP rows                                     */
         /* ------------------------------------------------------------ */
 
         .zato-topic-amqp-row-create,
         .zato-topic-amqp-row-edit {
             display: none;
-        }
-
-        .zato-topic-form-hint {
-            display: block;
-            margin-top: 0.15rem;
-            font-size: 0.8em;
-            font-style: italic;
-            color: #666666;
         }
 
         .zato-topic-backend-badge {
@@ -74,6 +67,7 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
@@ -246,21 +240,18 @@
                         </tr>
                         <tr class="zato-topic-amqp-row-create">
                             <td style="vertical-align:middle"><label for="id_amqp_routing_key">Routing key</label></td>
-                            <td>
-                                {{ create_form.amqp_routing_key }}
-                                <span class="zato-topic-form-hint">Optional, the topic name is used if empty</span>
-                            </td>
+                            <td>{{ create_form.amqp_routing_key }}</td>
                         </tr>
                         <tr class="zato-topic-amqp-row-create">
                             <td style="vertical-align:middle"><label for="id_amqp_channel_name">Channel</label></td>
-                            <td>
-                                {{ create_form.amqp_channel_name }}
-                                <span class="zato-topic-form-hint">Optional, messages from this channel are delivered to the topic's subscribers</span>
-                            </td>
+                            <td>{{ create_form.amqp_channel_name }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -298,21 +289,18 @@
                         </tr>
                         <tr class="zato-topic-amqp-row-edit">
                             <td style="vertical-align:middle"><label for="id_edit-amqp_routing_key">Routing key</label></td>
-                            <td>
-                                {{ edit_form.amqp_routing_key }}
-                                <span class="zato-topic-form-hint">Optional, the topic name is used if empty</span>
-                            </td>
+                            <td>{{ edit_form.amqp_routing_key }}</td>
                         </tr>
                         <tr class="zato-topic-amqp-row-edit">
                             <td style="vertical-align:middle"><label for="id_edit-amqp_channel_name">Channel</label></td>
-                            <td>
-                                {{ edit_form.amqp_channel_name }}
-                                <span class="zato-topic-form-hint">Optional, messages from this channel are delivered to the topic's subscribers</span>
-                            </td>
+                            <td>{{ edit_form.amqp_channel_name }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

@@ -23,6 +23,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# This value marks the select option that takes the user to a page where the missing definition can be created.
+Create_New_Value = 'zato-create-new'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_outconn_amqp_choices(req:'HttpRequest') -> 'anylist':
     """ Returns a list of outgoing AMQP connections as form choices.
     """
@@ -36,6 +42,12 @@ def get_outconn_amqp_choices(req:'HttpRequest') -> 'anylist':
 
     for item in response.data:
         out.append((item.name, item.name))
+
+    # .. with nothing to select, offer to create a connection ..
+    has_items = len(out) > 1
+
+    if not has_items:
+        out.append((Create_New_Value, 'Create a new connection'))
 
     # .. and return the result.
     return out
@@ -56,6 +68,12 @@ def get_channel_amqp_choices(req:'HttpRequest') -> 'anylist':
 
     for item in response.data:
         out.append((item.name, item.name))
+
+    # .. with nothing to select, offer to create a channel ..
+    has_items = len(out) > 1
+
+    if not has_items:
+        out.append((Create_New_Value, 'Create a new channel'))
 
     # .. and return the result.
     return out
