@@ -36,6 +36,19 @@
             display: none;
         }
 
+        /* The help badge must not contribute to the width of the narrow first column,
+           so it is taken out of the layout flow and centered vertically in its cell. */
+        .zato-topic-help-cell {
+            position: relative;
+        }
+
+        .zato-topic-help-cell .how-it-works-badge {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
         .zato-topic-backend-badge {
             font-size: 0.8em;
             font-weight: bold;
@@ -248,7 +261,7 @@
                         </tr>
 
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td class="zato-topic-help-cell" style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
                             </td>
                             <td style="text-align:right">
@@ -297,7 +310,7 @@
                         </tr>
 
                         <tr>
-                            <td style="text-align:left;vertical-align:middle">
+                            <td class="zato-topic-help-cell" style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
                             </td>
                             <td style="text-align:right">
