@@ -15,7 +15,7 @@ import time
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anylist, strlist
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +25,9 @@ _Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 _Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
 _Subscription_Page_Url = '/zato/pubsub/subscription/?cluster=1'
 _Outgoing_REST_Page_Url = '/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http'
+_Channel_REST_Page_Url = '/zato/http-soap/?cluster=1&connection=channel&transport=plain_http'
+_Outgoing_AMQP_Page_Url = '/zato/outgoing/amqp/?cluster=1'
+_Channel_AMQP_Page_Url = '/zato/channel/amqp/?cluster=1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -576,6 +579,333 @@ def create_permission_with_two_patterns(
 
     out = id_cell.inner_text().strip()
     return out
+
+# ################################################################################################################################
+
+def set_select_value(page:'Page', selector:'str', value:'str') -> 'None':
+    """ Sets a select's value via JS - needed because Chosen.js hides the underlying select element.
+    """
+    page.evaluate(f'$("{selector}").val("{value}").trigger("chosen:updated").trigger("change")')
+
+# ################################################################################################################################
+
+def create_outgoing_amqp(page:'Page', base_url:'str', name:'str', address:'str', username:'str', password:'str') -> 'str':
+    """ Creates an outgoing AMQP connection via the UI and returns its item_id.
+    """
+
+    # Navigate to the outgoing AMQP page ..
+    navigate_to_page(page, base_url, _Outgoing_AMQP_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the form fields ..
+    page.fill('#id_name', name)
+    page.fill('#id_address', address)
+    page.fill('#id_username', username)
+    page.fill('#id_password', password)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. wait for the row to appear ..
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    page.wait_for_selector(row_selector, state='visible', timeout=10000)
+
+    # .. and extract the item_id.
+    out = get_item_id(page, name)
+    return out
+
+# ################################################################################################################################
+
+def create_amqp_channel(
+    page:'Page',
+    base_url:'str',
+    name:'str',
+    address:'str',
+    username:'str',
+    password:'str',
+    queue:'str',
+    service_name:'str',
+    ) -> 'str':
+    """ Creates an AMQP channel via the UI and returns its item_id.
+    """
+
+    # Navigate to the AMQP channels page ..
+    navigate_to_page(page, base_url, _Channel_AMQP_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the form fields ..
+    page.fill('#id_name', name)
+    page.fill('#id_address', address)
+    page.fill('#id_username', username)
+    page.fill('#id_password', password)
+    page.fill('#id_queue', queue)
+
+    # .. pick the service the channel will invoke ..
+    set_select_value(page, '#id_service', service_name)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. wait for the row to appear ..
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    page.wait_for_selector(row_selector, state='visible', timeout=10000)
+
+    # .. and extract the item_id.
+    out = get_item_id(page, name)
+    return out
+
+# ################################################################################################################################
+
+def create_amqp_topic(
+    page:'Page',
+    base_url:'str',
+    name:'str',
+    outconn_name:'str',
+    exchange:'str',
+    routing_key:'str',
+    channel_name:'str',
+    ) -> 'str':
+    """ Creates an AMQP-backed pub/sub topic via the UI and returns its item_id.
+    The routing key and channel name may be empty strings.
+    """
+
+    # Navigate to the topics page ..
+    navigate_to_page(page, base_url, _Topic_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the name ..
+    page.fill('#id_name', name)
+
+    # .. switch the backend type to AMQP so the AMQP rows appear ..
+    set_select_value(page, '#id_backend_type', 'amqp')
+    page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
+
+    # .. select the outgoing connection ..
+    set_select_value(page, '#id_amqp_outconn_name', outconn_name)
+
+    # .. fill in the exchange ..
+    page.fill('#id_amqp_exchange', exchange)
+
+    # .. the routing key is optional ..
+    if routing_key:
+        page.fill('#id_amqp_routing_key', routing_key)
+
+    # .. so is the channel ..
+    if channel_name:
+        set_select_value(page, '#id_amqp_channel_name', channel_name)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. wait for the row to appear ..
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+    page.wait_for_selector(row_selector, state='visible', timeout=10000)
+
+    # .. and extract the item_id.
+    out = get_item_id(page, name)
+    return out
+
+# ################################################################################################################################
+
+def open_edit_and_read_backend_fields(page:'Page', item_id:'str') -> 'dict':
+    """ Opens the topic edit dialog and returns the backend fields it shows, then closes the dialog.
+    """
+
+    # Open the edit dialog ..
+    open_edit_dialog(page, 'topic', item_id)
+
+    # .. read all the backend fields ..
+    out = {
+        'name': page.input_value('#id_edit-name'),
+        'backend_type': page.input_value('#id_edit-backend_type'),
+        'amqp_outconn_name': page.input_value('#id_edit-amqp_outconn_name'),
+        'amqp_exchange': page.input_value('#id_edit-amqp_exchange'),
+        'amqp_routing_key': page.input_value('#id_edit-amqp_routing_key'),
+        'amqp_channel_name': page.input_value('#id_edit-amqp_channel_name'),
+    }
+
+    # .. close the dialog ..
+    close_dialog_via_jquery(page, 'edit-div')
+
+    # .. and return what the form showed.
+    return out
+
+# ################################################################################################################################
+
+def create_rest_channel(page:'Page', base_url:'str', name:'str', service_name:'str', url_path:'str') -> 'None':
+    """ Creates a REST channel via the UI, pointing at the given service.
+    """
+
+    # Zato
+    from zato.common.api import ZATO_NONE
+
+    # Navigate to the REST channels page ..
+    navigate_to_page(page, base_url, _Channel_REST_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the form fields ..
+    page.fill('#id_name', name)
+    page.fill('#id_url_path', url_path)
+
+    # .. pick the service the channel will invoke ..
+    set_select_value(page, '#id_service', service_name)
+
+    # .. no security definition, the channel is open for tests ..
+    set_select_value(page, '#id_security', ZATO_NONE)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. wait for the row to appear.
+    row_selector = f'#data-table tbody tr:has(span.name-value:text-is("{name}"))'
+    page.wait_for_selector(row_selector, state='visible', timeout=10000)
+
+# ################################################################################################################################
+
+def select_option_by_label(page:'Page', selector:'str', label:'str') -> 'None':
+    """ Selects an option by its visible label via JS - needed because Chosen.js hides the underlying select element.
+    """
+    page.evaluate(
+        '(() => {'
+        f'  var sel = document.querySelector("{selector}");'
+        '  for (var i = 0; i < sel.options.length; i++) {'
+        f'    if (sel.options[i].text === {label!r}) {{'
+        '      sel.value = sel.options[i].value;'
+        '      $(sel).trigger("chosen:updated").trigger("change");'
+        '      return true;'
+        '    }'
+        '  }'
+        '  return false;'
+        '})()'
+    )
+
+# ################################################################################################################################
+
+def create_outgoing_rest_with_address(page:'Page', base_url:'str', name:'str', host:'str', url_path:'str') -> 'None':
+    """ Creates an outgoing REST connection via the UI, pointing at the given host and URL path.
+    """
+
+    # Zato
+    from zato.common.api import ZATO_NONE
+
+    # Navigate to the outgoing REST page ..
+    navigate_to_page(page, base_url, _Outgoing_REST_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog(page)
+
+    # .. fill in the form fields ..
+    page.fill('#id_name', name)
+    page.fill('#id_host', host)
+    page.fill('#id_url_path', url_path)
+
+    # .. no security definition ..
+    set_select_value(page, '#id_security', ZATO_NONE)
+
+    # .. submit and wait for the dialog to close ..
+    submit_create_form(page)
+
+    # .. wait for the row to appear.
+    row_selector = f'#data-table tbody tr:has(span.name-value:text-is("{name}"))'
+    page.wait_for_selector(row_selector, state='visible', timeout=10000)
+
+# ################################################################################################################################
+
+def create_push_rest_subscription(
+    page:'Page',
+    base_url:'str',
+    sec_name:'str',
+    topic_name:'str',
+    rest_endpoint_name:'str',
+    ) -> 'None':
+    """ Creates a push subscription targeting an outgoing REST connection via the UI.
+    """
+
+    # Navigate to the subscriptions page ..
+    navigate_to_page(page, base_url, _Subscription_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog_via_js(page, 'subscription')
+
+    # .. select the sec def and wait for topics ..
+    select_sec_def_and_wait_for_topics(page, sec_name)
+
+    # .. check the topic checkbox ..
+    page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
+
+    # .. set delivery type to push ..
+    page.select_option('#id_delivery_type', value='push')
+    time.sleep(0.3)
+
+    # .. set push type to REST ..
+    page.select_option('#id_push_type', value='rest')
+    time.sleep(0.3)
+
+    # .. wait for the REST endpoints dropdown to populate ..
+    page.wait_for_function(
+        'document.querySelector("#id_rest_push_endpoint_id") && '
+        'document.querySelector("#id_rest_push_endpoint_id").options.length > 1',
+        timeout=10000
+    )
+
+    # .. select the endpoint by its visible name ..
+    select_option_by_label(page, '#id_rest_push_endpoint_id', rest_endpoint_name)
+
+    # .. submit the form.
+    submit_create_form(page)
+
+# ################################################################################################################################
+
+def create_push_service_subscription(
+    page:'Page',
+    base_url:'str',
+    sec_name:'str',
+    topic_name:'str',
+    service_name:'str',
+    ) -> 'None':
+    """ Creates a push subscription targeting a service via the UI.
+    """
+
+    # Navigate to the subscriptions page ..
+    navigate_to_page(page, base_url, _Subscription_Page_Url)
+
+    # .. open the create dialog ..
+    open_create_dialog_via_js(page, 'subscription')
+
+    # .. select the sec def and wait for topics ..
+    select_sec_def_and_wait_for_topics(page, sec_name)
+
+    # .. check the topic checkbox ..
+    page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
+
+    # .. set delivery type to push ..
+    page.select_option('#id_delivery_type', value='push')
+    time.sleep(0.3)
+
+    # .. set push type to service ..
+    page.select_option('#id_push_type', value='service')
+    time.sleep(0.3)
+
+    # .. wait for the services dropdown to populate ..
+    page.wait_for_function(
+        'document.querySelector("#id_push_service_name") && '
+        'document.querySelector("#id_push_service_name").options.length > 1',
+        timeout=10000
+    )
+
+    # .. select the service ..
+    set_select_value(page, '#id_push_service_name', service_name)
+
+    # .. submit the form.
+    submit_create_form(page)
 
 # ################################################################################################################################
 

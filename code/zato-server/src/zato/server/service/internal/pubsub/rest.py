@@ -208,18 +208,23 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        # .. publish to Redis ..
-        result = self.server.pubsub_redis.publish(
-            topic_name,
-            data,
-            priority=priority,
-            expiration=expiration,
-            correl_id=correl_id,
-            in_reply_to=in_reply_to,
-            ext_client_id=ext_client_id,
-            publisher=username,
-            pub_time=pub_time,
-        )
+        # .. publish either to the AMQP broker or to Redis, depending on the topic's backend ..
+        backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
+
+        if backend_config:
+            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data)
+        else:
+            result = self.server.pubsub_redis.publish(
+                topic_name,
+                data,
+                priority=priority,
+                expiration=expiration,
+                correl_id=correl_id,
+                in_reply_to=in_reply_to,
+                ext_client_id=ext_client_id,
+                publisher=username,
+                pub_time=pub_time,
+            )
 
         # Build response
         self.response.payload.is_ok = True

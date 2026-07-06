@@ -1289,6 +1289,9 @@ class PubSubTopic(Base):
     created = Column(DateTime, nullable=False, default=_utcnow)
     last_updated = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=id, cascade='all, delete, delete-orphan'))
 

@@ -1456,6 +1456,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
 
         self.config_manager._sync_pubsub_subscriptions()
+        self.config_manager._sync_pubsub_topics()
 
         # .. pass connection params so each delivery greenlet creates its own connection ..
         redis_conn_params = {
