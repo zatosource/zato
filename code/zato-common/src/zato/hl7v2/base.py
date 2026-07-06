@@ -34,6 +34,12 @@ _segment_classes:'strtypedict'  = {}
 # to avoid circular imports (v2_9 imports from base, base cannot import v2_9 at module level).
 _v2_9_module:'any_' = None
 
+# The standard MSH-2 encoding characters, used when a message is built
+# from scratch without assigning MSH-2 explicitly. Real-world senders may
+# use fewer characters (e.g. '^~&' with no escape character), in which case
+# the assigned value is serialized as-is.
+_default_encoding_characters = '^~\\&'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1075,9 +1081,16 @@ class HL7Segment:
         max_position = max(fields_by_position.keys())
         parts = [self._segment_id]
 
-        # .. MSH needs the encoding characters appended first ..
+        # .. MSH needs the encoding characters appended first - the value
+        # .. assigned to MSH-2 wins so that non-standard sets (e.g. '^~&'
+        # .. without an escape character) are reproduced as-is ..
         if self._segment_id == 'MSH':
-            parts.append('^~\\&')
+            encoding_characters = fields_by_position.get(2)
+
+            if encoding_characters is None:
+                encoding_characters = _default_encoding_characters
+
+            parts.append(encoding_characters)
 
         # .. then fill in each field position up to the maximum
         # .. (MSH starts at 3 because positions 1 and 2 are the field separator and encoding characters).
