@@ -684,11 +684,14 @@ class ConnectorAMQP(Connector):
     def _start_amqp(self):
         self.is_connected = True
 
+        # The connector itself has no consumer cid, so the test connection gets its own one for logging
+        cid = new_cid_queue_consumer()
+
         test_conn:'KombuAMQPConnection' = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
         _ = test_conn.connect()
         self.is_connected = test_conn.connected
 
-        close_connection(self.cid, test_conn)
+        close_connection(cid, test_conn)
 
 # ################################################################################################################################
 

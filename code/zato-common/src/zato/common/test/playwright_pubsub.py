@@ -717,6 +717,10 @@ def open_edit_and_read_backend_fields(page:'Page', item_id:'str') -> 'dict':
     """ Opens the topic edit dialog and returns the backend fields it shows, then closes the dialog.
     """
 
+    # Reload first - the dialog must show what the server persisted, not what the local
+    # JavaScript put into the row after the last form submission.
+    _ = page.reload(wait_until='networkidle')
+
     # Open the edit dialog ..
     open_edit_dialog(page, 'topic', item_id)
 

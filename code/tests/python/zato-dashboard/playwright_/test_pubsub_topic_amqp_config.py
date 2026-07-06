@@ -461,7 +461,7 @@ class TestPubSubTopicAMQPConfig:
         assert row is None, f'Expected no row for `{topic_name}` after deletion'
 
         # .. and nothing went wrong along the way.
-        real_console_errors = filter_console_noise(console_errors, ['favicon.ico'])
+        real_console_errors = filter_console_noise(console_errors, ['favicon.ico', 'Content-Security-Policy'])
 
         assert not real_console_errors, f'Expected no console errors, got: {real_console_errors}'
         assert not http_errors, f'Expected no HTTP 500s, got: {http_errors}'

@@ -393,6 +393,9 @@ class Create(AdminService):
                 pubsub_msg.username = sec_base.username
                 pubsub_msg.topic_name_list = topic_objects_list
                 pubsub_msg.delivery_type = input.delivery_type
+                pubsub_msg.push_type = sub.push_type
+                pubsub_msg.rest_push_endpoint_id = sub.rest_push_endpoint_id
+                pubsub_msg.push_service_name = sub.push_service_name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 # .. our own process we invoke directly ..
