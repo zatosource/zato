@@ -212,3 +212,15 @@ env_variables_page_config['textarea_id'] = 'env-variables'
 env_variables_page_config['textarea_label'] = 'Variables'
 env_variables_page_config['textarea_placeholder'] = 'KEY=value, one per line, e.g.:\nMY_API_KEY=abc123\nDEBUG=1'
 env_variables_page_config['content_rows'] = []
+
+sbom_page_config = {}
+sbom_page_config['title'] = 'SBOM'
+sbom_page_config['api_prefix'] = '/zato/sbom/'
+sbom_page_config['version_section_title'] = 'SBOM'
+sbom_page_config['show_sidebar'] = False
+sbom_page_config['show_restart_steps'] = False
+sbom_page_config['panel_width'] = '55%'
+sbom_page_config['textarea_id'] = 'sbom'
+sbom_page_config['textarea_label'] = 'CycloneDX'
+sbom_page_config['no_sbom_message'] = 'No SBOM found, generate one with: make sbom'
+sbom_page_config['content_rows'] = []

@@ -87,3 +87,6 @@ vscode
 
 # Cosmic-ray mutation testing
 *.py.meta
+
+# CycloneDX SBOM output
+/sbom/
