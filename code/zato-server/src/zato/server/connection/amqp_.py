@@ -408,7 +408,7 @@ class Consumer:
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
         except Exception:
-            logger.warning(f'[{self.cid}] {format_exc()}')
+            logger.warning(f'[{self.cid}] on-amqp-message error in channel `{self.name}` -> {format_exc()}')
 
 # ################################################################################################################################
 
@@ -705,23 +705,30 @@ class ConnectorAMQP(Connector):
         _RECEIVED='RECEIVED', _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
         """ Invoked each time a message is taken off an AMQP queue.
         """
-        self.on_message_callback(
-            channel_config['service_name'],
-            body,
-            channel=_CHANNEL_AMQP,
-            data_format=channel_config['data_format'],
-            zato_ctx={'zato.channel_item': {  # noqa: JS101
-                'id': channel_config.id,
-                'name': channel_config.name,
-                'is_internal': False,
-                'amqp_msg': msg,
-            }}) # noqa: JS101
-
-        if msg._state == _RECEIVED:
-            if channel_config['ack_mode'] == _ZATO_ACK_MODE_ACK:
-                msg.ack()
-            else:
-                msg.reject()
+        try:
+            self.on_message_callback(
+                channel_config['service_name'],
+                body,
+                channel=_CHANNEL_AMQP,
+                data_format=channel_config['data_format'],
+                zato_ctx={'zato.channel_item': {  # noqa: JS101
+                    'id': channel_config.id,
+                    'name': channel_config.name,
+                    'is_internal': False,
+                    'amqp_msg': msg,
+                }}) # noqa: JS101
+        except Exception:
+            # The service failed, reject the message and requeue it immediately so the broker
+            # redelivers it right away instead of holding it until the connection is torn down.
+            if msg._state == _RECEIVED:
+                msg.requeue()
+            raise
+        else:
+            if msg._state == _RECEIVED:
+                if channel_config['ack_mode'] == _ZATO_ACK_MODE_ACK:
+                    msg.ack()
+                else:
+                    msg.reject()
 
 # ################################################################################################################################
 

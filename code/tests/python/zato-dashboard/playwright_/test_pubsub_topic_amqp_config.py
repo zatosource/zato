@@ -60,7 +60,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 24 - an outgoing AMQP connection created through the form appears in the table
+        """ An outgoing AMQP connection created through the form appears in the table
         and the edit dialog shows the stored address.
         """
         page = logged_in_page
@@ -94,7 +94,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 25 - an AMQP channel created through the form appears in the table
+        """ An AMQP channel created through the form appears in the table
         and the edit dialog shows the stored values.
         """
         page = logged_in_page
@@ -129,7 +129,7 @@ class TestPubSubTopicAMQPConfig:
 # ################################################################################################################################
 
     def test_26_create_dialog_defaults_to_builtin(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Item 26 - the topic create dialog defaults to the built-in backend
+        """ The topic create dialog defaults to the built-in backend
         and all four AMQP inputs are hidden.
         """
         page = logged_in_page
@@ -153,7 +153,7 @@ class TestPubSubTopicAMQPConfig:
 # ################################################################################################################################
 
     def test_27_backend_select_toggles_amqp_fields(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Item 27 - selecting AMQP reveals the AMQP inputs, switching back to built-in hides them.
+        """ Selecting AMQP reveals the AMQP inputs, switching back to built-in hides them.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -188,7 +188,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 28 - an AMQP topic created through the form appears in the table
+        """ An AMQP topic created through the form appears in the table
         and the edit dialog shows exactly what was entered.
         """
         page = logged_in_page
@@ -230,7 +230,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 29 - a topic created with an empty routing key stores the topic name in it,
+        """ A topic created with an empty routing key stores the topic name in it,
         which the edit dialog then shows.
         """
         page = logged_in_page
@@ -263,7 +263,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 30 - an AMQP topic without an outgoing connection cannot be submitted,
+        """ An AMQP topic without an outgoing connection cannot be submitted,
         the dialog stays open with a validation indication and no row is added.
         """
         page = logged_in_page
@@ -307,7 +307,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 31 - an AMQP topic without an exchange cannot be submitted,
+        """ An AMQP topic without an exchange cannot be submitted,
         the dialog stays open with a validation indication and no row is added.
         """
         page = logged_in_page
@@ -357,7 +357,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 32 - a built-in topic edited to AMQP stores the AMQP values,
+        """ A built-in topic edited to AMQP stores the AMQP values,
         editing it back to built-in hides the AMQP inputs and requires no AMQP values.
         """
         page = logged_in_page
@@ -417,7 +417,7 @@ class TestPubSubTopicAMQPConfig:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 33 - create, edit and delete an AMQP topic with zero console errors
+        """ Create, edit and delete an AMQP topic with zero console errors
         and zero HTTP 500s, server and dashboard logs are covered by the autouse fixture.
         """
         page = logged_in_page
@@ -469,7 +469,7 @@ class TestPubSubTopicAMQPConfig:
 # ################################################################################################################################
 
     def test_34_builtin_create_flow_unaffected(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Item 34 - the plain built-in create flow still works with the new form elements present
+        """ The plain built-in create flow still works with the new form elements present
         and built-in topics never show AMQP inputs.
         """
         page = logged_in_page

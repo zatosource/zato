@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import logging
 import os
 import tempfile
 import time
@@ -23,8 +24,8 @@ import pytest
 from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.playwright_pubsub import confirm_delete, create_amqp_channel, create_amqp_topic, create_basic_auth, \
     create_outgoing_amqp, create_outgoing_rest_with_address, create_permission, create_push_rest_subscription, \
-    create_push_service_subscription, create_rest_channel, find_row_by_name, open_edit_dialog, set_select_value, \
-    submit_edit_form, trigger_delete
+    create_push_service_subscription, create_rest_channel, find_row_by_name, navigate_to_page, open_edit_dialog, \
+    set_select_value, submit_edit_form, trigger_delete
 from zato.common.test.rabbitmq_ import declare_and_bind, get_queue_depth, publish_to_exchange
 from zato.common.test.receiver import WebhookReceiver
 from zato.common.util.api import new_cid
@@ -41,6 +42,10 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger('zato.test.playwright')
+
+_Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 
 _Test_Name_Prefix = 'test.amqp.bridge.' + new_cid() + '.'
 
@@ -385,7 +390,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 43 - a message injected into the broker reaches a REST push subscriber through the bridge.
+        """ A message injected into the broker reaches a REST push subscriber through the bridge.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -414,7 +419,7 @@ class TestPubSubTopicAMQPBridge:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 44 - a message injected into the broker reaches a service push subscriber through the bridge.
+        """ A message injected into the broker reaches a service push subscriber through the bridge.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -454,7 +459,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 45 - two REST push subscribers and one service push subscriber on one topic
+        """ Two REST push subscribers and one service push subscriber on one topic
         all receive one injected message.
         """
         page = logged_in_page
@@ -514,7 +519,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 46 - 50 injected messages are delivered exactly once each
+        """ 50 injected messages are delivered exactly once each
         and the queue is fully drained and acked afterwards.
         """
         page = logged_in_page
@@ -536,8 +541,11 @@ class TestPubSubTopicAMQPBridge:
             body = json.dumps({'value': marker})
             publish_to_exchange(rabbitmq_broker['amqp_url'], rabbitmq_broker['exchange'], pipeline['binding_key'], body)
 
-        # .. the receiver got all 50, each exactly once ..
-        messages = webhook_receiver.wait_for_delivery(message_count, timeout=120)
+        # .. the receiver got all 50, each exactly once.
+        # .. The browser is intentionally idle here, delivery happens on the AMQP side ..
+        logger.info('Waiting for all %d messages to arrive at the webhook receiver', message_count)
+
+        messages = webhook_receiver.wait_for_delivery(message_count)
 
         received = [item['value'] for item in messages]
 
@@ -558,7 +566,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 47 - a failed delivery leaves the message unacked, the broker redelivers
+        """ A failed delivery leaves the message unacked, the broker redelivers
         and after the receiver recovers the message arrives, leaving the queue empty.
         """
         page = logged_in_page
@@ -577,8 +585,13 @@ class TestPubSubTopicAMQPBridge:
 
         publish_to_exchange(rabbitmq_broker['amqp_url'], rabbitmq_broker['exchange'], pipeline['binding_key'], body)
 
-        # .. the broker redelivered after the failed attempt and the message finally arrived ..
-        messages = webhook_receiver.wait_for_delivery(1, timeout=120)
+        # .. the broker redelivered after the failed attempt and the message finally arrived.
+        # .. The browser is intentionally idle here, everything happens on the AMQP side ..
+        msg = 'The first delivery was rejected with a 503 on purpose,'
+        msg += ' now waiting for RabbitMQ to redeliver the unacked message'
+        logger.info(msg)
+
+        messages = webhook_receiver.wait_for_delivery(1)
 
         assert len(messages) == 1, f'Expected exactly one delivery after redelivery, got: {messages}'
         assert messages[0]['value'] == marker, f'Expected `{marker}`, got: {messages[0]}'
@@ -600,7 +613,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 48 - while the override is active, the bridge delivers to subscribers
+        """ While the override is active, the bridge delivers to subscribers
         and the channel's original service never runs.
         """
         page = logged_in_page
@@ -644,7 +657,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 49 - editing the topic to remove its channel restores the channel's
+        """ Editing the topic to remove its channel restores the channel's
         original service, which then receives injected messages instead of the subscribers.
         """
         page = logged_in_page
@@ -657,6 +670,10 @@ class TestPubSubTopicAMQPBridge:
             # .. the channel points at the marker service, the topic then overrides it ..
             pipeline = _setup_amqp_pipeline(page, base_url, rabbitmq_broker, '49', writer['service_name'])
             _add_rest_push_subscriber(page, base_url, '49', pipeline['topic_name'], webhook_receiver.port)
+
+            # .. the subscriber helper left the browser on the subscriptions page,
+            # .. so go back to the topics page where the edit function exists ..
+            navigate_to_page(page, base_url, _Topic_Page_Url)
 
             # .. edit the topic via the form to remove the channel ..
             open_edit_dialog(page, 'topic', pipeline['item_id'])
@@ -696,7 +713,7 @@ class TestPubSubTopicAMQPBridge:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 50 - deleting the AMQP-backed topic restores the channel's original service
+        """ Deleting the AMQP-backed topic restores the channel's original service
         and the topic row is gone from the table.
         """
         page = logged_in_page
@@ -747,7 +764,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 51 - the complete documented flow, a service calls self.publish, the message
+        """ The complete documented flow, a service calls self.publish, the message
         travels through the outgoing connection to the exchange, the channel consumes it
         and the bridge delivers it to the REST receiver.
         """
@@ -781,7 +798,7 @@ class TestPubSubTopicAMQPBridge:
             assert response['is_ok'] is True, f'Expected is_ok, got: {response}'
 
             # .. and the receiver got the message end to end.
-            messages = webhook_receiver.wait_for_delivery(1, timeout=60)
+            messages = webhook_receiver.wait_for_delivery(1)
 
             assert len(messages) == 1, f'Expected exactly one delivery, got: {messages}'
             assert messages[0]['value'] == marker, f'Expected `{marker}`, got: {messages[0]}'
@@ -799,7 +816,7 @@ class TestPubSubTopicAMQPBridge:
         rabbitmq_broker:'anydict', # noqa: F811
         webhook_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 52 - the round trip preserves a JSON dict payload with its types
+        """ The round trip preserves a JSON dict payload with its types
         and a plain string payload arrives exactly as published.
         """
         page = logged_in_page
@@ -832,7 +849,7 @@ class TestPubSubTopicAMQPBridge:
             })
             assert response['is_ok'] is True, f'Expected is_ok, got: {response}'
 
-            messages = webhook_receiver.wait_for_delivery(1, timeout=60)
+            messages = webhook_receiver.wait_for_delivery(1)
             assert len(messages) == 1, f'Expected exactly one delivery, got: {messages}'
             assert messages[0] == dict_payload, f'Expected `{dict_payload}`, got: {messages[0]}'
 

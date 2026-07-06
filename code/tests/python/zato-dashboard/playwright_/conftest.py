@@ -40,6 +40,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+from cleanup_refs import cleanup_refs as _cleanup_refs
 from client import ZatoClient
 from login import login as login_to_dashboard
 
@@ -54,13 +55,6 @@ _Process_Kill_Timeout  = 5
 _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
 _Ping_Poll_Interval    = 0.5
-
-_cleanup_refs = {
-    'server_process': None,
-    'dashboard_process': None,
-    'listener_process': None,
-    'temporary_dir': None,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################

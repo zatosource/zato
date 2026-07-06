@@ -31,7 +31,7 @@ def _is_port_open(port:'int') -> 'bool':
 # ################################################################################################################################
 
 class TestRabbitMQProcessLifecycle(unittest.TestCase):
-    """ Item 12 - start a broker, publish and consume through the helpers, stop, assert cleanup.
+    """ Start a broker, publish and consume through the helpers, stop, assert cleanup.
     """
 
     def test_basic_lifecycle(self) -> 'None':
@@ -71,7 +71,7 @@ class TestRabbitMQProcessLifecycle(unittest.TestCase):
 # ################################################################################################################################
 
 class TestRabbitMQProcessParallel(unittest.TestCase):
-    """ Item 13 - two parallel brokers do not clash.
+    """ Two parallel brokers do not clash.
     """
 
     def test_two_brokers_in_parallel(self) -> 'None':

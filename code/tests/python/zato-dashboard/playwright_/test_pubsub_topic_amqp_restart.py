@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -33,8 +34,8 @@ from zato.common.util.api import new_cid
 # The broker fixture is resolved by pytest through this import
 from amqp_fixtures import rabbitmq_broker # noqa: F401
 
-# The shared conftest holds the process handles its atexit cleanup will kill
-import conftest as playwright_conftest
+# The conftest's atexit cleanup reads this dict, so handing the new process over here means it will be killed at exit
+from cleanup_refs import cleanup_refs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +46,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = logging.getLogger('zato.test.playwright')
 
 _Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 
@@ -66,8 +69,8 @@ _Restart_Timeout = 180
 # How long to wait for the channel's consumer to attach to its queue
 _Consumer_Wait_Timeout = 60
 
-# State shared between the restart tests - item 53 configures and restarts,
-# item 54 verifies the inbound side of the same, already restarted server
+# State shared between the restart tests - test 53 configures and restarts,
+# test 54 verifies the inbound side of the same, already restarted server
 _shared_state = {} # type: dict
 
 # ################################################################################################################################
@@ -155,9 +158,12 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
 
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..
     zato_dashboard['server_process'] = new_process
-    playwright_conftest._cleanup_refs['server_process'] = new_process
+    cleanup_refs['server_process'] = new_process
 
     # .. and wait until the server answers pings again.
+    # .. The browser is intentionally idle during this wait, the server is restarting ..
+    logger.info('The server was stopped on purpose, waiting up to %ss for it to come back after the restart', _Restart_Timeout)
+
     url = f'http://{host}:{server_port}/zato/ping'
     deadline = time.monotonic() + _Restart_Timeout
 
@@ -204,7 +210,7 @@ class TestPubSubTopicAMQPRestart:
         rabbitmq_broker:'anydict', # noqa: F811
         module_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 53 - after a server restart, with no config events fired since startup,
+        """ After a server restart, with no config events fired since startup,
         a publish through the overlay still routes to AMQP, proving _sync_pubsub_topics
         rebuilt the registry from opaque1.
         """
@@ -239,7 +245,7 @@ class TestPubSubTopicAMQPRestart:
         _ = create_amqp_topic(
             page, base_url, topic_name, outconn_name, exchange, rabbitmq_broker['routing_key'], channel_name)
 
-        # .. a REST push subscriber for the inbound side, verified in item 54 ..
+        # .. a REST push subscriber for the inbound side, verified in test 54 ..
         sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, '53')
         _ = create_permission(page, base_url, sec_info['name'], 'subscriber', 'sub', topic_name)
 
@@ -256,7 +262,7 @@ class TestPubSubTopicAMQPRestart:
         # .. rebuilt from the ODB, with no config events fired since startup ..
         _restart_server(zato_dashboard)
 
-        # .. share the setup with item 54 ..
+        # .. share the setup with test 54 ..
         _shared_state['topic_name'] = topic_name
         _shared_state['channel_queue'] = channel_queue
         _shared_state['channel_binding_key'] = channel_binding_key
@@ -286,13 +292,13 @@ class TestPubSubTopicAMQPRestart:
         rabbitmq_broker:'anydict', # noqa: F811
         module_receiver:'WebhookReceiver',
         ) -> 'None':
-        """ Item 54 - after the restart, an injected message still reaches the REST receiver
+        """ After the restart, an injected message still reaches the REST receiver
         through the bridge, proving the channel override was reapplied by the startup sync.
         """
         amqp_url = rabbitmq_broker['amqp_url']
         exchange = rabbitmq_broker['exchange']
 
-        # The setup and the restart happened in item 53 ..
+        # The setup and the restart happened in test 53 ..
         channel_binding_key = _shared_state['channel_binding_key']
         channel_queue = _shared_state['channel_queue']
 
@@ -306,7 +312,7 @@ class TestPubSubTopicAMQPRestart:
         publish_to_exchange(amqp_url, exchange, channel_binding_key, body)
 
         # .. and the receiver got it through the bridge.
-        messages = module_receiver.wait_for_delivery(1, timeout=60)
+        messages = module_receiver.wait_for_delivery(1)
 
         assert len(messages) == 1, f'Expected exactly one delivery, got: {messages}'
         assert messages[0]['value'] == marker, f'Expected `{marker}`, got: {messages[0]}'
