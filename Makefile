@@ -421,26 +421,7 @@ _test-pubsub:
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_config.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_publish.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_bridge.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_topic_amqp_restart.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
 
 test-enmasse: ## Enmasse round-trip tests.
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v

@@ -69,8 +69,8 @@ _Restart_Timeout = 180
 # How long to wait for the channel's consumer to attach to its queue
 _Consumer_Wait_Timeout = 60
 
-# State shared between the restart tests - test 53 configures and restarts,
-# test 54 verifies the inbound side of the same, already restarted server
+# State shared between the restart tests - the registry test configures and restarts,
+# the override test verifies the inbound side of the same, already restarted server
 _shared_state = {} # type: dict
 
 # ################################################################################################################################
@@ -203,7 +203,7 @@ class TestPubSubTopicAMQPRestart:
     at startup, without any config events since.
     """
 
-    def test_53_restart_rebuilds_registry(
+    def test_restart_rebuilds_registry(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -245,8 +245,8 @@ class TestPubSubTopicAMQPRestart:
         _ = create_amqp_topic(
             page, base_url, topic_name, outconn_name, exchange, rabbitmq_broker['routing_key'], channel_name)
 
-        # .. a REST push subscriber for the inbound side, verified in test 54 ..
-        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, '53')
+        # .. a REST push subscriber for the inbound side, verified by the override test ..
+        sec_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'restart')
         _ = create_permission(page, base_url, sec_info['name'], 'subscriber', 'sub', topic_name)
 
         rest_name = _Test_Name_Prefix + 'rest.53'
@@ -262,7 +262,7 @@ class TestPubSubTopicAMQPRestart:
         # .. rebuilt from the ODB, with no config events fired since startup ..
         _restart_server(zato_dashboard)
 
-        # .. share the setup with test 54 ..
+        # .. share the setup with the override test ..
         _shared_state['topic_name'] = topic_name
         _shared_state['channel_queue'] = channel_queue
         _shared_state['channel_binding_key'] = channel_binding_key
@@ -285,7 +285,7 @@ class TestPubSubTopicAMQPRestart:
 
 # ################################################################################################################################
 
-    def test_54_restart_reapplies_override(
+    def test_restart_reapplies_override(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -298,7 +298,7 @@ class TestPubSubTopicAMQPRestart:
         amqp_url = rabbitmq_broker['amqp_url']
         exchange = rabbitmq_broker['exchange']
 
-        # The setup and the restart happened in test 53 ..
+        # The setup and the restart happened in the registry test ..
         channel_binding_key = _shared_state['channel_binding_key']
         channel_queue = _shared_state['channel_queue']
 
