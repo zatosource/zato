@@ -1309,9 +1309,9 @@ class TestMsg12(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='REPORT', cwe_2='Befund')
         obx.obx_5 = (
-            'Befund CT Abdomen\\.br\\\\.br\\Klinische Fragestellung: V.a. Cholelithiasis\\.br\\\\.br\\Technik: CT Abdomen mit i.v. KM\\.br\\\\.br\\Befund: Einzelner '
-            '12mm Gallenstein in der Gallenblase. Keine Cholezystitis.\\.br\\Leber, Milz und Pankreas unauffaellig.\\.br\\Keine freie Fluessigkeit.\\.br\\\\.br\\'
-            'Beurteilung: Solitaerer Gallenstein, elektive Cholezystektomie empfohlen.'
+            'Befund CT Abdomen\\.br\\\\.br\\Klinische Fragestellung: V.a. Cholelithiasis\\.br\\\\.br\\Technik: CT Abdomen mit i.v. KM\\.br\\\\.br\\Befund: Ei'
+            'nzelner 12mm Gallenstein in der Gallenblase. Keine Cholezystitis.\\.br\\Leber, Milz und Pankreas unauffaellig.\\.br\\Keine freie Fluessigkeit.\\'
+            '.br\\\\.br\\Beurteilung: Solitaerer Gallenstein, elektive Cholezystektomie empfohlen.'
         )
         obx.observation_result_status = 'F'
 

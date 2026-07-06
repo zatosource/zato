@@ -3059,8 +3059,7 @@ class TestMsg20(unittest.TestCase):
         obx_4.value_type = 'TX'
         obx_4.observation_identifier = CWE(cwe_1='86974-0', cwe_2='CT CORONARY ANGIO IMPRESSION', cwe_3='LN')
         obx_4.obx_5 = (
-            'CONCLUSION: Enfermedad coronaria significativa en DA proximal (estenosis 75%). Se sugiere evaluacion por hemodinamia para eventual angioplas'
-            'tia.'
+            'CONCLUSION: Enfermedad coronaria significativa en DA proximal (estenosis 75%). Se sugiere evaluacion por hemodinamia para eventual angioplastia.'
         )
         obx_4.observation_result_status = 'F'
 

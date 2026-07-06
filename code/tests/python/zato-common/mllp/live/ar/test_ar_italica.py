@@ -1069,8 +1069,7 @@ class TestMsg09(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='71020&IMP', cwe_2='Radiografia torax impresion', cwe_3='CPT')
         obx.obx_5 = (
-            'Infiltrado alveolar bilateral con predominio en bases. Derrame pleural bilateral de escasa cuantia. Silueta cardiaca dentro de limites norma'
-            'les.'
+            'Infiltrado alveolar bilateral con predominio en bases. Derrame pleural bilateral de escasa cuantia. Silueta cardiaca dentro de limites normales.'
         )
         obx.observation_result_status = 'F'
 

@@ -955,9 +955,9 @@ class TestMsg09(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='REPORT', cwe_2='Befund')
         obx.obx_5 = (
-            'Roentgen Thorax in 2 Ebenen\\.br\\\\.br\\Fragestellung: V.a. Infiltrat rechts basal\\.br\\\\.br\\Befund:\\.br\\Herz normal gross und konfiguriert.\\.br'
-            '\\Streifige Verdichtung rechts basal, vereinbar mit Infiltrat.\\.br\\Kein Pleuraerguss. Kein Pneumothorax.\\.br\\\\.br\\Beurteilung: Pneumonisches '
-            'Infiltrat rechts basal,\\.br\\klinische Kontrolle in 10 Tagen empfohlen.'
+            'Roentgen Thorax in 2 Ebenen\\.br\\\\.br\\Fragestellung: V.a. Infiltrat rechts basal\\.br\\\\.br\\Befund:\\.br\\Herz normal gross und konfigurier'
+            't.\\.br\\Streifige Verdichtung rechts basal, vereinbar mit Infiltrat.\\.br\\Kein Pleuraerguss. Kein Pneumothorax.\\.br\\\\.br\\Beurteilung: Pneu'
+            'monisches Infiltrat rechts basal,\\.br\\klinische Kontrolle in 10 Tagen empfohlen.'
         )
         obx.observation_result_status = 'F'
 

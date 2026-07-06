@@ -1976,8 +1976,7 @@ class TestMsg15(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='93000&IMP', cwe_2='ECG impresion', cwe_3='CPT')
         obx.obx_5 = (
-            'Ritmo sinusal. Frecuencia cardiaca 72 lpm. Eje electrico normal. Sin alteraciones de repolarizacion. PR 0.16 seg. QRS 0.08 seg. QTc 0.42 seg'
-            '.'
+            'Ritmo sinusal. Frecuencia cardiaca 72 lpm. Eje electrico normal. Sin alteraciones de repolarizacion. PR 0.16 seg. QRS 0.08 seg. QTc 0.42 seg.'
         )
         obx.observation_result_status = 'F'
 

@@ -1844,8 +1844,8 @@ class TestMsg14(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='OP_NOTE', cwe_2='Operatieverslag', cwe_3='LOCAL')
         obx.obx_5 = (
-            'Ingreep: Laparoscopische cholecystectomie\\.br\\Patient verdroeg de procedure goed\\.br\\Geen complicaties\\.br\\Geschat bloedverlies: 50 mL\\.br\\P'
-            'reparaten verzonden naar pathologie.'
+            'Ingreep: Laparoscopische cholecystectomie\\.br\\Patient verdroeg de procedure goed\\.br\\Geen complicaties\\.br\\Geschat bloedverlies: 50 mL\\.b'
+            'r\\Preparaten verzonden naar pathologie.'
         )
         obx.observation_result_status = 'F'
 

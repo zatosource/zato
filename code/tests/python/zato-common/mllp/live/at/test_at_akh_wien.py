@@ -1410,10 +1410,10 @@ class TestMsg10(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='71260', cwe_2='CT Thorax mit KM', cwe_3='AKHRAD')
         obx.obx_5 = (
-            'Befund: CT Thorax mit KM\\.br\\Klinische Angabe: V.a. Pulmonalembolie\\.br\\\\.br\\Technik: Nativ- und KM-verstaerkte Spiralcomputertomographie de'
-            's Thorax\\.br\\\\.br\\Befund:\\.br\\Keine Hinweise auf Pulmonalembolie. Regelrechte Darstellung der Pulmonalarterien.\\.br\\Herz normal gross, kein '
-            'Perikarderguss.\\.br\\Keine mediastinale Lymphadenopathie.\\.br\\Lungenparenchym ohne fokale Verdichtungen.\\.br\\Keine Pleuraerguesse.\\.br\\\\.br\\B'
-            'eurteilung: Kein Nachweis einer Pulmonalembolie.'
+            'Befund: CT Thorax mit KM\\.br\\Klinische Angabe: V.a. Pulmonalembolie\\.br\\\\.br\\Technik: Nativ- und KM-verstaerkte Spiralcomputertomographie '
+            'des Thorax\\.br\\\\.br\\Befund:\\.br\\Keine Hinweise auf Pulmonalembolie. Regelrechte Darstellung der Pulmonalarterien.\\.br\\Herz normal gross,'
+            ' kein Perikarderguss.\\.br\\Keine mediastinale Lymphadenopathie.\\.br\\Lungenparenchym ohne fokale Verdichtungen.\\.br\\Keine Pleuraerguesse.\\.'
+            'br\\\\.br\\Beurteilung: Kein Nachweis einer Pulmonalembolie.'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'
@@ -2032,9 +2032,9 @@ class TestMsg15(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='22637-3', cwe_2='Pathologiebefund', cwe_3='LN')
         obx.obx_5 = (
-            'Histologischer Befund:\\.br\\Material: Gallenblase, Cholezystektomie\\.br\\\\.br\\Makroskopisch: 8,5 cm grosse Gallenblase mit wandstaendigen Konk'
-            'rementen.\\.br\\Mikroskopisch: Chronische Cholezystitis mit Schleimhautulzerationen. Kein Anhalt fuer Malignitat.\\.br\\\\.br\\Diagnose: Chronisch'
-            'e kalkuloese Cholezystitis.'
+            'Histologischer Befund:\\.br\\Material: Gallenblase, Cholezystektomie\\.br\\\\.br\\Makroskopisch: 8,5 cm grosse Gallenblase mit wandstaendigen Ko'
+            'nkrementen.\\.br\\Mikroskopisch: Chronische Cholezystitis mit Schleimhautulzerationen. Kein Anhalt fuer Malignitat.\\.br\\\\.br\\Diagnose: Chron'
+            'ische kalkuloese Cholezystitis.'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'

@@ -545,10 +545,10 @@ class TestMsg03(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='24627-2', cwe_2='CT Chest Report', cwe_3='LN')
         obx.obx_5 = (
-            'CT CHEST WITHOUT CONTRAST\\.br\\\\.br\\CLINICAL NOTES: Persistent cough 6 weeks. Smoker.\\.br\\\\.br\\FINDINGS:\\.br\\Lungs: No focal consolidation or'
-            ' mass lesion identified. Minor dependent atelectasis in both lower lobes.\\.br\\Mediastinum: No lymphadenopathy. Heart size normal.\\.br\\Pleura'
-            ': No effusion.\\.br\\Bones: Degenerative changes thoracic spine. No suspicious lesion.\\.br\\\\.br\\CONCLUSION: No significant pulmonary abnormali'
-            'ty demonstrated.'
+            'CT CHEST WITHOUT CONTRAST\\.br\\\\.br\\CLINICAL NOTES: Persistent cough 6 weeks. Smoker.\\.br\\\\.br\\FINDINGS:\\.br\\Lungs: No focal consolidat'
+            'ion or mass lesion identified. Minor dependent atelectasis in both lower lobes.\\.br\\Mediastinum: No lymphadenopathy. Heart size normal.\\.br\\'
+            'Pleura: No effusion.\\.br\\Bones: Degenerative changes thoracic spine. No suspicious lesion.\\.br\\\\.br\\CONCLUSION: No significant pulmonary a'
+            'bnormality demonstrated.'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240220100000+1100'
@@ -814,9 +814,9 @@ class TestMsg05(unittest.TestCase):
         obx.observation_identifier = CWE(cwe_1='630-4', cwe_2='Urine Culture', cwe_3='LN')
         obx.observation_sub_id = OG(og_1='1')
         obx.obx_5 = (
-            'SPECIMEN: Mid-stream urine\\.br\\\\.br\\MICROSCOPY:\\.br\\WBC: >100 x10\\S\\6/L\\.br\\RBC: 5-10 x10\\S\\6/L\\.br\\Epithelial cells: Occasional\\.br\\\\.br\\CU'
-            'LTURE:\\.br\\Escherichia coli - heavy growth (>10\\S\\8 cfu/L)\\.br\\\\.br\\SENSITIVITIES:\\.br\\Amoxicillin: Resistant\\.br\\Trimethoprim: Resistant\\.b'
-            'r\\Cefalexin: Sensitive\\.br\\Nitrofurantoin: Sensitive\\.br\\Norfloxacin: Sensitive'
+            'SPECIMEN: Mid-stream urine\\.br\\\\.br\\MICROSCOPY:\\.br\\WBC: >100 x10\\S\\6/L\\.br\\RBC: 5-10 x10\\S\\6/L\\.br\\Epithelial cells: Occasional\\'
+            '.br\\\\.br\\CULTURE:\\.br\\Escherichia coli - heavy growth (>10\\S\\8 cfu/L)\\.br\\\\.br\\SENSITIVITIES:\\.br\\Amoxicillin: Resistant\\.br\\Trim'
+            'ethoprim: Resistant\\.br\\Cefalexin: Sensitive\\.br\\Nitrofurantoin: Sensitive\\.br\\Norfloxacin: Sensitive'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240612090000+1000'
@@ -1083,11 +1083,11 @@ class TestMsg07(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='66121-5', cwe_2='Histopathology Report', cwe_3='LN')
         obx.obx_5 = (
-            'SPECIMEN: Excision biopsy left breast lesion (wire localised)\\.br\\\\.br\\MACROSCOPIC:\\.br\\Specimen 45 x 30 x 25mm with wire entering from supe'
-            'rior aspect. Firm area 12mm identified on serial sectioning.\\.br\\\\.br\\MICROSCOPIC:\\.br\\Sections show a grade 2 invasive ductal carcinoma NST'
-            ', measuring 11mm in maximum extent.\\.br\\Margins: Superior 8mm, inferior 12mm, medial 5mm, lateral 15mm, deep 6mm, superficial 10mm.\\.br\\Lymp'
-            'hovascular invasion: Not identified.\\.br\\DCIS: Present, low grade, solid pattern, confined within invasive tumour.\\.br\\\\.br\\ER: Positive (Al'
-            'lred 8/8)\\.br\\PR: Positive (Allred 7/8)\\.br\\HER2: Negative (1+)\\.br\\Ki67: 15%'
+            'SPECIMEN: Excision biopsy left breast lesion (wire localised)\\.br\\\\.br\\MACROSCOPIC:\\.br\\Specimen 45 x 30 x 25mm with wire entering from su'
+            'perior aspect. Firm area 12mm identified on serial sectioning.\\.br\\\\.br\\MICROSCOPIC:\\.br\\Sections show a grade 2 invasive ductal carcinoma'
+            ' NST, measuring 11mm in maximum extent.\\.br\\Margins: Superior 8mm, inferior 12mm, medial 5mm, lateral 15mm, deep 6mm, superficial 10mm.\\.br\\'
+            'Lymphovascular invasion: Not identified.\\.br\\DCIS: Present, low grade, solid pattern, confined within invasive tumour.\\.br\\\\.br\\ER: Positi'
+            've (Allred 8/8)\\.br\\PR: Positive (Allred 7/8)\\.br\\HER2: Negative (1+)\\.br\\Ki67: 15%'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240125100000+1100'
@@ -2481,11 +2481,11 @@ class TestMsg16(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='24590-2', cwe_2='MRI Brain Report', cwe_3='LN')
         obx.obx_5 = (
-            'MRI BRAIN WITH CONTRAST\\.br\\\\.br\\CLINICAL: Headaches, query space-occupying lesion.\\.br\\\\.br\\TECHNIQUE: Multiplanar sequences pre and post g'
-            'adolinium.\\.br\\\\.br\\FINDINGS:\\.br\\Brain parenchyma: Normal grey-white matter differentiation. No focal signal abnormality. No mass lesion or'
-            ' midline shift.\\.br\\Ventricles: Normal size and configuration.\\.br\\Extra-axial spaces: Normal.\\.br\\Post contrast: No abnormal enhancement.\\.'
-            'br\\Posterior fossa: Normal.\\.br\\Vascular: Normal flow voids in major intracranial vessels.\\.br\\\\.br\\CONCLUSION: Normal MRI brain. No evidenc'
-            'e of intracranial mass lesion.'
+            'MRI BRAIN WITH CONTRAST\\.br\\\\.br\\CLINICAL: Headaches, query space-occupying lesion.\\.br\\\\.br\\TECHNIQUE: Multiplanar sequences pre and po'
+            'st gadolinium.\\.br\\\\.br\\FINDINGS:\\.br\\Brain parenchyma: Normal grey-white matter differentiation. No focal signal abnormality. No mass les'
+            'ion or midline shift.\\.br\\Ventricles: Normal size and configuration.\\.br\\Extra-axial spaces: Normal.\\.br\\Post contrast: No abnormal enhanc'
+            'ement.\\.br\\Posterior fossa: Normal.\\.br\\Vascular: Normal flow voids in major intracranial vessels.\\.br\\\\.br\\CONCLUSION: Normal MRI brain'
+            '. No evidence of intracranial mass lesion.'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240912090000+1000'

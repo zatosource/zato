@@ -1012,11 +1012,11 @@ class TestMsg06(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='SP', cwe_2='Specialist Letter', cwe_3='LN')
         obx.obx_5 = (
-            'Dear Dr Smith,\\.br\\\\.br\\Thank you for referring Thomas Fitzgerald for review of multiple solar keratoses on his forearms and scalp.\\.br\\\\.br'
-            '\\On examination I identified 12 actinic keratoses on the dorsal forearms and 3 on the vertex of the scalp. I treated these with cryotherapy '
-            'today.\\.br\\\\.br\\I have also noted a suspicious 8mm pigmented lesion on his left shoulder which I have performed a shave biopsy of. Histology'
-            ' is pending and I will forward results when available.\\.br\\\\.br\\Please review in 3 months for follow-up skin check.\\.br\\\\.br\\Kind regards,\\.'
-            'br\\Dr Michael Lee\\.br\\Dermatologist'
+            'Dear Dr Smith,\\.br\\\\.br\\Thank you for referring Thomas Fitzgerald for review of multiple solar keratoses on his forearms and scalp.\\.br\\\\'
+            '.br\\On examination I identified 12 actinic keratoses on the dorsal forearms and 3 on the vertex of the scalp. I treated these with cryothera'
+            'py today.\\.br\\\\.br\\I have also noted a suspicious 8mm pigmented lesion on his left shoulder which I have performed a shave biopsy of. Histol'
+            'ogy is pending and I will forward results when available.\\.br\\\\.br\\Please review in 3 months for follow-up skin check.\\.br\\\\.br\\Kind reg'
+            'ards,\\.br\\Dr Michael Lee\\.br\\Dermatologist'
         )
         obx.observation_result_status = 'F'
 
@@ -1960,12 +1960,12 @@ class TestMsg12(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='DS', cwe_2='Discharge Summary', cwe_3='LN')
         obx.obx_5 = (
-            "DISCHARGE SUMMARY\\.br\\\\.br\\Admission: 08/07/2024 Discharge: 12/07/2024\\.br\\Admitting Diagnosis: Upper GI haemorrhage\\.br\\\\.br\\SUMMARY: Mr O'"
-            'Connor presented with haematemesis and melaena. Hb on admission 78g/L. Received 3 units PRBC. OGD performed 09/07/2024 showing Forrest IIa d'
-            'uodenal ulcer with visible vessel, treated with adrenaline injection and bipolar diathermy. H.pylori CLO test positive.\\.br\\\\.br\\DISCHARGE M'
-            'EDICATIONS:\\.br\\1. Esomeprazole 40mg BD x 8 weeks\\.br\\2. Amoxicillin 1g BD x 14 days\\.br\\3. Clarithromycin 500mg BD x 14 days\\.br\\\\.br\\FOLLO'
-            'W UP: Repeat OGD in 8 weeks. H.pylori breath test 4 weeks post antibiotics. Review with Dr Reddy in 2 weeks.\\.br\\\\.br\\GP actions: Please che'
-            'ck FBC in 2 weeks.'
+            'DISCHARGE SUMMARY\\.br\\\\.br\\Admission: 08/07/2024 Discharge: 12/07/2024\\.br\\Admitting Diagnosis: Upper GI haemorrhage\\.br\\\\.br\\SUMMARY:'
+            " Mr O'Connor presented with haematemesis and melaena. Hb on admission 78g/L. Received 3 units PRBC. OGD performed 09/07/2024 showing Forrest"
+            ' IIa duodenal ulcer with visible vessel, treated with adrenaline injection and bipolar diathermy. H.pylori CLO test positive.\\.br\\\\.br\\DISCH'
+            'ARGE MEDICATIONS:\\.br\\1. Esomeprazole 40mg BD x 8 weeks\\.br\\2. Amoxicillin 1g BD x 14 days\\.br\\3. Clarithromycin 500mg BD x 14 days\\.br\\'
+            '\\.br\\FOLLOW UP: Repeat OGD in 8 weeks. H.pylori breath test 4 weeks post antibiotics. Review with Dr Reddy in 2 weeks.\\.br\\\\.br\\GP actions'
+            ': Please check FBC in 2 weeks.'
         )
         obx.observation_result_status = 'F'
 
@@ -2397,11 +2397,11 @@ class TestMsg15(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='76700', cwe_2='US Abdomen', cwe_3='CPT')
         obx.obx_5 = (
-            'ULTRASOUND ABDOMEN\\.br\\\\.br\\CLINICAL NOTES: RUQ pain, raised GGT\\.br\\\\.br\\FINDINGS:\\.br\\Liver: Mildly increased echogenicity consistent with'
-            ' hepatic steatosis. No focal lesion. Liver span 16cm.\\.br\\Gallbladder: Multiple mobile gallstones, largest 12mm. No wall thickening or peric'
-            'holecystic fluid. CBD 4mm.\\.br\\Pancreas: Normal.\\.br\\Spleen: Normal, 10cm.\\.br\\Kidneys: Normal size and echogenicity bilaterally. No hydrone'
-            'phrosis or calculi.\\.br\\Aorta: Normal calibre.\\.br\\\\.br\\IMPRESSION:\\.br\\1. Cholelithiasis without cholecystitis\\.br\\2. Mild hepatic steatosi'
-            's\\.br\\\\.br\\Dr Yuki Tanaka, Radiologist'
+            'ULTRASOUND ABDOMEN\\.br\\\\.br\\CLINICAL NOTES: RUQ pain, raised GGT\\.br\\\\.br\\FINDINGS:\\.br\\Liver: Mildly increased echogenicity consisten'
+            't with hepatic steatosis. No focal lesion. Liver span 16cm.\\.br\\Gallbladder: Multiple mobile gallstones, largest 12mm. No wall thickening or'
+            ' pericholecystic fluid. CBD 4mm.\\.br\\Pancreas: Normal.\\.br\\Spleen: Normal, 10cm.\\.br\\Kidneys: Normal size and echogenicity bilaterally. No'
+            ' hydronephrosis or calculi.\\.br\\Aorta: Normal calibre.\\.br\\\\.br\\IMPRESSION:\\.br\\1. Cholelithiasis without cholecystitis\\.br\\2. Mild he'
+            'patic steatosis\\.br\\\\.br\\Dr Yuki Tanaka, Radiologist'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240425090000+1000'

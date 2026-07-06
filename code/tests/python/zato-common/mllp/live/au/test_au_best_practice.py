@@ -1976,8 +1976,8 @@ class TestMsg12(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='24558-9', cwe_2='Report', cwe_3='LN')
         obx.obx_5 = (
-            'CHEST X-RAY PA\\.br\\Clinical Details: Persistent cough 3 weeks\\.br\\\\.br\\Findings:\\.br\\Heart size normal. Lungs clear. No focal consolidation '
-            'or effusion.\\.br\\No bony abnormality detected.\\.br\\\\.br\\Conclusion: Normal chest X-ray.'
+            'CHEST X-RAY PA\\.br\\Clinical Details: Persistent cough 3 weeks\\.br\\\\.br\\Findings:\\.br\\Heart size normal. Lungs clear. No focal consolidat'
+            'ion or effusion.\\.br\\No bony abnormality detected.\\.br\\\\.br\\Conclusion: Normal chest X-ray.'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20240612143000'
@@ -3194,9 +3194,9 @@ class TestMsg20(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='22637-3', cwe_2='Report', cwe_3='LN')
         obx.obx_5 = (
-            'HISTOPATHOLOGY REPORT\\.br\\\\.br\\Specimen: Punch biopsy left forearm\\.br\\\\.br\\Macroscopic: Skin punch biopsy 4mm diameter, 3mm depth.\\.br\\\\.br'
-            '\\Microscopic: Sections show a basal cell carcinoma, nodular type, extending to a depth of 1.8mm. Deep and lateral margins clear (nearest mar'
-            'gin 0.5mm lateral).\\.br\\\\.br\\Diagnosis: Basal cell carcinoma, nodular type, margins clear.'
+            'HISTOPATHOLOGY REPORT\\.br\\\\.br\\Specimen: Punch biopsy left forearm\\.br\\\\.br\\Macroscopic: Skin punch biopsy 4mm diameter, 3mm depth.\\.br'
+            '\\\\.br\\Microscopic: Sections show a basal cell carcinoma, nodular type, extending to a depth of 1.8mm. Deep and lateral margins clear (neares'
+            't margin 0.5mm lateral).\\.br\\\\.br\\Diagnosis: Basal cell carcinoma, nodular type, margins clear.'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20241203160000'

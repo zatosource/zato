@@ -2530,7 +2530,10 @@ class TestMsg18(unittest.TestCase):
         obr.obr_16 = '02115678^&&van Proefhuisarts^A.B.^^^^^^VEKTIS'
         obr.result_status = 'F'
         obr.placer_supplemental_service_information = CWE(
-            cwe_2='Overzicht van de bijlagen:\\.br\\De volgende bijlage(n) behorend bij de verwijzing met ZD200046119 is/zijn verzonden\\.br\\- HL7.doc\\.br\\- logo.png\\.br\\',
+            cwe_2=(
+                'Overzicht van de bijlagen:\\.br\\De volgende bijlage(n) behorend bij de verwijzing met ZD200046119 is/zijn verzonden\\.br\\- HL7.doc\\.br\\-'
+                ' logo.png\\.br\\'
+            ),
         )
 
         # .. build OBX ..

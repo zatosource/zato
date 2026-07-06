@@ -1615,9 +1615,10 @@ class TestMsg12(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='CXRAY', cwe_2='Chest X-Ray Report', cwe_3='ACTRAD')
         obx.obx_5 = (
-            'CHEST X-RAY PA AND LATERAL\\.br\\\\.br\\Clinical Indication: SOB and pleuritic chest pain\\.br\\\\.br\\Comparison: Nil prior\\.br\\\\.br\\Findings:\\.br\\'
-            'Heart size is normal. The mediastinal contour is unremarkable.\\.br\\There is a small left-sided pleural effusion with associated basal atelec'
-            'tasis.\\.br\\The right lung is clear. No pneumothorax.\\.br\\\\.br\\Impression:\\.br\\Small left pleural effusion. Clinical correlation recommended.'
+            'CHEST X-RAY PA AND LATERAL\\.br\\\\.br\\Clinical Indication: SOB and pleuritic chest pain\\.br\\\\.br\\Comparison: Nil prior\\.br\\\\.br\\Findin'
+            'gs:\\.br\\Heart size is normal. The mediastinal contour is unremarkable.\\.br\\There is a small left-sided pleural effusion with associated basa'
+            'l atelectasis.\\.br\\The right lung is clear. No pneumothorax.\\.br\\\\.br\\Impression:\\.br\\Small left pleural effusion. Clinical correlation '
+            'recommended.'
         )
         obx.observation_result_status = 'F'
         obx.date_time_of_the_observation = '20250320152000'
@@ -2660,13 +2661,13 @@ class TestMsg20(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='DS', cwe_2='Discharge Summary', cwe_3='LN')
         obx.obx_5 = (
-            'DISCHARGE SUMMARY\\.br\\\\.br\\Patient: CAVANOUGH, Reuben Xavier\\.br\\MRN: MRN3415802\\.br\\DOB: 28/04/1949\\.br\\\\.br\\Admission Date: 20/03/2025\\.br'
-            '\\Discharge Date: 29/03/2025\\.br\\\\.br\\Admitting Diagnosis: Shortness of breath, pleuritic chest pain\\.br\\\\.br\\Investigations:\\.br\\- Chest X-R'
-            'ay: Small left pleural effusion\\.br\\- CT Pulmonary Angiogram: No pulmonary embolism\\.br\\- Pleural fluid analysis: Transudative\\.br\\\\.br\\Mana'
-            'gement:\\.br\\- Diuretic therapy with intravenous frusemide\\.br\\- Echocardiogram showed preserved LV function, mild diastolic dysfunction\\.br\\'
-            '- Transitioned to oral frusemide 40mg daily\\.br\\\\.br\\Discharge Medications:\\.br\\1. Frusemide 40mg PO daily\\.br\\2. Perindopril 5mg PO daily\\.'
-            'br\\3. Atorvastatin 40mg PO nocte\\.br\\\\.br\\Follow-up:\\.br\\- Cardiology outpatients in 4 weeks\\.br\\- Repeat chest X-ray in 2 weeks\\.br\\\\.br\\Pr'
-            'epared by: Dr Mira Pavlovic, MBBS FRACP'
+            'DISCHARGE SUMMARY\\.br\\\\.br\\Patient: CAVANOUGH, Reuben Xavier\\.br\\MRN: MRN3415802\\.br\\DOB: 28/04/1949\\.br\\\\.br\\Admission Date: 20/03/'
+            '2025\\.br\\Discharge Date: 29/03/2025\\.br\\\\.br\\Admitting Diagnosis: Shortness of breath, pleuritic chest pain\\.br\\\\.br\\Investigations:\\'
+            '.br\\- Chest X-Ray: Small left pleural effusion\\.br\\- CT Pulmonary Angiogram: No pulmonary embolism\\.br\\- Pleural fluid analysis: Transudati'
+            've\\.br\\\\.br\\Management:\\.br\\- Diuretic therapy with intravenous frusemide\\.br\\- Echocardiogram showed preserved LV function, mild diasto'
+            'lic dysfunction\\.br\\- Transitioned to oral frusemide 40mg daily\\.br\\\\.br\\Discharge Medications:\\.br\\1. Frusemide 40mg PO daily\\.br\\2. '
+            'Perindopril 5mg PO daily\\.br\\3. Atorvastatin 40mg PO nocte\\.br\\\\.br\\Follow-up:\\.br\\- Cardiology outpatients in 4 weeks\\.br\\- Repeat ch'
+            'est X-ray in 2 weeks\\.br\\\\.br\\Prepared by: Dr Mira Pavlovic, MBBS FRACP'
         )
         obx.observation_result_status = 'F'
 

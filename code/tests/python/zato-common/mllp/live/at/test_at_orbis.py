@@ -1862,8 +1862,8 @@ class TestMsg14(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='OP_NOTE', cwe_2='Operationsbericht', cwe_3='LOCAL')
         obx.obx_5 = (
-            'Eingriff: Sectio caesarea\\.br\\Indikation: Beckenendlage\\.br\\Komplikationen: Keine\\.br\\Geschätzter Blutverlust: 400 mL\\.br\\Neugeborenes: männ'
-            'lich, 3250 g, APGAR 9/10/10.'
+            'Eingriff: Sectio caesarea\\.br\\Indikation: Beckenendlage\\.br\\Komplikationen: Keine\\.br\\Geschätzter Blutverlust: 400 mL\\.br\\Neugeborenes: '
+            'männlich, 3250 g, APGAR 9/10/10.'
         )
         obx.observation_result_status = 'F'
 

@@ -1331,8 +1331,7 @@ class TestMsg10(unittest.TestCase):
         obx.value_type = 'ED'
         obx.observation_identifier = CWE(cwe_1='18748-4', cwe_2="CR d'imagerie medicale", cwe_3='LN')
         obx.obx_5 = (
-            '^text^XML^Base64^'
-            'PENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj48dGl0bGU+RG9jdW1lbnQgc3VwcHJpbWU8L3RpdGxlPjwvQ2xpbmljYWxEb2N1bWVudD4='
+            '^text^XML^Base64^PENsaW5pY2FsRG9jdW1lbnQgeG1sbnM9InVybjpobDctb3JnOnYzIj48dGl0bGU+RG9jdW1lbnQgc3VwcHJpbWU8L3RpdGxlPjwvQ2xpbmljYWxEb2N1bWVudD4='
         )
         obx.observation_result_status = 'D'
 

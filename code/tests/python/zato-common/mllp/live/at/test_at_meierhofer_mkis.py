@@ -1365,8 +1365,8 @@ class TestMsg10(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='71020', cwe_2='Roentgen Thorax', cwe_3='MKRAD')
         obx.obx_5 = (
-            'Befund:\\.br\\Roentgen Thorax in 2 Ebenen\\.br\\\\.br\\Herz normal gross und konfiguriert. Kein Perikarderguss.\\.br\\Lunge beidseits belüftet, kein'
-            'e Infiltrate. Kein Pleuraerguss.\\.br\\Kein Pneumothorax.\\.br\\Zwerchfelle glatt begrenzt.\\.br\\Praeoperativer Normalbefund.'
+            'Befund:\\.br\\Roentgen Thorax in 2 Ebenen\\.br\\\\.br\\Herz normal gross und konfiguriert. Kein Perikarderguss.\\.br\\Lunge beidseits belüftet, '
+            'keine Infiltrate. Kein Pleuraerguss.\\.br\\Kein Pneumothorax.\\.br\\Zwerchfelle glatt begrenzt.\\.br\\Praeoperativer Normalbefund.'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'
@@ -2144,9 +2144,9 @@ class TestMsg15(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='43239-9', cwe_2='OeGD Befund', cwe_3='LN')
         obx.obx_5 = (
-            'Befund:\\.br\\Oesophagogastroduodenoskopie\\.br\\\\.br\\Oesophagus: Unauffaellige Schleimhaut, kein Barrett.\\.br\\Magen: Antrum mit leichter Erythe'
-            'mgastritis. Keine Erosionen oder Ulcera.\\.br\\Duodenum: Bulbus und Pars descendens unauffaellig.\\.br\\\\.br\\Biopsie: 2x Antrum zur HP-Diagnosti'
-            'k entnommen.\\.br\\Diagnose: Leichte Antrumgastritis.'
+            'Befund:\\.br\\Oesophagogastroduodenoskopie\\.br\\\\.br\\Oesophagus: Unauffaellige Schleimhaut, kein Barrett.\\.br\\Magen: Antrum mit leichter Er'
+            'ythemgastritis. Keine Erosionen oder Ulcera.\\.br\\Duodenum: Bulbus und Pars descendens unauffaellig.\\.br\\\\.br\\Biopsie: 2x Antrum zur HP-Dia'
+            'gnostik entnommen.\\.br\\Diagnose: Leichte Antrumgastritis.'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'

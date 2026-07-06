@@ -1154,9 +1154,9 @@ class TestMsg09(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='70450', cwe_2='CT Schaedel nativ', cwe_3='AVRAD')
         obx.obx_5 = (
-            'Befund:\\.br\\CT Schaedel nativ\\.br\\\\.br\\Klinische Angabe: Zustand nach Sturz, Fraktur ausschliessen\\.br\\\\.br\\Befund:\\.br\\Kein Nachweis einer '
-            'Fraktur des Neurocraniums oder Viscerocraniums.\\.br\\Kein intrakranielles Haematom. Keine Mittellinienverlagerung.\\.br\\Basale Zisternen frei.'
-            ' Innere und aeussere Liquorraeume altersentspr.\\.br\\\\.br\\Beurteilung: Unauffaelliges CCT.'
+            'Befund:\\.br\\CT Schaedel nativ\\.br\\\\.br\\Klinische Angabe: Zustand nach Sturz, Fraktur ausschliessen\\.br\\\\.br\\Befund:\\.br\\Kein Nachwei'
+            's einer Fraktur des Neurocraniums oder Viscerocraniums.\\.br\\Kein intrakranielles Haematom. Keine Mittellinienverlagerung.\\.br\\Basale Zistern'
+            'en frei. Innere und aeussere Liquorraeume altersentspr.\\.br\\\\.br\\Beurteilung: Unauffaelliges CCT.'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'
@@ -2070,10 +2070,10 @@ class TestMsg15(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='76700', cwe_2='Sonographie Abdomen', cwe_3='AVRAD')
         obx.obx_5 = (
-            'Befund:\\.br\\Sonographie Abdomen komplett\\.br\\\\.br\\Leber: Normal gross, homogenes Parenchym, keine fokalen Laesionen.\\.br\\Gallenblase: Steinf'
-            'reil, Wanddicke normal.\\.br\\Pankreas: Soweit einsehbar unauffaellig.\\.br\\Milz: Normal gross (11 cm).\\.br\\Nieren: Beidseits normal gross, kei'
-            'n Harnstau. Rechts ein 8mm Zyste im Unterpol.\\.br\\Aorta: Kaliber normal.\\.br\\Kein freier Aszites.\\.br\\\\.br\\Beurteilung: Unauffaelliger Oberb'
-            'auch. Kleine Nierenzyste rechts (Bosniak I).'
+            'Befund:\\.br\\Sonographie Abdomen komplett\\.br\\\\.br\\Leber: Normal gross, homogenes Parenchym, keine fokalen Laesionen.\\.br\\Gallenblase: St'
+            'einfreil, Wanddicke normal.\\.br\\Pankreas: Soweit einsehbar unauffaellig.\\.br\\Milz: Normal gross (11 cm).\\.br\\Nieren: Beidseits normal gros'
+            's, kein Harnstau. Rechts ein 8mm Zyste im Unterpol.\\.br\\Aorta: Kaliber normal.\\.br\\Kein freier Aszites.\\.br\\\\.br\\Beurteilung: Unauffaell'
+            'iger Oberbauch. Kleine Nierenzyste rechts (Bosniak I).'
         )
         obx.interpretation_codes = CWE(cwe_1='N')
         obx.observation_result_status = 'F'

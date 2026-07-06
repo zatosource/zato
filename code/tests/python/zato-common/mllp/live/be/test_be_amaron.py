@@ -1459,8 +1459,8 @@ class TestMsg11(unittest.TestCase):
         obx.value_type = 'TX'
         obx.observation_identifier = CWE(cwe_1='OP_NOTE', cwe_2='Operative Note', cwe_3='LOCAL')
         obx.obx_5 = (
-            'Procedure: Laparoscopic cholecystectomy\\.br\\Patient tolerated procedure well\\.br\\No complications\\.br\\EBL: 50mL\\.br\\Specimens sent to pathol'
-            'ogy.'
+            'Procedure: Laparoscopic cholecystectomy\\.br\\Patient tolerated procedure well\\.br\\No complications\\.br\\EBL: 50mL\\.br\\Specimens sent to pa'
+            'thology.'
         )
         obx.observation_result_status = 'F'
 

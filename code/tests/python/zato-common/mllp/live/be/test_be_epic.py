@@ -1782,10 +1782,10 @@ class TestMsg12(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='22637-3', cwe_2='Path report', cwe_3='LN')
         obx.obx_5 = (
-            'ANATOMOPATHOLOGISCH VERSLAG\\.br\\\\.br\\Materiaal: Colonresectie rechts\\.br\\\\.br\\Macroscopie: Hemicolectomie rechts, 25 cm. Polipoide tumor in '
-            'coecum, diameter 4.2 cm.\\.br\\\\.br\\Microscopie: Matig gedifferentieerd adenocarcinoom van het coecum, invasie tot in de subserosa (pT3). 18 l'
-            'ymfeklieren onderzocht, 2 positief (pN1a). Resectieranden vrij.\\.br\\\\.br\\Conclusie: Adenocarcinoom coecum, pT3N1aM0, stadium IIIB. MSI testi'
-            'ng wordt uitgevoerd.'
+            'ANATOMOPATHOLOGISCH VERSLAG\\.br\\\\.br\\Materiaal: Colonresectie rechts\\.br\\\\.br\\Macroscopie: Hemicolectomie rechts, 25 cm. Polipoide tumor'
+            ' in coecum, diameter 4.2 cm.\\.br\\\\.br\\Microscopie: Matig gedifferentieerd adenocarcinoom van het coecum, invasie tot in de subserosa (pT3). '
+            '18 lymfeklieren onderzocht, 2 positief (pN1a). Resectieranden vrij.\\.br\\\\.br\\Conclusie: Adenocarcinoom coecum, pT3N1aM0, stadium IIIB. MSI t'
+            'esting wordt uitgevoerd.'
         )
         obx.observation_result_status = 'F'
 
@@ -2041,10 +2041,10 @@ class TestMsg14(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='18748-4', cwe_2='Diagnostic imaging study', cwe_3='LN')
         obx.obx_5 = (
-            'CT ANGIOGRAFIE THORAX\\.br\\\\.br\\Indicatie: Verdenking longembolie\\.br\\\\.br\\Techniek: CT thorax na IV toediening van 80ml Ultravist 370\\.br\\\\.'
-            'br\\Bevindingen:\\.br\\- Bilaterale longembolieen in segmentele takken van rechter en linker onderlobarterie\\.br\\- Geen RV overbelasting\\.br\\- '
-            'Geen pleuravocht\\.br\\- Longparenchym zonder afwijkingen\\.br\\- Mediastinale structuren normaal\\.br\\\\.br\\Conclusie: Bilaterale segmentele long'
-            'embolieen zonder tekenen van rechts hartfalen.'
+            'CT ANGIOGRAFIE THORAX\\.br\\\\.br\\Indicatie: Verdenking longembolie\\.br\\\\.br\\Techniek: CT thorax na IV toediening van 80ml Ultravist 370\\.'
+            'br\\\\.br\\Bevindingen:\\.br\\- Bilaterale longembolieen in segmentele takken van rechter en linker onderlobarterie\\.br\\- Geen RV overbelastin'
+            'g\\.br\\- Geen pleuravocht\\.br\\- Longparenchym zonder afwijkingen\\.br\\- Mediastinale structuren normaal\\.br\\\\.br\\Conclusie: Bilaterale s'
+            'egmentele longembolieen zonder tekenen van rechts hartfalen.'
         )
         obx.observation_result_status = 'F'
 
@@ -2699,11 +2699,11 @@ class TestMsg19(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='18748-4', cwe_2='Diagnostic imaging study', cwe_3='LN')
         obx.obx_5 = (
-            'MRI HERSENEN MET GADOLINIUM\\.br\\\\.br\\Indicatie: Epilepsie. Zoeken naar structurele oorzaak.\\.br\\\\.br\\Techniek: 3T MRI met T1, T2, FLAIR, DWI'
-            ' en post-contrast T1 sequenties.\\.br\\\\.br\\Bevindingen:\\.br\\- Kleine FLAIR hyperintense laesie rechts mesiotemporaal, 12x8mm\\.br\\- Geen patho'
-            'logisch aankleuren\\.br\\- Lichte hippocampale asymmetrie rechts < links\\.br\\- Geen andere intracraniële afwijkingen\\.br\\- Ventrikelsysteem sy'
-            'mmetrisch, normale afmetingen\\.br\\\\.br\\Conclusie: Rechts mesiotemporale laesie compatibel met hippocampale sclerose. Correleren met kliniek '
-            'en EEG.'
+            'MRI HERSENEN MET GADOLINIUM\\.br\\\\.br\\Indicatie: Epilepsie. Zoeken naar structurele oorzaak.\\.br\\\\.br\\Techniek: 3T MRI met T1, T2, FLAIR,'
+            ' DWI en post-contrast T1 sequenties.\\.br\\\\.br\\Bevindingen:\\.br\\- Kleine FLAIR hyperintense laesie rechts mesiotemporaal, 12x8mm\\.br\\- Ge'
+            'en pathologisch aankleuren\\.br\\- Lichte hippocampale asymmetrie rechts < links\\.br\\- Geen andere intracraniële afwijkingen\\.br\\- Ventrikel'
+            'systeem symmetrisch, normale afmetingen\\.br\\\\.br\\Conclusie: Rechts mesiotemporale laesie compatibel met hippocampale sclerose. Correleren me'
+            't kliniek en EEG.'
         )
         obx.observation_result_status = 'F'
 

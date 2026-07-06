@@ -2267,9 +2267,9 @@ class TestMsg13(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='22634-0', cwe_2='Pathology report', cwe_3='LN')
         obx.obx_5 = (
-            'SKIN EXCISION - LEFT FOREARM\\.br\\\\.br\\MACROSCOPY: Ellipse of skin 22x11x8mm with a central raised pigmented lesion 7mm diameter.\\.br\\\\.br\\MI'
-            'CROSCOPY: Sections show a compound melanocytic naevus with junctional and dermal components. No dysplasia. Excision appears complete.\\.br\\\\.'
-            'br\\DIAGNOSIS: Compound melanocytic naevus, left forearm. No evidence of malignancy.'
+            'SKIN EXCISION - LEFT FOREARM\\.br\\\\.br\\MACROSCOPY: Ellipse of skin 22x11x8mm with a central raised pigmented lesion 7mm diameter.\\.br\\\\.br'
+            '\\MICROSCOPY: Sections show a compound melanocytic naevus with junctional and dermal components. No dysplasia. Excision appears complete.\\.br'
+            '\\\\.br\\DIAGNOSIS: Compound melanocytic naevus, left forearm. No evidence of malignancy.'
         )
         obx.probability = 'N'
         obx.effective_date_of_reference_range = 'F'
@@ -3454,9 +3454,9 @@ class TestMsg20(unittest.TestCase):
         obx_4.value_type = 'FT'
         obx_4.observation_identifier = CWE(cwe_1='22637-3', cwe_2='Pathology report', cwe_3='LN')
         obx_4.obx_5 = (
-            'LIQUID BASED CYTOLOGY - CERVIX\\.br\\\\.br\\CLINICAL: Routine cervical screening test.\\.br\\\\.br\\SPECIMEN: ThinPrep, satisfactory for evaluation.'
-            '\\.br\\Endocervical component present.\\.br\\\\.br\\RESULT: Negative for intraepithelial lesion or malignancy.\\.br\\HPV DNA not detected.\\.br\\\\.br\\'
-            'RECOMMENDATION: Return to routine 5-yearly screening as per National Cervical Screening Program guidelines.'
+            'LIQUID BASED CYTOLOGY - CERVIX\\.br\\\\.br\\CLINICAL: Routine cervical screening test.\\.br\\\\.br\\SPECIMEN: ThinPrep, satisfactory for evaluat'
+            'ion.\\.br\\Endocervical component present.\\.br\\\\.br\\RESULT: Negative for intraepithelial lesion or malignancy.\\.br\\HPV DNA not detected.\\'
+            '.br\\\\.br\\RECOMMENDATION: Return to routine 5-yearly screening as per National Cervical Screening Program guidelines.'
         )
         obx_4.probability = 'N'
         obx_4.effective_date_of_reference_range = 'F'

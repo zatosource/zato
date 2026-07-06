@@ -2602,9 +2602,9 @@ class TestMsg19(unittest.TestCase):
         obx.value_type = 'FT'
         obx.observation_identifier = CWE(cwe_1='18748-4', cwe_2='Diagnostic imaging study', cwe_3='LN')
         obx.obx_5 = (
-            'MRI Hersenen met gadolinium\\.br\\\\.br\\Indicatie: Hoofdpijn, verdenking ruimte-innemend proces\\.br\\\\.br\\Bevindingen:\\.br\\- Geen intracranieel '
-            'ruimte-innemend proces\\.br\\- Geen afwijkend aankleuren na gadolinium\\.br\\- Ventrikelsysteem normaal van configuratie\\.br\\- Geen midline shif'
-            't\\.br\\- Sinussen vrij belicht\\.br\\\\.br\\Conclusie: Normaal MRI onderzoek van de hersenen.'
+            'MRI Hersenen met gadolinium\\.br\\\\.br\\Indicatie: Hoofdpijn, verdenking ruimte-innemend proces\\.br\\\\.br\\Bevindingen:\\.br\\- Geen intracra'
+            'nieel ruimte-innemend proces\\.br\\- Geen afwijkend aankleuren na gadolinium\\.br\\- Ventrikelsysteem normaal van configuratie\\.br\\- Geen midl'
+            'ine shift\\.br\\- Sinussen vrij belicht\\.br\\\\.br\\Conclusie: Normaal MRI onderzoek van de hersenen.'
         )
         obx.observation_result_status = 'F'
 
