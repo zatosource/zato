@@ -596,6 +596,43 @@ class TestADTA24Cardinality:
         assert not result.is_valid
         assert any("CARDINALITY_MAX" in e.code for e in result.errors)
 
+class TestADTA30Cardinality:
+
+    def test_adt_a30_valid_all_required_present(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["EVN"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["MRG"] = 1
+        result = validate_cardinality("ADT_A30", segment_counts, group_counts, choice_children, "TEST")
+        assert result.is_valid
+
+    def test_adt_a30_invalid_missing_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["EVN"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["MRG"] = 1
+        result = validate_cardinality("ADT_A30", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MIN" in e.code for e in result.errors)
+
+    def test_adt_a30_invalid_exceeds_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["EVN"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["MRG"] = 1
+        segment_counts["MSH"] = 2
+        result = validate_cardinality("ADT_A30", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MAX" in e.code for e in result.errors)
+
 class TestADTA37Cardinality:
 
     def test_adt_a37_valid_all_required_present(self):

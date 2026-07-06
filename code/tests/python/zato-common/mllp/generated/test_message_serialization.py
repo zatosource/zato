@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from zato.hl7v2.v2_9.messages import (
     ACK,
+    ADR_A19,
     ADT_A01,
     ADT_A02,
     ADT_A03,
@@ -16,6 +17,7 @@ from zato.hl7v2.v2_9.messages import (
     ADT_A20,
     ADT_A21,
     ADT_A24,
+    ADT_A30,
     ADT_A37,
     ADT_A38,
     ADT_A39,
@@ -160,6 +162,7 @@ from zato.hl7v2.v2_9.messages import (
     QBP_Qnn,
     QBP_Z73,
     QCN_J01,
+    QRY_A19,
     QSB_Q16,
     QVR_Q17,
     RAS_O17,
@@ -236,6 +239,19 @@ class TestMessageSerialization:
         assert isinstance(j, str)
         parsed = json.loads(j)
         assert parsed.get("_structure_id") == "ACK"
+
+    def test_adr_a19_to_dict(self):
+        msg = ADR_A19()
+        d = msg.to_dict()
+        assert isinstance(d, dict)
+        assert d.get("_structure_id") == "ADR_A19"
+
+    def test_adr_a19_to_json(self):
+        msg = ADR_A19()
+        j = msg.to_json()
+        assert isinstance(j, str)
+        parsed = json.loads(j)
+        assert parsed.get("_structure_id") == "ADR_A19"
 
     def test_adt_a01_to_dict(self):
         msg = ADT_A01()
@@ -405,6 +421,19 @@ class TestMessageSerialization:
         assert isinstance(j, str)
         parsed = json.loads(j)
         assert parsed.get("_structure_id") == "ADT_A24"
+
+    def test_adt_a30_to_dict(self):
+        msg = ADT_A30()
+        d = msg.to_dict()
+        assert isinstance(d, dict)
+        assert d.get("_structure_id") == "ADT_A30"
+
+    def test_adt_a30_to_json(self):
+        msg = ADT_A30()
+        j = msg.to_json()
+        assert isinstance(j, str)
+        parsed = json.loads(j)
+        assert parsed.get("_structure_id") == "ADT_A30"
 
     def test_adt_a37_to_dict(self):
         msg = ADT_A37()
@@ -2277,6 +2306,19 @@ class TestMessageSerialization:
         assert isinstance(j, str)
         parsed = json.loads(j)
         assert parsed.get("_structure_id") == "QCN_J01"
+
+    def test_qry_a19_to_dict(self):
+        msg = QRY_A19()
+        d = msg.to_dict()
+        assert isinstance(d, dict)
+        assert d.get("_structure_id") == "QRY_A19"
+
+    def test_qry_a19_to_json(self):
+        msg = QRY_A19()
+        j = msg.to_json()
+        assert isinstance(j, str)
+        parsed = json.loads(j)
+        assert parsed.get("_structure_id") == "QRY_A19"
 
     def test_qsb_q16_to_dict(self):
         msg = QSB_Q16()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from zato.hl7v2.v2_9.messages import (
     ACK,
+    ADR_A19,
     ADT_A01,
     ADT_A02,
     ADT_A03,
@@ -15,6 +16,7 @@ from zato.hl7v2.v2_9.messages import (
     ADT_A20,
     ADT_A21,
     ADT_A24,
+    ADT_A30,
     ADT_A37,
     ADT_A38,
     ADT_A39,
@@ -159,6 +161,7 @@ from zato.hl7v2.v2_9.messages import (
     QBP_Qnn,
     QBP_Z73,
     QCN_J01,
+    QRY_A19,
     QSB_Q16,
     QVR_Q17,
     RAS_O17,
@@ -227,6 +230,10 @@ class TestMessageInstantiation:
         msg = ACK()
         assert msg._structure_id == "ACK"
 
+    def test_instantiate_adr_a19(self):
+        msg = ADR_A19()
+        assert msg._structure_id == "ADR_A19"
+
     def test_instantiate_adt_a01(self):
         msg = ADT_A01()
         assert msg._structure_id == "ADT_A01"
@@ -278,6 +285,10 @@ class TestMessageInstantiation:
     def test_instantiate_adt_a24(self):
         msg = ADT_A24()
         assert msg._structure_id == "ADT_A24"
+
+    def test_instantiate_adt_a30(self):
+        msg = ADT_A30()
+        assert msg._structure_id == "ADT_A30"
 
     def test_instantiate_adt_a37(self):
         msg = ADT_A37()
@@ -854,6 +865,10 @@ class TestMessageInstantiation:
     def test_instantiate_qcn_j01(self):
         msg = QCN_J01()
         assert msg._structure_id == "QCN_J01"
+
+    def test_instantiate_qry_a19(self):
+        msg = QRY_A19()
+        assert msg._structure_id == "QRY_A19"
 
     def test_instantiate_qsb_q16(self):
         msg = QSB_Q16()

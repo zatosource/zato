@@ -33,7 +33,7 @@ def fake_adta16() -> str:
     return fake_msh("ADT", "A16", "ADT_A16") + fake_evn("A16") + fake_pid() + fake_pv1()
 
 def fake_adta17() -> str:
-    return fake_msh("ADT", "A17", "ADT_A17") + fake_evn("A17") + fake_pid() + fake_pv1() + fake_pid() + fake_pv1()
+    return fake_msh("ADT", "A17", "ADT_A17") + fake_evn("A17") + fake_pid() + fake_pv1()
 
 def fake_adta20() -> str:
     return fake_msh("ADT", "A20", "ADT_A20") + fake_evn("A20") + fake_npu()
@@ -42,10 +42,13 @@ def fake_adta21() -> str:
     return fake_msh("ADT", "A21", "ADT_A21") + fake_evn("A21") + fake_pid() + fake_pv1()
 
 def fake_adta24() -> str:
-    return fake_msh("ADT", "A24", "ADT_A24") + fake_evn("A24") + fake_pid() + fake_pid()
+    return fake_msh("ADT", "A24", "ADT_A24") + fake_evn("A24") + fake_pid()
+
+def fake_adta30() -> str:
+    return fake_msh("ADT", "A30", "ADT_A30") + fake_evn("A30") + fake_pid() + fake_mrg()
 
 def fake_adta37() -> str:
-    return fake_msh("ADT", "A37", "ADT_A37") + fake_evn("A37") + fake_pid() + fake_pid()
+    return fake_msh("ADT", "A37", "ADT_A37") + fake_evn("A37") + fake_pid()
 
 def fake_adta38() -> str:
     return fake_msh("ADT", "A38", "ADT_A38") + fake_evn("A38") + fake_pid() + fake_pv1()

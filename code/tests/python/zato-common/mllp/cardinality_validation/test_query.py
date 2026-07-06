@@ -419,6 +419,37 @@ class TestQCNJ01Cardinality:
         assert not result.is_valid
         assert any("CARDINALITY_MAX" in e.code for e in result.errors)
 
+class TestQRYA19Cardinality:
+
+    def test_qry_a19_valid_all_required_present(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["QRD"] = 1
+        result = validate_cardinality("QRY_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert result.is_valid
+
+    def test_qry_a19_invalid_missing_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["QRD"] = 1
+        result = validate_cardinality("QRY_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MIN" in e.code for e in result.errors)
+
+    def test_qry_a19_invalid_exceeds_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["QRD"] = 1
+        segment_counts["MSH"] = 2
+        result = validate_cardinality("QRY_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MAX" in e.code for e in result.errors)
+
 class TestQSBQ16Cardinality:
 
     def test_qsb_q16_valid_all_required_present(self):

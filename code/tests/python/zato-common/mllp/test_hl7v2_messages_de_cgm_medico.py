@@ -16,6 +16,7 @@ from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
+from zato.hl7v2.z_segments import *  # noqa: F403
 
 # ################################################################################################################
 # ################################################################################################################
@@ -870,6 +871,19 @@ class Test_de_cgm_medico_01_1_ADT_A01_Aufnahme_admission_standard_profile(unitte
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20250405|4'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202603151705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202603151705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1812,6 +1826,19 @@ class Test_de_cgm_medico_02_2_ADT_A01_Aufnahme_admission_DRG_profile(unittest.Te
 
         serialized = segment.serialize()
         expected = 'PV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2930,6 +2957,19 @@ class Test_de_cgm_medico_04_4_ADT_A01_Aufnahme_admission_billing_profile(unittes
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '83217^KIS'
+        segment.zbe_2 = '202606051705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|83217^KIS|202606051705||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -3704,6 +3744,19 @@ class Test_de_cgm_medico_05_5_ADT_A08_nderung_Patientendaten_update_patient_stan
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20260405|4'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||REFERENCE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -4984,6 +5037,19 @@ class Test_de_cgm_medico_07_7_ADT_A08_nderung_Patientendaten_update_patient_DRG_
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -5897,6 +5963,19 @@ class Test_de_cgm_medico_08_8_ADT_A08_nderung_Patientendaten_update_patient_bill
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -6727,6 +6806,19 @@ class Test_de_cgm_medico_09_9_ADT_A03_Entlassung_discharge_standard_profile(unit
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202504011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A03()
 
@@ -7508,6 +7600,19 @@ class Test_de_cgm_medico_10_10_ADT_A03_Entlassung_discharge_DRG_profile(unittest
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202504011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A03()
 
@@ -8234,6 +8339,19 @@ class Test_de_cgm_medico_11_11_ADT_A03_Entlassung_discharge_billing_profile(unit
 
         serialized = segment.serialize()
         expected = 'PV2||||||||||||||||||||||||||||||||||||N|N'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202504011705||REFERENCE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9437,6 +9555,19 @@ class Test_de_cgm_medico_13_13_ADT_A02_Verlegung_transfer_standard_profile(unitt
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '3456^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|3456^KIS|202604011935||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A02()
 
@@ -10274,6 +10405,19 @@ class Test_de_cgm_medico_14_14_ADT_A02_Verlegung_transfer_DRG_profile(unittest.T
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '3456^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|3456^KIS|202604011935||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A02()
 
@@ -11022,6 +11166,19 @@ class Test_de_cgm_medico_15_15_ADT_A12_Stornierung_Verlegung_cancel_transfer(uni
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20260405|4'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '3456^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'DELETE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|3456^KIS|202604011935||DELETE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -11777,6 +11934,19 @@ class Test_de_cgm_medico_16_16_ADT_A12_Stornierung_fr_herer_Verlegung_cancel_ear
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '3456^KIS'
+        segment.zbe_2 = '202603301345'
+        segment.zbe_4 = 'DELETE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|3456^KIS|202603301345||DELETE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A12()
 
@@ -12493,6 +12663,19 @@ class Test_de_cgm_medico_17_17_ADT_A04_Besuchsmeldung_Registrierung_outpatient_r
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -13177,6 +13360,19 @@ class Test_de_cgm_medico_18_18_ADT_A04_Besuchsmeldung_Registrierung_pre_admissio
 
         serialized = segment.serialize()
         expected = 'PV2||||||||20260601'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '7891^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|7891^KIS|202604011705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################

@@ -10,16 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.hl7v2 import parse_hl7
+from zato.hl7v2 import HL7Fragment, parse_hl7
 from zato.hl7v2.testing.live_util import load_message, md_path_for
 from zato.hl7v2.v2_9.datatypes import CQ, CWE, CX, EI, EIP, HD, MSG, OG, PL, PPN, PT, RPT, VID, XAD, XCN, XPN
-from zato.hl7v2.v2_9.groups import MdmT02CommonOrder, MdmT02Observation, OmbO27Patient, OmbO27PatientVisit, OrmO01Order, OrmO01OrderDetail, OrmO01Patient, \
-    OrmO01PatientVisit, OruR01CommonOrder, OruR01Observation, OruR01OrderObservation, OruR01Patient, OruR01PatientResult, OruR01Visit, RdeO11Order, \
-    RdeO11Patient, RdeO11PatientVisit, RdeO11TimingEncoded, RspK22QueryResponse, SiuS12LocationResource, SiuS12Patient, SiuS12PersonnelResource, \
+from zato.hl7v2.v2_9.groups import AdtA39Patient, MdmT02CommonOrder, MdmT02Observation, OmbO27Patient, OmbO27PatientVisit, OrmO01Order, OrmO01OrderDetail, \
+    OrmO01Patient, OrmO01PatientVisit, OruR01CommonOrder, OruR01Observation, OruR01OrderObservation, OruR01Patient, OruR01PatientResult, OruR01Visit, \
+    RdeO11Order, RdeO11Patient, RdeO11PatientVisit, RdeO11TimingEncoded, RspK22QueryResponse, SiuS12LocationResource, SiuS12Patient, SiuS12PersonnelResource, \
     SiuS12Resources, SiuS12Service, SrmS01Patient, SrmS01Resources, SrmS01Service
-from zato.hl7v2.v2_9.messages import ACK, ADT_A01, ADT_A02, ADT_A03, MDM_T02, OMB_O27, ORM_O01, ORU_R01, QBP_Q21, RDE_O11, RSP_K22, SIU_S12, SRM_S01
-from zato.hl7v2.v2_9.segments import AIL, AIP, AIS, ARQ, BPO, DG1, ERR, EVN, MSA, MSH, OBR, OBX, ORC, PID, PV1, QAK, QPD, QRI, RCP, RGS, RXE, RXR, SCH, SPM, \
-    TQ1, TXA
+from zato.hl7v2.v2_9.messages import ACK, ADT_A01, ADT_A02, ADT_A03, ADT_A39, MDM_T02, OMB_O27, ORM_O01, ORU_R01, QBP_Q21, RDE_O11, RSP_K22, SIU_S12, SRM_S01
+from zato.hl7v2.v2_9.segments import AIL, AIP, AIS, ARQ, BPO, DG1, ERR, EVN, MRG, MSA, MSH, OBR, OBX, ORC, PID, PV1, QAK, QPD, QRI, RCP, RGS, RXE, RXR, SCH, \
+    SPM, TQ1, TXA
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -328,6 +328,40 @@ class TestMsg04(unittest.TestCase):
 
     maxDiff = None
 
+    def test_build(self) -> 'None':
+
+        # Build PID ..
+        pid = PID()
+        pid.set_id_pid = '1'
+        pid.patient_identifier_list = [
+            CX(cx_1='39284561W', cx_4='MI', cx_5='NNESP', cx_8='20070101', cx_9='ESP&&ISO3166'),
+            CX(cx_1='CAEX298476531088', cx_4='CCEX', cx_5='JHN', cx_8='20070101', cx_9='ER&&ISO3166-2'),
+            CX(cx_1='061572943812', cx_4='SS', cx_5='SS', cx_9='ESP&&ISO3166'),
+            CX(cx_1='9934217', cx_4='HC', cx_5='PI', cx_9='ESP&&ISO3166'),
+        ]
+        pid.patient_name = XPN(xpn_1='BRAVO', xpn_2='RAFAEL')
+        pid.mothers_maiden_name = XPN(xpn_1='ESPINOSA')
+        pid.date_time_of_birth = '19780603'
+        pid.administrative_sex = CWE(cwe_1='M')
+        pid.patient_address = [
+            XAD(xad_1='AV&MERIDA&12', xad_2='4A-3A ESCALERA B', xad_3='06083', xad_4='06', xad_5='06800', xad_6='ESP', xad_7='H'),
+            XAD(xad_1='CL&REPUBLICA&56', xad_2='1A-C', xad_3='06083', xad_4='06', xad_5='06800', xad_6='ESP', xad_7='M'),
+        ]
+        pid.pid_13 = '^PRN^PH^^^+34^924736218~^WPN^CP^^^+34^672145987~^NET^Internet^rbravo@hl7spain.org'
+
+        # .. assemble the full message ..
+        msg = HL7Fragment()
+        msg.extra_segments = [pid]
+
+        built_er7 = msg.to_hl7v2()
+
+        # .. and assert exact match against the .md file.
+        expected_er7 = load_message(_md_path, 4)
+
+        self.assertEqual(built_er7, expected_er7)
+
+# ################################################################################################################################
+
     def test_parse(self) -> 'None':
 
         raw = load_message(_md_path, 4)
@@ -359,6 +393,37 @@ class TestMsg05(unittest.TestCase):
     """
 
     maxDiff = None
+
+    def test_build(self) -> 'None':
+
+        # Build PID ..
+        pid = PID()
+        pid.set_id_pid = '1'
+        pid.patient_identifier_list = [
+            CX(cx_1='HOPN810752927130', cx_4='SNS', cx_5='HC', cx_8='20070101', cx_9='ESP&&ISO3166'),
+            CX(cx_1='22847361S', cx_4='MI', cx_5='NNESP', cx_8='20070101', cx_9='ESP&&ISO3166'),
+            CX(cx_1='50005', cx_4='HC', cx_5='PI', cx_9='ESP&&ISO3166'),
+            CX(cx_1='2904900652613', cx_4='SS', cx_5='SS', cx_9='ESP&&ISO3166'),
+        ]
+        pid.patient_name = XPN(xpn_1='DURAN', xpn_2='TERESA')
+        pid.mothers_maiden_name = XPN(xpn_1='CAMACHO')
+        pid.date_time_of_birth = '19810712'
+        pid.administrative_sex = CWE(cwe_1='F')
+        pid.patient_address = XAD(xad_1='PL&ZOCODOVER&7', xad_2='2ºA', xad_3='451685', xad_4='45', xad_5='45002', xad_6='ESP', xad_7='M')
+        pid.pid_13 = '^PRN^PH^^^925234567~^ORN^PH^^^925765432~^ORN^CP^^^671556677'
+
+        # .. assemble the full message ..
+        msg = HL7Fragment()
+        msg.extra_segments = [pid]
+
+        built_er7 = msg.to_hl7v2()
+
+        # .. and assert exact match against the .md file.
+        expected_er7 = load_message(_md_path, 5)
+
+        self.assertEqual(built_er7, expected_er7)
+
+# ################################################################################################################################
 
     def test_parse(self) -> 'None':
 
@@ -1117,6 +1182,79 @@ class TestMsg13(unittest.TestCase):
     """
 
     maxDiff = None
+
+    def test_build(self) -> 'None':
+
+        # Build MSH ..
+        msh = MSH()
+        msh.sending_application = HD(hd_1='01')
+        msh.sending_facility = HD(hd_1='01')
+        msh.receiving_application = HD(hd_1='11')
+        msh.receiving_facility = HD(hd_1='01')
+        msh.date_time_of_message = '20250703112947'
+        msh.message_type = MSG(msg_1='ADT', msg_2='40')
+        msh.message_control_id = 'ID:9-245198483174068'
+        msh.processing_id = PT(pt_1='T')
+        msh.version_id = VID(vid_1='2.4')
+        msh.accept_acknowledgment = 'AL'
+        msh.application_acknowledgment_type = 'AL'
+
+        # .. build EVN ..
+        evn = EVN()
+        evn.recorded_date_time = '20250703112947'
+        evn.operator_id = XCN(xcn_1='01')
+        evn.event_occurred = '20250703112947'
+
+        # .. build PID ..
+        pid = PID()
+        pid.patient_identifier_list = [
+            CX(cx_1='50012069545', cx_4='001'),
+            CX(cx_1='50012069545', cx_4='003'),
+            CX(cx_1='G00213974', cx_4='013'),
+            CX(cx_1='41829375K', cx_4='014'),
+            CX(cx_1='082125236695', cx_4='015'),
+            CX(cx_4='016'),
+            CX(cx_1='CCCCCCCCCZ365977', cx_4='025'),
+            CX(cx_4='026'),
+            CX(cx_1='49561879365', cx_4='027'),
+            CX(cx_4='028'),
+            CX(cx_4='029'),
+        ]
+        pid.patient_name = XPN(xpn_1='TORRES', xpn_2='LEONOR', xpn_3='PRIETO')
+        pid.date_time_of_birth = '19940832'
+        pid.administrative_sex = CWE(cwe_1='M')
+        pid.patient_address = [
+            XAD(xad_1='CL&AMPLE&1', xad_3='002', xad_4='07', xad_5='07730', xad_6='724', xad_7='H', xad_8='000101'),
+            XAD(xad_4='04', xad_6='724', xad_7='N', xad_8=''),
+        ]
+        pid.pid_13 = '^^PH^^^^~^^PH^^^^~^^Internet^'
+        pid.pid_14 = '^^CP^^^^'
+        pid.patient_death_indicator = 'N'
+        pid.last_update_date_time = '20250628'
+
+        # .. build MRG ..
+        mrg = MRG()
+        mrg.prior_patient_identifier_list = [CX(cx_1='49596310157', cx_4='001'), CX(cx_1='49596310157', cx_4='003')]
+
+        # .. build the PATIENT group ..
+        patient = AdtA39Patient()
+        patient.pid = pid
+        patient.mrg = mrg
+
+        # .. assemble the full message ..
+        msg = ADT_A39()
+        msg.msh = msh
+        msg.evn = evn
+        msg.patient = patient
+
+        built_er7 = msg.to_hl7v2()
+
+        # .. and assert exact match against the .md file.
+        expected_er7 = load_message(_md_path, 13)
+
+        self.assertEqual(built_er7, expected_er7)
+
+# ################################################################################################################################
 
     def test_parse(self) -> 'None':
 

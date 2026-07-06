@@ -16,6 +16,7 @@ from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
+from zato.hl7v2.z_segments import *  # noqa: F403
 
 # ################################################################################################################
 # ################################################################################################################
@@ -5105,8 +5106,7 @@ _Raw_de_cgm_clinical_10 = (
     'EVN|A08|202604011516+0200\r'
     'PID|1|56789|xbc3def912a^^^&www.example.com&DNS^PI~56789^^^^PT||Überström^Rikård^^^Prof.||19880913|M|||'
     'Straße der Einheit 42^^Zürich^^8001^CH||'
-    '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^'
-    'rikard.ueberstroem@example.com\r'
+    '+41794321098^^CP^^^^^^^^^+41794321098~+41446789012^^PH^^^^^^^^^+41446789012~rikard.ueberstroem@example.com^NET^X.400^rikard.ueberstroem@example.com\r'
     'PV1|1|U'
 )
 
@@ -7005,8 +7005,7 @@ class Test_de_cgm_clinical_14_14_ADT_A40_Zusammenf_hrung_Patienten_merge_patient
 # ################################################################################################################
 
 _Raw_de_cgm_clinical_15 = (
-    'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||'
-    '2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
+    'MSH|^~\\&|KLINx||AUFN||20260401112408||ADT^A01^ADT_A01|77|P|2.5|||AL|NE|DEU|8859/1|DEU^^HL70296||2.16.840.1.113883.2.6.9.1^^2.16.840.1.113883.2.6^ISO'
 )
 
 class Test_de_cgm_clinical_15_15_ADT_A01_Aufnahme_from_MSH_segment_reference_HL7_DE(unittest.TestCase):
@@ -9258,8 +9257,7 @@ class Test_de_cgm_clinical_19_19_ACK_A02_transport_acknowledgment_for_transfer(u
 # ################################################################################################################
 
 _Raw_de_cgm_clinical_20 = (
-    'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||'
-    '||\r'
+    'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||\r'
     'EVN|A04|20260613083617|||\r'
     'PID|1||246813||MÜNCHHAUSEN^THÉODOR^||19550718|M|||Brückenstraße 5^^Zürich^ZH^8001||(044)9391289^^^theodor@example.com|||||2847|99999999|||||'
     '|||||||||||||||\r'
@@ -9516,8 +9514,7 @@ class Test_de_cgm_clinical_20_20_ADT_A04_registration_from_ringholm_de_reference
 
         serialized = segment.serialize()
         expected = (
-            'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||'
-            '||'
+            'MSH|^~\\&|SENDE_APPLIKATION|SENDE_EINRICHTUNG|EMPFANGS_APPLIKATION|EMPFANGS_EINRICHTUNG|20260613083617||ADT^A04|934576120260613083617|P|2.3||||'
         )
         self.assertEqual(serialized, expected)
 

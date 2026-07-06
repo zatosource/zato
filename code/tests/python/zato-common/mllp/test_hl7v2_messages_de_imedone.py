@@ -16,6 +16,7 @@ from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
+from zato.hl7v2.z_segments import *  # noqa: F403
 
 # ################################################################################################################
 # ################################################################################################################
@@ -868,6 +869,19 @@ class Test_de_imedone_01_1_ADT_A01_Admission_standard_profile_wiki_hl7_de(unitte
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20250405|4'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '5678^KIS'
+        segment.zbe_2 = '202612151705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|5678^KIS|202612151705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1815,6 +1829,19 @@ class Test_de_imedone_02_2_ADT_A01_Admission_for_DRG_wiki_hl7_de(unittest.TestCa
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '5678^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|5678^KIS|202604011705||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -2614,6 +2641,19 @@ class Test_de_imedone_03_3_ADT_A01_Admission_for_billing_wiki_hl7_de(unittest.Te
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20260615|10'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '82914^KIS'
+        segment.zbe_2 = '202606051705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|82914^KIS|202606051705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -3796,6 +3836,19 @@ class Test_de_imedone_05_5_ADT_A02_Transfer_standard_profile_wiki_hl7_de(unittes
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '1234^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|1234^KIS|202604011935||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A02()
 
@@ -4634,6 +4687,19 @@ class Test_de_imedone_06_6_ADT_A02_Transfer_for_DRG_wiki_hl7_de(unittest.TestCas
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '1234^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|1234^KIS|202604011935||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A02()
 
@@ -5462,6 +5528,19 @@ class Test_de_imedone_07_7_ADT_A03_Discharge_wiki_hl7_de(unittest.TestCase):
             'PV1|1|I|HNO^311^3^IN^^N^B^4|R|||620407^Hüttner^Frïedhelm^^^Dr.^^^Ulmen-Klinik^L^^^DN^^^DN||||||||||||3142^^^Ulmen-Klinik^VN|||||||||||||||||'
             '011||||||||202504011645|202504061100'
         )
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '5678^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|5678^KIS|202504011705||REFERENCE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
