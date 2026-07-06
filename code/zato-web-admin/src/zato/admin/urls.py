@@ -15,7 +15,7 @@ from zato.admin import settings
 from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, \
-    main, news, openapi_, python_packages, scheduler, service, updates
+    main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
@@ -1170,6 +1170,16 @@ urlpatterns += [
         login_required(env_variables.test), name='settings-env-variables-test'),
     url(r'^zato/env-variables/save$',
         login_required(env_variables.save), name='settings-env-variables-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - SBOM
+
+    url(r'^zato/sbom/$',
+        login_required(sbom.index), name='settings-sbom'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################
