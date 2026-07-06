@@ -1162,6 +1162,31 @@ class HL7Segment:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HL7RawLine:
+    """ One wire line that is not an HL7 segment - e.g. a base64 continuation
+    line of an embedded-image field that a real-world sender split across
+    multiple lines with raw carriage returns. The line is kept verbatim so
+    messages that carry such lines serialize byte-exact.
+    """
+
+    def __init__(self, line:'str') -> 'None':
+        self.line = line
+
+# ################################################################################################################################
+
+    def serialize(self) -> 'str':
+        out = self.line
+        return out
+
+# ################################################################################################################################
+
+    to_hl7 = serialize
+    to_hl7v2 = serialize
+    to_er7 = serialize
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HL7Group:
     """ Base class for HL7 message groups.
     """
