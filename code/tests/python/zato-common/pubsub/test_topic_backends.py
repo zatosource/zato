@@ -88,7 +88,7 @@ def _make_amqp_msg(topic_name:'str', channel_name:'str'='', exchange:'str'='my.e
 # ################################################################################################################################
 
 class TestSyncPubSubTopics(unittest.TestCase):
-    """ Item 18 - _sync_pubsub_topics keeps only AMQP topics from opaque1.
+    """ _sync_pubsub_topics keeps only AMQP topics from opaque1.
     """
 
     def setUp(self) -> 'None':
@@ -169,7 +169,7 @@ class TestSyncPubSubTopics(unittest.TestCase):
 # ################################################################################################################################
 
 class TestTopicCreateHandler(unittest.TestCase):
-    """ Item 19 - TOPIC_CREATE adds a registry entry and applies the channel override.
+    """ TOPIC_CREATE adds a registry entry and applies the channel override.
     """
 
     def setUp(self) -> 'None':
@@ -213,7 +213,7 @@ class TestTopicCreateHandler(unittest.TestCase):
 # ################################################################################################################################
 
 class TestTopicEditHandler(unittest.TestCase):
-    """ Item 20 - TOPIC_EDIT updates the entry and moves the channel override.
+    """ TOPIC_EDIT updates the entry and moves the channel override.
     """
 
     def setUp(self) -> 'None':
@@ -311,7 +311,7 @@ class TestTopicEditHandler(unittest.TestCase):
 # ################################################################################################################################
 
 class TestTopicDeleteHandler(unittest.TestCase):
-    """ Item 21 - TOPIC_DELETE removes the entry and restores the channel.
+    """ TOPIC_DELETE removes the entry and restores the channel.
     """
 
     def setUp(self) -> 'None':

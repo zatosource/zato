@@ -187,7 +187,7 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 35 - a message published through the invoker overlay lands on the bound RabbitMQ queue.
+        """ A message published through the invoker overlay lands on the bound RabbitMQ queue.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -218,8 +218,8 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 36 - a message published through the pub/sub REST endpoint by an external client
-        lands on the bound RabbitMQ queue, item 38 - the response carries is_ok and a msg_id.
+        """ A message published through the pub/sub REST endpoint by an external client
+        lands on the bound RabbitMQ queue and the response carries is_ok and a msg_id.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -242,7 +242,7 @@ class TestPubSubTopicAMQPPublish:
         payload = 'rest-payload-' + new_cid()
         response = client.publish(topic_name, payload)
 
-        # .. item 38 - the response carries is_ok and a msg_id with the standard prefix ..
+        # .. the response carries is_ok and a msg_id with the standard prefix ..
         assert response['is_ok'] is True, f'Expected is_ok, got: {response}'
         assert response['msg_id'].startswith(_Msg_Id_Prefix), f'Expected a `{_Msg_Id_Prefix}` msg_id, got: {response}'
 
@@ -261,8 +261,8 @@ class TestPubSubTopicAMQPPublish:
         rabbitmq_broker:'anydict', # noqa: F811
         publisher_service:'anydict',
         ) -> 'None':
-        """ Item 37 - a message published with self.publish from a hot-deployed service
-        lands on the bound RabbitMQ queue, item 38 - the service returns the PublishResult fields.
+        """ A message published with self.publish from a hot-deployed service
+        lands on the bound RabbitMQ queue and the service returns the PublishResult fields.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -291,7 +291,7 @@ class TestPubSubTopicAMQPPublish:
             'data': payload,
         })
 
-        # .. item 38 - the service returned the PublishResult fields ..
+        # .. the service returned the PublishResult fields ..
         assert response['is_ok'] is True, f'Expected is_ok, got: {response}'
         assert response['msg_id'].startswith(_Msg_Id_Prefix), f'Expected a `{_Msg_Id_Prefix}` msg_id, got: {response}'
 
@@ -309,7 +309,7 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 38 - the overlay's history panel shows the msg_id returned by an AMQP publish.
+        """ The overlay's history panel shows the msg_id returned by an AMQP publish.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -349,7 +349,7 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 39 - a topic with an explicit routing key delivers to a queue bound with that key
+        """ A topic with an explicit routing key delivers to a queue bound with that key
         and not to a queue bound with the topic name.
         """
         page = logged_in_page
@@ -401,7 +401,7 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 40 - a topic without a routing key delivers to a queue bound with the topic name.
+        """ A topic without a routing key delivers to a queue bound with the topic name.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -444,7 +444,7 @@ class TestPubSubTopicAMQPPublish:
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Item 41 - publishing to an AMQP-backed topic leaves no pub/sub stream keys in Redis.
+        """ Publishing to an AMQP-backed topic leaves no pub/sub stream keys in Redis.
         """
         # redis
         from redis import Redis
@@ -486,7 +486,7 @@ class TestPubSubTopicAMQPPublish:
         logged_in_page:'Page',
         zato_dashboard:'anydict',
         ) -> 'None':
-        """ Item 42 - a built-in topic with a REST push subscriber still delivers through
+        """ A built-in topic with a REST push subscriber still delivers through
         the normal Redis push path, both backends coexist in one server.
         """
         page = logged_in_page

@@ -72,7 +72,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 # ################################################################################################################################
 
     def test_amqp_topic_routes_to_amqp_invoke(self) -> 'None':
-        """ Item 14 - an AMQP-backed topic goes to amqp_invoke with the configured
+        """ An AMQP-backed topic goes to amqp_invoke with the configured
         outconn name, exchange, routing key and the given data.
         """
         _ = self.facade.publish('topic.amqp', 'amqp data')
@@ -90,7 +90,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 # ################################################################################################################################
 
     def test_amqp_topic_returns_publish_result_with_msg_id(self) -> 'None':
-        """ Item 15 - the AMQP path returns a PublishResult with a msg_id
+        """ The AMQP path returns a PublishResult with a msg_id
         in the standard format, shape identical to the built-in path.
         """
         out = self.facade.publish('topic.amqp', 'amqp data')
@@ -101,7 +101,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 # ################################################################################################################################
 
     def test_builtin_topic_goes_to_redis(self) -> 'None':
-        """ Item 16 - a topic absent from the registry goes to pubsub_redis.publish
+        """ A topic absent from the registry goes to pubsub_redis.publish
         with unchanged arguments, amqp_invoke is not called.
         """
         out = self.facade.publish('topic.builtin', 'builtin data', priority=7)
@@ -120,7 +120,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 # ################################################################################################################################
 
     def test_service_auto_topics_stay_builtin(self) -> 'None':
-        """ Item 17 - a zato.s.to.* topic name goes builtin even when
+        """ A zato.s.to.* topic name goes builtin even when
         the registry contains an entry for it.
         """
         service_topic = _service_topic_prefix + 'some.service'
