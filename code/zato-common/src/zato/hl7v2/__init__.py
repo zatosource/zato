@@ -14,7 +14,7 @@ from zato.hl7v2.base import (
 )
 from zato.hl7v2.validator import validate_message, ValidationResult, ValidationError  # pyright: ignore[reportAttributeAccessIssue]
 from zato.hl7v2.batch import HL7Batch, HL7File, parse_batch, parse_file, parse_batch_or_file, create_batch, create_file
-from zato.hl7v2.z_segments import ZDS
+from zato.hl7v2.z_segments import ZAU, ZBE, ZDS, ZFD
 from zato.hl7v2_rs import ToleranceConfig
 
 
@@ -48,5 +48,8 @@ __all__ = [
     'create_batch',
     'create_file',
     'ToleranceConfig',
+    'ZAU',
+    'ZBE',
     'ZDS',
+    'ZFD',
 ]
