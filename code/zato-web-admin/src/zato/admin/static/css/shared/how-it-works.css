@@ -7,6 +7,7 @@
     padding: 2px 8px;
     font-size: 9px;
     font-weight: 400;
+    white-space: nowrap;
     color: #101010;
     background: linear-gradient(to bottom, rgba(255, 220, 90, 0.35), rgba(255, 206, 59, 0.3));
     border-radius: 3px;
