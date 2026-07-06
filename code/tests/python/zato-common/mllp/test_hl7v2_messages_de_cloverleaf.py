@@ -16,6 +16,7 @@ from zato.hl7v2.v2_9 import parse_hl7
 from zato.hl7v2.v2_9.segments import *  # noqa: F403
 from zato.hl7v2.v2_9.datatypes import *  # noqa: F403
 from zato.hl7v2.v2_9.messages import *  # noqa: F403
+from zato.hl7v2.z_segments import *  # noqa: F403
 
 # ################################################################################################################
 # ################################################################################################################
@@ -868,6 +869,19 @@ class Test_de_cloverleaf_01_1_ADT_A01_admission_standard_HL7_D_profile_v2_5(unit
 
         serialized = segment.serialize()
         expected = 'PV2|||||||||20250405|4'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202603151705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202603151705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -1808,6 +1822,19 @@ class Test_de_cloverleaf_02_2_ADT_A01_admission_with_DRG_HL7_D_profile_v2_5(unit
 
         serialized = segment.serialize()
         expected = 'PV2|||0101^vollstationär, Normalfall^GSG0001||||||20260405|4||||||||||||||||||||||||||N|N'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202604011705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -2922,6 +2949,19 @@ class Test_de_cloverleaf_04_4_ADT_A01_admission_with_billing_HL7_D_profile_v2_5(
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '71823^KIS'
+        segment.zbe_2 = '202606051705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|71823^KIS|202606051705||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -3753,6 +3793,19 @@ class Test_de_cloverleaf_05_5_ADT_A03_discharge_standard_HL7_D_profile_v2_5(unit
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202504011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A03()
 
@@ -4532,6 +4585,19 @@ class Test_de_cloverleaf_06_6_ADT_A03_discharge_with_DRG_HL7_D_profile_v2_5(unit
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202504011705||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A03()
 
@@ -5256,6 +5322,19 @@ class Test_de_cloverleaf_07_7_ADT_A03_discharge_with_billing_HL7_D_profile_v2_5(
 
         serialized = segment.serialize()
         expected = 'PV2||||||||||||||||||||||||||||||||||||N|N'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202504011705'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202504011705||REFERENCE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -6070,6 +6149,19 @@ class Test_de_cloverleaf_08_8_ADT_A02_transfer_standard_HL7_D_profile_v2_5(unitt
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '9012^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|9012^KIS|202604011935||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A02()
 
@@ -6818,6 +6910,19 @@ class Test_de_cloverleaf_09_9_ADT_A12_cancel_transfer_HL7_D_profile_v2_5(unittes
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '9012^KIS'
+        segment.zbe_2 = '202604011935'
+        segment.zbe_4 = 'DELETE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|9012^KIS|202604011935||DELETE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A12()
 
@@ -7531,6 +7636,19 @@ class Test_de_cloverleaf_10_10_ADT_A04_outpatient_registration_HL7_D_profile_v2_
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202604011705||INSERT'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -8213,6 +8331,19 @@ class Test_de_cloverleaf_11_11_ADT_A04_pre_admission_registration_HL7_D_profile_
 
         serialized = segment.serialize()
         expected = 'PV2||||||||20260601'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '4567^KIS'
+        segment.zbe_2 = '202604011705'
+        segment.zbe_4 = 'INSERT'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|4567^KIS|202604011705||INSERT'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -9539,6 +9670,19 @@ class Test_de_cloverleaf_13_13_ADT_A08_update_with_gestational_age_OBX_HL7_D_DRG
 
 # ################################################################################################################
 
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '812943'
+        segment.zbe_2 = '20260920'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|812943|20260920||REFERENCE'
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
     def test_build_full_message(self) -> 'None':
         message = ADT_A01()
 
@@ -9588,8 +9732,7 @@ _Raw_de_cloverleaf_14 = (
     'MSH|^~\\&|KIS|ADT|LAB|ADT|202609201025||ADT^A08^ADT_A01|00013424|P|2.5^DEU&&HL70399|||AL|NE||8859/1|||'
     '2.16.840.1.113883.2.6.9.62^^2.16.840.1.113883.2.6^ISO~2.16.840.1.113883.2.6.9.52^^2.16.840.1.113883.2.6^ISO\r'
     'EVN||202609201025\r'
-    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||'
-    'Y|2\r'
+    'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||Y|2\r'
     'PV1|1|I|IN1^202^^IN^^N^A||||||||||||||||202677891^^^KIS^VN|||||||||||||||||||||||||202609161815\r'
     'DG1|1||P07.1^Neugeborenes mit sonstigem niedrigem Geburtsgewicht^I10-2004||20260920|BD|||||||||1|'
     '519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||518347291^KIS|A\r'
@@ -10164,8 +10307,7 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
 
         serialized = segment.serialize()
         expected = (
-            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||'
-            'Y|2'
+            'PID|||667812^^^KIS^PI||Brückmann&&Brückmann^Hëlga^^^^^L||19780211|F|||||^PRN^PH^^49^711^4582716||DEU^^HL70296|M^^HL70002|EVC^^HL70006|||||||Y|2'
         )
         self.assertEqual(serialized, expected)
 
@@ -10203,6 +10345,19 @@ class Test_de_cloverleaf_14_14_ADT_A08_update_with_diagnosis_DG1_HL7_D_DRG_profi
             'DG1|1||P07.1^Neugeborenes mit sonstigem niedrigem Geburtsgewicht^I10-2004||20260920|BD|||||||||1|'
             '519834^Förster&&Förster^Löthar^^^Dr.^^^^L^^^DN||||518347291^KIS|A'
         )
+        self.assertEqual(serialized, expected)
+
+# ################################################################################################################
+
+    def test_build_ZBE(self) -> 'None':
+        segment = ZBE()
+
+        segment.zbe_1 = '671238542^KIS'
+        segment.zbe_2 = '20260919'
+        segment.zbe_4 = 'REFERENCE'
+
+        serialized = segment.serialize()
+        expected = 'ZBE|671238542^KIS|20260919||REFERENCE'
         self.assertEqual(serialized, expected)
 
 # ################################################################################################################
@@ -10268,8 +10423,7 @@ _Raw_de_cloverleaf_15 = (
     'EVN||20260416180000\r'
     'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
     'DEU||EVC||||||Nürnberg|||D\r'
-    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
-    '6308714\r'
+    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714\r'
     'TXA|1|CN|application/word|||20260416142700|20260416142700||||wörnli|78491||||78491.doc^HOSPAT|DI\r'
     'OBX|1|ED|^Document Content|1|^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg==||||||F'
 )
@@ -10888,8 +11042,7 @@ class Test_de_cloverleaf_15_15_MDM_T02_document_notification_with_content_HL7_D_
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
-            '6308714'
+            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714'
         )
         self.assertEqual(serialized, expected)
 
@@ -10999,8 +11152,7 @@ _Raw_de_cloverleaf_16 = (
     'EVN||20260416181000\r'
     'PID|||205000418^^^Tannen-Klinikum^PI||Würzburger^Gërd^^^^^L||19660514|M|||Brühlweg 11^^Kempten^^87435^DEU^H|08312649|0831-5287634|08323-291|'
     'DEU||EVC||||||Nürnberg|||D\r'
-    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
-    '6308714\r'
+    'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714\r'
     'TXA|1|CN|application/word|||20260416142700|20260416142700|20260416170000|||wörnli|78491||||78491.doc^HOSPAT|AU\r'
     'OBX|1|ED|^Document Content|1|^text/plain^^Base64^VGhpcyBpcyBhbiBleGFtcGxlIERvY3VtZW50Lg==||||||F'
 )
@@ -11626,8 +11778,7 @@ class Test_de_cloverleaf_16_16_MDM_T08_document_status_change_HL7_D_MDM_profile_
 
         serialized = segment.serialize()
         expected = (
-            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||'
-            '6308714'
+            'PV1||I|C1^^^CH|N|6308714||||||||||||||6308714^^^Tannen-Klinikum^VN||K|||||||||||||||E|||7823|||||20260122155500|20260813174000|||617||6308714'
         )
         self.assertEqual(serialized, expected)
 

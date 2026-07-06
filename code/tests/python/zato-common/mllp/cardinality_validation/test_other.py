@@ -35,6 +35,55 @@ class TestACKCardinality:
         assert not result.is_valid
         assert any("CARDINALITY_MAX" in e.code for e in result.errors)
 
+class TestADRA19Cardinality:
+
+    def test_adr_a19_valid_all_required_present(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        group_counts["ADR_A19.QUERY_RESPONSE"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["PR1"] = 1
+        segment_counts["IN1"] = 1
+        result = validate_cardinality("ADR_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert result.is_valid
+
+    def test_adr_a19_invalid_missing_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        group_counts["ADR_A19.QUERY_RESPONSE"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["PR1"] = 1
+        segment_counts["IN1"] = 1
+        result = validate_cardinality("ADR_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MIN" in e.code for e in result.errors)
+
+    def test_adr_a19_invalid_exceeds_msh(self):
+        segment_counts = {}
+        group_counts = {}
+        choice_children = {}
+        segment_counts["MSH"] = 1
+        segment_counts["MSA"] = 1
+        segment_counts["QRD"] = 1
+        group_counts["ADR_A19.QUERY_RESPONSE"] = 1
+        segment_counts["PID"] = 1
+        segment_counts["PV1"] = 1
+        segment_counts["PR1"] = 1
+        segment_counts["IN1"] = 1
+        segment_counts["MSH"] = 2
+        result = validate_cardinality("ADR_A19", segment_counts, group_counts, choice_children, "TEST")
+        assert not result.is_valid
+        assert any("CARDINALITY_MAX" in e.code for e in result.errors)
+
 class TestDBCO41Cardinality:
 
     def test_dbc_o41_valid_all_required_present(self):

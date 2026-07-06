@@ -8,6 +8,10 @@ class TestMessageClassImports:
         from zato.hl7v2.v2_9.messages import ACK
         assert ACK._structure_id == "ACK"
 
+    def test_import_adr_a19(self):
+        from zato.hl7v2.v2_9.messages import ADR_A19
+        assert ADR_A19._structure_id == "ADR_A19"
+
     def test_import_adt_a01(self):
         from zato.hl7v2.v2_9.messages import ADT_A01
         assert ADT_A01._structure_id == "ADT_A01"
@@ -59,6 +63,10 @@ class TestMessageClassImports:
     def test_import_adt_a24(self):
         from zato.hl7v2.v2_9.messages import ADT_A24
         assert ADT_A24._structure_id == "ADT_A24"
+
+    def test_import_adt_a30(self):
+        from zato.hl7v2.v2_9.messages import ADT_A30
+        assert ADT_A30._structure_id == "ADT_A30"
 
     def test_import_adt_a37(self):
         from zato.hl7v2.v2_9.messages import ADT_A37
@@ -635,6 +643,10 @@ class TestMessageClassImports:
     def test_import_qcn_j01(self):
         from zato.hl7v2.v2_9.messages import QCN_J01
         assert QCN_J01._structure_id == "QCN_J01"
+
+    def test_import_qry_a19(self):
+        from zato.hl7v2.v2_9.messages import QRY_A19
+        assert QRY_A19._structure_id == "QRY_A19"
 
     def test_import_qsb_q16(self):
         from zato.hl7v2.v2_9.messages import QSB_Q16

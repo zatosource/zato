@@ -1398,6 +1398,16 @@ class HL7Message:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HL7Fragment(HL7Message):
+    """ A run of segments without an MSH header - implementation guides often
+    document single segments standalone. There is no message type to dispatch
+    on, so all segments are carried in extra_segments.
+    """
+    _structure_id = 'Fragment'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_by_path(message:'HL7Message', path:'str') -> 'any_':
     """ Resolve a dotted path to a value within a parsed HL7 message.
     """

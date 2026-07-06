@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from zato.hl7v2.tests.fakers.base import fake_msh, fake_segment
+from zato.hl7v2.tests.fakers.patient import fake_pid
 from zato.hl7v2.tests.fakers.query import fake_msa
 
 
 def fake_ehce01() -> str:
-    return fake_msh("EHC", "E01", "EHC_E01")
+    return fake_msh("EHC", "E01", "EHC_E01") + fake_pid()
 
 def fake_ehce02() -> str:
-    return fake_msh("EHC", "E02", "EHC_E02")
+    return fake_msh("EHC", "E02", "EHC_E02") + fake_pid()
 
 def fake_ehce04() -> str:
-    return fake_msh("EHC", "E04", "EHC_E04")
+    return fake_msh("EHC", "E04", "EHC_E04") + fake_pid()
 
 def fake_ehce10() -> str:
     return fake_msh("EHC", "E10", "EHC_E10") + fake_msa()
@@ -23,13 +24,13 @@ def fake_ehce13() -> str:
     return fake_msh("EHC", "E13", "EHC_E13") + fake_msa() + fake_segment("RFI") + fake_segment("IVC") + fake_segment("PSS") + fake_segment("PSG")
 
 def fake_ehce15() -> str:
-    return fake_msh("EHC", "E15", "EHC_E15")
+    return fake_msh("EHC", "E15", "EHC_E15") + fake_pid()
 
 def fake_ehce20() -> str:
-    return fake_msh("EHC", "E20", "EHC_E20")
+    return fake_msh("EHC", "E20", "EHC_E20") + fake_pid()
 
 def fake_ehce21() -> str:
-    return fake_msh("EHC", "E21", "EHC_E21")
+    return fake_msh("EHC", "E21", "EHC_E21") + fake_pid()
 
 def fake_ehce24() -> str:
     return fake_msh("EHC", "E24", "EHC_E24") + fake_msa()

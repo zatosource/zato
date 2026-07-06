@@ -17,8 +17,10 @@ _test_data_dir = current / 'tests' / 'messages' / 'hl7v2' / 'live'
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Headers come in two forms - "## 1. ORM^O01 - wellness checkup order" and a bare "## 1"
-_header_pattern = re.compile(r'^## (\d+)\.\s+(\S+)\s*-\s*(.+)$')
+# Headers come in two forms - "## 1. ORM^O01 - wellness checkup order" and a bare "## 1".
+# The message type part may contain spaces (e.g. "ORU R01"), so it is matched
+# non-greedily up to the first dash.
+_header_pattern = re.compile(r'^## (\d+)\.\s+(.+?)\s*-\s*(.+)$')
 _bare_header_pattern = re.compile(r'^## (\d+)\s*$')
 
 # ################################################################################################################################

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from zato.hl7v2.tests.fakers.base import fake_msh
+from zato.hl7v2.tests.fakers.patient import fake_pid
 from zato.hl7v2.tests.fakers.query import fake_qpd, fake_rcp
 
 
 def fake_qbpe03() -> str:
-    return fake_msh("QBP", "E03", "QBP_E03")
+    return fake_msh("QBP", "E03", "QBP_E03") + fake_pid()
 
 def fake_qbpe22() -> str:
-    return fake_msh("QBP", "E22", "QBP_E22")
+    return fake_msh("QBP", "E22", "QBP_E22") + fake_pid()
 
 def fake_qbpo33() -> str:
     return fake_msh("QBP", "O33", "QBP_O33") + fake_qpd() + fake_rcp()

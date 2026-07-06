@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from zato.hl7v2.tests.fakers.msg_ack import fake_ack
+from zato.hl7v2.tests.fakers.msg_adr import fake_adra19
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta01
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta02
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta03
@@ -14,6 +15,7 @@ from zato.hl7v2.tests.fakers.msg_adt import fake_adta17
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta20
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta21
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta24
+from zato.hl7v2.tests.fakers.msg_adt import fake_adta30
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta37
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta38
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta39
@@ -158,6 +160,7 @@ from zato.hl7v2.tests.fakers.msg_qbp import fake_qbpq21
 from zato.hl7v2.tests.fakers.msg_qbp import fake_qbpqnn
 from zato.hl7v2.tests.fakers.msg_qbp import fake_qbpz73
 from zato.hl7v2.tests.fakers.msg_qcn import fake_qcnj01
+from zato.hl7v2.tests.fakers.msg_qry import fake_qrya19
 from zato.hl7v2.tests.fakers.msg_qsb import fake_qsbq16
 from zato.hl7v2.tests.fakers.msg_qvr import fake_qvrq17
 from zato.hl7v2.tests.fakers.msg_ras import fake_raso17
@@ -225,6 +228,12 @@ class TestParseMessageValidateFalse:
 
     def test_parse_ack_validate_false(self):
         raw = fake_ack()
+        msg = parse_hl7(raw, validate=False)
+        assert msg is not None
+        assert hasattr(msg, "_raw_message")
+
+    def test_parse_adra19_validate_false(self):
+        raw = fake_adra19()
         msg = parse_hl7(raw, validate=False)
         assert msg is not None
         assert hasattr(msg, "_raw_message")
@@ -303,6 +312,12 @@ class TestParseMessageValidateFalse:
 
     def test_parse_adta24_validate_false(self):
         raw = fake_adta24()
+        msg = parse_hl7(raw, validate=False)
+        assert msg is not None
+        assert hasattr(msg, "_raw_message")
+
+    def test_parse_adta30_validate_false(self):
+        raw = fake_adta30()
         msg = parse_hl7(raw, validate=False)
         assert msg is not None
         assert hasattr(msg, "_raw_message")
@@ -1167,6 +1182,12 @@ class TestParseMessageValidateFalse:
 
     def test_parse_qcnj01_validate_false(self):
         raw = fake_qcnj01()
+        msg = parse_hl7(raw, validate=False)
+        assert msg is not None
+        assert hasattr(msg, "_raw_message")
+
+    def test_parse_qrya19_validate_false(self):
+        raw = fake_qrya19()
         msg = parse_hl7(raw, validate=False)
         assert msg is not None
         assert hasattr(msg, "_raw_message")
