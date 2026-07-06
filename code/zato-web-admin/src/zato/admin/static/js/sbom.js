@@ -1,3 +1,10 @@
 $(document).ready(function() {
-    $('.copy-icon').on('click', $.fn.zato.settings.handleCopyIcon);
+
+    var config = {};
+    config.textareaId = 'sbom';
+
+    $('#copy-button').on('click', function(event) {
+        var text = $('#' + config.textareaId).val();
+        $.fn.zato.settings.copyToClipboard(text, event);
+    });
 });
