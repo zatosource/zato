@@ -243,12 +243,17 @@ class TestEndpointDelete:
         Proves GAP 28 fix: pending message references are removed on endpoint delete.
         """
         from zato.common.test.config_pubsub_endpoint_delete import TestConfig
+        from zato.common.test.conftest_base_pubsub import find_free_port
 
         admin = _get_admin()
         redis = _get_redis()
         publisher = _get_publisher()
 
         topic_name = 'ed.topic.pending'
+
+        # The endpoint must point at a port with no listener so push deliveries fail
+        # and the published messages remain in the pending state for this test to verify.
+        unreachable_port = find_free_port()
 
         # .. create a new outgoing REST connection for this test ..
         _ = admin.invoke('zato.http-soap.create', {
@@ -258,7 +263,7 @@ class TestEndpointDelete:
             'transport': 'plain_http',
             'is_active': True,
             'is_internal': False,
-            'host': f'http://127.0.0.1:{TestConfig.webhook_port}',
+            'host': f'http://127.0.0.1:{unreachable_port}',
             'url_path': '/webhook',
             'data_format': 'json',
             'timeout': 30,

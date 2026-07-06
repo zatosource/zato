@@ -373,15 +373,29 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
+		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
 		2>&1 | $(TS)
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
@@ -391,15 +405,29 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
+		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
 		2>&1 | $(TS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
@@ -409,16 +437,34 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) \
+		2>&1 | $(TS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
+		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
+		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_config_store -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
 	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
