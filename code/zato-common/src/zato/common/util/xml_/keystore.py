@@ -31,12 +31,11 @@ certificate_list = list[Certificate]
 
 @dataclass(init=False)
 class Keystore:
-    """ All keys and certificates one party needs for AS4 exchanges.
+    """ All keys and certificates one party needs for secure XML exchanges.
 
-    For the RSA suite (eDelivery 1.x) the signing key doubles as the decryption key
-    unless a separate one is configured. For the EdDSA suite (eDelivery 2.0) signing uses
-    an Ed25519 key and decryption uses a separate X25519 key agreement key,
-    because neither of those curves can do both jobs.
+    For RSA suites the signing key doubles as the decryption key unless a separate one
+    is configured. For EdDSA suites signing uses an Ed25519 key and decryption uses
+    a separate X25519 key agreement key, because neither of those curves can do both jobs.
     """
     # Our own private key used to sign outgoing messages, with its certificate chain -
     # the leaf certificate first, any intermediates after it. Assigned by new_keystore.
@@ -44,7 +43,7 @@ class Keystore:
     signing_certificate_chain: 'certificate_list'
 
     # Our own private key used to decrypt incoming messages - for RSA key transport
-    # this is an RSA key, for eDelivery 2.0 it is an X25519 key.
+    # this is an RSA key, for X25519 key agreement it is an X25519 key.
     decryption_key: 'PrivateKeyTypes | None' = None
 
     # The other side's certificates - one to encrypt to and one to verify their signatures with.
@@ -83,7 +82,7 @@ def new_keystore() -> 'Keystore':
 # ################################################################################################################################
 
 def load_private_key_pem(data:'bytes', password:'bytesnone'=None) -> 'PrivateKeyTypes':
-    """ Loads a PEM private key of any of the types AS4 uses (RSA, Ed25519, X25519).
+    """ Loads a PEM private key of any of the supported types (RSA, Ed25519, X25519).
     """
     out = load_pem_private_key(data, password)
     return out

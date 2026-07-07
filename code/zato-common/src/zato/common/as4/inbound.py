@@ -16,18 +16,19 @@ from lxml import etree
 # Zato
 from zato.common.as4.common import AS4ProtocolException, EbMSError, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_receipt, parse_messaging
-from zato.common.as4.mime_ import decompress_part, parse_multipart, part_list
+from zato.common.as4.mime_ import decompress_part, parse_multipart
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
+from zato.common.util.xml_.mime_ import part_list
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.as4.ebms import signal_info_list, UserMessageInfo
-    from zato.common.as4.keystore import Keystore
     from zato.common.as4.pmode import PMode
     from zato.common.typing_ import any_, callable_, strnone
+    from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     callable_ = callable_
     strnone = strnone

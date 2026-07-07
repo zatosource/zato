@@ -14,7 +14,7 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import AS4ProtocolException, EbMSError, NS
-from zato.common.as4.ebms import qname, utc_timestamp
+from zato.common.util.xml_.core import qname, utc_timestamp
 
 # ################################################################################################################################
 # ################################################################################################################################

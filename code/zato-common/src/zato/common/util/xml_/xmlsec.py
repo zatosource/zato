@@ -15,7 +15,7 @@ from io import BytesIO
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import NS
+from zato.common.util.xml_.constants import NS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +34,7 @@ _wsu_id = f'{{{NS.WSU}}}Id'
 
 def canonicalize_exclusive(element:'any_') -> 'bytes':
     """ Serializes an element with Exclusive XML Canonicalization without comments,
-    the canonicalization method both eDelivery generations mandate.
+    the canonicalization method WS-Security signatures mandate.
     """
     buffer = BytesIO()
     tree = etree.ElementTree(element)

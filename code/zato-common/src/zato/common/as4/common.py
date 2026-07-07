@@ -6,60 +6,19 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.util.xml_.constants import NS as CommonNS
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class NS:
-    """ XML namespaces used across AS4 messages.
+class NS(CommonNS):
+    """ XML namespaces used across AS4 messages - the shared ones plus the ebXML family.
     """
-    SOAP    = 'http://www.w3.org/2003/05/soap-envelope'
+    SOAP    = CommonNS.SOAP12
     EBMS    = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/'
-    WSSE    = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
-    WSSE11  = 'http://docs.oasis-open.org/wss/oasis-wss-wssecurity-secext-1.1.xsd'
-    WSU     = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'
-    DS      = 'http://www.w3.org/2000/09/xmldsig#'
-    XENC    = 'http://www.w3.org/2001/04/xmlenc#'
-    XENC11  = 'http://www.w3.org/2009/xmlenc11#'
     EBBP    = 'http://docs.oasis-open.org/ebxml-bp/ebbp-signals-2.0'
     SBDH    = 'http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader'
-    XMLDSIG11 = 'http://www.w3.org/2009/xmldsig11#'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Algorithm:
-    """ Algorithm identifiers from XML Signature, XML Encryption and their 1.1 revisions.
-    """
-    C14N_Exclusive  = 'http://www.w3.org/2001/10/xml-exc-c14n#'
-    RSA_SHA256      = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
-    Ed25519         = 'http://www.w3.org/2021/04/xmldsig-more#eddsa-ed25519'
-    SHA256          = 'http://www.w3.org/2001/04/xmlenc#sha256'
-    AES128_GCM      = 'http://www.w3.org/2009/xmlenc11#aes128-gcm'
-    RSA_OAEP        = 'http://www.w3.org/2009/xmlenc11#rsa-oaep'
-    MGF1_SHA256     = 'http://www.w3.org/2009/xmlenc11#mgf1sha256'
-    ECDH_ES         = 'http://www.w3.org/2009/xmlenc11#ECDH-ES'
-    HKDF            = 'http://www.w3.org/2021/04/xmldsig-more#hkdf'
-    HMAC_SHA256     = 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha256'
-    AES128_KeyWrap  = 'http://www.w3.org/2001/04/xmlenc#kw-aes128'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Transform:
-    """ Transform identifiers from the WS-Security SOAP with Attachments profile 1.1.
-    """
-    Attachment_Content    = 'http://docs.oasis-open.org/wss/oasis-wss-SwAProfile-1.1#Attachment-Content-Signature-Transform'
-    Attachment_Ciphertext = 'http://docs.oasis-open.org/wss/oasis-wss-SwAProfile-1.1#Attachment-Ciphertext-Transform'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TokenType:
-    """ WS-Security X.509 token profile identifiers for the BinarySecurityToken ValueType attribute.
-    """
-    X509v3       = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3'
-    PKIPath      = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509PKIPathv1'
-    Base64Binary = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'
 
 # ################################################################################################################################
 # ################################################################################################################################
