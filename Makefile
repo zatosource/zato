@@ -532,6 +532,10 @@ test-ui-pubsub:
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_audit_log.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_pubsub_permission_create.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_pubsub \
 		$(FAIL_FAST) $(PYTEST_ARGS)
