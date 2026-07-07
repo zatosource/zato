@@ -113,8 +113,30 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     // Check current content before setting
     var beforeContent = $(targetDivId).html();
 
+    // Snapshot the checkbox state by topic name, as a re-render, e.g. one triggered by live form updates
+    // or a duplicate AJAX response, must not wipe out selections already made in the open form.
+    var previousState = {};
+    $(targetDivId + ' input[name="topic_name"]').each(function() {
+        previousState[this.value] = {
+            "checked": this.checked,
+            "indeterminate": $(this).hasClass('indeterminate')
+        };
+    });
+
     // Set the HTML content
     $(targetDivId).html(htmlContent);
+
+    // Re-apply the snapshotted state to the freshly rendered checkboxes, before the tri-state setup
+    // below reads their state to initialize itself. Topics new to this render have no snapshot entry.
+    $(targetDivId + ' input[name="topic_name"]').each(function() {
+        var state = previousState[this.value];
+        if (state) {
+            this.checked = state.checked;
+            if (state.indeterminate) {
+                $(this).addClass('indeterminate');
+            }
+        }
+    });
 
     // Convert all topic checkboxes to tri-state
     $(targetDivId + ' input[name="topic_name"]').addClass('tri-state').each(function() {
