@@ -526,10 +526,6 @@ class ServiceInvoker(Service):
                 zato_response_headers_container=zato_response_headers_container
                 )
 
-            logger.info('invoker: self.invoke returned type=%s, is_str=%s, keys=%s',
-                type(response).__name__, isinstance(response, str),
-                list(response.keys()) if hasattr(response, 'keys') else 'N/A')
-
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response
 
