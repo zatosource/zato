@@ -46,6 +46,7 @@ class CreateForm(forms.Form):
     scheduler_run_unit = forms.ChoiceField(required=False, widget=forms.Select())
     scheduler_start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%; height:19px'}))
     scheduler_service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    scheduler_invoke_with = forms.ChoiceField(required=False, widget=forms.Select())
     scheduler_job_id = forms.CharField(required=False, widget=forms.HiddenInput())
 
     def __init__(self, prefix=None, post_data=None, req=None):
@@ -60,6 +61,10 @@ class CreateForm(forms.Form):
         self.fields['scheduler_run_unit'].choices = []
         for item in EMAIL.IMAP.Scheduler.UnitList:
             self.fields['scheduler_run_unit'].choices.append([item, item])
+
+        self.fields['scheduler_invoke_with'].choices = []
+        for key, value in EMAIL.IMAP.Scheduler.InvokeWithHuman.items():
+            self.fields['scheduler_invoke_with'].choices.append([key, value])
 
 # ################################################################################################################################
 # ################################################################################################################################

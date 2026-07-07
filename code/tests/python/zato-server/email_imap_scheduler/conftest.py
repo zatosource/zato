@@ -38,7 +38,9 @@ if 0:
 # ################################################################################################################################
 
 # Source code of the services that the tests point IMAP connections to. The first one records each message
-# it receives in the evidence file and marks it as seen, the second one always raises so that tests can confirm
+# it receives in the evidence file and marks it as seen, the second one records messages without marking them
+# so that the dispatch service's automatic ack can be observed, the third one records each attachment it receives,
+# raising for filenames that contain the word "fail", and the fourth one always raises so that tests can confirm
 # that messages are not marked as seen when the target service fails.
 _test_services_template = '''# -*- coding: utf-8 -*-
 
@@ -78,6 +80,57 @@ class StoreIMAPMessage(Service):
         # .. and mark it as seen only afterwards, so a failed write leaves it available for a retry.
         message.mark_seen()
 
+class StoreIMAPMessageNoAck(Service):
+    """ Records each IMAP message received on input without marking it as seen,
+    which lets tests confirm that the dispatch service acks messages on its own.
+    """
+    name = '{service_store_message_no_ack}'
+
+    def handle(self):
+
+        # The dispatch service hands us the message object itself
+        message = self.request.raw_request
+
+        uid = message.uid.decode('utf-8')
+        sent_from = message.data.sent_from[0]['email']
+        body = message.data.body['plain'][0]
+
+        line = dumps({{
+            'uid': uid,
+            'subject': message.data.subject,
+            'sent_from': sent_from,
+            'body': body,
+        }})
+
+        with open(_evidence_file, 'a') as evidence:
+            _ = evidence.write(line + '\\n')
+
+class StoreIMAPAttachment(Service):
+    """ Records each IMAP attachment received on input, raising for filenames that contain the word "fail"
+    so that tests can observe partial failures in the each-attachment mode.
+    """
+    name = '{service_store_attachment}'
+
+    def handle(self):
+
+        # The dispatch service hands us the attachment object itself
+        attachment = self.request.raw_request
+
+        if 'fail' in attachment.filename:
+            raise Exception('This attachment is configured to fail in IMAP attachment tests')
+
+        line = dumps({{
+            'msg_uid': attachment.msg_uid.decode('utf-8'),
+            'subject': attachment.subject,
+            'filename': attachment.filename,
+            'content_type': attachment.content_type,
+            'size': attachment.size,
+            'data': attachment.data.decode('utf-8'),
+        }})
+
+        with open(_evidence_file, 'a') as evidence:
+            _ = evidence.write(line + '\\n')
+
 class AlwaysRaiseIMAPMessage(Service):
     """ Fails on purpose, without marking the input message as seen.
     """
@@ -108,6 +161,8 @@ def _build_config(
     source = _test_services_template.format(
         evidence_file=evidence_file,
         service_store_message=TestConfig.service_store_message,
+        service_store_message_no_ack=TestConfig.service_store_message_no_ack,
+        service_store_attachment=TestConfig.service_store_attachment,
         service_always_raise=TestConfig.service_always_raise,
     )
 

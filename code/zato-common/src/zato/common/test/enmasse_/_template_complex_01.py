@@ -347,6 +347,7 @@ email_imap:
     scheduler_run_unit: minutes
     scheduler_start_date: '2030-01-01T00:00:00'
     scheduler_service: demo.ping
+    scheduler_invoke_with: each_attachment
 
 email_smtp:
 

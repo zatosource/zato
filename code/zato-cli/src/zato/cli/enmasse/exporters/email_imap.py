@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query import email_imap_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -122,6 +122,11 @@ class IMAPExporter:
                 if scheduler_start_date := item.get('scheduler_start_date'):
                     imap_conn['scheduler_start_date'] = scheduler_start_date
                 imap_conn['scheduler_service'] = scheduler_service
+
+                # The invoke-with mode is exported only if it differs from the default message one
+                if scheduler_invoke_with := item.get('scheduler_invoke_with'):
+                    if scheduler_invoke_with != EMAIL.IMAP.Scheduler.InvokeWith.Message:
+                        imap_conn['scheduler_invoke_with'] = scheduler_invoke_with
 
             exported_imap.append(imap_conn)
 

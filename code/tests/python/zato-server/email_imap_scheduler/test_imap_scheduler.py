@@ -156,13 +156,16 @@ def _conn_payload(imap_test_server, name):
 
 # ################################################################################################################################
 
-def _scheduler_fields(run_every, run_unit, service=_invoked_service, start_date=_start_date):
+def _scheduler_fields(run_every, run_unit, service=_invoked_service, start_date=_start_date, invoke_with=None):
     out = {
         'scheduler_run_every': run_every,
         'scheduler_run_unit': run_unit,
         'scheduler_start_date': start_date,
         'scheduler_service': service,
     }
+
+    if invoke_with:
+        out['scheduler_invoke_with'] = invoke_with
 
     return out
 
@@ -190,7 +193,7 @@ def _edit_conn(client, imap_test_server, name, conn_id, **extra):
 
 # ################################################################################################################################
 
-def _job_extra(conn_id, conn_name, service):
+def _job_extra(conn_id, conn_name, service, invoke_with=None):
     """ The extra data that an IMAP-linked job carries for the dispatch service.
     """
     out = {
@@ -198,6 +201,9 @@ def _job_extra(conn_id, conn_name, service):
         _scheduler.Extra_Conn_Name: conn_name,
         _scheduler.Extra_Service: service,
     }
+
+    if invoke_with:
+        out[_scheduler.Extra_Invoke_With] = invoke_with
 
     return out
 
@@ -224,11 +230,11 @@ def _read_evidence(subject):
 
 # ################################################################################################################################
 
-def _invoke_dispatch(client, conn_id, conn_name, service):
+def _invoke_dispatch(client, conn_id, conn_name, service, invoke_with=None):
     """ Invokes the dispatch service directly, the way a scheduler fire event does it, retrying until the newly
     created connection has propagated to the server's connection store.
     """
-    payload = _job_extra(conn_id, conn_name, service)
+    payload = _job_extra(conn_id, conn_name, service, invoke_with)
 
     deadline = time.monotonic() + _ping_wait_seconds
     last_error = None
@@ -247,12 +253,13 @@ def _invoke_dispatch(client, conn_id, conn_name, service):
 
 # ################################################################################################################################
 
-def _prepare_dispatch_conn(client, imap_test_server, service):
+def _prepare_dispatch_conn(client, imap_test_server, service, invoke_with=None):
     """ Creates a connection whose linked job points to the given per-message service, sets its password
     and returns the connection's name and ID.
     """
     conn_name = _new_conn_name()
-    conn_id = _create_conn(client, imap_test_server, conn_name, **_scheduler_fields(2, _unit.Minutes, service=service))
+    fields = _scheduler_fields(2, _unit.Minutes, service=service, invoke_with=invoke_with)
+    conn_id = _create_conn(client, imap_test_server, conn_name, **fields)
 
     # The connection needs a password before it can log in anywhere
     _ = client.invoke(f'{_service_imap}.change-password', {'id': conn_id, 'password': 'test-password'})
@@ -277,12 +284,14 @@ def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server)
     assert int(job['minutes']) == 2
     assert int(job['imap_conn_id']) == int(conn_id)
 
-    # The job's extra data carries the connection's identity and the per-message service
+    # The job's extra data carries the connection's identity, the per-message service
+    # and the invoke-with mode, which defaults to the message one.
     extra = loads(job['extra'])
 
     assert int(extra[_scheduler.Extra_Conn_ID]) == int(conn_id)
     assert extra[_scheduler.Extra_Conn_Name] == conn_name
     assert extra[_scheduler.Extra_Service] == _invoked_service
+    assert extra[_scheduler.Extra_Invoke_With] == _scheduler.InvokeWith.Message
 
     # The connection's own row points to the job and mirrors its definition
     item = _get_imap_item(client, conn_name)
@@ -291,7 +300,46 @@ def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server)
     assert item['scheduler_run_unit'] == _unit.Minutes
     assert item['scheduler_start_date'] == _start_date
     assert item['scheduler_service'] == _invoked_service
+    assert item['scheduler_invoke_with'] == _scheduler.InvokeWith.Message
     assert int(item['scheduler_job_id']) == int(job['id'])
+
+# ################################################################################################################################
+
+def test_create_conn_with_each_attachment_mode(client, imap_test_server):
+
+    conn_name = _new_conn_name()
+    job_name = _scheduler.Job_Prefix + conn_name
+
+    fields = _scheduler_fields(2, _unit.Minutes, invoke_with=_scheduler.InvokeWith.EachAttachment)
+    _ = _create_conn(client, imap_test_server, conn_name, **fields)
+
+    # The job's extra data carries the each-attachment mode ..
+    job = _get_job(client, job_name)
+    extra = loads(job['extra'])
+
+    assert extra[_scheduler.Extra_Invoke_With] == _scheduler.InvokeWith.EachAttachment
+
+    # .. and so does the connection's own row.
+    item = _get_imap_item(client, conn_name)
+
+    assert item['scheduler_invoke_with'] == _scheduler.InvokeWith.EachAttachment
+
+# ################################################################################################################################
+
+def test_create_conn_with_invalid_invoke_with_is_rejected(client, imap_test_server):
+
+    conn_name = _new_conn_name()
+    job_name = _scheduler.Job_Prefix + conn_name
+
+    payload = _conn_payload(imap_test_server, conn_name)
+    payload.update(_scheduler_fields(2, _unit.Minutes, invoke_with='invalid_mode'))
+
+    with pytest.raises(Exception, match='invoke-with'):
+        _ = client.create(f'{_service_imap}.create', **payload)
+
+    # Neither the connection nor a job were created
+    assert _get_imap_item(client, conn_name) is None
+    assert job_name not in _get_job_names(client)
 
 # ################################################################################################################################
 
@@ -544,7 +592,8 @@ def test_dispatch_invokes_service_per_message(client, imap_test_server):
     assert entry['sent_from'] == _sender
     assert entry['body'].strip() == 'Second message body'
 
-    # .. and both messages were marked as seen because the service did it itself.
+    # .. and both messages were marked as seen - the service does it itself
+    # .. and the dispatch service acks them as well because no exception was raised.
     assert imap_test_server.is_seen(uid_first)
     assert imap_test_server.is_seen(uid_second)
 
@@ -588,6 +637,115 @@ def test_dispatch_error_leaves_message_unseen(client, imap_test_server):
 
     # .. and nothing was recorded about it either.
     assert len(_read_evidence(subject)) == 0
+
+# ################################################################################################################################
+
+def test_dispatch_auto_ack_marks_message_seen(client, imap_test_server):
+
+    subject = 'Test message auto ack ' + uuid4().hex[:8]
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body acked by the dispatch service')
+
+    # The target service records the message but never marks it as seen itself
+    conn_name, conn_id = _prepare_dispatch_conn(client, imap_test_server, TestConfig.service_store_message_no_ack)
+
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_message_no_ack)
+
+    # The message was recorded ..
+    assert len(_read_evidence(subject)) == 1
+
+    # .. and the dispatch service marked it as seen because the invocation raised no exception.
+    assert imap_test_server.is_seen(uid)
+
+# ################################################################################################################################
+
+def test_dispatch_each_attachment_invokes_per_attachment(client, imap_test_server):
+
+    subject = 'Test message with attachments ' + uuid4().hex[:8]
+
+    attachments = [
+        {'filename': 'report.txt', 'content_type': 'text/plain', 'payload': b'First attachment payload'},
+        {'filename': 'details.csv', 'content_type': 'text/csv', 'payload': b'name,value\ntest,123\n'},
+    ]
+
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body that is ignored', attachments)
+
+    invoke_with = _scheduler.InvokeWith.EachAttachment
+    conn_name, conn_id = _prepare_dispatch_conn(
+        client, imap_test_server, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    # The per-attachment service saw each of the two attachments exactly once ..
+    entries = _read_evidence(subject)
+    assert len(entries) == 2
+
+    # .. with the full details of each of them ..
+    entry_by_filename = {}
+    for entry in entries:
+        entry_by_filename[entry['filename']] = entry
+
+    entry = entry_by_filename['report.txt']
+
+    assert entry['content_type'] == 'text/plain'
+    assert entry['size'] == len(b'First attachment payload')
+    assert entry['data'] == 'First attachment payload'
+    assert entry['msg_uid'] == uid
+
+    entry = entry_by_filename['details.csv']
+
+    assert entry['content_type'] == 'text/csv'
+    assert entry['data'] == 'name,value\ntest,123\n'
+
+    # .. and the message was acked because all its attachment invocations succeeded.
+    assert imap_test_server.is_seen(uid)
+
+# ################################################################################################################################
+
+def test_dispatch_each_attachment_partial_failure_leaves_unseen(client, imap_test_server):
+
+    subject = 'Test message with a failing attachment ' + uuid4().hex[:8]
+
+    # The per-attachment service raises for filenames that contain the word "fail"
+    attachments = [
+        {'filename': 'summary.txt', 'content_type': 'text/plain', 'payload': b'Summary attachment payload'},
+        {'filename': 'data-fail.txt', 'content_type': 'text/plain', 'payload': b'Payload that will not be processed'},
+    ]
+
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body that is ignored', attachments)
+
+    invoke_with = _scheduler.InvokeWith.EachAttachment
+    conn_name, conn_id = _prepare_dispatch_conn(
+        client, imap_test_server, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    # The first attachment was recorded before the second one failed ..
+    entries = _read_evidence(subject)
+
+    assert len(entries) == 1
+    assert entries[0]['filename'] == 'summary.txt'
+
+    # .. and the message stays unseen because not all of its attachments were processed, so it will be retried.
+    assert not imap_test_server.is_seen(uid)
+
+# ################################################################################################################################
+
+def test_dispatch_each_attachment_without_attachments_acks(client, imap_test_server):
+
+    subject = 'Test message without attachments ' + uuid4().hex[:8]
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body without any attachments')
+
+    invoke_with = _scheduler.InvokeWith.EachAttachment
+    conn_name, conn_id = _prepare_dispatch_conn(
+        client, imap_test_server, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_attachment, invoke_with=invoke_with)
+
+    # There was nothing to invoke the service with ..
+    assert len(_read_evidence(subject)) == 0
+
+    # .. and the message was acked so it will not be received anew.
+    assert imap_test_server.is_seen(uid)
 
 # ################################################################################################################################
 

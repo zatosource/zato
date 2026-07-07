@@ -22,6 +22,8 @@ class TestConfig:
 
     # Names of the hot-deployed test services
     service_store_message = 'imap-scheduler-test.store-message'
+    service_store_message_no_ack = 'imap-scheduler-test.store-message-no-ack'
+    service_store_attachment = 'imap-scheduler-test.store-attachment'
     service_always_raise = 'imap-scheduler-test.always-raise'
 
 # ################################################################################################################################

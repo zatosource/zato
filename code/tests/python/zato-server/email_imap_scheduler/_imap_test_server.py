@@ -16,7 +16,7 @@ from email.message import EmailMessage
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import bytesnone, strdictlist, strlist
+    from zato.common.typing_ import bytesnone, strdictlist, strdictlistnone, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,8 +233,16 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
 
 # ################################################################################################################################
 
-    def add_message(self, sent_from:'str', sent_to:'str', subject:'str', body:'str') -> 'str':
+    def add_message(
+        self,
+        sent_from:'str',
+        sent_to:'str',
+        subject:'str',
+        body:'str',
+        attachments:'strdictlistnone' = None,
+        ) -> 'str':
         """ Builds an RFC822 message out of the input fields and appends it to the mailbox, returning its UID.
+        Each attachment is a dict with the filename, content_type and payload keys, where payload is bytes.
         """
 
         # Build the actual message first ..
@@ -243,6 +251,14 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
         message['To'] = sent_to
         message['Subject'] = subject
         message.set_content(body)
+
+        # .. optionally, turn it into a multipart message with the requested attachments ..
+        if attachments:
+            for attachment in attachments:
+                content_type = attachment['content_type']
+                maintype, subtype = content_type.split('/')
+                message.add_attachment(
+                    attachment['payload'], maintype=maintype, subtype=subtype, filename=attachment['filename'])
 
         data = message.as_bytes()
 

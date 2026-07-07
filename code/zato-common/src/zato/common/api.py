@@ -23,8 +23,9 @@ from zato.common.defaults import http_plain_server_port
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strnone
     Imbox = Imbox
+    strnone = strnone
 
 # ################################################################################################################################
 
@@ -585,6 +586,17 @@ class EMAIL:
 
             UnitList = (Unit.Seconds, Unit.Minutes, Unit.Hours, Unit.Days)
 
+            class InvokeWith:
+                Message = 'message'
+                EachAttachment = 'each_attachment'
+
+            InvokeWithHuman = {
+                InvokeWith.Message: 'Message',
+                InvokeWith.EachAttachment: 'Each attachment',
+            }
+
+            InvokeWithList = (InvokeWith.Message, InvokeWith.EachAttachment)
+
             # Prefix of the names of the jobs that are auto-created for IMAP connections
             Job_Prefix = 'imap.'
 
@@ -598,15 +610,17 @@ class EMAIL:
             Extra_Conn_ID = 'imap_conn_id'
             Extra_Conn_Name = 'imap_conn_name'
             Extra_Service = 'service'
+            Extra_Invoke_With = 'invoke_with'
 
             # Names of the opaque attributes that an IMAP connection carries to describe its linked job
             Field_Run_Every = 'scheduler_run_every'
             Field_Run_Unit = 'scheduler_run_unit'
             Field_Start_Date = 'scheduler_start_date'
             Field_Service = 'scheduler_service'
+            Field_Invoke_With = 'scheduler_invoke_with'
             Field_Job_ID = 'scheduler_job_id'
 
-            FieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Service, Field_Job_ID)
+            FieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Service, Field_Invoke_With, Field_Job_ID)
 
     class SMTP:
         class MODE:
@@ -1072,6 +1086,43 @@ class IMAPMessage:
 
     def mark_seen(self):
         raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IMAPAttachment:
+    """ A single attachment extracted from an IMAP message, handed over to services invoked by the scheduler
+    in the each-attachment mode.
+    """
+
+    def __init__(
+        self,
+        message:'IMAPMessage',
+        filename:'str',
+        content_type:'str',
+        size:'int',
+        data:'bytes',
+        content_id:'strnone',
+        ) -> 'None':
+
+        # The parent message that this attachment was extracted from
+        self.message = message
+        self.msg_uid = message.uid
+        self.subject = message.data.subject
+        self.sent_from = message.data.sent_from
+
+        # The attachment itself
+        self.filename = filename
+        self.content_type = content_type
+        self.size = size
+        self.data = data
+        self.content_id = content_id
+
+    def __repr__(self):
+        class_name = self.__class__.__name__
+        self_id = hex(id(self))
+        return '<{} at {}, filename:`{}`, content_type:`{}`, size:`{}`, msg_uid:`{}`>'.format(
+            class_name, self_id, self.filename, self.content_type, self.size, self.msg_uid)
 
 # ################################################################################################################################
 # ################################################################################################################################
