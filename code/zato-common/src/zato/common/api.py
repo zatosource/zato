@@ -575,6 +575,15 @@ class EMAIL:
             ServerType.Microsoft365: 'Microsoft 365',
         }
 
+        class Scheduler:
+
+            class Unit:
+                Minutes = 'minutes'
+                Hours = 'hours'
+                Days = 'days'
+
+            UnitList = (Unit.Minutes, Unit.Hours, Unit.Days)
+
     class SMTP:
         class MODE:
             PLAIN = 'plain'

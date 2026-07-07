@@ -4,6 +4,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
@@ -14,6 +15,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
@@ -328,6 +330,38 @@
                             <td>{{ create_form.filter_criteria }} </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:middle">
+                            Scheduler
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.scheduler-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_scheduler_run_every">Run every</label>
+                            </td>
+                            <td>
+                                {{ create_form.scheduler_run_every }}
+                                {{ create_form.scheduler_run_unit }}
+                            </td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_scheduler_start_date">Start date
+                            <br/>
+                            &amp; time
+                            </label>
+                            </td>
+                            <td>{{ create_form.scheduler_start_date }}</td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_scheduler_service">Service</label>
+                            </td>
+                            <td>{{ create_form.scheduler_service }}</td>
+                        </tr>
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -335,6 +369,7 @@
                         </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    {{ create_form.scheduler_job_id }}
                 </form>
             </div>
         </div>
@@ -447,6 +482,38 @@
                             <td>{{ edit_form.filter_criteria }} </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:middle">
+                            Scheduler
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.scheduler-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-scheduler_run_every">Run every</label>
+                            </td>
+                            <td>
+                                {{ edit_form.scheduler_run_every }}
+                                {{ edit_form.scheduler_run_unit }}
+                            </td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-scheduler_start_date">Start date
+                            <br/>
+                            &amp; time
+                            </label>
+                            </td>
+                            <td>{{ edit_form.scheduler_start_date }}</td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-scheduler_service">Service</label>
+                            </td>
+                            <td>{{ edit_form.scheduler_service }}</td>
+                        </tr>
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -455,6 +522,7 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    {{ edit_form.scheduler_job_id }}
                 </form>
             </div>
         </div>
@@ -485,6 +553,12 @@
                 </form>
             </div>
         </div>
+
+        <form>
+            <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+            <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+            <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+        </form>
 
     {% endif %} {% comment %}cluster_id{% endcomment %}
 

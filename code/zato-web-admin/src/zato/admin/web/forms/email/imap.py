@@ -13,6 +13,7 @@ from imaplib import IMAP4_SSL_PORT
 from django import forms
 
 # Zato
+from zato.admin.web.forms import add_services
 from zato.common.api import EMAIL
 
 # ################################################################################################################################
@@ -41,13 +42,24 @@ class CreateForm(forms.Form):
         widget=forms.Textarea(attrs={'style':'width:100%; height:4rem'}
     ))
 
-    def __init__(self, prefix=None, post_data=None):
+    scheduler_run_every = forms.CharField(required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+    scheduler_run_unit = forms.ChoiceField(required=False, widget=forms.Select())
+    scheduler_start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%; height:19px'}))
+    scheduler_service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    scheduler_job_id = forms.CharField(required=False, widget=forms.HiddenInput())
+
+    def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+        add_services(self, req)
         self.fields['mode'].choices = ((item, item) for item in EMAIL.IMAP.MODE())
 
         self.fields['server_type'].choices = []
         for key, value in EMAIL.IMAP.ServerTypeHuman.items():
             self.fields['server_type'].choices.append([key, value])
+
+        self.fields['scheduler_run_unit'].choices = []
+        for item in EMAIL.IMAP.Scheduler.UnitList:
+            self.fields['scheduler_run_unit'].choices.append([item, item])
 
 # ################################################################################################################################
 # ################################################################################################################################

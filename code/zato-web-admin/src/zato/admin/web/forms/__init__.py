@@ -34,6 +34,7 @@ SELECT_SERVICE_FIELDS = [
     'on_error_service',
     'on_message_service_name',
     'on_success_service',
+    'scheduler_service',
     'service',
     'service_id',
     'service_list',
