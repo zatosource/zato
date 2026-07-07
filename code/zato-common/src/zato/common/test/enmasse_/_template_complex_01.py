@@ -338,6 +338,16 @@ email_imap:
     username: enmasse@example.com
     password: Zato_Enmasse_Env.IMAPPassword
 
+  - name: enmasse.email.imap.2
+    host: imap2.example.com
+    port: 143
+    username: enmasse2@example.com
+    password: Zato_Enmasse_Env.IMAPPassword
+    scheduler_run_every: 5
+    scheduler_run_unit: minutes
+    scheduler_start_date: '2030-01-01T00:00:00'
+    scheduler_service: demo.ping
+
 email_smtp:
 
   - name: enmasse.email.smtp.1

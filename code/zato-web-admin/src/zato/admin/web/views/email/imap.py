@@ -13,6 +13,7 @@ import logging
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
+from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.email.imap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, get_js_dt_format, \
@@ -40,8 +41,17 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
          'get_criteria', 'server_type', 'server_type_human'
-    output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
+    output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria', \
+        'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_job_id'
     output_repeated = True
+
+    def on_before_append_item(self, item):
+
+        # The start date is stored in UTC and it is displayed in the user's own timezone and format
+        if item.scheduler_start_date:
+            item.scheduler_start_date = from_utc_to_user(item.scheduler_start_date + '+00:00', self.req.zato.user_profile)
+
+        return item
 
     def handle(self):
         out = {
@@ -65,7 +75,18 @@ class _CreateEdit(CreateEdit):
 
     input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria', \
         'server_type', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
+    input_optional = 'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \
+        'scheduler_job_id'
     output_required = 'id', 'name'
+
+    def pre_process_item(self, name, value):
+
+        # The start date is entered in the user's own timezone and format and it is stored in UTC
+        if name == 'scheduler_start_date':
+            if value:
+                value = from_user_to_utc(value, self.req.zato.user_profile).isoformat()
+
+        return value
 
     def success_message(self, item):
         return 'Successfully {} IMAP connection `{}`'.format(self.verb, item.name)

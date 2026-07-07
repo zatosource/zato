@@ -15,10 +15,11 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
-from zato.common.odb.model import IMAP
+from zato.common.odb.model import IMAP, IntervalBasedJob, Job
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,8 +87,8 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         # Process all IMAP definitions
         created, updated = self.imap_importer.sync_imap_definitions(imap_defs, self.session)
 
-        # Should have created 1 definition
-        self.assertEqual(len(created), 1)
+        # Should have created 2 definitions
+        self.assertEqual(len(created), 2)
         self.assertEqual(len(updated), 0)
 
         # Verify IMAP connection was created correctly
@@ -97,6 +98,48 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.assertEqual(imap.username, 'enmasse@example.com')
         self.assertEqual(imap.mode, 'plain')
         self.assertTrue(hasattr(imap, 'password'))
+
+# ################################################################################################################################
+
+    def test_imap_scheduler_job_creation(self):
+        """ Test that an IMAP connection with scheduler fields auto-creates a linked scheduler job.
+        """
+        self._setup_test_environment()
+
+        # Process all IMAP definitions, one of which carries scheduler fields
+        imap_defs = self.yaml_config['email_imap']
+        _ = self.imap_importer.sync_imap_definitions(imap_defs, self.session)
+
+        # The connection with scheduler fields must point to its auto-created job
+        imap = self.session.query(IMAP).filter_by(name='enmasse.email.imap.2').one() # type: ignore
+        imap_opaque = parse_instance_opaque_attr(imap)
+
+        self.assertEqual(imap_opaque['scheduler_run_every'], 5)
+        self.assertEqual(imap_opaque['scheduler_run_unit'], 'minutes')
+        self.assertEqual(imap_opaque['scheduler_service'], 'demo.ping')
+
+        # The job itself must exist under the conventional name ..
+        job = self.session.query(Job).filter_by(name='imap.enmasse.email.imap.2').one() # type: ignore
+        self.assertEqual(imap_opaque['scheduler_job_id'], job.id)
+        self.assertEqual(job.job_type, 'interval_based')
+        self.assertEqual(job.service.name, 'demo.ping')
+
+        # .. it must point back to its connection ..
+        job_opaque = parse_instance_opaque_attr(job)
+        self.assertEqual(job_opaque['imap_conn_id'], imap.id)
+
+        # .. and its interval must match the run-every configuration.
+        interval = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one() # type: ignore
+        self.assertEqual(interval.minutes, 5)
+        self.assertEqual(interval.seconds, 0)
+        self.assertEqual(interval.hours, 0)
+        self.assertEqual(interval.days, 0)
+
+        # Importing again must update the same job rather than create a new one
+        _ = self.imap_importer.sync_imap_definitions(imap_defs, self.session)
+
+        job_count = self.session.query(Job).filter_by(name='imap.enmasse.email.imap.2').count() # type: ignore
+        self.assertEqual(job_count, 1)
 
 # ################################################################################################################################
 
@@ -155,19 +198,19 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.importer.imap_defs = self.imap_importer.imap_defs
 
         # Verify IMAP definitions were created
-        self.assertEqual(len(imap_created), 1)
+        self.assertEqual(len(imap_created), 2)
         self.assertEqual(len(imap_updated), 0)
 
         # Verify the IMAP definitions dictionary was populated
-        self.assertEqual(len(self.imap_importer.imap_defs), 1)
+        self.assertEqual(len(self.imap_importer.imap_defs), 2)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.imap_defs), 1)
+        self.assertEqual(len(self.importer.imap_defs), 2)
 
         # Try importing the same definitions again - should result in updates, not creations
         imap_created2, imap_updated2 = self.imap_importer.sync_imap_definitions(imap_list, self.session)
         self.assertEqual(len(imap_created2), 0)
-        self.assertEqual(len(imap_updated2), 1)
+        self.assertEqual(len(imap_updated2), 2)
 
 # ################################################################################################################################
 # ################################################################################################################################

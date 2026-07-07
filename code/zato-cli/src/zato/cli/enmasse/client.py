@@ -274,9 +274,10 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 def cleanup_enmasse() -> 'None':
     """ Cleans up all database objects with the 'enmasse' prefix using the default server path.
     """
+    # The 'imap.enmasse' prefix covers scheduler jobs auto-created for enmasse IMAP connections
     server_path = default_server_base_dir
-    cleanup(['enmasse', 'test_sync_group'], server_path)
-    logger.info('Enmasse cleanup completed for prefixes: enmasse, test_sync_group')
+    cleanup(['enmasse', 'test_sync_group', 'imap.enmasse'], server_path)
+    logger.info('Enmasse cleanup completed for prefixes: enmasse, test_sync_group, imap.enmasse')
 
 # ################################################################################################################################
 

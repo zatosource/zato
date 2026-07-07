@@ -21,6 +21,7 @@ from zato.common.api import SCHEDULER, ZATO_NONE
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
+from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
@@ -33,6 +34,10 @@ _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
 _new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms',
     'on_success_service', 'on_success_job', 'on_error_service', 'on_error_job')
+
+# This one is stored in the job's opaque attributes only - it points back to the IMAP connection
+# that the job was auto-created for and it must never be sent to the scheduler process itself.
+_imap_conn_id_param = 'imap_conn_id'
 
 _opaque_stale_keys = frozenset(_ib_params + (
     'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
@@ -93,6 +98,10 @@ def _create_edit(self, action):
     service_name = input.service
     logger = self.logger
     cid = self.cid
+
+    # Note whether the caller is the IMAP connection layer - if it is not, and the job carries a link
+    # to an IMAP connection, the connection's own scheduler fields will be updated after the job is saved.
+    input_had_imap_conn_id = bool(input.get(_imap_conn_id_param))
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = f'Unrecognized job type [{job_type}]'
@@ -219,7 +228,14 @@ def _create_edit(self, action):
                 ib.seconds = data['seconds']
                 ib.repeats = data['repeats']
 
-            set_instance_opaque_attrs(job_row, input, only=list(_new_params))
+            # An empty value must not overwrite a link stored previously, e.g. when the edit comes
+            # from the scheduler's own UI which does not carry this parameter in its forms.
+            if not input_had_imap_conn_id:
+                existing_opaque = parse_instance_opaque_attr(job_row)
+                if existing_link := existing_opaque.get(_imap_conn_id_param):
+                    input.imap_conn_id = existing_link
+
+            set_instance_opaque_attrs(job_row, input, only=list(_new_params) + [_imap_conn_id_param])
 
             if job_row.opaque1:
                 from json import loads as json_loads, dumps as json_dumps
@@ -234,6 +250,9 @@ def _create_edit(self, action):
             data['id'] = job_row.id
             job_id = job_row.id
 
+            # Read the link back after the commit - it may come from a previous save rather than from this input
+            job_opaque = parse_instance_opaque_attr(job_row)
+
         logger.info('_create_edit action=%s job_id=%s data=%s', action, job_id, data)
 
         if action == 'create':
@@ -242,6 +261,18 @@ def _create_edit(self, action):
         else:
             self.server._scheduler.edit_job(job_id, data)
             logger.info('_create_edit: edit_job returned for job_id=%s', job_id)
+
+        # An edit made directly in the scheduler is written back to the IMAP connection that this job is linked to,
+        # so the connection never shows a stale description of its job. Edits that come from the IMAP layer itself
+        # are skipped because that layer updates the connection on its own.
+        if action == 'edit':
+            if not input_had_imap_conn_id:
+                if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+                    if imap_conn_id := job_opaque.get(_imap_conn_id_param):
+                        run = unit_from_interval(data['weeks'], data['days'], data['hours'], data['minutes'], data['seconds'])
+                        with closing(self.odb.session()) as session:
+                            update_imap_scheduler_fields(
+                                session, imap_conn_id, run.run_every, run.run_unit, start_iso, service_name, job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
@@ -259,7 +290,8 @@ class _CreateEdit(_SchedulerAdmin):
         Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
         '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
-        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job'
+        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
+        '-imap_conn_id'
     output = '-id', '-name', '-cron_definition'
 
     def handle(self):
@@ -274,7 +306,8 @@ class _Get(_SchedulerAdmin):
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
         '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
-        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job'
+        '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
+        '-imap_conn_id'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -441,11 +474,22 @@ class Delete(_SchedulerAdmin):
                     raise ZatoException(self.cid, 'Job not found')
 
                 job_id = job_row.id
+
+                # Read the link to an IMAP connection, if any, before the row is deleted
+                job_opaque = parse_instance_opaque_attr(job_row)
+
                 session.query(IntervalBasedJob).filter_by(job_id=job_row.id).delete()
                 session.delete(job_row)
                 session.commit()
 
             self.server._scheduler.delete_job(job_id)
+
+            # The job was auto-created for an IMAP connection so the connection's scheduler fields
+            # are cleared now - otherwise it would still describe a job that no longer exists.
+            if imap_conn_id := job_opaque.get(_imap_conn_id_param):
+                with closing(self.odb.session()) as session:
+                    clear_imap_scheduler_fields(session, imap_conn_id)
+
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())
             raise

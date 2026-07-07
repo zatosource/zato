@@ -114,6 +114,15 @@ class IMAPExporter:
             if (timeout := item.get('timeout')) and timeout != 30:
                 imap_conn['timeout'] = timeout
 
+            # Include the linked scheduler job configuration, if any - the job ID itself
+            # is never exported because IDs are not portable across environments.
+            if scheduler_service := item.get('scheduler_service'):
+                imap_conn['scheduler_run_every'] = item['scheduler_run_every']
+                imap_conn['scheduler_run_unit'] = item['scheduler_run_unit']
+                if scheduler_start_date := item.get('scheduler_start_date'):
+                    imap_conn['scheduler_start_date'] = scheduler_start_date
+                imap_conn['scheduler_service'] = scheduler_service
+
             exported_imap.append(imap_conn)
 
         logger.info('Successfully prepared %d IMAP connection definitions for export', len(exported_imap))

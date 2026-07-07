@@ -93,6 +93,11 @@ class SchedulerExporter:
             if opaque1:
                 opaque_data = json_loads(opaque1) if isinstance(opaque1, str) else opaque1
 
+                # Jobs auto-created for IMAP connections are not exported on their own
+                # because they are already fully described by their connection's scheduler fields.
+                if opaque_data.get('imap_conn_id'):
+                    continue
+
                 for callback_field in ('on_success_service', 'on_success_job', 'on_error_service', 'on_error_job'):
                     value = opaque_data.get(callback_field)
                     if value:
