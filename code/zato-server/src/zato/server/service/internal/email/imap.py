@@ -16,7 +16,7 @@ from traceback import format_exc
 from six import add_metaclass
 
 # Zato
-from zato.common.api import EMAIL as EMail_Common, SCHEDULER, Zato_None
+from zato.common.api import EMAIL as EMail_Common, IMAPAttachment, SCHEDULER, Zato_None
 from zato.common.broker_message import EMAIL
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import BadRequest
@@ -47,9 +47,11 @@ broker_message = EMAIL
 broker_message_prefix = 'IMAP_'
 list_func = email_imap_list
 create_edit_input_optional_extra = ['server_type', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria',
-    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_job_id']
+    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
+    'scheduler_job_id']
 output_optional_extra = ['server_type', 'server_type_human', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria',
-    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_job_id']
+    'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
+    'scheduler_job_id']
 
 # ################################################################################################################################
 
@@ -103,8 +105,20 @@ def _validate_scheduler_config(service:'Service', input:'Bunch') -> 'None':
     if input.scheduler_service not in service.server.service_store.name_to_impl_name:
         raise BadRequest(service.cid, f'Scheduler service `{input.scheduler_service}` does not exist')
 
+    # An empty invoke-with value means the message mode, which is what connections
+    # created before this field existed also expect.
+    invoke_with = input.scheduler_invoke_with
+    if not invoke_with:
+        invoke_with = _scheduler_common.InvokeWith.Message
+
+    if invoke_with not in _scheduler_common.InvokeWithList:
+        raise BadRequest(service.cid, f'Scheduler invoke-with `{invoke_with}` is not one of `{_scheduler_common.InvokeWithList}`')
+
     # Store the parsed value back so it is saved as an integer
     input.scheduler_run_every = run_every
+
+    # Store the normalized value back so a default is saved explicitly
+    input.scheduler_invoke_with = invoke_with
 
 # ################################################################################################################################
 
@@ -170,11 +184,13 @@ def _sync_scheduler_job(service:'Service', input:'Bunch', instance:'any_', attrs
     if has_config:
 
         # The job invokes the internal dispatch service and its extra data carries the connection's identity
-        # along with the user's service, which the dispatch service invokes once per each message received.
+        # along with the user's service, which the dispatch service invokes either once per each message received
+        # or once per each of a message's attachments, depending on the invoke-with mode.
         extra = dumps({
             _scheduler_common.Extra_Conn_ID: instance.id,
             _scheduler_common.Extra_Conn_Name: input.name,
             _scheduler_common.Extra_Service: input.scheduler_service,
+            _scheduler_common.Extra_Invoke_With: input.scheduler_invoke_with,
         })
 
         request = {
@@ -208,7 +224,7 @@ def _sync_scheduler_job(service:'Service', input:'Bunch', instance:'any_', attrs
         # .. either way, the connection's opaque attributes now reflect the job's current state.
         with closing(service.odb.session()) as session:
             update_imap_scheduler_fields(session, instance.id, input.scheduler_run_every, input.scheduler_run_unit,
-                input.scheduler_start_date, input.scheduler_service, job_id)
+                input.scheduler_start_date, input.scheduler_service, input.scheduler_invoke_with, job_id)
 
     # There is no scheduler configuration on input ..
     else:
@@ -253,6 +269,11 @@ def response_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_
             for name in _scheduler_common.FieldList:
                 if not item.get(name):
                     item[name] = ''
+
+            # Connections created before the invoke-with field existed run in the message mode
+            if item.scheduler_service:
+                if not item.scheduler_invoke_with:
+                    item.scheduler_invoke_with = _scheduler_common.InvokeWith.Message
 
     elif hook_type == 'create_edit':
 
@@ -324,8 +345,31 @@ class Ping(AdminService):
 
 class ProcessMessages(AdminService):
     """ Invoked by the scheduler on behalf of an IMAP connection - reads messages matching the connection's
-    get-criteria and invokes the configured service once per each message received.
+    get-criteria and invokes the configured service, either once per each message received
+    or once per each of a message's attachments, depending on the connection's invoke-with mode.
     """
+
+    def _invoke_per_attachment(self, target_service:'str', message:'any_') -> 'None':
+        """ Invokes the target service once per each attachment of the message, ignoring the message's body.
+        """
+        for attachment in message.data.attachments:
+
+            # The attachment's payload is stored in a BytesIO object and services receive it as bytes
+            content = attachment['content']
+            data = content.getvalue()
+
+            # Generic IMAP servers report a Content-ID header but Microsoft 365 does not
+            if 'content-id' in attachment:
+                content_id = attachment['content-id']
+            else:
+                content_id = None
+
+            item = IMAPAttachment(message, attachment['filename'], attachment['content-type'], attachment['size'],
+                data, content_id)
+
+            _ = self.invoke(target_service, item)
+
+# ################################################################################################################################
 
     def handle(self) -> 'None':
 
@@ -336,6 +380,11 @@ class ProcessMessages(AdminService):
         conn_name = context[_scheduler_common.Extra_Conn_Name]
         target_service = context[_scheduler_common.Extra_Service]
 
+        # Jobs created before the invoke-with mode existed do not carry it in their extra data
+        invoke_with = context.get(_scheduler_common.Extra_Invoke_With)
+        if not invoke_with:
+            invoke_with = _scheduler_common.InvokeWith.Message
+
         # The email component may be disabled in server.conf
         if not self.email:
             self.logger.warning('Could not process IMAP messages for `%s`; ' \
@@ -345,13 +394,25 @@ class ProcessMessages(AdminService):
         # Get a client for the mailbox that this connection points to ..
         conn = self.email.imap.get(conn_name, True).conn
 
-        # .. and hand each message over to the target service. The service receives the message object itself
-        # .. and it is up to the service to mark the message as seen or to delete it. The invocation is synchronous
+        # .. and hand each message over to the target service. The invocation is synchronous
         # .. so the underlying connection is still open while the service runs.
         for _, message in conn.get():
             try:
-                _ = self.invoke(target_service, message)
+                # Invoke the target service once per each attachment, ignoring the message's body ..
+                if invoke_with == _scheduler_common.InvokeWith.EachAttachment:
+                    self._invoke_per_attachment(target_service, message)
+
+                # .. or once with the whole message on input ..
+                else:
+                    _ = self.invoke(target_service, message)
+
+                # .. everything succeeded so the message is acked by marking it as seen.
+                message.mark_seen()
+
             except Exception:
+
+                # The message is rejected by leaving it untouched - it still matches the UNSEEN criteria
+                # so it will be received anew on the next run, which means that messages are never lost.
                 self.logger.warning('Could not invoke `%s` with an IMAP message from `%s` -> `%s`',
                     target_service, conn_name, format_exc())
 

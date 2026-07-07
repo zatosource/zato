@@ -76,6 +76,9 @@
             // 10
             'scheduler_start_date',
             'scheduler_service',
+            'scheduler_invoke_with',
+
+            // 11
             'scheduler_job_id',
         ]
     }
@@ -154,6 +157,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 11 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -227,6 +233,9 @@
                         {% comment %} 10 {% endcomment %}
                         <td class='ignore'>{{ item.scheduler_start_date|default:"" }}</td>
                         <td class='ignore'>{{ item.scheduler_service|default:"" }}</td>
+                        <td class='ignore'>{{ item.scheduler_invoke_with|default:"" }}</td>
+
+                        {% comment %} 11 {% endcomment %}
                         <td class='ignore'>{{ item.scheduler_job_id|default:"" }}</td>
                     </tr>
                 {% endfor %}
@@ -382,6 +391,12 @@
                             </td>
                             <td>{{ create_form.scheduler_service }}</td>
                         </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_scheduler_invoke_with">Invoke with</label>
+                            </td>
+                            <td>{{ create_form.scheduler_invoke_with }}</td>
+                        </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -533,6 +548,12 @@
                             <label for="id_edit-scheduler_service">Service</label>
                             </td>
                             <td>{{ edit_form.scheduler_service }}</td>
+                        </tr>
+                        <tr class="scheduler-options-block hidden">
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-scheduler_invoke_with">Invoke with</label>
+                            </td>
+                            <td>{{ edit_form.scheduler_invoke_with }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

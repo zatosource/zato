@@ -109,7 +109,7 @@ class TestEnmasseEmailIMAPExporter(TestCase):
                     self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for IMAP connection "{name}"')
 
             # Scheduler fields must round-trip when they were given in YAML
-            for field in ['scheduler_run_every', 'scheduler_run_unit', 'scheduler_service']:
+            for field in ['scheduler_run_every', 'scheduler_run_unit', 'scheduler_service', 'scheduler_invoke_with']:
                 if field in yaml_def:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for IMAP connection "{name}"')
 

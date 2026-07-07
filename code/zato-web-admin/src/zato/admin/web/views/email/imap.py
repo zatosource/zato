@@ -42,7 +42,8 @@ class Index(_Index):
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', \
          'get_criteria', 'server_type', 'server_type_human'
     output_optional = 'username', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria', \
-        'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_job_id'
+        'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with', \
+        'scheduler_job_id'
     output_repeated = True
 
     def on_before_append_item(self, item):
@@ -76,7 +77,7 @@ class _CreateEdit(CreateEdit):
     input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria', \
         'server_type', 'tenant_id', 'client_id', 'search_criteria', 'filter_criteria'
     input_optional = 'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \
-        'scheduler_job_id'
+        'scheduler_invoke_with', 'scheduler_job_id'
     output_required = 'id', 'name'
 
     def pre_process_item(self, name, value):

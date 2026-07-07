@@ -44,6 +44,10 @@ _imap_conn_id_param = 'imap_conn_id'
 # that is to be invoked once per each message received.
 _imap_extra_service = EMAIL.IMAP.Scheduler.Extra_Service
 
+# The key in a job's extra data under which an IMAP-linked job carries the invoke-with mode,
+# i.e. whether the service receives whole messages or their individual attachments.
+_imap_extra_invoke_with = EMAIL.IMAP.Scheduler.Extra_Invoke_With
+
 _opaque_stale_keys = frozenset(_ib_params + (
     'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
 ))
@@ -277,9 +281,11 @@ def _create_edit(self, action):
                         run = unit_from_interval(data['weeks'], data['days'], data['hours'], data['minutes'], data['seconds'])
 
                         # The job's own service is the internal dispatch service so the one to write back
-                        # is the per-message target service carried in the job's extra data. If the extra data
-                        # does not describe it, only the interval and start date are written back.
+                        # is the per-message target service carried in the job's extra data, along with
+                        # the invoke-with mode. If the extra data does not describe them, only the interval
+                        # and start date are written back.
                         target_service = None
+                        invoke_with = None
                         if extra:
                             try:
                                 extra_data = loads(extra)
@@ -287,10 +293,12 @@ def _create_edit(self, action):
                                 extra_data = None
                             if extra_data:
                                 target_service = extra_data.get(_imap_extra_service)
+                                invoke_with = extra_data.get(_imap_extra_invoke_with)
 
                         with closing(self.odb.session()) as session:
                             update_imap_scheduler_fields(
-                                session, imap_conn_id, run.run_every, run.run_unit, start_iso, target_service, job_id)
+                                session, imap_conn_id, run.run_every, run.run_unit, start_iso, target_service,
+                                invoke_with, job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name

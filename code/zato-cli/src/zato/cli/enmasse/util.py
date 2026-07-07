@@ -245,7 +245,9 @@ def get_object_order(object_type:'str') -> 'strlist':
         'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent', \
         'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds', \
         'tls_ca_path', 'tls_cert_path', 'tls_key_path',
-    order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
+    order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
+        'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \
+        'scheduler_invoke_with', # TODO: Implement type vs. server_type
     order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
     order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'
     order['elastic_search'] = 'name', 'is_active', 'hosts:list', 'timeout', 'body_as'

@@ -119,6 +119,7 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.assertEqual(imap_opaque['scheduler_run_every'], 5)
         self.assertEqual(imap_opaque['scheduler_run_unit'], 'minutes')
         self.assertEqual(imap_opaque['scheduler_service'], 'demo.ping')
+        self.assertEqual(imap_opaque['scheduler_invoke_with'], 'each_attachment')
 
         # The job itself must exist under the conventional name and invoke the dispatch service ..
         scheduler_common = EMAIL.IMAP.Scheduler
@@ -127,11 +128,13 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.assertEqual(job.job_type, 'interval_based')
         self.assertEqual(job.service.name, scheduler_common.Dispatch_Service)
 
-        # .. its extra data must carry the connection's identity and the per-message service ..
+        # .. its extra data must carry the connection's identity, the per-message service
+        # .. and the invoke-with mode ..
         extra = loads(job.extra)
         self.assertEqual(extra[scheduler_common.Extra_Conn_ID], imap.id)
         self.assertEqual(extra[scheduler_common.Extra_Conn_Name], 'enmasse.email.imap.2')
         self.assertEqual(extra[scheduler_common.Extra_Service], 'demo.ping')
+        self.assertEqual(extra[scheduler_common.Extra_Invoke_With], 'each_attachment')
 
         # .. it must point back to its connection ..
         job_opaque = parse_instance_opaque_attr(job)

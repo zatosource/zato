@@ -125,6 +125,7 @@ def update_imap_scheduler_fields(
     run_unit:'str',
     start_date:'str',
     service_name:'strnone',
+    invoke_with:'strnone',
     job_id:'int',
     ) -> 'None':
     """ Writes the current state of a scheduler job back to the opaque fields of its linked IMAP connection.
@@ -148,6 +149,10 @@ def update_imap_scheduler_fields(
     # .. may not describe it, in which case the field previously stored is left untouched ..
     if service_name:
         opaque[_scheduler.Field_Service] = service_name
+
+    # .. the same applies to the invoke-with mode, which older jobs do not carry in their extra data ..
+    if invoke_with:
+        opaque[_scheduler.Field_Invoke_With] = invoke_with
 
     # .. and store the result back.
     row.opaque1 = dumps(opaque)

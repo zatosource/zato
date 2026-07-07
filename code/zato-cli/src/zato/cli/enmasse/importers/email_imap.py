@@ -107,13 +107,19 @@ class IMAPImporter:
         """
         run_every = int(imap_def['scheduler_run_every'])
         run_unit = imap_def.get('scheduler_run_unit', _scheduler_common.Unit.Minutes)
+        invoke_with = imap_def.get('scheduler_invoke_with', _scheduler_common.InvokeWith.Message)
+
+        # Store the resolved mode back so the connection's opaque attributes always describe it explicitly
+        imap_def['scheduler_invoke_with'] = invoke_with
 
         # The job invokes the internal dispatch service and its extra data carries the connection's identity
-        # along with the user's service, which the dispatch service invokes once per each message received.
+        # along with the user's service, which the dispatch service invokes either once per each message received
+        # or once per each of a message's attachments, depending on the invoke-with mode.
         extra = dumps({
             _scheduler_common.Extra_Conn_ID: imap_conn.id,
             _scheduler_common.Extra_Conn_Name: imap_conn.name,
             _scheduler_common.Extra_Service: imap_def['scheduler_service'],
+            _scheduler_common.Extra_Invoke_With: invoke_with,
         })
 
         # Build a regular scheduler job definition out of the connection's scheduler fields
