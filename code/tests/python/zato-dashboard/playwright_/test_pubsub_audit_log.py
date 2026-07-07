@@ -10,6 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 from urllib.parse import quote
 
+# pytest
+import pytest
+
+# Playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 # Zato
 from zato.common.test import rand_string
 from zato.common.test.client import PublishClient
@@ -21,7 +27,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth, create_permiss
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +37,7 @@ _Test_Name_Prefix = 'test.audit.' + rand_string() + '.'
 _Topic_Page_Url       = '/zato/pubsub/topic/?cluster=1'
 _Audit_Log_Url_Prefix = '/zato/audit-log/'
 _CID_Page_Url_Prefix  = '/zato/audit-log/cid/'
+_Poll_Url_Path        = '/zato/audit-log/poll/'
 
 _Event_Type_Published = 'published'
 _No_Events_Text       = 'No events found'
@@ -113,8 +120,63 @@ def _get_row_cells(row:'any_') -> 'anylist':
 
 # ################################################################################################################################
 
+def _attach_diagnostics(page:'Page') -> 'anydict':
+    """ Captures everything the browser and Django report while a test runs - console messages,
+    uncaught page errors, failed requests and the full body of each poll response.
+    """
+
+    # All the captured facts go here ..
+    out = {
+        'console': [],
+        'page_errors': [],
+        'failed_requests': [],
+        'poll_responses': [],
+    } # type: anydict
+
+    # .. every console message is recorded with its severity ..
+    def _on_console(message:'any_') -> 'None':
+        out['console'].append(f'[console.{message.type}] {message.text}')
+
+    # .. uncaught JavaScript exceptions are recorded in full ..
+    def _on_page_error(error:'any_') -> 'None':
+        out['page_errors'].append(f'[pageerror] {error}')
+
+    # .. requests that never completed are recorded with their failure reason ..
+    def _on_request_failed(request:'any_') -> 'None':
+        out['failed_requests'].append(f'[requestfailed] {request.method} {request.url} -> {request.failure}')
+
+    # .. and each poll response is recorded with its status and body, which is what Django returned.
+    def _on_response(response:'any_') -> 'None':
+        if _Poll_Url_Path in response.url:
+            body = response.text()
+            out['poll_responses'].append(f'[poll] {response.status} {response.url} -> {body}')
+
+    page.on('console', _on_console)
+    page.on('pageerror', _on_page_error)
+    page.on('requestfailed', _on_request_failed)
+    page.on('response', _on_response)
+
+    return out
+
+# ################################################################################################################################
+
+def _format_diagnostics(diagnostics:'anydict') -> 'str':
+    """ Turns the captured diagnostics into one readable block for assertion messages.
+    """
+
+    lines = [] # type: anylist
+
+    for key in ('page_errors', 'failed_requests', 'console', 'poll_responses'):
+        for entry in diagnostics[key]:
+            lines.append(entry)
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
 def _search(page:'Page', query:'str') -> 'None':
-    """ Types a query into the audit log search form and submits it.
+    """ Types a query into the audit log search form and submits it with the search button.
     """
 
     # Fill in the query ..
@@ -125,19 +187,44 @@ def _search(page:'Page', query:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_for_body_text(page:'Page', text:'str') -> 'None':
-    """ Waits until the audit log table body contains the given text.
+def _search_via_enter(page:'Page', query:'str') -> 'None':
+    """ Types a query into the audit log search form and submits it by pressing Enter in the input.
     """
-    page.wait_for_function(
-        f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
+
+    # Fill in the query ..
+    page.fill('#audit-log-search-input', query)
+
+    # .. and submit the form by pressing Enter.
+    page.press('#audit-log-search-input', 'Enter')
 
 # ################################################################################################################################
 
-def _wait_for_body_without_text(page:'Page', text:'str') -> 'None':
-    """ Waits until the audit log table body no longer contains the given text.
+def _wait_for_body_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
+    """ Waits until the audit log table body contains the given text.
+    On timeout, the assertion message includes everything the browser and Django reported.
     """
-    page.wait_for_function(
-        f'!document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
+    try:
+        page.wait_for_function(
+            f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
+    except PlaywrightTimeoutError:
+        body_text = page.inner_text('#audit-log-table-body')
+        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
+        pytest.fail(f'Timed out waiting for "{text}" in the table, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
+
+# ################################################################################################################################
+
+def _wait_for_body_without_text(page:'Page', text:'str', diagnostics:'anydictnone' = None) -> 'None':
+    """ Waits until the audit log table body no longer contains the given text.
+    On timeout, the assertion message includes everything the browser and Django reported.
+    """
+    try:
+        page.wait_for_function(
+            f'!document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
+    except PlaywrightTimeoutError:
+        body_text = page.inner_text('#audit-log-table-body')
+        details = _format_diagnostics(diagnostics) if diagnostics else '(no diagnostics attached)'
+        pytest.fail(
+            f'Timed out waiting for "{text}" to disappear, the table shows:\n{body_text}\n\nDiagnostics:\n{details}')
 
 # ################################################################################################################################
 

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -15,6 +16,9 @@ from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.x509 import BasicConstraints, CertificateBuilder, Name, NameAttribute, random_serial_number
 from cryptography.x509.oid import NameOID
+
+# lxml
+from lxml import etree
 
 # pytest
 import pytest
@@ -25,9 +29,124 @@ from zato.common.util.xml_.keystore import Keystore, new_keystore
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The official XSDs live in the AS4 fixture tree and are shared by both suites.
+Schemas_Dir = os.path.join(os.path.dirname(__file__), '..', 'as4', 'fixtures', 'schemas')
+
 # RSA parameters for throwaway test keys.
 _rsa_public_exponent = 65537
 _rsa_key_size = 2048
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _LocalSchemaResolver(etree.Resolver):
+    """ Resolves the absolute schemaLocation URLs inside the official XSDs
+    to their local fixture copies, keeping schema validation fully offline.
+    """
+    url_map = {
+        'http://www.w3.org/2001/03/xml.xsd': 'xml.xsd',
+        'http://www.w3.org/2001/xml.xsd': 'xml.xsd',
+        'http://www.w3.org/2009/01/xml.xsd': 'xml.xsd',
+        'http://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd': 'xmldsig-core-schema.xsd',
+        'http://www.w3.org/TR/2002/REC-xmldsig-core-20020212/xmldsig-core-schema.xsd': 'xmldsig-core-schema.xsd',
+        'http://www.w3.org/TR/2002/REC-xmlenc-core-20021210/xenc-schema.xsd': 'xenc-schema.xsd',
+        'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd':
+            'oasis-200401-wss-wssecurity-utility-1.0.xsd',
+    }
+
+    def resolve(self, url, public_id, context):
+        if url in self.url_map:
+            path = os.path.join(Schemas_Dir, self.url_map[url])
+            return self.resolve_filename(path, context)
+        return None
+
+# ################################################################################################################################
+
+def load_schema(file_name):
+    """ Loads one of the official XSDs with offline import resolution.
+    """
+    parser = etree.XMLParser()
+    parser.resolvers.add(_LocalSchemaResolver())
+
+    document = etree.parse(os.path.join(Schemas_Dir, file_name), parser)
+
+    out = etree.XMLSchema(document)
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap11_schema():
+    """ The official SOAP 1.1 envelope schema.
+    """
+    out = load_schema('soap-envelope-1.1.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap12_schema():
+    """ The official SOAP 1.2 envelope schema.
+    """
+    out = load_schema('soap-envelope-1.2.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def wsse_schema():
+    """ The official OASIS WS-Security 1.0 secext schema - it imports the wsu
+    and XML Signature schemas, so wsse:Security contents validate strictly too.
+    """
+    out = load_schema('oasis-200401-wss-wssecurity-secext-1.0.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def wsu_schema():
+    """ The official OASIS WS-Security 1.0 utility schema - wsu:Timestamp and friends.
+    """
+    out = load_schema('oasis-200401-wss-wssecurity-utility-1.0.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def dsig_schema():
+    """ The official W3C XML Signature schema.
+    """
+    out = load_schema('xmldsig-core-schema.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def xenc_schema():
+    """ The official W3C XML Encryption schema.
+    """
+    out = load_schema('xenc-schema.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def xenc11_schema():
+    """ The official W3C XML Encryption 1.1 schema - it imports the 1.0 one,
+    so elements mixing both namespaces (xenc11:MGF inside xenc:EncryptionMethod)
+    validate strictly against this schema set.
+    """
+    out = load_schema('xenc-schema-11.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def saml_schema():
+    """ The official OASIS SAML 2.0 assertion schema.
+    """
+    out = load_schema('saml-schema-assertion-2.0.xsd')
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +193,7 @@ class TestParties:
 @pytest.fixture(scope='session')
 def parties():
     """ A CA plus a sender and a receiver with CA-issued RSA certificates -
-    the WS-Security X.509 world the report's mandates live in.
+    the world WS-Security X.509 exchanges live in.
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
     ca_name = _make_name('soap-test-ca')

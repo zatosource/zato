@@ -28,8 +28,8 @@ if 0:
 # ################################################################################################################################
 
 class Mode:
-    """ The modes a WS-Security definition can be in - which one of the report's
-    credential schemes the definition carries.
+    """ The modes a WS-Security definition can be in - which credential scheme
+    the definition carries.
     """
     UsernameToken = 'username_token'
     X509 = 'x509'

@@ -6,76 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # lxml
 from lxml import etree
-
-# pytest
-import pytest
 
 # Zato
 from zato.common.soap.addressing import add_addressing, AddressingInfo
 from zato.common.soap.common import FaultCode, SOAPVersion
 from zato.common.soap.envelope import attach_body, build_envelope, build_fault, to_bytes
 from zato.common.soap.message import SOAPMessage
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The official XSDs already live in the AS4 fixture tree - they are shared test-only oracles.
-_schemas_dir = os.path.join(os.path.dirname(__file__), '..', 'as4', 'fixtures', 'schemas')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _LocalSchemaResolver(etree.Resolver):
-    """ Resolves the absolute schemaLocation URLs inside the official XSDs
-    to their local fixture copies, keeping schema validation fully offline.
-    """
-    url_map = {
-        'http://www.w3.org/2001/03/xml.xsd': 'xml.xsd',
-        'http://www.w3.org/2001/xml.xsd': 'xml.xsd',
-        'http://www.w3.org/2009/01/xml.xsd': 'xml.xsd',
-    }
-
-    def resolve(self, url, public_id, context):
-        if url in self.url_map:
-            path = os.path.join(_schemas_dir, self.url_map[url])
-            return self.resolve_filename(path, context)
-        return None
-
-# ################################################################################################################################
-
-def _load_schema(file_name):
-    """ Loads one of the official XSDs with offline import resolution.
-    """
-    parser = etree.XMLParser()
-    parser.resolvers.add(_LocalSchemaResolver())
-
-    document = etree.parse(os.path.join(_schemas_dir, file_name), parser)
-
-    out = etree.XMLSchema(document)
-    return out
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def soap11_schema():
-    """ The official SOAP 1.1 envelope schema.
-    """
-    out = _load_schema('soap-envelope-1.1.xsd')
-    return out
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def soap12_schema():
-    """ The official SOAP 1.2 envelope schema.
-    """
-    out = _load_schema('soap-envelope-1.2.xsd')
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
