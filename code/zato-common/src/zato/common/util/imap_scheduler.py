@@ -19,7 +19,7 @@ from zato.common.odb.model import IMAP
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import intnone, stranydict
+    from zato.common.typing_ import intnone, stranydict, strnone
 
     SASession = SASession
 
@@ -124,7 +124,7 @@ def update_imap_scheduler_fields(
     run_every:'int',
     run_unit:'str',
     start_date:'str',
-    service_name:'str',
+    service_name:'strnone',
     job_id:'int',
     ) -> 'None':
     """ Writes the current state of a scheduler job back to the opaque fields of its linked IMAP connection.
@@ -142,8 +142,12 @@ def update_imap_scheduler_fields(
     opaque[_scheduler.Field_Run_Every] = run_every
     opaque[_scheduler.Field_Run_Unit] = run_unit
     opaque[_scheduler.Field_Start_Date] = start_date
-    opaque[_scheduler.Field_Service] = service_name
     opaque[_scheduler.Field_Job_ID] = job_id
+
+    # .. the per-message service is written back only if the caller knows it - the job's extra data
+    # .. may not describe it, in which case the field previously stored is left untouched ..
+    if service_name:
+        opaque[_scheduler.Field_Service] = service_name
 
     # .. and store the result back.
     row.opaque1 = dumps(opaque)
