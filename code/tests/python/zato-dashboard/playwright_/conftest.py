@@ -274,6 +274,13 @@ def zato_dashboard() -> 'any_':
     dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
 
+    # The OpenAPI import runs enmasse against this server directory ..
+    dashboard_env['Zato_Server_Dir'] = server_dir
+
+    # .. and it invokes the zato command, which must be resolvable from the dashboard's PATH.
+    zato_bin_dir = os.path.dirname(_Zato_Bin)
+    dashboard_env['PATH'] = zato_bin_dir + os.pathsep + dashboard_env['PATH']
+
     dashboard_process = subprocess.Popen(
         [_Zato_Bin, 'start', dashboard_dir, '--fg'],
         env=dashboard_env,
@@ -389,8 +396,25 @@ def playwright_browser() -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.fixture(scope='session')
+def playwright_context(playwright_browser:'any_') -> 'any_':
+    """ A single browser context shared by the entire session, so only one browser window
+    ever opens and focus is taken once at startup. Each test runs in its own tab of that
+    window and tabs never raise the window, with cookies cleared between tests.
+    """
+
+    context = playwright_browser.new_context()
+
+    yield context
+
+    context.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture()
-def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:'any_') -> 'any_':
+def logged_in_page(
+    zato_dashboard:'anydict', playwright_browser:'any_', playwright_context:'any_', request:'any_') -> 'any_':
     """ Provides a fresh, logged-in Playwright page for each test.
     """
 
@@ -421,10 +445,12 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:
     except Exception as probe_exc:
         logger.error(f'[FIXTURE-SETUP] {test_name}: HTTP probe FAILED: {probe_exc}')
 
-    # Create a new browser context ..
-    context = playwright_browser.new_context()
+    # Reuse the session-wide context so no new browser window opens for this test,
+    # clearing cookies first so each test starts from a clean login.
+    context = playwright_context
+    context.clear_cookies()
 
-    # .. open a page ..
+    # .. open a page, which is a new tab in the already open window ..
     page = context.new_page()
 
     # .. listen for page crashes and unexpected closes ..
@@ -484,9 +510,10 @@ def logged_in_page(zato_dashboard:'anydict', playwright_browser:'any_', request:
 
     yield page
 
-    # .. clean up.
+    # .. clean up, closing only the tab, the shared context stays open for the session,
+    # which is also why its close listener must be detached here.
     page.close()
-    context.close()
+    context.remove_listener('close', _on_context_close)
 
 # ################################################################################################################################
 # ################################################################################################################################

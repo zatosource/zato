@@ -142,7 +142,10 @@ def import_objects(req):
 
         logger.info('import_objects: enmasse YAML:\n%s', enmasse_yaml)
 
-        server_path = default_server_base_dir
+        # The environment takes precedence, e.g. under tests with auto-generated servers
+        server_path = os.environ.get('Zato_Server_Dir')
+        if not server_path:
+            server_path = default_server_base_dir
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
             _ = f.write(enmasse_yaml)

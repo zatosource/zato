@@ -470,6 +470,12 @@ class ConfigManager(_ConfigManagerBase):
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
 
+            # API key definitions keep a placeholder username in the ODB while the actual
+            # header name is an opaque attribute of the definition, so it is resolved here.
+            if sec_config['sec_type'] == SEC_DEF_TYPE.APIKEY:
+                apikey_config = self.request_dispatcher.url_data.apikey_get(security_name).config
+                sec_config['orig_username'] = apikey_config['orig_header']
+
         # .. otherwise, try to find it elsewhere ..
         else:
 
