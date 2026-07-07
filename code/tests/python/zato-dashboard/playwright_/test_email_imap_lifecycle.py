@@ -31,7 +31,9 @@ _Scheduler_Page_Url_Pattern = '/zato/scheduler/?cluster=1'
 _Test_Name_Prefix = 'test.imap.' + os.urandom(4).hex() + '.'
 
 _Invoked_Service = 'demo.ping'
-_Start_Date = '2099-01-01 00:00:00'
+
+# The default user profile displays dates as day-first
+_Start_Date = '01-01-2099 00:00:00'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,12 +62,15 @@ def _create_connection(page:'Page', name:'str', invoke_with:'str') -> 'None':
     page.click('#create-div a[href*="generic-imap-options-block"]')
     page.fill('#id_host', 'imap.example.com')
 
-    # .. expand the scheduler options and fill them all in, including the invoke-with mode ..
+    # .. expand the scheduler options and fill them all in, including the invoke-with mode -
+    # .. the service select is a chosen widget which hides the underlying select element
+    # .. and the start date field has a datetimepicker attached which rewrites the field on focus,
+    # .. hence both are set through jQuery, the same way the widgets themselves do it ..
     page.click('#create-div a[href*="scheduler-options-block"]')
     page.fill('#id_scheduler_run_every', '5')
     _ = page.select_option('#id_scheduler_run_unit', _scheduler.Unit.Minutes)
-    page.fill('#id_scheduler_start_date', _Start_Date)
-    _ = page.select_option('#id_scheduler_service', _Invoked_Service)
+    _ = page.evaluate(f'$("#id_scheduler_start_date").val("{_Start_Date}")')
+    _ = page.evaluate(f'$("#id_scheduler_service").val("{_Invoked_Service}").trigger("chosen:updated").trigger("change")')
     _ = page.select_option('#id_scheduler_invoke_with', invoke_with)
 
     # .. submit and wait for the dialog to close ..
@@ -174,7 +179,9 @@ class TestEmailIMAPLifecycle:
         assert invoke_with_value == _scheduler.InvokeWith.EachAttachment, \
             f'Expected the edit select to show each-attachment, got: "{invoke_with_value}"'
 
-        # .. switch the mode to message and save ..
+        # .. switch the mode to message and save - the scheduler options block is collapsed
+        # .. by default so it needs to be expanded first for the select to be visible ..
+        page.click('#edit-div a[href*="scheduler-options-block"]')
         _ = page.select_option('#id_edit-scheduler_invoke_with', _scheduler.InvokeWith.Message)
         _submit_edit_form(page)
 
