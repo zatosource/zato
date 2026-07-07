@@ -83,6 +83,11 @@ class SECURITY(Constants):
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
+    WSS_CREATE = ValueConstant('')
+    WSS_EDIT = ValueConstant('')
+    WSS_DELETE = ValueConstant('')
+    WSS_CHANGE_PASSWORD = ValueConstant('')
+
     BASIC_AUTH_RATE_LIMITING_EDIT = ValueConstant('')
     APIKEY_RATE_LIMITING_EDIT = ValueConstant('')
 

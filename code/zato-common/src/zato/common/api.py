@@ -220,6 +220,7 @@ class SEC_DEF_TYPE:
     BASIC_AUTH = 'basic_auth'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
+    WSS = 'wss'
 
 Sec_Def_Type = SEC_DEF_TYPE
 
@@ -231,6 +232,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'Bearer token',
+    SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
 All_Sec_Def_Types = sorted(SEC_DEF_TYPE_NAME)

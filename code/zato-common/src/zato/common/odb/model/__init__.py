@@ -392,6 +392,28 @@ class APIKeySecurity(SecurityBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WSSecurity(SecurityBase):
+    """ A WS-Security definition - its mode and all the mode-specific details are kept in opaque attributes.
+    """
+    __tablename__ = 'sec_wss'
+    __mapper_args__ = {'polymorphic_identity': 'wss'}
+
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """

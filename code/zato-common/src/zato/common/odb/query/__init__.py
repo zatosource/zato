@@ -24,7 +24,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
-    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
+    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -319,6 +319,22 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==NTLM.cluster_id).\
         filter(SecurityBase.id==NTLM.id).\
+        order_by(SecurityBase.name)
+
+@query_wrapper
+def wss_list(session, cluster_id, needs_columns=False):
+    """ All the WS-Security definitions.
+    """
+    return session.query(
+        WSSecurity.id, WSSecurity.name,
+        WSSecurity.is_active,
+        WSSecurity.username,
+        WSSecurity.password, WSSecurity.sec_type,
+        WSSecurity.password_type,
+        WSSecurity.opaque1).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==WSSecurity.cluster_id).\
+        filter(SecurityBase.id==WSSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
