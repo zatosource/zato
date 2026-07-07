@@ -49,7 +49,7 @@ def _sample_envelope():
 # ################################################################################################################################
 
 class TestUsernameToken:
-    """ The UsernameToken profile - the report's simplest credential scheme,
+    """ The UsernameToken profile - the simplest credential scheme,
     used by legacy gateways that predate X.509 profiles.
     """
 
@@ -93,8 +93,8 @@ class TestUsernameToken:
 # ################################################################################################################################
 
 class TestX509:
-    """ The X.509 token profile - what Peppol-style profiles and the report's
-    e-invoicing and government gateways demand from message signatures.
+    """ The X.509 token profile - what Peppol-style profiles and e-invoicing
+    and government gateways demand from message signatures.
     """
 
     def test_sign_verify_roundtrip(self, parties):

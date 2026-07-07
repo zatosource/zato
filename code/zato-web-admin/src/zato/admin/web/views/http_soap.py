@@ -367,16 +367,6 @@ def ping(req, id, cluster_id): # type: ignore
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('POST')
-def reload_wsdl(req, id, cluster_id): # type: ignore
-    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'WSDL could not be reloaded, e:`{}`')
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse('WSDL reloaded, check server logs for details')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _extract_invoke_params(req):
     return {
         'payload': req.POST.get('data-request', ''),

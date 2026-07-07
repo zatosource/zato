@@ -109,9 +109,9 @@ def sign(
     signature_algorithm:'str'=Algorithm.RSA_SHA256,
     token_type:'str'=TokenType.X509v3,
     ) -> 'any_':
-    """ Signs an envelope in place the way the report's mandates expect - a wsu:Timestamp
-    and the SOAP body are covered by a ds:Signature whose certificate travels
-    in a BinarySecurityToken. Returns the ds:Signature element.
+    """ Signs an envelope in place following the WS-Security X.509 token profile -
+    a wsu:Timestamp and the SOAP body are covered by a ds:Signature whose certificate
+    travels in a BinarySecurityToken. Returns the ds:Signature element.
     """
     # The body needs a wsu:Id for its signature reference.
     body = get_body(envelope)

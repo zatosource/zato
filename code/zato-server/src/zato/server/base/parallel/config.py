@@ -65,6 +65,10 @@ class ConfigLoader:
         query = self.odb.get_oauth_list(cluster_id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
+        # WS-Security
+        query = self.odb.get_wss_list(cluster_id, True)
+        self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
+
         # Load rate limiting for security definitions
         self._load_sec_def_rate_limiting(self.config.basic_auth)
         self._load_sec_def_rate_limiting(self.config.apikey)
@@ -324,7 +328,7 @@ class ConfigLoader:
         self: 'ParallelServer' # type: ignore
     ) -> 'None':
 
-        sec_config_dict_types = ('apikey', 'basic_auth', 'ntlm', 'oauth',)
+        sec_config_dict_types = ('apikey', 'basic_auth', 'ntlm', 'oauth', 'wss',)
 
         # Global lock to make sure only one server attempts to do it at a time
         with self.zato_lock_manager('zato_encrypt_secrets'):

@@ -28,7 +28,7 @@ class NS(CommonNS):
 # ################################################################################################################################
 
 class SOAPVersion:
-    """ The two SOAP versions the report's mandates use.
+    """ The two SOAP versions in use.
     """
     V11 = '1.1'
     V12 = '1.2'

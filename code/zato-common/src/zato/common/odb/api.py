@@ -1211,5 +1211,6 @@ class ODBManager(SessionWrapper):
     encrypt_sec_basic_auth         = encrypt_sec_base
     encrypt_sec_ntlm               = encrypt_sec_base
     encrypt_sec_oauth              = encrypt_sec_base
+    encrypt_sec_wss                = encrypt_sec_base
 
 # ################################################################################################################################

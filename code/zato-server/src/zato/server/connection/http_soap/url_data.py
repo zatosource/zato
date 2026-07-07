@@ -24,6 +24,8 @@ from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
+from zato.common.soap.envelope import parse_envelope
+from zato.common.soap.security.wss import enforce_wss
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
@@ -48,7 +50,7 @@ class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, config_manager, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, config_dispatcher=None, odb=None):
+                 oauth_config=None, apikey_config=None, wss_config=None, config_dispatcher=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.config_manager = config_manager
@@ -57,6 +59,7 @@ class URLData(PyURLData):
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
+        self.wss_config = wss_config
         self.config_dispatcher = config_dispatcher
         self.odb = odb
 
@@ -75,13 +78,14 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def set_security_objects(self, *, url_sec, basic_auth_config, ntlm_config, oauth_config, apikey_config):
+    def set_security_objects(self, *, url_sec, basic_auth_config, ntlm_config, oauth_config, apikey_config, wss_config):
 
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
+        self.wss_config = wss_config
 
 # ################################################################################################################################
 
@@ -136,6 +140,25 @@ class URLData(PyURLData):
                 msg_exc = 'Unauthorized; cid={}'.format(cid)
                 logger.error(msg_log)
                 raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
+            else:
+                return False
+
+        return True
+
+# ################################################################################################################################
+
+    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Enforces the channel's WS-Security definition on the incoming SOAP envelope.
+        """
+        try:
+            envelope = parse_envelope(body)
+            enforce_wss(envelope, sec_def)
+        except Exception:
+            if enforce_auth:
+                msg = '401 Unauthorized path_info:`{}`, cid:`{}`, e:`{}`'.format(path_info, cid, format_exc())
+                error_msg = '401 Unauthorized'
+                logger.error(msg)
+                raise Unauthorized(cid, error_msg, None)
             else:
                 return False
 
@@ -358,6 +381,57 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             self.ntlm_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
+
+# ################################################################################################################################
+
+    def _update_wss(self, name, config):
+        self.wss_config[name] = Bunch()
+        self.wss_config[name].config = config
+
+    def wss_get(self, name):
+        """ Returns the configuration of the WS-Security definition of the given name.
+        """
+        wait_for_dict_key(self.wss_config, name)
+        with self.url_sec_lock:
+            return self.wss_config.get(name)
+
+    def wss_get_by_id(self, def_id):
+        """ Same as wss_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.wss_config, def_id)
+
+    def on_config_event_SECURITY_WSS_CREATE(self, msg, *args):
+        """ Creates a new WS-Security definition.
+        """
+        with self.url_sec_lock:
+            self._update_wss(msg.name, msg)
+
+    def on_config_event_SECURITY_WSS_EDIT(self, msg, *args):
+        """ Updates an existing WS-Security definition.
+        """
+        with self.url_sec_lock:
+            current_config = self.wss_config[msg.old_name]
+            msg.password = current_config.config.password
+            del self.wss_config[msg.old_name]
+            self._update_wss(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
+
+    def on_config_event_SECURITY_WSS_DELETE(self, msg, *args):
+        """ Deletes a WS-Security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('wss', msg.name)
+            del self.wss_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS, True)
+
+    def on_config_event_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of a WS-Security definition.
+        """
+        wait_for_dict_key(self.wss_config, msg.name)
+        with self.url_sec_lock:
+            self.wss_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
 
 # ################################################################################################################################
 

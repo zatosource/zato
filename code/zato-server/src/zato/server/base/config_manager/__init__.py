@@ -323,6 +323,7 @@ class ConfigManager(_ConfigManagerBase):
             self.config_store.ntlm,
             self.config_store.oauth,
             self.config_store.apikey,
+            self.config_store.wss,
             self.config_dispatcher,
             self.server.odb,
         )
@@ -699,6 +700,7 @@ class ConfigManager(_ConfigManagerBase):
             ntlm_config=self.config_store.ntlm,
             oauth_config=self.config_store.oauth,
             apikey_config=self.config_store.apikey,
+            wss_config=self.config_store.wss,
         )
 
         # .. now, initialize connections that may depend on what we have just loaded ..
@@ -1603,6 +1605,45 @@ class ConfigManager(_ConfigManagerBase):
         """ Changes password of an NTLM security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
+                self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def wait_for_wss(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.wss_get, name, timeout, interval=0.5)
+
+    def wss_get(self, name:'str') -> 'bunch_':
+        """ Returns the configuration of the WS-Security definition
+        of the given name.
+        """
+        return self.request_dispatcher.url_data.wss_get(name)
+
+    def wss_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as wss_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.wss_get_by_id(def_id)
+
+    def on_config_event_SECURITY_WSS_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Creates a new WS-Security definition.
+        """
+        dispatcher.notify(broker_message.SECURITY.WSS_CREATE.value, msg)
+
+    def on_config_event_SECURITY_WSS_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates an existing WS-Security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
+                self._visit_wrapper_edit, keys=('username', 'name'))
+
+    def on_config_event_SECURITY_WSS_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Deletes a WS-Security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
+                self._visit_wrapper_delete)
+
+    def on_config_event_SECURITY_WSS_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Changes password of a WS-Security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
