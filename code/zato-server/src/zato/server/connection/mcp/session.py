@@ -277,10 +277,18 @@ class MCPSessionReaper:
         """ Iterates over all MCP channel wrappers and cleans up expired sessions.
         """
 
-        # Walk each channel wrapper and run cleanup on its session manager ..
-        for wrapper in self.channel_mcp_dict.values():
+        # Walk each channel config, reaching the wrapper through its .conn attribute ..
+        for channel_config in self.channel_mcp_dict.values():
 
+            wrapper = channel_config.conn
+
+            # .. skip channels that were deleted mid-sweep and have no handler anymore ..
             handler = wrapper.handler
+
+            if handler is None:
+                continue
+
+            # .. run cleanup on the channel's session manager ..
             session_manager = handler.session_manager
             removed = session_manager.cleanup_expired()
 
