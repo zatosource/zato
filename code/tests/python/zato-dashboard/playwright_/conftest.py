@@ -178,7 +178,7 @@ def zato_dashboard() -> 'any_':
     dashboard_port = _find_free_port()
     broker_port    = _find_free_port()
 
-    temporary_dir = tempfile.mkdtemp(prefix='zato_pw_test_')
+    temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_test_')
     _cleanup_refs['temporary_dir'] = temporary_dir
 
     # .. 1) create a quickstart environment with both server and dashboard ..

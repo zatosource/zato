@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import GENERIC, SFTP
+from zato.common.api import GENERIC
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -32,27 +32,14 @@ logger = logging.getLogger(__name__)
 
 # Fields to extract from opaque attributes, in the order they are exported
 OPTIONAL_FIELDS = [
-    'port', 'identity_file', 'ssh_config_file', 'log_level', 'sftp_command', 'ping_command', 'buffer_size',
-    'bandwidth_limit', 'force_ip_type', 'should_flush', 'should_preserve_meta', 'is_compression_enabled',
-    'ssh_options', 'default_directory'
+    'private_key',
+    'strict_host_key_checking',
 ]
 
 # Values that are not exported because they match the defaults
 _field_defaults = {
-    'port': SFTP.DEFAULT.PORT,
-    'identity_file': '',
-    'ssh_config_file': '',
-    'log_level': 0,
-    'sftp_command': SFTP.DEFAULT.COMMAND_SFTP,
-    'ping_command': SFTP.DEFAULT.COMMAND_PING,
-    'buffer_size': SFTP.DEFAULT.BUFFER_SIZE,
-    'bandwidth_limit': SFTP.DEFAULT.BANDWIDTH_LIMIT,
-    'force_ip_type': '',
-    'should_flush': False,
-    'should_preserve_meta': True,
-    'is_compression_enabled': False,
-    'ssh_options': '',
-    'default_directory': '',
+    'private_key': '',
+    'strict_host_key_checking': True,
 }
 
 # ################################################################################################################################
@@ -92,8 +79,8 @@ class SFTPExporter:
                 'name': row['name'],
             }
 
-            if host := row.get('host'):
-                item['host'] = host
+            if address := row.get('address'):
+                item['address'] = address
 
             if username := row.get('username'):
                 item['username'] = username

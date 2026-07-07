@@ -4,6 +4,10 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -13,8 +17,13 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} SFTP {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp.js"></script>
@@ -28,52 +37,26 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            '_host',
+            '_address',
 
             {% comment %} 2 {% endcomment %}
-            '_port',
             '_username',
-            '_identity_file',
+            '_command_shell',
 
             {% comment %} 3 {% endcomment %}
-            '_default_directory',
-            '_command_shell',
-            '_change_password',
-
-            {% comment %} 4 {% endcomment %}
             '_edit',
             '_delete',
             '_ping',
 
-            {% comment %} 5 {% endcomment %}
+            {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'log_level',
+            'address',
 
-            {% comment %} 6 {% endcomment %}
-            'host',
-            'port',
+            {% comment %} 5 {% endcomment %}
             'username',
-
-            {% comment %} 7 {% endcomment %}
-            'identity_file',
-            'ssh_config_file',
-            'buffer_size',
-
-            {% comment %} 8 {% endcomment %}
-            'is_compression_enabled',
-            'force_ip_type',
-            'should_flush',
-
-            {% comment %} 9 {% endcomment %}
-            'should_preserve_meta',
-            'ssh_options',
-            'sftp_command',
-
-            {% comment %} 10 {% endcomment %}
-            'ping_command',
-            'bandwidth_limit',
-            'default_directory',
+            'private_key',
+            'strict_host_key_checking',
         ]
     }
     </script>
@@ -108,49 +91,23 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Host</a></th>
+                        <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Port</a></th>
                         <th><a href="#">Username</a></th>
-                        <th><a href="#">Identity file</a></th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
-                        <th><a href="#">Default dir.</a></th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 6 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 7 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 8 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 9 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 10 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -167,58 +124,32 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.address|default:'<span class="form_hint">---</span>' }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
-                        <td>{{ item.identity_file|default:'<span class="form_hint">---</span>' }}</td>
+                        <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td>{{ item.default_directory|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-
-                        {% comment %} 4 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
 
-                        {% comment %} 5 {% endcomment %}
+                        {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.log_level }}</td>
+                        <td class='ignore'>{{ item.address }}</td>
 
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.host }}</td>
-                        <td class='ignore'>{{ item.port|default:'' }}</td>
+                        {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.username|default:'' }}</td>
-
-                        {% comment %} 7 {% endcomment %}
-                        <td class='ignore'>{{ item.identity_file }}</td>
-                        <td class='ignore'>{{ item.ssh_config_file }}</td>
-                        <td class='ignore'>{{ item.buffer_size }}</td>
-
-                        {% comment %} 8 {% endcomment %}
-                        <td class='ignore'>{{ item.is_compression_enabled }}</td>
-                        <td class='ignore'>{{ item.force_ip_type }}</td>
-                        <td class='ignore'>{{ item.should_flush }}</td>
-
-                        {% comment %} 9 {% endcomment %}
-                        <td class='ignore'>{{ item.should_preserve_meta }}</td>
-                        <td class='ignore'>{{ item.ssh_options }}</td>
-                        <td class='ignore'>{{ item.sftp_command }}</td>
-
-                        {% comment %} 10 {% endcomment %}
-                        <td class='ignore'>{{ item.ping_command }}</td>
-                        <td class='ignore'>{{ item.bandwidth_limit }}</td>
-                        <td class='ignore'>{{ item.default_directory }}</td>
+                        <td class='ignore'>{{ item.private_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.strict_host_key_checking }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='32'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -234,9 +165,10 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:10%">Name</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Options</td>
                             <td>
@@ -246,76 +178,15 @@
                                 {{ create_form.is_active }}
                                 </label>
 
-                                |
-
-                                <label>
-                                Preserve meta
-                                {{ create_form.should_preserve_meta }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Flush immd.
-                                {{ create_form.should_flush }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Compress
-                                {{ create_form.is_compression_enabled }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log level <span class="form_hint">(0=min)</span>
-                                {{ create_form.log_level }}
-                                </label>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-
-                                <label>
-                                Buffer size
-                                {{ create_form.buffer_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Bandw. limit <span class="form_hint">(in MB)</span>
-                                {{ create_form.bandwidth_limit }}
-                                </label>
-
-                                |
-
-                                <label>
-                                IP type
-                                {{ create_form.force_ip_type }}
-                                </label>
-
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_host">Host</label>
+                                <label for="id_address">Address</label>
                             </td>
                             <td>
-                                {{ create_form.host }}
-
-                                |
-
-                                <label>
-                                Port
-                                {{ create_form.port }}
-                                </label>
-
+                                {{ create_form.address }}
                             </td>
                         </tr>
 
@@ -330,53 +201,28 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_sftp_command">SFTP command</label>
+                                <label for="id_secret">Password</label>
                             </td>
                             <td>
-                                {{ create_form.sftp_command }}
-
-                                |
-
-                                <label>
-                                Ping command
-                                {{ create_form.ping_command }}
-                                </label>
-
+                                {{ create_form.secret }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_identity_file">Ident. file</label>
+                                <label for="id_private_key">Private key</label>
                             </td>
                             <td>
-                                {{ create_form.identity_file }}
+                                {{ create_form.private_key }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_ssh_config_file">Conf. file</label>
+                                <label for="id_strict_host_key_checking">Strict host key checking</label>
                             </td>
                             <td>
-                                {{ create_form.ssh_config_file }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_default_directory">Default directory</label>
-                            </td>
-                            <td>
-                                {{ create_form.default_directory }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2">
-                            <label for="id_ssh_options">SSH options</label>
-                            <br/>
-                            {{ create_form.ssh_options }}
+                                <label class="toggle-switch">{{ create_form.strict_host_key_checking }}<span class="toggle-slider"></span></label>
                             </td>
                         </tr>
 
@@ -399,9 +245,10 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:10%">Name</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Options</td>
                             <td>
@@ -411,76 +258,15 @@
                                 {{ edit_form.is_active }}
                                 </label>
 
-                                |
-
-                                <label>
-                                Preserve meta
-                                {{ edit_form.should_preserve_meta }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Flush immd.
-                                {{ edit_form.should_flush }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Compress
-                                {{ edit_form.is_compression_enabled }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log level <span class="form_hint">(0=min)</span>
-                                {{ edit_form.log_level }}
-                                </label>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-
-                                <label>
-                                Buffer size
-                                {{ edit_form.buffer_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Bandw. limit <span class="form_hint">(in MB)</span>
-                                {{ edit_form.bandwidth_limit }}
-                                </label>
-
-                                |
-
-                                <label>
-                                IP type
-                                {{ edit_form.force_ip_type }}
-                                </label>
-
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-host">Host</label>
+                                <label for="id_edit-address">Address</label>
                             </td>
                             <td>
-                                {{ edit_form.host }}
-
-                                |
-
-                                <label>
-                                Port
-                                {{ edit_form.port }}
-                                </label>
-
+                                {{ edit_form.address }}
                             </td>
                         </tr>
 
@@ -495,53 +281,28 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-sftp_command">SFTP command</label>
+                                <label for="id_edit-secret">Password</label>
                             </td>
                             <td>
-                                {{ edit_form.sftp_command }}
-
-                                |
-
-                                <label>
-                                Ping command
-                                {{ edit_form.ping_command }}
-                                </label>
-
+                                {{ edit_form.secret }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-identity_file">Ident. file</label>
+                                <label for="id_edit-private_key">Private key</label>
                             </td>
                             <td>
-                                {{ edit_form.identity_file }}
+                                {{ edit_form.private_key }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-ssh_config_file">Conf. file</label>
+                                <label for="id_edit-strict_host_key_checking">Strict host key checking</label>
                             </td>
                             <td>
-                                {{ edit_form.ssh_config_file }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-default_directory">Default directory</label>
-                            </td>
-                            <td>
-                                {{ edit_form.default_directory }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2">
-                            <label for="id_edit-ssh_options">SSH options</label>
-                            <br/>
-                            {{ edit_form.ssh_options }}
+                                <label class="toggle-switch">{{ edit_form.strict_host_key_checking }}<span class="toggle-slider"></span></label>
                             </td>
                         </tr>
 
@@ -555,32 +316,6 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
-                </form>
-            </div>
-        </div>
-
-        <div id="change_password-div" class='data-popup ignore'>
-            <div class="bd">
-                <form novalidate action="{% url "out-sftp-change-password" %}" method="post" id="change_password-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle; width:13%">Name</td>
-                            <td id="change-password-name"></td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Password</td>
-                            <td>{{ change_password_form.password }}
-                                <input type="hidden" id="id_change_password-id" name="id" />
-                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
                 </form>
             </div>
         </div>

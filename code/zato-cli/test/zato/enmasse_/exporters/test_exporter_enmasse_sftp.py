@@ -32,8 +32,8 @@ if 0:
 
 class ModuleCtx:
     Env_Key_Should_Test = 'Zato_Test_SFTP'
-    Key_Conn_Name = 'enmasse.sftp.key.1'
-    Password_Conn_Name = 'enmasse.sftp.password.1'
+    Conn_Name = 'enmasse.sftp.1'
+    Second_Conn_Name = 'enmasse.sftp.2'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,30 +92,36 @@ class TestEnmasseSFTPExporter(TestCase):
 
 # ################################################################################################################################
 
+    def get_address(self) -> 'str':
+
+        out = '{}:{}'.format(self.sftp_server.host, self.sftp_server.port)
+
+        return out
+
+# ################################################################################################################################
+
     def get_definitions(self) -> 'list':
 
-        # A connection that authenticates with a plain key ..
-        key_based = {
-            'name': ModuleCtx.Key_Conn_Name,
-            'host': self.sftp_server.host,
-            'port': self.sftp_server.port,
+        # The first connection authenticates with an encrypted key whose passphrase is the password,
+        # with host key checking turned off because the test server's key is freshly generated.
+        first = {
+            'name': ModuleCtx.Conn_Name,
+            'address': self.get_address(),
             'username': self.sftp_server.username,
-            'identity_file': self.sftp_server.client_key_path,
-            'ssh_options': self.sftp_server.ssh_options,
-        }
-
-        # .. and one that authenticates with an encrypted key whose passphrase is the connection's password.
-        password_based = {
-            'name': ModuleCtx.Password_Conn_Name,
-            'host': self.sftp_server.host,
-            'port': self.sftp_server.port,
-            'username': self.sftp_server.username,
-            'identity_file': self.sftp_server.client_key_encrypted_path,
             'password': self.sftp_server.password,
-            'ssh_options': self.sftp_server.ssh_options,
+            'private_key': self.sftp_server.client_key_encrypted_path,
+            'strict_host_key_checking': False,
         }
 
-        out = [key_based, password_based]
+        # The second one uses a plain key and leaves host key checking at its default of True
+        second = {
+            'name': ModuleCtx.Second_Conn_Name,
+            'address': self.get_address(),
+            'username': self.sftp_server.username,
+            'private_key': self.sftp_server.client_key_path,
+        }
+
+        out = [first, second]
 
         return out
 
@@ -140,18 +146,19 @@ class TestEnmasseSFTPExporter(TestCase):
         self.assertIn('sftp', exported_data, 'Exporter did not produce a "sftp" section.')
         exported_sftp_list = exported_data['sftp']
 
-        # 4. Compare exported data with the original definitions
-        self.assertEqual(len(exported_sftp_list), len(sftp_list_from_yaml),
-                         'Number of exported SFTP connections does not match original YAML.')
-
-        # Create dictionaries keyed by name for easier comparison
+        # 4. Compare exported data with the original definitions - note that the database may contain
+        # other SFTP connections too, which is why only the ones created by this test are compared.
         yaml_sftp_by_name = {}
         for item in sftp_list_from_yaml:
             yaml_sftp_by_name[item['name']] = item
 
         exported_sftp_by_name = {}
         for item in exported_sftp_list:
-            exported_sftp_by_name[item['name']] = item
+            if item['name'] in yaml_sftp_by_name:
+                exported_sftp_by_name[item['name']] = item
+
+        self.assertEqual(len(exported_sftp_by_name), len(yaml_sftp_by_name),
+                         'Number of exported SFTP connections does not match original YAML.')
 
         for name, yaml_def in yaml_sftp_by_name.items():
 
@@ -159,11 +166,18 @@ class TestEnmasseSFTPExporter(TestCase):
             exported_def = exported_sftp_by_name[name]
 
             # Compare all the options that were given on input - they must round trip unchanged
-            for field in ['name', 'host', 'port', 'username', 'identity_file', 'ssh_options']:
+            for field in ['name', 'address', 'username', 'private_key']:
                 self.assertEqual(exported_def.get(field), yaml_def.get(field),
                                  f'Mismatch for "{field}" in SFTP connection "{name}"')
 
-        # 5. The password must never appear in the exported data in plain text
+        # 5. Host key checking is only exported when it differs from the default of True
+        first_exported = exported_sftp_by_name[ModuleCtx.Conn_Name]
+        second_exported = exported_sftp_by_name[ModuleCtx.Second_Conn_Name]
+
+        self.assertFalse(first_exported['strict_host_key_checking'])
+        self.assertNotIn('strict_host_key_checking', second_exported)
+
+        # 6. The password must never appear in the exported data in plain text
         for item in exported_sftp_list:
             self.assertNotIn('password', item, 'Password must not be exported')
             self.assertNotIn('secret', item, 'Secret must not be exported')

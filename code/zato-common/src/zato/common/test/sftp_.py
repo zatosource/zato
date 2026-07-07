@@ -12,7 +12,7 @@ import socket
 from getpass import getuser
 from logging import getLogger
 from shutil import rmtree
-from subprocess import PIPE, Popen, run as subprocess_run
+from subprocess import DEVNULL, PIPE, Popen, run as subprocess_run
 from tempfile import mkdtemp
 from time import sleep
 
@@ -179,8 +179,10 @@ class SFTPTestServer:
         # .. write out the server's configuration ..
         self._write_config()
 
-        # .. start the server in the foreground, as the current user, with no root or systemd needed ..
-        self.sshd = Popen([_sshd_binary, '-D', '-e', '-f', self.config_path], stdout=PIPE, stderr=PIPE)
+        # .. start the server in the foreground, as the current user, with no root or systemd needed -
+        # .. note that its output must be discarded rather than piped because nothing ever reads the pipes,
+        # .. and once a full pipe buffer blocked sshd mid-handshake, every client would hang forever ..
+        self.sshd = Popen([_sshd_binary, '-D', '-e', '-f', self.config_path], stdout=DEVNULL, stderr=DEVNULL)
 
         # .. and wait until it accepts connections.
         self._wait_until_accepting_connections()
