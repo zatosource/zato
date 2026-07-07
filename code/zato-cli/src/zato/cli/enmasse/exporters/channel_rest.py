@@ -138,9 +138,6 @@ class ChannelExporter:
             if channel_row.content_type:
                 exported_channel['content_type'] = channel_row.content_type
 
-            if channel_row.content_encoding:
-                exported_channel['content_encoding'] = channel_row.content_encoding
-
             if gateway_service_list := channel_row.get('gateway_service_list'):
                 if gateway_service_list.strip():
                     exported_channel['gateway_service_list'] = gateway_service_list.strip().split('\n')

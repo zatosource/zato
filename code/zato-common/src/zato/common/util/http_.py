@@ -45,31 +45,33 @@ def get_proxy_config(config):
 
 # ################################################################################################################################
 
-def get_form_data(wsgi_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict':
+def get_form_data(environ:'stranydict') -> 'stranydict':
 
     # Response to produce
     out = {}
 
     # This is the form data uploaded to a channel or service
-    data = wsgi_environ['zato.http.raw_request'] # type: any_
+    data = environ['zato.http.raw_request'] # type: any_
 
     # Create a buffer to hold the form data and write the form to it
     buff = BytesIO()
     buff.write(data)
     buff.seek(0)
 
-    # Parse form data using modern multipart parser
-    _, form_dict = parse_form_data({
-        'CONTENT_TYPE': wsgi_environ.get('CONTENT_TYPE', ''),
-        'CONTENT_LENGTH': str(len(data))
-    }, buff)
+    # Parse the form. The parser reads the body from the wsgi.input key of the dict
+    # given to it, the method must be POST because the parser only handles POST, PUT
+    # and PATCH, and it returns a (forms, files) tuple, of which we need the forms.
+    form_dict, _ = parse_form_data({
+        'REQUEST_METHOD': 'POST',
+        'CONTENT_TYPE': environ.get('CONTENT_TYPE', ''),
+        'CONTENT_LENGTH': str(len(data)),
+        'wsgi.input': buff,
+    })
 
     # Clean up
     buff.close()
 
-    # Process the form data if needed
-    if as_dict:
-        out.update(form_dict)
+    out.update(form_dict)
 
     # Return the dict now
     return out

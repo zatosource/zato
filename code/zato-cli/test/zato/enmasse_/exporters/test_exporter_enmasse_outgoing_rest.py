@@ -144,7 +144,7 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
                     conn_required['security'] = conn_def['security']
 
                 # Add optional fields if present in the template
-                for field in ['data_format', 'is_active', 'timeout', 'method', 'content_type', 'content_encoding', 'pool_size', 'ping_method', 'tls_verify']:
+                for field in ['data_format', 'is_active', 'timeout', 'method', 'content_type', 'pool_size', 'ping_method', 'tls_verify']:
                     if field in conn_def and conn_def[field] is not None:
                         conn_required[field] = conn_def[field]
 

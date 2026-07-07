@@ -292,7 +292,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 12, 13 */
     if(is_channel) {
         row += String.format("<td class='ignore'>{0}</td>", data.service);
-        row += String.format("<td class='ignore'>{0}</td>", data.content_encoding);
     }
 
     /* 14, 15, 16 */

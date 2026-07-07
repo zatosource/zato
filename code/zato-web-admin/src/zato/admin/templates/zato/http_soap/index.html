@@ -98,7 +98,6 @@
             // 12, 13
             {% if connection == 'channel' %}
                 'service',
-                'content_encoding',
             {% endif %}
 
             // 14, 15, 16
@@ -239,7 +238,6 @@
                         <!-- 12, 13, 13a -->
                         {% if connection == 'channel' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endif %}
 
                         <!-- 14, 15, 16 -->
@@ -374,7 +372,6 @@
                         <!-- 12, 13 -->
                         {% if connection == 'channel' %}
                             <td class='ignore'>{{ item.service_name }}</td>
-                            <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endif %}
 
                         <!-- 14, 15, 16 -->
@@ -628,11 +625,6 @@
                             <td style="vertical-align:middle">Method</td>
                             <td>
                                 {{ create_form.method }}
-                                |
-                                <label>
-                                    Encoding
-                                    {{ create_form.content_encoding }}
-                                </label>
                             </td>
                         </tr>
 
@@ -853,11 +845,6 @@
                             <td style="vertical-align:middle">Method</td>
                             <td>
                                 {{ edit_form.method }}
-                                |
-                                <label>
-                                    Encoding
-                                    {{ edit_form.content_encoding }}
-                                </label>
                             </td>
                         </tr>
 

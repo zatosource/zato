@@ -55,7 +55,6 @@ class Response:
         self.result = ZATO_OK
         self.result_details = ''
         self._payload = ''
-        self.content_encoding = None
         self.cid = None
         self.data_format = None
         self.headers = {}

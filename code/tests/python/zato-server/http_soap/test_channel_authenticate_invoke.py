@@ -72,7 +72,6 @@ def _make_channel_item(overrides:'anydict | None'=None) -> 'anydict':
         'match_target': '/test/path::GET::*::*',
         'data_format': DATA_FORMAT.JSON,
         'transport': 'plain_http',
-        'content_encoding': '',
         'merge_url_params_req': True,
         'url_params_pri': 'qs-over-path',
         'params_pri': 'qs-over-path',
@@ -583,81 +582,6 @@ class FormatResponseTestCase(unittest.TestCase):
         _ = ctx.dispatcher._format_response(_make_channel_item(), wsgi_environ, response)
 
         self.assertEqual(wsgi_environ['zato.http.response.status'], status_response[200])
-
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.GzipFile')
-    @patch('zato.server.connection.http_soap.channel.StringIO')
-    def test_gzip_encoding_sets_header(self, mock_stringio:'MagicMock', mock_gzipfile:'MagicMock') -> 'None':
-        """ When content_encoding is 'gzip', Content-Encoding header is set.
-        """
-        mock_s = MagicMock()
-        mock_s.getvalue.return_value = b'compressed'
-        mock_stringio.return_value = mock_s
-        mock_gzipfile.return_value.__enter__ = MagicMock(return_value=MagicMock())
-        mock_gzipfile.return_value.__exit__ = MagicMock(return_value=False)
-
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'content_encoding': 'gzip'})
-        response = _make_response()
-        wsgi_environ = _make_wsgi_environ()
-
-        _ = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Encoding'], 'gzip')
-
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.GzipFile')
-    @patch('zato.server.connection.http_soap.channel.StringIO')
-    def test_gzip_encoding_compresses_payload(self, mock_stringio:'MagicMock', mock_gzipfile:'MagicMock') -> 'None':
-        """ When content_encoding is 'gzip', the payload is gzip-compressed.
-        """
-        mock_s = MagicMock()
-        mock_s.getvalue.return_value = b'compressed-bytes'
-        mock_stringio.return_value = mock_s
-
-        mock_f = MagicMock()
-        mock_gzipfile.return_value.__enter__ = MagicMock(return_value=mock_f)
-        mock_gzipfile.return_value.__exit__ = MagicMock(return_value=False)
-
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'content_encoding': 'gzip'})
-        response = _make_response(payload=b'original')
-        wsgi_environ = _make_wsgi_environ()
-
-        _ = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        mock_f.write.assert_called_once_with(b'original')
-
-# ################################################################################################################################
-
-    def test_non_gzip_no_content_encoding_header(self) -> 'None':
-        """ When content_encoding is not 'gzip', no Content-Encoding header is set.
-        """
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'content_encoding': ''})
-        response = _make_response()
-        wsgi_environ = _make_wsgi_environ()
-
-        _ = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertNotIn('Content-Encoding', wsgi_environ['zato.http.response.headers'])
-
-# ################################################################################################################################
-
-    def test_identity_encoding_no_gzip(self) -> 'None':
-        """ When content_encoding is 'identity' (sorts higher than 'gzip'), gzip is NOT applied.
-        """
-        ctx = _make_dispatcher()
-        channel_item = _make_channel_item({'content_encoding': 'identity'})
-        response = _make_response(payload=b'not-compressed')
-        wsgi_environ = _make_wsgi_environ()
-
-        result = ctx.dispatcher._format_response(channel_item, wsgi_environ, response)
-
-        self.assertEqual(result, b'not-compressed')
-        self.assertNotIn('Content-Encoding', wsgi_environ['zato.http.response.headers'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1212,30 +1136,12 @@ class LogIncomingRequestTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     @patch('zato.server.connection.http_soap.channel.logger')
-    def test_gzip_content_encoding_logs_payload_len(self, mock_logger:'MagicMock') -> 'None':
-        """ When content_encoding is 'gzip', the logged len reflects the payload length.
+    def test_payload_len_is_logged(self, mock_logger:'MagicMock') -> 'None':
+        """ The logged len reflects the raw payload length.
         """
         ctx = _make_dispatcher()
         ctx.dispatcher.server.rest_log_ignore = set()
-        channel_item = _make_channel_item({'content_encoding': 'gzip'})
-        meta = _make_meta(path_info='/api/gz')
-        payload = b'x' * 100
-
-        ctx.dispatcher._log_incoming_request(
-            _test_cid, meta, channel_item, 'test.channel', payload, 'agent', '1.2.3.4')
-
-        call_args = mock_logger.info.call_args[0][0]
-        self.assertIn('len=100', call_args)
-
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.logger')
-    def test_non_gzip_content_encoding_logs_payload_len(self, mock_logger:'MagicMock') -> 'None':
-        """ When content_encoding is not 'gzip', the logged len still reflects the raw payload length.
-        """
-        ctx = _make_dispatcher()
-        ctx.dispatcher.server.rest_log_ignore = set()
-        channel_item = _make_channel_item({'content_encoding': ''})
+        channel_item = _make_channel_item()
         meta = _make_meta(path_info='/api/plain')
         payload = b'y' * 50
 
