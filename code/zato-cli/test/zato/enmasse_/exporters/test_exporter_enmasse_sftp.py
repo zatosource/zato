@@ -35,6 +35,11 @@ class ModuleCtx:
     Conn_Name = 'enmasse.sftp.1'
     Second_Conn_Name = 'enmasse.sftp.2'
 
+    # Names of environment variables that point to private key files on disk -
+    # the YAML definitions below carry these names, not the paths themselves.
+    Env_Key_Private_Key = 'Zato_Test_Enmasse_SFTP_Key'
+    Env_Key_Private_Key_Encrypted = 'Zato_Test_Enmasse_SFTP_Key_Encrypted'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,6 +57,10 @@ class TestEnmasseSFTPExporter(TestCase):
 
         class_.sftp_server = SFTPTestServer()
         class_.sftp_server.start()
+
+        # Export the variables that the YAML definitions refer to by name
+        os.environ[ModuleCtx.Env_Key_Private_Key] = class_.sftp_server.client_key_path
+        os.environ[ModuleCtx.Env_Key_Private_Key_Encrypted] = class_.sftp_server.client_key_encrypted_path
 
 # ################################################################################################################################
 
@@ -109,7 +118,7 @@ class TestEnmasseSFTPExporter(TestCase):
             'address': self.get_address(),
             'username': self.sftp_server.username,
             'password': self.sftp_server.password,
-            'private_key': self.sftp_server.client_key_encrypted_path,
+            'private_key': ModuleCtx.Env_Key_Private_Key_Encrypted,
             'strict_host_key_checking': False,
         }
 
@@ -118,7 +127,7 @@ class TestEnmasseSFTPExporter(TestCase):
             'name': ModuleCtx.Second_Conn_Name,
             'address': self.get_address(),
             'username': self.sftp_server.username,
-            'private_key': self.sftp_server.client_key_path,
+            'private_key': ModuleCtx.Env_Key_Private_Key,
         }
 
         out = [first, second]

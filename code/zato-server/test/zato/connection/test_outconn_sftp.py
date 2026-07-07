@@ -38,6 +38,13 @@ if 0:
 class ModuleCtx:
     Env_Key_Should_Test = 'Zato_Test_SFTP'
 
+    # Names of environment variables that point to private key files on disk -
+    # the connections below carry these names, not the paths themselves.
+    Env_Key_Private_Key = 'Zato_Test_SFTP_Key'
+    Env_Key_Private_Key_Encrypted = 'Zato_Test_SFTP_Key_Encrypted'
+    Env_Key_Private_Key_Rejected = 'Zato_Test_SFTP_Key_Rejected'
+    Env_Key_Private_Key_Missing = 'Zato_Test_SFTP_Key_Missing'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,6 +93,10 @@ class OutconnSFTPTestCase(TestCase):
         class_.server = SFTPTestServer()
         class_.server.start()
 
+        # Export the variables that the connections refer to by name
+        os.environ[ModuleCtx.Env_Key_Private_Key] = class_.server.client_key_path
+        os.environ[ModuleCtx.Env_Key_Private_Key_Encrypted] = class_.server.client_key_encrypted_path
+
 # ################################################################################################################################
 
     @classmethod
@@ -100,12 +111,13 @@ class OutconnSFTPTestCase(TestCase):
     def get_config(self, conn_name:'str', *, use_password:'bool'=False) -> 'Bunch':
 
         # With a password in use, we authenticate with the encrypted key whose passphrase
-        # is the connection's password, going through the askpass helper.
+        # is the connection's password, going through the askpass helper. Either way,
+        # the connection carries the name of an environment variable, not a path.
         if use_password:
-            private_key = self.server.client_key_encrypted_path
+            private_key = ModuleCtx.Env_Key_Private_Key_Encrypted
             secret = self.server.password
         else:
-            private_key = self.server.client_key_path
+            private_key = ModuleCtx.Env_Key_Private_Key
             secret = ''
 
         config = bunchify({
@@ -230,13 +242,35 @@ class OutconnSFTPTestCase(TestCase):
         rejected_key_path = os.path.join(self.server.base_dir, 'rejected_key')
         self.server.generate_key(rejected_key_path)
 
+        # The connection refers to the key through an environment variable
+        os.environ[ModuleCtx.Env_Key_Private_Key_Rejected] = rejected_key_path
+
         config = self.get_config('test_wrong_key_is_rejected')
-        config.private_key = rejected_key_path
+        config.private_key = ModuleCtx.Env_Key_Private_Key_Rejected
 
         client = self.make_client(config)
         out = client.ping()
 
         self.assertFalse(out.is_ok)
+
+# ################################################################################################################################
+
+    def test_missing_env_variable_is_reported(self) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        # This variable must not exist for the test to be meaningful
+        _ = os.environ.pop(ModuleCtx.Env_Key_Private_Key_Missing, None)
+
+        config = self.get_config('test_missing_env_variable_is_reported')
+        config.private_key = ModuleCtx.Env_Key_Private_Key_Missing
+
+        client = self.make_client(config)
+        out = client.ping()
+
+        # The ping must fail with a clear error naming the variable
+        self.assertFalse(out.is_ok)
+        self.assertIn(ModuleCtx.Env_Key_Private_Key_Missing, out.details)
 
 # ################################################################################################################################
 
