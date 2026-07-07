@@ -71,13 +71,11 @@ $.fn.zato.audit_log.renderRow = function(row) {
     // .. the size is right-aligned like all numeric columns ..
     html += '<td style="text-align:right">' + row.size + '</td>';
 
-    // .. and the payload preview concludes the row, linking to the complete message.
+    // .. and the payload preview concludes the row.
     if (row.data === '') {
         html += '<td>' + config.emptyValue + '</td>';
     } else {
-        html += '<td class="audit-log-data-preview">';
-        html += '<a href="#" class="audit-log-preview-link" data-id="' + row.id + '">' + escapeHTML(row.data) + '</a>';
-        html += '</td>';
+        html += '<td class="audit-log-data-preview">' + escapeHTML(row.data) + '</td>';
     }
 
     html += '</tr>';
@@ -109,6 +107,25 @@ $.fn.zato.audit_log.renderPage = function($body, rows) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.audit_log.guessAceMode = function(text) {
+    var trimmed = text.trim();
+
+    // JSON documents start with an object or an array ..
+    if (trimmed.indexOf('{') === 0 || trimmed.indexOf('[') === 0) {
+        return 'ace/mode/json';
+    }
+
+    // .. XML documents start with an opening tag ..
+    if (trimmed.indexOf('<') === 0) {
+        return 'ace/mode/xml';
+    }
+
+    // .. anything else is left to the highlight pane's own detection, e.g. HL7 or tracebacks.
+    return null;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
     var config = $.fn.zato.audit_log.config;
 
@@ -123,15 +140,28 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
                 data = JSON.parse(data);
             }
 
-            var title = cid ? 'Message data - ' + cid : 'Message data';
+            var aceMode = $.fn.zato.audit_log.guessAceMode(data.data);
+
+            // One button copies just the CID ..
+            var copyCIDButton = {
+                id: 'audit-log-copy-cid',
+                label: 'Copy CID',
+                on_click: function(buttonElement) {
+                    $.fn.zato.ui_helpers.copy_to_clipboard(buttonElement, cid);
+                }
+            };
+
+            // .. and the other one copies the whole message.
+            var copyMessageButton = $.fn.zato.highlight_pane.buttons.copy();
+            copyMessageButton.label = 'Copy message';
 
             $.fn.zato.highlight_pane.open_overlay({
-                title: title,
+                title: 'Message data',
+                title_detail: cid,
                 text: data.data,
                 editable: false,
-                buttons: [
-                    $.fn.zato.highlight_pane.buttons.copy()
-                ]
+                ace_mode: aceMode,
+                buttons: [copyCIDButton, copyMessageButton]
             });
         }
     });
@@ -168,17 +198,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
         pagination.fetch_page(1);
     });
 
-    // .. let each data preview open the complete message in an overlay ..
-    $(document).on('click', '.audit-log-preview-link', function(event) {
-        event.preventDefault();
-
-        var eventId = parseInt($(this).attr('data-id'), 10);
-        var cid = $(this).closest('tr').find('.audit-log-cid-link').attr('data-cid');
-
-        $.fn.zato.audit_log.openMessageOverlay(eventId, cid);
-    });
-
-    // .. and let each CID do the same.
+    // .. and let each CID open the complete message of its event in an overlay.
     $(document).on('click', '.audit-log-cid-link', function(event) {
         event.preventDefault();
 
