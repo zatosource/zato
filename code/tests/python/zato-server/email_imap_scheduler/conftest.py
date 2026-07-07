@@ -8,8 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import subprocess
 import sys
 import tempfile
+import time
+from urllib.request import urlopen
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -156,6 +159,55 @@ def imap_test_server() -> 'any_':
     server.start()
     yield server
     server.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def scheduler_process(zato_server:'any_') -> 'any_':
+    """ Makes sure the Rust scheduler binary runs for tests that need real fire events, starting one if none is running.
+    It depends on the server fixture so that it starts only after quickstart wiped the Redis keys.
+    """
+
+    # Perhaps one is already running on this machine, e.g. from a development environment
+    existing = subprocess.run(['pgrep', '-f', '_zato_scheduler'], capture_output=True)
+
+    if existing.returncode == 0:
+        yield None
+        return
+
+    # There is none so we start our own, the same way zato start <scheduler-dir> does it
+    zato_base = os.environ['ZATO_TEST_BASE_DIR']
+    binary = os.path.join(zato_base, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler')
+
+    environment = os.environ.copy()
+    environment.setdefault('Zato_Scheduler_Redis_Host', 'localhost')
+    environment.setdefault('Zato_Scheduler_Redis_Port', '6379')
+    environment.setdefault('Zato_Scheduler_Redis_Password', '')
+    environment.setdefault('Zato_Scheduler_Log_Level', 'info')
+
+    log_file = open('/tmp/zato-imap-scheduler-test-scheduler.log', 'w')
+
+    process = subprocess.Popen([binary], env=environment, stdout=log_file, stderr=subprocess.STDOUT)
+
+    # Wait until the scheduler's HTTP API is up, which means it is also consuming its command stream
+    deadline = time.monotonic() + 30
+
+    while time.monotonic() < deadline:
+        try:
+            with urlopen('http://127.0.0.1:35100/metrics', timeout=1) as response:
+                _ = response.read()
+        except Exception:
+            time.sleep(0.5)
+            continue
+        else:
+            break
+
+    yield process
+
+    process.kill()
+    _ = process.wait()
+    log_file.close()
 
 # ################################################################################################################################
 # ################################################################################################################################

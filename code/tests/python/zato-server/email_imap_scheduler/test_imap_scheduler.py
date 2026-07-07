@@ -591,7 +591,7 @@ def test_dispatch_error_leaves_message_unseen(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_via_real_scheduler_fire(client, imap_test_server):
+def test_dispatch_via_real_scheduler_fire(client, imap_test_server, scheduler_process):
 
     conn_name = _new_conn_name()
     subject = 'Test message via scheduler ' + uuid4().hex[:8]
