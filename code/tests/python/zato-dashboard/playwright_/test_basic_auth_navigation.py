@@ -200,16 +200,19 @@ class TestBasicAuthNavigation:
 
 # ################################################################################################################################
 
-    def test_50_direct_url_without_login(self, logged_in_page:'Page', zato_dashboard:'anydict', playwright_browser:'object') -> 'None':
-        """ In a fresh browser context (not logged in), navigates to the basic auth page URL.
+    def test_50_direct_url_without_login(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Without session cookies, navigates to the basic auth page URL.
         Verifies the user is redirected to the login page.
         """
 
         base_url = zato_dashboard['dashboard_url']
 
-        # Create a fresh context with no session cookies ..
-        fresh_context = playwright_browser.new_context()
-        fresh_page = fresh_context.new_page()
+        # Drop the session cookies so the tab below is not logged in, a new tab is used
+        # instead of a new context so no additional browser window opens.
+        context = logged_in_page.context
+        context.clear_cookies()
+
+        fresh_page = context.new_page()
 
         try:
             # .. navigate directly to the basic auth page ..
@@ -223,7 +226,6 @@ class TestBasicAuthNavigation:
 
         finally:
             fresh_page.close()
-            fresh_context.close()
 
 # ################################################################################################################################
 

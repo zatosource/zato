@@ -831,6 +831,13 @@ class InvokeChannel(AdminService):
             except Exception:
                 pass
 
+        # API key definitions keep a placeholder username in the ODB while the actual
+        # header name is an opaque attribute of the definition, so it is resolved here.
+        if sec_def.sec_type == SEC_DEF_TYPE.APIKEY:
+            opaque = parse_instance_opaque_attr(sec_def)
+            header = opaque.get('header') or self.server.api_key_header
+            username = header
+
         return {
             'sec_type': sec_def.sec_type,
             'username': username,
