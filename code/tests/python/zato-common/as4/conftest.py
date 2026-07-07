@@ -26,7 +26,7 @@ from lxml import etree
 import pytest
 
 # Zato
-from zato.common.as4.keystore import Keystore, new_keystore
+from zato.common.util.xml_.keystore import Keystore, new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################

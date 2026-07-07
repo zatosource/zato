@@ -20,7 +20,7 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import AS4Exception
-from zato.common.as4.security.xmlsec import decode_base64
+from zato.common.util.xml_.xmlsec import decode_base64
 
 # ################################################################################################################################
 # ################################################################################################################################

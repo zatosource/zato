@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.as4.common import Algorithm, CryptoSuite, Default, MEPBinding, TokenType
+from zato.common.as4.common import CryptoSuite, Default, MEPBinding
+from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.as4.pmode import new_pmode, PMode
 
 # ################################################################################################################################

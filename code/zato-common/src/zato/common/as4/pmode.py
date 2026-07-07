@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # Zato
-from zato.common.as4.common import Algorithm, CryptoSuite, Default, MEP, MEPBinding, TokenType
+from zato.common.as4.common import CryptoSuite, Default, MEP, MEPBinding
+from zato.common.util.xml_.constants import Algorithm, TokenType
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from uuid import uuid4
 
 # lxml
@@ -16,7 +15,8 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import Default, NS, Severity
-from zato.common.as4.mime_ import part_list
+from zato.common.util.xml_.core import qname, utc_timestamp
+from zato.common.util.xml_.mime_ import part_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,23 +48,6 @@ _wsu_id = f'{{{NS.WSU}}}Id'
 _xml_lang = '{http://www.w3.org/XML/1998/namespace}lang'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def qname(namespace:'str', tag:'str') -> 'str':
-    """ Returns the fully-qualified lxml tag name for a namespace and local name.
-    """
-    out = f'{{{namespace}}}{tag}'
-    return out
-
-# ################################################################################################################################
-
-def utc_timestamp() -> 'str':
-    """ Returns the current UTC time in the xsd:dateTime format that ebMS3 messages use.
-    """
-    now = datetime.now(timezone.utc)
-    out = now.strftime('%Y-%m-%dT%H:%M:%S.') + f'{now.microsecond // 1000:03d}Z'
-    return out
-
 # ################################################################################################################################
 
 def new_message_id(suffix:'str'='zato') -> 'str':

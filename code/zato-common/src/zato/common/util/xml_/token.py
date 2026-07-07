@@ -11,8 +11,8 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509 import Certificate, load_der_x509_certificate
 
 # Zato
-from zato.common.as4.common import AS4SecurityException, EbMSError
-from zato.common.as4.keystore import certificate_list
+from zato.common.util.xml_.core import XMLSecurityException
+from zato.common.util.xml_.keystore import certificate_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,10 +83,10 @@ def parse_pkipath(data:'bytes') -> 'certificate_list':
     returned leaf first to match how chains are stored in the keystore.
     """
     if not data:
-        raise AS4SecurityException(EbMSError.Failed_Authentication, 'PKIPath token is empty')
+        raise XMLSecurityException('PKIPath token is empty')
 
     if data[0] != _der_sequence_tag:
-        raise AS4SecurityException(EbMSError.Failed_Authentication, 'PKIPath token is not a DER sequence')
+        raise XMLSecurityException('PKIPath token is not a DER sequence')
 
     content_offset, content_length = _read_der_element(data, 0)
     end_offset = content_offset + content_length
@@ -104,7 +104,7 @@ def parse_pkipath(data:'bytes') -> 'certificate_list':
         certificates.append(certificate)
 
     if not certificates:
-        raise AS4SecurityException(EbMSError.Failed_Authentication, 'PKIPath token contains no certificates')
+        raise XMLSecurityException('PKIPath token contains no certificates')
 
     # The wire order is root first, the keystore order is leaf first.
     certificates.reverse()

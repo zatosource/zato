@@ -11,7 +11,7 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import NS
-from zato.common.as4.ebms import qname
+from zato.common.util.xml_.core import qname
 from zato.common.as4.sbdh import build_sbdh, parse_sbdh
 
 # ################################################################################################################################

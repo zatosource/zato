@@ -12,8 +12,8 @@ from threading import RLock
 
 # Zato
 from zato.common.as4.inbound import handle as as4_handle
-from zato.common.as4.keystore import load_certificates_pem, load_private_key_pem, new_keystore
 from zato.common.as4.profiles import new_edelivery1_pmode, new_edelivery2_pmode, new_ics2_pmode, new_peppol_pmode
+from zato.common.util.xml_.keystore import load_certificates_pem, load_private_key_pem, new_keystore
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -21,7 +21,7 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from zato.common.as4.inbound import pmode_list
-    from zato.common.as4.keystore import Keystore
+    from zato.common.util.xml_.keystore import Keystore
     from zato.common.typing_ import any_, anytuple
     any_ = any_
     anytuple = anytuple

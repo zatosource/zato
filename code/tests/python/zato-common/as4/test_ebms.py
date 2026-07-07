@@ -15,9 +15,10 @@ from lxml import etree
 # Zato
 from zato.common.as4.common import NS, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_pull_request, build_receipt, build_user_message, \
-    new_message_id, parse_messaging, qname
+    new_message_id, parse_messaging
 from zato.common.as4.outbound import new_part
 from zato.common.as4.pmode import new_pmode
+from zato.common.util.xml_.core import qname
 
 # ################################################################################################################################
 # ################################################################################################################################

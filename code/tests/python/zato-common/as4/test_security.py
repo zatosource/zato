@@ -13,15 +13,17 @@ from lxml import etree
 import pytest
 
 # Zato
-from zato.common.as4.common import Algorithm, AS4SecurityException, CryptoSuite, EbMSError, NS, TokenType
-from zato.common.as4.ebms import build_envelope, build_user_message, new_message_id, qname
-from zato.common.as4.keystore import new_keystore
+from zato.common.as4.common import AS4SecurityException, CryptoSuite, EbMSError, NS
+from zato.common.as4.ebms import build_envelope, build_user_message, new_message_id
 from zato.common.as4.outbound import new_part
 from zato.common.as4.pmode import new_pmode
 from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
-from zato.common.as4.security.token import build_pkipath, parse_pkipath
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
+from zato.common.util.xml_.constants import Algorithm, TokenType
+from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.keystore import new_keystore
+from zato.common.util.xml_.token import build_pkipath, parse_pkipath
 
 # ################################################################################################################################
 # ################################################################################################################################

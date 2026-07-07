@@ -15,7 +15,6 @@ from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.keywrap import aes_key_wrap
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -23,12 +22,14 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import Algorithm, CryptoSuite, NS, TokenType, Transform
-from zato.common.as4.ebms import qname
-from zato.common.as4.mime_ import part_list
+from zato.common.as4.common import CryptoSuite, NS
 from zato.common.as4.security.sign import get_security_header
-from zato.common.as4.security.xmlsec import encode_base64
 from zato.common.typing_ import cast_
+from zato.common.util.xml_.constants import Algorithm, Transform
+from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.mime_ import part_list
+from zato.common.util.xml_.wssec import derive_key_encryption_key
+from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,9 +38,9 @@ if 0:
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
     from cryptography.x509 import Certificate
-    from zato.common.as4.keystore import Keystore
     from zato.common.as4.pmode import SecurityConfig
     from zato.common.typing_ import any_, strlist
+    from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     strlist = strlist
 
@@ -161,17 +162,6 @@ def _add_encrypted_key_rsa(
 
 # ################################################################################################################################
 
-def derive_key_encryption_key(shared_secret:'bytes') -> 'bytes':
-    """ Derives the AES key-wrapping key from an X25519 shared secret with HKDF-SHA256,
-    as the eDelivery 2.0 profile requires.
-    """
-    hkdf = HKDF(algorithm=SHA256(), length=_content_key_size_bytes, salt=None, info=HKDF_Info)
-
-    out = hkdf.derive(shared_secret)
-    return out
-
-# ################################################################################################################################
-
 def _add_encrypted_key_ecdh(
     security:'any_',
     content_key:'bytes',
@@ -190,7 +180,7 @@ def _add_encrypted_key_ecdh(
     shared_secret = ephemeral_key.exchange(recipient_public_key)
 
     # .. derive the key encryption key and wrap the content key with it.
-    key_encryption_key = derive_key_encryption_key(shared_secret)
+    key_encryption_key = derive_key_encryption_key(shared_secret, HKDF_Info)
     wrapped_key = aes_key_wrap(key_encryption_key, content_key)
 
     encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
