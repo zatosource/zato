@@ -1479,14 +1479,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_mcp_channel_exists, \
+        from zato.common.util.channel import ensure_as4_channel_exists, ensure_mcp_channel_exists, \
             ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
+            as4_created = ensure_as4_channel_exists(session, self.cluster_id)
 
-            if openapi_created or mcp_created:
+            if openapi_created or mcp_created or as4_created:
                 session.commit()
 
             if openapi_created:
@@ -1494,6 +1495,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
+
+            if as4_created:
+                logger.info('Created AS4 handler channel')
 
 # ################################################################################################################################
 

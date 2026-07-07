@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+OASIS takes no position regarding the validity or scope of any intellectual property or other rights that might be claimed to pertain to the implementation or use of the technology described in this document or the extent to which any license under such rights might or might not be available; neither does it represent that it has made any effort to identify any such rights. Information on OASIS's procedures with respect to rights in OASIS specifications can be found at the OASIS website. Copies of claims of rights made available for publication and any assurances of licenses to be made available, or the result of an attempt made to obtain a general license or permission for the use of such proprietary rights by implementors or users of this specification, can be obtained from the OASIS Executive Director.
+OASIS invites any interested party to bring to its attention any copyrights, patents or patent applications, or other proprietary rights which may cover technology that may be required to implement this specification. Please address the information to the OASIS Executive Director.
+Copyright © OASIS Open 2002-2006. All Rights Reserved.
+This document and translations of it may be copied and furnished to others, and derivative works that comment on or otherwise explain it or assist in its implementation may be prepared, copied, published and distributed, in whole or in part, without restriction of any kind, provided that the above copyright notice and this paragraph are included on all such copies and derivative works. However, this document itself does not be modified in any way, such as by removing the copyright notice or references to OASIS, except as needed for the purpose of developing OASIS specifications, in which case the procedures for copyrights defined in the OASIS Intellectual Property Rights document must be followed, or as required to translate it into languages other than English.
+The limited permissions granted above are perpetual and will not be revoked by OASIS or its successors or assigns.
+This document and the information contained herein is provided on an “AS IS” basis and OASIS DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+-->
+<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema' 
+		   targetNamespace='http://docs.oasis-open.org/wss/oasis-wss-wssecurity-secext-1.1.xsd'
+		   xmlns:tns='http://docs.oasis-open.org/wss/oasis-wss-wssecurity-secext-1.1.xsd'
+		   xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' 
+		   xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'
+		   xmlns:soap11='http://schemas.xmlsoap.org/soap/envelope/' 
+		   xmlns:soap12='http://www.w3.org/2003/05/soap-envelope' 
+		   >
+  <xs:import namespace='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' schemaLocation='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' />
+  <xs:import namespace='http://www.w3.org/2001/04/xmlenc#' schemaLocation='http://www.w3.org/TR/2002/REC-xmlenc-core-20021210/xenc-schema.xsd' />
+  <xs:import namespace='http://schemas.xmlsoap.org/soap/envelope/' schemaLocation='http://schemas.xmlsoap.org/soap/envelope/' />
+  <xs:import namespace='http://www.w3.org/2003/05/soap-envelope' schemaLocation='http://www.w3.org/2003/05/soap-envelope/' />
+  
+  <xs:element name='SignatureConfirmation' type='tns:SignatureConfirmationType' />
+  <xs:complexType name='SignatureConfirmationType' >
+	<xs:attribute ref='wsu:Id' use='optional' />
+	<xs:attribute name='Value' type='xs:base64Binary' use='required' />
+  </xs:complexType>
+
+  <xs:element name='EncryptedHeader' type='tns:EncryptedHeaderType' />
+  <xs:complexType name='EncryptedHeaderType' >
+	<xs:sequence>
+	  <xs:element ref='xenc:EncryptedData' />
+	</xs:sequence>
+	<xs:attribute ref='wsu:Id' use='optional' />
+	<xs:attribute ref='soap11:mustUnderstand' use='optional' />
+	<xs:attribute ref='soap11:actor' use='optional' />
+	<xs:attribute ref='soap12:mustUnderstand' use='optional' />
+	<xs:attribute ref='soap12:role' use='optional' />
+	<xs:attribute ref='soap12:relay' use='optional' />
+  </xs:complexType>
+
+  <xs:element name='Salt' type='xs:base64Binary' />
+  <xs:element name='Iteration' type='xs:unsignedInt' />
+
+  <xs:attribute name='TokenType' type='xs:anyURI' />
+</xs:schema>
