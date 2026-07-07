@@ -48,8 +48,9 @@ $.fn.zato.audit_log.renderRow = function(row, isCIDPage) {
 
     var html = '<tr>';
 
-    // The event time always comes first ..
-    html += renderCell(row.event_time_iso);
+    // The event time always comes first, shown in the browser's timezone and locale format ..
+    var eventTime = new Date(row.event_time_iso);
+    html += renderCell(eventTime.toLocaleString());
 
     // .. each CID links to the cross-source page for that CID ..
     if (row.cid === '') {
@@ -67,7 +68,6 @@ $.fn.zato.audit_log.renderRow = function(row, isCIDPage) {
     html += renderCell(row.event_type);
     html += renderCell(row.msg_id);
     html += renderCell(row.endpoint);
-    html += renderCell(row.server_name);
 
     // .. the size is right-aligned like all numeric columns ..
     html += '<td style="text-align:right">' + row.size + '</td>';
@@ -92,7 +92,7 @@ $.fn.zato.audit_log.renderPage = function($body, rows) {
 
     // The table shows a placeholder row when there are no events ..
     if (rows.length === 0) {
-        var columnCount = isCIDPage ? 9 : 8;
+        var columnCount = isCIDPage ? 8 : 7;
         $body.html('<tr><td colspan="' + columnCount + '">No events found</td></tr>');
         return;
     }
