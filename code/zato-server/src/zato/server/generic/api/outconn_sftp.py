@@ -96,7 +96,9 @@ class SFTPClient:
             password = ''
         self.password = password # type: str
 
-        # An optional path to a private key file - when it is empty, system-level keys are used
+        # An optional name of an environment variable that points to a private key file on disk -
+        # when it is empty, system-level keys are used. The variable is resolved on each command
+        # rather than here so a misconfigured connection can still be created and edited.
         self.private_key = self.config.private_key # type: str
 
         # Whether the remote host key must already be known or whether keys of new hosts are accepted
@@ -161,14 +163,21 @@ class SFTPClient:
         else:
             args.append(_host_key_checking_accept_new)
 
-        # A private key is optional - when it is given, only that identity is offered to the server
-        if self.private_key:
-            args.append('-i')
-            args.append(self.private_key)
-            args.append('-o')
-            args.append('IdentitiesOnly=yes')
-
         return args
+
+# ################################################################################################################################
+
+    def _resolve_private_key(self) -> 'str':
+        """ Turns the private key environment variable into a path to a key file on disk.
+        The variable comes from the outside world, which is why an explicit check is needed here.
+        """
+        out = os.environ.get(self.private_key)
+
+        if out is None:
+            raise Exception('Environment variable `{}` with a path to the private key of `{}` is not set'.format(
+                self.private_key, self.name))
+
+        return out
 
 # ################################################################################################################################
 
@@ -216,6 +225,16 @@ class SFTPClient:
         # Now, the base arguments shared by all the invocations
         args.extend(self.base_args)
 
+        # A private key is optional - when it is given, only that identity is offered to the server.
+        # The environment variable is resolved here, on each command, so that a connection whose
+        # variable is missing fails with a clear error when it is used, not when it is created.
+        if self.private_key:
+            private_key_path = self._resolve_private_key()
+            args.append('-i')
+            args.append(private_key_path)
+            args.append('-o')
+            args.append('IdentitiesOnly=yes')
+
         # Logging is always available but may map to an empty string
         log_level_mapped = log_level_map[log_level]
         if log_level_mapped:
@@ -246,22 +265,23 @@ class SFTPClient:
 
         logger.info('Executing cid:`%s` (%s; %s; %s), data:`%s`', cid, self.id, self.name, self.command_no, data)
 
-        # Build the full command line for this invocation
-        command = self._build_command(log_level)
-
         # Each command must be on its own line and the last one must end with a newline for the binary to run it
         if not data.endswith('\n'):
             data += '\n'
 
         # Our response to produce
         out = SFTPOutput(cid, self.command_no)
-        out.command = command
 
         # Paths to askpass-related files, if any are needed
         password_path = ''
         helper_path = ''
 
         try:
+            # Build the full command line for this invocation - this is inside the try block
+            # because resolving the private key environment variable may raise an exception.
+            command = self._build_command(log_level)
+            out.command = command
+
             # With a password in use, the binary needs an askpass helper to read it from ..
             if self.password:
 

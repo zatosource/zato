@@ -51,6 +51,11 @@ _Zato_Bin  = os.path.join(_Zato_Base, 'code', 'bin', 'zato')
 
 _Password = 'test.dashboard.' + os.urandom(8).hex()
 
+# The server process gets its environment once, at start, which is why the variable
+# with the path to an SFTP private key must be exported here - the key file itself
+# is created later, by tests that need it, under the path the variable points to.
+_SFTP_Key_Env_Name = 'Zato_Test_SFTP_Key_File'
+
 _Process_Kill_Timeout  = 5
 _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
@@ -245,6 +250,10 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
+    # SFTP tests copy a private key to this path after the server has already started
+    sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')
+    server_env[_SFTP_Key_Env_Name] = sftp_key_path
+
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
@@ -332,6 +341,8 @@ def zato_dashboard() -> 'any_':
         'server_process': server_process,
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
+        'sftp_key_env_name': _SFTP_Key_Env_Name,
+        'sftp_key_path': sftp_key_path,
     }
 
     # .. teardown: stop listener ..
