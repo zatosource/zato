@@ -3,6 +3,7 @@
 {% block page_title %}{{ audit_log_title }}{% endblock %}
 
 {% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
 <style nonce="{{ CSP_NONCE }}">
 img.help-icon[id=""] { display: none; }
 
@@ -36,15 +37,15 @@ img.help-icon[id=""] { display: none; }
 {% block detail_page_class %}detail-page-audit-log{% endblock %}
 
 {% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.audit_log.init({
         poll_url: '{{ poll_url }}',
         source: '{{ source }}',
-        object_name: '{{ object_name }}',
-        cid: '{{ cid }}',
-        is_cid_page: {{ is_cid_page|yesno:"true,false" }}
+        object_name: '{{ object_name }}'
     });
 });
 </script>
@@ -70,9 +71,6 @@ $(document).ready(function() {
             <tr>
                 <th>Time</th>
                 <th>CID</th>
-                {% if is_cid_page %}
-                <th>Source</th>
-                {% endif %}
                 <th>Event</th>
                 <th>Message id</th>
                 <th>Endpoint</th>
