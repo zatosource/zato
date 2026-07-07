@@ -15,8 +15,8 @@ from django.http import HttpResponse, HttpResponseServerError
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.email.imap import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
-     Index as _Index, method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, get_js_dt_format, \
+     id_only_service, Index as _Index, method_allowed
 from zato.common.api import EMAIL
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -44,15 +44,18 @@ class Index(_Index):
     output_repeated = True
 
     def handle(self):
-        return {
+        out = {
             'show_search_form': True,
             'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
             'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
             'default_filter_criteria': EMAIL.DEFAULT.FILTER_CRITERIA,
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(req=self.req),
+            'edit_form': EditForm(prefix='edit', req=self.req),
             'change_password_form': ChangePasswordForm()
         }
+        out.update(get_js_dt_format(self.req.zato.user_profile))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

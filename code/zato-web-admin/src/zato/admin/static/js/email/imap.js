@@ -25,6 +25,18 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
     });
+
+    // Attach date-time pickers to the scheduler start date fields in both popups
+    var picker_ids = ['#id_scheduler_start_date', '#id_edit-scheduler_start_date'];
+    $.each(picker_ids, function(ignored, picker_id) {
+        $(picker_id).datetimepicker(
+            {
+                'dateFormat':$('#js_date_format').val(),
+                'timeFormat':$('#js_time_format').val(),
+                'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
+            }
+        );
+    });
 })
 
 
