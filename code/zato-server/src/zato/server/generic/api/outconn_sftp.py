@@ -38,16 +38,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# One megabyte is eight thousand kilobits
-_mb_to_kbit = 8000
-
-# ################################################################################################################################
-
-ip_type_map = {
-    SFTP.IP_TYPE.IPV4.id: '-4',
-    SFTP.IP_TYPE.IPV6.id: '-6',
-}
-
 log_level_map = {
     0: '',
     1: '-v',
@@ -56,33 +46,26 @@ log_level_map = {
     4: '-vvvv',
 }
 
+# What to tell the binary about host keys - a server process has no TTY to answer prompts,
+# which is why the two modes are either full strictness or accepting keys of new hosts.
+_host_key_checking_strict = 'StrictHostKeyChecking=yes'
+_host_key_checking_accept_new = 'StrictHostKeyChecking=accept-new'
+
 # ################################################################################################################################
 
 # Default values applied when a configuration key is missing or None
 outconn_sftp_config_defaults:'dict[str, object]' = {
-    'host': '',
-    'port': SFTP.DEFAULT.PORT,
+    'address': '',
     'username': '',
-    'identity_file': '',
-    'ssh_config_file': '',
-    'log_level': 0,
-    'sftp_command': SFTP.DEFAULT.COMMAND_SFTP,
-    'ping_command': SFTP.DEFAULT.COMMAND_PING,
-    'buffer_size': SFTP.DEFAULT.BUFFER_SIZE,
-    'bandwidth_limit': SFTP.DEFAULT.BANDWIDTH_LIMIT,
-    'force_ip_type': '',
-    'should_flush': False,
-    'should_preserve_meta': True,
-    'is_compression_enabled': False,
-    'ssh_options': '',
-    'default_directory': '',
+    'private_key': '',
+    'strict_host_key_checking': True,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
-outconn_sftp_int_config_keys = ('port', 'log_level', 'buffer_size')
+outconn_sftp_int_config_keys = ()
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_sftp_bool_config_keys = ('should_flush', 'should_preserve_meta', 'is_compression_enabled')
+outconn_sftp_bool_config_keys = ('strict_host_key_checking',)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,23 +81,14 @@ class SFTPClient:
         # How many times .execute has been called
         self.command_no = 0
 
-        # Reject unknown IP types
-        if self.config.force_ip_type:
-            if not SFTP.IP_TYPE().is_valid(self.config.force_ip_type):
-                raise Exception('Unknown IP type `{!r}`'.format(self.config.force_ip_type))
-
-        # Reject unknown logging levels
-        if self.config.log_level:
-            if self.config.log_level not in log_level_map:
-                raise Exception('Unknown log level `{!r}`'.format(self.config.log_level))
-
         self.id = self.config.id           # type: int
         self.name = self.config.name       # type: str
         self.is_active = self.config.is_active # type: bool
 
-        self.host = self.config.host         # type: str
-        self.port = self.config.port         # type: int
         self.username = self.config.username # type: str
+
+        # The address is a single field that may include a port, e.g. example.com or example.com:22022
+        self.host, self.port = self._parse_address(self.config.address)
 
         # The connection's password - it is optional because key-based authentication may be in use instead
         password = self.config.secret
@@ -122,30 +96,17 @@ class SFTPClient:
             password = ''
         self.password = password # type: str
 
-        self.sftp_command = self.config.sftp_command # type: str
-        self.ping_command = self.config.ping_command # type: str
+        # An optional path to a private key file - when it is empty, system-level keys are used
+        self.private_key = self.config.private_key # type: str
 
-        self.identity_file = self.config.identity_file     # type: str
-        self.ssh_config_file = self.config.ssh_config_file # type: str
-
-        self.log_level = self.config.log_level     # type: int
-        self.should_flush = self.config.should_flush # type: bool
-        self.buffer_size = self.config.buffer_size # type: int
-
-        self.ssh_options = self.config.ssh_options     # type: str
-        self.force_ip_type = self.config.force_ip_type # type: str
-
-        self.should_preserve_meta = self.config.should_preserve_meta         # type: bool
-        self.is_compression_enabled = self.config.is_compression_enabled     # type: bool
-
-        # SFTP expects kilobits instead of megabytes
-        self.bandwidth_limit = int(float(self.config.bandwidth_limit) * _mb_to_kbit) # type: int
+        # Whether the remote host key must already be known or whether keys of new hosts are accepted
+        self.strict_host_key_checking = self.config.strict_host_key_checking # type: bool
 
         # Added for API completeness
         self.is_connected = True
 
         # The binary to invoke - it may be a name or a full path
-        self.base_binary = shlex_split(self.sftp_command)
+        self.base_binary = shlex_split(SFTP.DEFAULT.COMMAND_SFTP)
 
         # The reusable list of arguments that every invocation of the binary receives
         self.base_args = self._get_base_args()
@@ -153,6 +114,24 @@ class SFTPClient:
         # The facade through which the sftp binary is invoked in a subprocess
         self.commands = CommandsFacade()
         self.commands.init(server)
+
+# ################################################################################################################################
+
+    def _parse_address(self, address:'str') -> 'tuple[str, int]':
+        """ Splits an address of the form host or host:port into its parts, with a default port of 22.
+        """
+
+        # The port, if given at all, follows the last colon ..
+        if ':' in address:
+            host, _, port = address.rpartition(':')
+            port = int(port)
+
+        # .. otherwise, the whole address is the host and the port is the default one.
+        else:
+            host = address
+            port = SFTP.DEFAULT.PORT
+
+        return host, port
 
 # ################################################################################################################################
 
@@ -165,51 +144,29 @@ class SFTPClient:
 
         # Buffer size is always available
         args.append('-B')
-        args.append(str(self.buffer_size))
+        args.append(str(SFTP.DEFAULT.BUFFER_SIZE))
 
-        # Bandwidth limit is always available
-        args.append('-l')
-        args.append(str(self.bandwidth_limit))
+        # File and directory metadata is always preserved
+        args.append('-p')
 
-        # Preserving file and directory metadata is optional
-        if self.should_preserve_meta:
-            args.append('-p')
+        # Port is always available - it either came with the address or it is the default one
+        args.append('-P')
+        args.append(str(self.port))
 
-        # Immediate flushing is optional
-        if self.should_flush:
-            args.append('-f')
+        # With strict checking on, the remote host key must already be in known_hosts,
+        # otherwise keys of previously unknown hosts are accepted and recorded on first connection.
+        args.append('-o')
+        if self.strict_host_key_checking:
+            args.append(_host_key_checking_strict)
+        else:
+            args.append(_host_key_checking_accept_new)
 
-        # Compression is optional
-        if self.is_compression_enabled:
-            args.append('-C')
-
-        # Forcing a particular IP version is optional
-        if self.force_ip_type:
-            args.append(ip_type_map[self.force_ip_type])
-
-        # Port is optional
-        if self.port:
-            args.append('-P')
-            args.append(str(self.port))
-
-        # Identity file is optional - when it is given, only that identity is offered to the server
-        if self.identity_file:
+        # A private key is optional - when it is given, only that identity is offered to the server
+        if self.private_key:
             args.append('-i')
-            args.append(self.identity_file)
+            args.append(self.private_key)
             args.append('-o')
             args.append('IdentitiesOnly=yes')
-
-        # SSH config file is optional
-        if self.ssh_config_file:
-            args.append('-F')
-            args.append(self.ssh_config_file)
-
-        # Additional SSH options are optional, given as one option per line
-        for option in self.ssh_options.splitlines():
-            option = option.strip()
-            if option:
-                args.append('-o')
-                args.append(option)
 
         return args
 
@@ -368,7 +325,7 @@ class SFTPClient:
     def ping(self) -> 'SFTPOutput':
         cid = 'ping-{}'.format(new_cid())
 
-        out = self.execute(cid, self.ping_command)
+        out = self.execute(cid, SFTP.DEFAULT.COMMAND_PING)
 
         return out
 
@@ -380,7 +337,7 @@ class OutconnSFTPWrapper(Wrapper):
     """
     def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config.parent = self
-        config.auth_url = '{}:{}'.format(config.host, config.port)
+        config.auth_url = config.address
         super(OutconnSFTPWrapper, self).__init__(config, 'outgoing SFTP', server)
 
 # ################################################################################################################################

@@ -19,39 +19,24 @@ from zato.common.api import SFTP
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    log_level = forms.ChoiceField(widget=forms.Select())
 
-    host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}))
-    port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SFTP.DEFAULT.PORT)
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    identity_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    ssh_config_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    secret = forms.CharField(required=False, strip=False, widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
-    sftp_command = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}), initial=SFTP.DEFAULT.COMMAND_SFTP)
-    ping_command = forms.CharField(widget=forms.TextInput(attrs={'style':'width:37%'}), initial=SFTP.DEFAULT.COMMAND_PING)
-
-    buffer_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SFTP.DEFAULT.BUFFER_SIZE)
-    is_compression_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    bandwidth_limit = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=SFTP.DEFAULT.BANDWIDTH_LIMIT)
-
-    force_ip_type = forms.ChoiceField(widget=forms.Select())
-    should_flush = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    should_preserve_meta = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-
-    default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    ssh_options = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+    private_key = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
-        add_select(self, 'log_level', SFTP.LOG_LEVEL(), needs_initial_select=False)
-        add_select(self, 'force_ip_type', SFTP.IP_TYPE())
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

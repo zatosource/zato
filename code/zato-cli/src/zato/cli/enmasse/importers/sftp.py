@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
-from zato.common.api import GENERIC, SFTP
+from zato.common.api import GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,30 +34,17 @@ class SFTPImporter(GenericConnectionImporter):
         'is_outgoing': True,
         'pool_size': 1,
 
-        # These two are columns on the ODB model rather than opaque attributes
-        'port': SFTP.DEFAULT.PORT,
+        # This is a column on the ODB model rather than an opaque attribute
         'username': '',
     }
 
     connection_extra_field_defaults = {
-        'host': '',
-        'identity_file': '',
-        'ssh_config_file': '',
-        'log_level': 0,
-        'sftp_command': SFTP.DEFAULT.COMMAND_SFTP,
-        'ping_command': SFTP.DEFAULT.COMMAND_PING,
-        'buffer_size': SFTP.DEFAULT.BUFFER_SIZE,
-        'bandwidth_limit': SFTP.DEFAULT.BANDWIDTH_LIMIT,
-        'force_ip_type': '',
-        'should_flush': False,
-        'should_preserve_meta': True,
-        'is_compression_enabled': False,
-        'ssh_options': '',
-        'default_directory': '',
+        'private_key': '',
+        'strict_host_key_checking': True,
     }
 
     connection_secret_keys = ['password', 'secret']
-    connection_required_attrs = ['name', 'host']
+    connection_required_attrs = ['name', 'address']
 
 # ################################################################################################################################
 
@@ -66,11 +53,8 @@ class SFTPImporter(GenericConnectionImporter):
         # Let the base class update the opaque attributes first ..
         connection = super().update_definition(connection_def, session)
 
-        # .. and then update the two fields that are columns on the ODB model
-        # .. rather than opaque attributes, but only if they are actually given on input.
-        if 'port' in connection_def:
-            connection.port = connection_def['port']
-
+        # .. and then update the field that is a column on the ODB model
+        # .. rather than an opaque attribute, but only if it is actually given on input.
         if 'username' in connection_def:
             connection.username = connection_def['username']
 

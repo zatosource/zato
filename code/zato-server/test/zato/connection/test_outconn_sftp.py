@@ -28,6 +28,8 @@ from zato.server.generic.api.outconn_sftp import SFTPClient
 if 0:
     from zato.common.ext.bunch import Bunch
     from zato.common.sftp import SFTPOutput
+    from zato.common.typing_ import any_
+    any_ = any_
     SFTPOutput = SFTPOutput
 
 # ################################################################################################################################
@@ -100,42 +102,45 @@ class OutconnSFTPTestCase(TestCase):
         # With a password in use, we authenticate with the encrypted key whose passphrase
         # is the connection's password, going through the askpass helper.
         if use_password:
-            identity_file = self.server.client_key_encrypted_path
+            private_key = self.server.client_key_encrypted_path
             secret = self.server.password
         else:
-            identity_file = self.server.client_key_path
+            private_key = self.server.client_key_path
             secret = ''
 
         config = bunchify({
             'id': 1,
             'name': conn_name,
             'is_active': True,
-            'host': self.server.host,
-            'port': self.server.port,
+            'address': '{}:{}'.format(self.server.host, self.server.port),
             'username': self.server.username,
             'secret': secret,
-            'sftp_command': 'sftp',
-            'ping_command': 'ls .',
-            'identity_file': identity_file,
-            'ssh_config_file': '',
-            'log_level': 0,
-            'should_flush': False,
-            'buffer_size': 32768,
-            'ssh_options': self.server.ssh_options,
-            'force_ip_type': '',
-            'should_preserve_meta': True,
-            'is_compression_enabled': False,
-            'bandwidth_limit': 10,
+            'private_key': private_key,
+
+            # The test server's host key is freshly generated, which means it cannot be in known_hosts yet
+            'strict_host_key_checking': False,
         })
 
         return config
 
 # ################################################################################################################################
 
+    def make_client(self, config:'Bunch') -> 'SFTPClient':
+
+        client = SFTPClient(config, cast_('any_', None))
+
+        # Keep the throwaway host keys of test servers out of the user's known_hosts file
+        client.base_args.append('-o')
+        client.base_args.append('UserKnownHostsFile=/dev/null')
+
+        return client
+
+# ################################################################################################################################
+
     def get_client(self, conn_name:'str', *, use_password:'bool'=False) -> 'SFTPClient':
 
         config = self.get_config(conn_name, use_password=use_password)
-        client = SFTPClient(config, cast_('any_', None))
+        client = self.make_client(config)
 
         return client
 
@@ -226,9 +231,9 @@ class OutconnSFTPTestCase(TestCase):
         self.server.generate_key(rejected_key_path)
 
         config = self.get_config('test_wrong_key_is_rejected')
-        config.identity_file = rejected_key_path
+        config.private_key = rejected_key_path
 
-        client = SFTPClient(config, cast_('any_', None))
+        client = self.make_client(config)
         out = client.ping()
 
         self.assertFalse(out.is_ok)
@@ -447,9 +452,9 @@ class OutconnSFTPTestCase(TestCase):
         config = self.get_config('test_bad_host_is_reported')
 
         # Nothing listens on this port, so the connection attempt must fail
-        config.port = get_free_port()
+        config.address = '{}:{}'.format(self.server.host, get_free_port())
 
-        client = SFTPClient(config, cast_('any_', None))
+        client = self.make_client(config)
         out = client.ping()
 
         self.assertFalse(out.is_ok)

@@ -39,10 +39,19 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Letters from three alphabets - one of the connections below uses them all in its name
+# to prove the round trip through YAML and the ODB does not corrupt Unicode.
+Dutch_Letters = 'ÁÉÍÓÚË'
+Greek_Letters = 'ΑΒΓΔΕΖ'
+Korean_Letters = 'ㄱㄴㄷㄹㅁㅂ'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
     Env_Key_Should_Test = 'Zato_Test_SFTP'
     Key_Conn_Name = 'enmasse.sftp.key.1'
-    Password_Conn_Name = 'enmasse.sftp.password.1'
+    Password_Conn_Name = 'enmasse.sftp.password.' + Dutch_Letters + '.' + Greek_Letters + '.' + Korean_Letters + '.1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +90,7 @@ class TestEnmasseSFTPFromYAML(TestCase):
         self.server_path = default_server_base_dir
 
         # The YAML configuration with two connections - one key-based and one password-based
-        yaml_data = yaml.safe_dump(self.get_yaml_dict())
+        yaml_data = yaml.safe_dump(self.get_yaml_dict(), allow_unicode=True)
 
         # Create a temporary file with the configuration
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
@@ -108,28 +117,36 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
 # ################################################################################################################################
 
+    def get_address(self) -> 'str':
+
+        out = '{}:{}'.format(self.sftp_server.host, self.sftp_server.port)
+
+        return out
+
+# ################################################################################################################################
+
     def get_yaml_dict(self) -> 'stranydict':
 
         # A connection that authenticates with a plain key ..
         key_based = {
             'name': ModuleCtx.Key_Conn_Name,
-            'host': self.sftp_server.host,
-            'port': self.sftp_server.port,
+            'address': self.get_address(),
             'username': self.sftp_server.username,
-            'identity_file': self.sftp_server.client_key_path,
-            'ssh_options': self.sftp_server.ssh_options,
+            'private_key': self.sftp_server.client_key_path,
+
+            # The test server's host key is freshly generated, which means it cannot be in known_hosts yet
+            'strict_host_key_checking': False,
         }
 
-        # .. and one that authenticates with an encrypted key whose passphrase
-        # .. is the connection's password, which exercises the askpass path.
+        # .. and one, with a Unicode name, that authenticates with an encrypted key
+        # .. whose passphrase is the connection's password, which exercises the askpass path.
         password_based = {
             'name': ModuleCtx.Password_Conn_Name,
-            'host': self.sftp_server.host,
-            'port': self.sftp_server.port,
+            'address': self.get_address(),
             'username': self.sftp_server.username,
-            'identity_file': self.sftp_server.client_key_encrypted_path,
+            'private_key': self.sftp_server.client_key_encrypted_path,
             'password': self.sftp_server.password,
-            'ssh_options': self.sftp_server.ssh_options,
+            'strict_host_key_checking': False,
         }
 
         out = {'sftp': [key_based, password_based]}
@@ -153,32 +170,25 @@ class TestEnmasseSFTPFromYAML(TestCase):
         """ Builds an SFTPClient out of what was actually stored in the database for the input connection.
         """
 
-        # All the SFTP-specific options live in the instance's opaque attributes
+        # The private key and host key checking mode live in the instance's opaque attributes
         opaque = parse_instance_opaque_attr(instance)
 
         config = bunchify({
             'id': instance.id,
             'name': instance.name,
             'is_active': True,
-            'host': opaque.host,
-            'port': instance.port,
+            'address': instance.address,
             'username': instance.username,
             'secret': instance.secret,
-            'sftp_command': opaque.sftp_command,
-            'ping_command': opaque.ping_command,
-            'identity_file': opaque.identity_file,
-            'ssh_config_file': opaque.ssh_config_file,
-            'log_level': opaque.log_level,
-            'should_flush': opaque.should_flush,
-            'buffer_size': opaque.buffer_size,
-            'ssh_options': opaque.ssh_options,
-            'force_ip_type': opaque.force_ip_type,
-            'should_preserve_meta': opaque.should_preserve_meta,
-            'is_compression_enabled': opaque.is_compression_enabled,
-            'bandwidth_limit': opaque.bandwidth_limit,
+            'private_key': opaque.private_key,
+            'strict_host_key_checking': opaque.strict_host_key_checking,
         })
 
         client = SFTPClient(config, cast_('any_', None))
+
+        # Keep the throwaway host keys of test servers out of the user's known_hosts file
+        client.base_args.append('-o')
+        client.base_args.append('UserKnownHostsFile=/dev/null')
 
         return client
 
@@ -207,12 +217,13 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         opaque = parse_instance_opaque_attr(key_based)
 
-        self.assertEqual(opaque.host, self.sftp_server.host)
-        self.assertEqual(key_based.port, self.sftp_server.port)
+        self.assertEqual(key_based.address, self.get_address())
         self.assertEqual(key_based.username, self.sftp_server.username)
-        self.assertEqual(opaque.identity_file, self.sftp_server.client_key_path)
+        self.assertEqual(opaque.private_key, self.sftp_server.client_key_path)
+        self.assertFalse(opaque.strict_host_key_checking)
 
-        # Verify the password-based connection stored its password as the secret
+        # Verify the password-based connection, the Unicode name included,
+        # stored its password as the secret.
         password_based = self.session.query(GenericConn).filter_by(
             name=ModuleCtx.Password_Conn_Name,
             type_=GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
@@ -266,14 +277,13 @@ class TestEnmasseSFTPFromYAML(TestCase):
         instance = self.sftp_importer.create_definition(sftp_def, self.session)
         self.session.commit()
 
-        opaque = parse_instance_opaque_attr(instance)
-        self.assertEqual(opaque.host, self.sftp_server.host)
+        self.assertEqual(instance.address, self.get_address())
 
         # Prepare an update definition based on the existing one
         update_def = {
             'name': sftp_def['name'],
             'id': instance.id,
-            'host': 'sftp.updated.example.com',
+            'address': 'sftp.updated.example.com:22022',
             'username': 'updated-username',
         }
 
@@ -282,10 +292,12 @@ class TestEnmasseSFTPFromYAML(TestCase):
         self.session.commit()
 
         # Verify the update was applied
-        opaque = parse_instance_opaque_attr(updated_instance)
-
-        self.assertEqual(opaque.host, 'sftp.updated.example.com')
+        self.assertEqual(updated_instance.address, 'sftp.updated.example.com:22022')
         self.assertEqual(updated_instance.username, 'updated-username')
+
+        # The update did not mention host key checking, which means the default of True was applied
+        opaque = parse_instance_opaque_attr(updated_instance)
+        self.assertTrue(opaque.strict_host_key_checking)
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)

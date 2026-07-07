@@ -875,7 +875,6 @@ class SMB:
 class SFTP:
 
     class DEFAULT:
-        BANDWIDTH_LIMIT = 10
         BUFFER_SIZE = 32768
         COMMAND_SFTP = 'sftp'
         COMMAND_PING = 'ls .'
@@ -890,16 +889,6 @@ class SFTP:
 
         def __iter__(self):
             return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
-
-        def is_valid(self, value):
-            return value in (elem.id for elem in self)
-
-    class IP_TYPE:
-        IPV4 = NameId('IPv4', 'ipv4')
-        IPV6 = NameId('IPv6', 'ipv6')
-
-        def __iter__(self):
-            return iter((self.IPV4, self.IPV6))
 
         def is_valid(self, value):
             return value in (elem.id for elem in self)

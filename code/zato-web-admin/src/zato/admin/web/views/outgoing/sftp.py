@@ -18,10 +18,9 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-     method_allowed, ping_connection, slugify
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify, \
+     SKIP_VALUE
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
 
@@ -31,10 +30,8 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-_fields_required = 'name', 'log_level'
-_fields_optional = ('is_active', 'host', 'port', 'username', 'identity_file', 'ssh_config_file', 'buffer_size',
-    'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', 'should_preserve_meta', 'ssh_options',
-    'sftp_command', 'ping_command', 'default_directory')
+_fields_required = ('name',)
+_fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +54,6 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
-            'change_password_form': ChangePasswordForm()
         }
 
 # ################################################################################################################################
@@ -67,7 +63,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = _fields_required
-    input_optional = _fields_optional
+    input_optional = _fields_optional + ('secret',)
     output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -76,6 +72,20 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
         initial_input_dict['pool_size'] = 1
+
+    def pre_process_item(self, name, value):
+
+        # An empty password on input means the current one is to be kept,
+        # which is why the field cannot be sent to the backend at all.
+        if name == 'secret':
+            if not value:
+                return SKIP_VALUE
+
+        # The checkbox arrives as 'on' when it is checked and as an empty value otherwise
+        elif name == 'strict_host_key_checking':
+            value = value == 'on'
+
+        return value
 
     def post_process_return_data(self, return_data):
         return_data['name_slug'] = slugify(return_data['name'])
@@ -106,12 +116,6 @@ class Delete(_Delete):
     url_name = 'out-sftp-delete'
     error_message = 'Could not delete outgoing SFTP connection'
     service_name = 'zato.generic.connection.delete'
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
 
 # ################################################################################################################################
 
