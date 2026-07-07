@@ -93,6 +93,11 @@
     letter-spacing: 0.3px;
 }
 
+.zato-highlight-pane-overlay-title-detail {
+    cursor: text;
+    user-select: text;
+}
+
 .zato-highlight-pane-overlay-close-btn {
     background: transparent;
     border: none;

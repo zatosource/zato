@@ -512,8 +512,12 @@ class TestPubSubAuditLog:
         assert len(preview) < len(long_payload), \
             f'Expected a truncated preview, got {len(preview)} characters for a {len(long_payload)}-character payload'
 
-        # .. clicking the preview opens the overlay with the complete message ..
-        page.click('.audit-log-preview-link')
+        # .. the preview itself is plain text, not a link ..
+        preview_link = rows[0].query_selector('.audit-log-data-preview a')
+        assert preview_link is None, 'Expected the data preview to be plain text'
+
+        # .. clicking the CID opens the overlay with the complete message ..
+        page.click('a.audit-log-cid-link')
         _ = page.wait_for_selector('#zato-highlight-pane-overlay:not(.hidden)', state='visible', timeout=10000)
 
         # .. the overlay editor holds the payload in full, read through the Ace API
@@ -575,6 +579,26 @@ class TestPubSubAuditLog:
         overlay_title = page.inner_text('#zato-highlight-pane-overlay .zato-highlight-pane-overlay-title')
         assert cid in overlay_title, f'Expected the CID "{cid}" in the overlay title, got: "{overlay_title}"'
 
+        # .. the CID part of the title can be selected with a double click, e.g. to copy it manually ..
+        page.dblclick('#zato-highlight-pane-overlay .zato-highlight-pane-overlay-title-detail')
+        selected_text = page.evaluate('window.getSelection().toString()')
+        assert selected_text == cid, f'Expected the CID "{cid}" to be selected, got: "{selected_text}"'
+
+        # .. there is one button copying the CID and one copying the whole message,
+        # .. read via textContent because CSS renders the labels uppercased ..
+        copy_cid_label = page.text_content('#audit-log-copy-cid')
+        assert copy_cid_label == 'Copy CID', f'Expected a "Copy CID" button, got: "{copy_cid_label}"'
+
+        copy_message_label = page.text_content('#zato-highlight-pane-copy')
+        assert copy_message_label == 'Copy message', f'Expected a "Copy message" button, got: "{copy_message_label}"'
+
+        # .. clicking "Copy CID" puts the CID in the clipboard ..
+        page.context.grant_permissions(['clipboard-read', 'clipboard-write'])
+        page.click('#audit-log-copy-cid')
+
+        clipboard_text = page.evaluate('navigator.clipboard.readText()')
+        assert clipboard_text == cid, f'Expected the CID "{cid}" in the clipboard, got: "{clipboard_text}"'
+
         # .. the overlay editor holds the complete message, read through the Ace API
         # .. because Ace renders only the visible part of the text into the DOM ..
         editor_value = page.evaluate(
@@ -584,6 +608,15 @@ class TestPubSubAuditLog:
             }''')
 
         assert editor_value == payload, f'Expected the complete payload in the overlay, got: "{editor_value}"'
+
+        # .. the JSON payload is highlighted as JSON ..
+        editor_mode = page.evaluate(
+            '''() => {
+                let element = document.querySelector('#zato-highlight-pane-overlay .zato-highlight-pane-editor');
+                return ace.edit(element).session.getMode().$id;
+            }''')
+
+        assert editor_mode == 'ace/mode/json', f'Expected JSON highlighting, got: "{editor_mode}"'
 
         # .. and no JavaScript errors or failed requests happened along the way.
         assert not diagnostics['page_errors'], f'Unexpected page errors:\n{_format_diagnostics(diagnostics)}'

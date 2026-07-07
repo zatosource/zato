@@ -414,6 +414,17 @@
             }
         });
 
+        // Double-clicking the selectable part of the title selects all of it,
+        // so it can be copied manually even though the header itself is a drag handle.
+        _$overlay.on('dblclick', '.zato-highlight-pane-overlay-title-detail', function() {
+            var range = document.createRange();
+            range.selectNodeContents(this);
+
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        });
+
         _make_overlay_draggable(_$overlay);
     }
 
@@ -426,6 +437,7 @@
 
         $header.on('mousedown.zato_highlight_overlay', function(e) {
             if ($(e.target).is('button, input, a')) return;
+            if ($(e.target).closest('.zato-highlight-pane-overlay-title-detail').length) return;
             isDragging = true;
             var rect = $content[0].getBoundingClientRect();
             offsetX = e.clientX - rect.left;
@@ -455,8 +467,18 @@
             _currentPane = null;
         }
 
-        // .. set the title ..
-        _$overlay.find('.zato-highlight-pane-overlay-title').text(config.title);
+        // .. set the title, with an optional selectable detail part after the main text ..
+        var $title = _$overlay.find('.zato-highlight-pane-overlay-title');
+        $title.text(config.title);
+
+        if (config.title_detail) {
+            var detailElement = document.createElement('span');
+            detailElement.className = 'zato-highlight-pane-overlay-title-detail';
+            detailElement.textContent = config.title_detail;
+
+            $title.append(' ');
+            $title.append(detailElement);
+        }
 
         // .. reset position ..
         var $content = _$overlay.find('.zato-highlight-pane-overlay-content');
