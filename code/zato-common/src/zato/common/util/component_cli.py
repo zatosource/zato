@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 import sys
-import os
 from logging import basicConfig, getLogger, INFO
 
 from zato.common.util.updates import Updater, UpdaterConfig

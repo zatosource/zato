@@ -218,16 +218,16 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
 
         # .. fill out the remaining details ..
 
-        if not 'is_active' in job:
+        if 'is_active' not in job:
             request.is_active = is_active
 
-        if not 'job_type' in job:
+        if 'job_type' not in job:
             request.job_type = job_type
 
-        if not 'start_date' in job:
+        if 'start_date' not in job:
             request.start_date = start_date
 
-        if not 'should_ignore_existing' in job:
+        if 'should_ignore_existing' not in job:
             request.should_ignore_existing = should_ignore_existing
 
         # .. now, we can create a new job, ignoring the fact that it may potentially already exist.

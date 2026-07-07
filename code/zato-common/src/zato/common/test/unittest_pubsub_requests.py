@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import http.client as http_client
-import json
 import logging
 import os
 from unittest import TestCase
@@ -183,7 +182,9 @@ class PubSubRESTServerBaseTestCase(TestCase):
                 return data
             else:
                 logger.debug(f'Diagnostics failed with status {response.status_code}: {response.text}')
-                logger.debug(f'Auth used: username={self.auth[0] if self.auth else "None"}, password_len={len(self.auth[1]) if self.auth and len(self.auth) > 1 else 0}')
+                logger.debug(
+                    f'Auth used: username={self.auth[0] if self.auth else "None"}, '
+                    f'password_len={len(self.auth[1]) if self.auth and len(self.auth) > 1 else 0}')
         except Exception as e:
             logger.error(f'Error calling diagnostics: {e}')
             logger.error(f'Auth details: {self.auth}')

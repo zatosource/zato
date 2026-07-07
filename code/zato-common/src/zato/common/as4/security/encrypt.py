@@ -43,6 +43,9 @@ if 0:
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     strlist = strlist
+    Certificate = Certificate
+    RSAPublicKey = RSAPublicKey
+    X25519PublicKey = X25519PublicKey
 
 # ################################################################################################################################
 # ################################################################################################################################

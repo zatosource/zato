@@ -8,19 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from base64 import b64encode
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
-from uuid import uuid4
 
 # Python 2/3 compatibility
 from zato.common.ext.future.utils import iteritems
-from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
@@ -487,7 +484,7 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def get_channel_by_name(self, name, _channel=CONNECTION.CHANNEL):
-        # type: (unicode, unicode) -> dict
+        # type: (str, str) -> dict
         for item in self.channel_data:
             if item['connection'] == _channel:
                 if item['name'] == name:

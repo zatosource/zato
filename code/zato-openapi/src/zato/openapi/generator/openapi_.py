@@ -105,7 +105,9 @@ class OpenAPIGenerator:
                     raise
 
         # If we can't map the input, raise an exception
-        raise TypeConversionError(f'Cannot map service input {service_input["type"]} to OpenAPI schema. Add handling for this input type in _create_request_schema method')
+        raise TypeConversionError(
+            f'Cannot map service input {service_input["type"]} to OpenAPI schema. '
+            'Add handling for this input type in _create_request_schema method')
 
     def _create_response_schema(self, service_output, models):
         """ Create a schema for the response body.
@@ -158,7 +160,9 @@ class OpenAPIGenerator:
                     raise
 
         # If we can't map the output, raise an exception
-        raise TypeConversionError(f'Cannot map service output {service_output["type"]} to OpenAPI schema. Add handling for this output type in _create_response_schema method')
+        raise TypeConversionError(
+            f'Cannot map service output {service_output["type"]} to OpenAPI schema. '
+            'Add handling for this output type in _create_response_schema method')
 
     def generate_openapi(self, scan_results, output_file):
         """ Generate an OpenAPI specification from the scanned services and models.

@@ -39,7 +39,7 @@ Default_Service_Wait_Timeout = 10
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, bool_, strnone
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,7 +116,8 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             security_ids = [row[0] for row in result.fetchall()]
 
             if security_ids:
-                logger.info(f'Found {len(security_ids)} security ID{'s' if len(security_ids) != 1 else ''} in sec_base matching prefixes: {', '.join(prefixes)}') # type: ignore
+                suffix = 's' if len(security_ids) != 1 else ''
+                logger.info(f'Found {len(security_ids)} security ID{suffix} in sec_base matching prefixes: {', '.join(prefixes)}')
 
                 # Delete from sec_base
                 delete_query = f'DELETE FROM sec_base WHERE {where_clause}'
@@ -146,8 +147,11 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                     session.commit()
 
                     if result.rowcount > 0:
-                        logger.info(f'Deleted {result.rowcount} row{"s" if result.rowcount != 1 else ""} from {table_name} with ID{"s" if len(security_ids) != 1 else ""} from sec_base')
-                        logger.debug(f'Deleted security names from {table_name}: {[row[1] for row in session.execute(f"SELECT name FROM {table_name} WHERE id IN ({ids_string})").fetchall()]}')
+                        row_suffix = 's' if result.rowcount != 1 else ''
+                        id_suffix = 's' if len(security_ids) != 1 else ''
+                        logger.info(f'Deleted {result.rowcount} row{row_suffix} from {table_name} with ID{id_suffix} from sec_base')
+                        deleted_names = [row[1] for row in session.execute(f'SELECT name FROM {table_name} WHERE id IN ({ids_string})').fetchall()]
+                        logger.debug(f'Deleted security names from {table_name}: {deleted_names}')
                 except SQLAlchemyError as e:
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
@@ -218,7 +222,8 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 
                 result = session.execute(delete_query)
                 session.commit()
-                logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from job_interval_based linked to jobs matching prefixes: {', '.join(prefixes)}')
+                suffix = 's' if result.rowcount != 1 else ''
+                logger.info(f'Deleted {result.rowcount} row{suffix} from job_interval_based linked to jobs matching prefixes: {', '.join(prefixes)}')
         except SQLAlchemyError as e:
             session.rollback()
             logger.debug(f'Error handling job_interval_based cleanup: {e}')
@@ -253,7 +258,8 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                         # If rows were deleted
                         if result.rowcount > 0:
                             changes_made = True
-                            logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from {table_name} matching prefixes: {', '.join(prefixes)}')
+                            suffix = 's' if result.rowcount != 1 else ''
+                            logger.info(f'Deleted {result.rowcount} row{suffix} from {table_name} matching prefixes: {', '.join(prefixes)}')
                     else:
                         logger.debug(f'Table {table_name} does not have a "name" column, skipping name-based delete.')
 

@@ -12,8 +12,8 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
-from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list
+from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json, WSSecurity
+from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -71,6 +71,10 @@ class SecurityImporter:
         oauth_json = to_json(oauth)
         logger.info('Getting oauth/bearer_token definitions: %s', oauth_json)
         self._process_security_defs(oauth, 'bearer_token', out)
+
+        wss = wss_list(session, cluster_id)
+        logger.info('Getting wss definitions')
+        self._process_security_defs(wss, 'wss', out)
 
         # Filter out specified keys from each security definition
         to_remove = ['cluster_name']
@@ -224,6 +228,21 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
+    def _create_wss(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        auth = WSSecurity(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['username'],
+            security_def.get('password'),
+            cluster
+        )
+
+        set_instance_opaque_attrs(auth, security_def)
+        return auth
+
+# ################################################################################################################################
+
     def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
         name = security_def['name']
         logger.debug('=== Creating bearer_token: name=%s ===', name)
@@ -270,6 +289,8 @@ class SecurityImporter:
             auth = self._create_apikey(security_def, cluster)
         elif sec_type == 'ntlm':
             auth = self._create_ntlm(security_def, cluster)
+        elif sec_type == 'wss':
+            auth = self._create_wss(security_def, cluster)
         elif sec_type == 'bearer_token':
             auth = self._create_bearer_token(security_def, cluster)
         else:
@@ -305,7 +326,8 @@ class SecurityImporter:
             'basic_auth': HTTPBasicAuth,
             'apikey': APIKeySecurity,
             'ntlm': NTLM,
-            'bearer_token': OAuth
+            'bearer_token': OAuth,
+            'wss': WSSecurity
         }
         return class_map[sec_type]
 
@@ -359,7 +381,7 @@ class SecurityImporter:
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} security {noun} from YAML')
 
-        valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey'}
+        valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey', 'wss'}
 
         for item in security_list:
             if item['type'] not in valid_types:

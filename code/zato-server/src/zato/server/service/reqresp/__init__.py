@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 from copy import deepcopy
 
 # Bunch
@@ -64,6 +63,8 @@ if 0:
     IOProcessor = IOProcessor
     EMailAPI = EMailAPI
     FTPStore = FTPStore
+    GraphQLFacade = GraphQLFacade
+    KafkaFacade = KafkaFacade
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
     PoolStore = PoolStore

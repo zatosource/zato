@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
-from sys import exc_info
-from traceback import extract_stack, extract_tb
+from traceback import extract_stack
 from typing import Any
 
 try:
@@ -148,18 +147,18 @@ class Model(BaseModel):
                     if '/opt/' in frame.filename and '/zato/' not in frame.filename:
                         line_len = len(frame.line)
                         msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
-                        msg += f'@dataclass(init=False)\n'
+                        msg += '@dataclass(init=False)\n'
                         msg += f'class {self.__class__.__name__}(Model):\n'
-                        msg += f'  ..\n\n'
+                        msg += '  ..\n\n'
                         msg += f'File "{frame.filename}", line {frame.lineno}, in {frame.name}\n'
                         msg += f'  {frame.line}\n'
                         msg += f'  {"^" * line_len}'
                         break
                 else:
                     msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
-                    msg += f'@dataclass(init=False)\n'
+                    msg += '@dataclass(init=False)\n'
                     msg += f'class {self.__class__.__name__}(Model):\n'
-                    msg += f'  ..'
+                    msg += '  ..'
 
                 raise BackendInvocationError(
                     None,
@@ -567,7 +566,7 @@ class MarshalAPI:
                 _, field_type, union_with = result
 
                 # .. check if this was an optional field.
-                is_required = not (union_with is _None_Type)
+                is_required = union_with is not _None_Type
 
             # Represents the current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)

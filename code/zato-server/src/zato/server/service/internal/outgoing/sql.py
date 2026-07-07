@@ -35,7 +35,7 @@ class _SQLService:
         self.config_dispatcher.publish(params)
 
     def validate_extra(self, cid, extra):
-        if extra and not '=' in extra:
+        if extra and '=' not in extra:
             raise ZatoException(cid,
                 'extra should be a list of key=value parameters, possibly one-element long, instead of `{}`'.format(
                     extra))

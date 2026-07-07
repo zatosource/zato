@@ -511,10 +511,6 @@ class Create(ZatoCommand):
         #
         # 3) servers
         #
-
-        # This is populated below in order for the scheduler to use it.
-        first_server_path = ''
-
         if create_components_other_than_scheduler:
 
             for name in server_names: # type: ignore

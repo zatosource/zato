@@ -17,9 +17,6 @@ from zato.common.typing_ import dictlist, strlist
 # diskcache
 from diskcache import Cache
 
-# PyYAML
-import yaml
-
 # tqdm
 from tqdm import tqdm
 

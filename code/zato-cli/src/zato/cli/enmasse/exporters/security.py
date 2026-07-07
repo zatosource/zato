@@ -11,7 +11,7 @@ import logging
 # Zato
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list
+from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,6 +176,7 @@ class SecurityExporter:
         apikey_defs = apikey_security_list(session, cluster_id)
         ntlm_defs = ntlm_list(session, cluster_id)
         oauth_defs = oauth_list(session, cluster_id)
+        wss_defs = wss_list(session, cluster_id)
 
         # Process basic auth definitions
         if basic_auth_defs:
@@ -203,6 +204,15 @@ class SecurityExporter:
             # Process and get NTLM items
             ntlm_security = self._process_standard_security(ntlm_items, 'ntlm', excluded_names, excluded_prefixes)
             exported_security.extend(ntlm_security)
+
+        # Process WS-Security definitions
+        if wss_defs:
+            wss_items = to_json(wss_defs, return_as_dict=True)
+            logger.info('Processing %d wss definitions', len(wss_items))
+
+            # Process and get wss items
+            wss_security = self._process_standard_security(wss_items, 'wss', excluded_names, excluded_prefixes)
+            exported_security.extend(wss_security)
 
         # Process OAuth bearer token definitions
         if oauth_defs:

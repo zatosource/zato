@@ -32,7 +32,7 @@ def _wait_for_server(host, port, timeout=30):
             conn = HTTPConnection(host, port, timeout=2)
             conn.request('GET', '/zato/ping')
             resp = conn.getresponse()
-            body = resp.read()
+            _ = resp.read()
             conn.close()
             if resp.status == OK:
                 return True

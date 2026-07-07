@@ -151,7 +151,7 @@ class ImportObjects(Service):
             else:
 
                 # .. passwords are optional on input ..
-                if not 'password' in new_item:
+                if 'password' not in new_item:
                     new_item['password'] = self.name + ' ' + cast_('str', CryptoManager.generate_secret(as_str=True))
 
                 new_item['sec_type'] = Sec_Def_Type.BASIC_AUTH

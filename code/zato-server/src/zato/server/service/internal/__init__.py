@@ -12,13 +12,9 @@ from contextlib import closing
 from copy import deepcopy
 from json import loads
 from traceback import format_exc
-
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring
-
 # Zato
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, SECURITY
+from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search

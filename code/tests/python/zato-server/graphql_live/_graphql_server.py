@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import re
 import threading
-from base64 import b64decode
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ################################################################################################################################

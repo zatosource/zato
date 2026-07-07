@@ -29,6 +29,7 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RPCServerInvocationCtx
 
+    callable_ = callable_
     Callable = Callable
     ParallelServer = ParallelServer
     RPCServerInvocationCtx = RPCServerInvocationCtx

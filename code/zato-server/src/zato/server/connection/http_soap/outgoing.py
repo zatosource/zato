@@ -49,7 +49,9 @@ if 0:
     from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
+    callnone = callnone
     ConfigDict = ConfigDict
+    SASession = SASession
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -409,7 +411,7 @@ class BaseHTTPSOAPWrapper:
             self._push_metrics(start_time, 'connection_error')
             msg = f'Connection error: {e}'
             raise BackendInvocationError(cid, msg, needs_msg=True)
-        except Exception as e:
+        except Exception:
             self._push_metrics(start_time, 'error')
             raise
 

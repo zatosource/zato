@@ -221,8 +221,8 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
 
-    order['security'] = 'name', 'is_active', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
-        'data_format', 'extra_fields:list', 'rate_limiting:list',
+    order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'auth_endpoint', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', 'rate_limiting:list',
 
     order['groups'] = 'name', 'is_active', 'members:list',
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',

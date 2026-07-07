@@ -25,7 +25,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, PubSub, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
@@ -1509,7 +1509,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
+        from zato.common.odb.model import PubSubPermission, PubSubSubscription, SecurityBase
 
         with closing(self.odb.session()) as session:
 

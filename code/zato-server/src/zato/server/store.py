@@ -129,7 +129,7 @@ class BaseStore:
         """ Actually deletes a definition. Must be called with self.lock held.
         """
         try:
-            if not name in self.items:
+            if name not in self.items:
                 raise Exception('No such name `{}` among `{}`'.format(name, self.items.keys()))
             self.delete_impl()
         except Exception:

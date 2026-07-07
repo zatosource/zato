@@ -10,17 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import re as stdlib_re
-from datetime import datetime
 from logging import getLogger
-from operator import itemgetter
-from uuid import uuid4
 
 # regex
 from regex import compile as re_compile
 
 # Zato
 from zato.common.ext.bunch import bunchify
-from zato.common.api import HTTP_SOAP, MISC, TRACE1
+from zato.common.api import HTTP_SOAP
 
 http_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 

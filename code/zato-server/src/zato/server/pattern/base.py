@@ -21,6 +21,7 @@ if 0:
     from gevent.lock import RLock
     from zato.server.service import Service
 
+    RLock = RLock
     Service = Service
 
 # ################################################################################################################################

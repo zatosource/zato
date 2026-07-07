@@ -17,6 +17,7 @@ from django.http import FileResponse, Http404, HttpResponseNotModified
 from django.template.response import TemplateResponse
 from django.utils._os import safe_join
 from django.utils.http import http_date, parse_http_date
+from django.views.static import directory_index
 
 # Zato
 from zato.common.util.platform_ import is_windows

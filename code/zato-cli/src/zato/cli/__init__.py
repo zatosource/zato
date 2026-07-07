@@ -332,7 +332,7 @@ class ZatoCommand:
         if address := getattr(args, main_arg_name, None):
 
             # Make sure we have a scheme ..
-            if not '://' in address:
+            if '://' not in address:
                 address = 'https://' + address
 
             # .. parse out the individual components ..

@@ -18,9 +18,6 @@ from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 
-# Bunch
-from zato.common.ext.bunch import Bunch
-
 # Zato
 from zato.common.api import MS_SQL, NotGiven, SECRET_SHADOW, UNITTEST
 from zato.common.exception import Inactive
@@ -30,7 +27,7 @@ from zato.common.util.api import get_component_name, get_engine_url, new_cid, pa
 
 if 0:
     from sqlalchemy.orm import Session as SASession
-    from zato.common.typing_ import any_, callable_, strdict, strdictnone
+    from zato.common.typing_ import any_, anylistnone, commondict, strdict, strdictnone
 
 # ################################################################################################################################
 
@@ -304,7 +301,7 @@ class SQLConnectionPool:
         sa = _get_sa()
 
         if self._is_oracle_db:
-            if not (key := os.environ.get('Zato_License_Key')): # type: ignore
+            if not os.environ.get('Zato_License_Key'):
                 self.logger.warning('Zato license key not found. Oracle DB connections will not be available.')
                 return
 

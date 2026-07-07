@@ -8,11 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import tempfile
 from unittest import TestCase, main
 
 # PyYAML
-import yaml
 
 # Zato
 from zato.openapi.generator.io_scanner import IOScanner, TypeMapper

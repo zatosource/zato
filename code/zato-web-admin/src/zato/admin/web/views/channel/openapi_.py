@@ -72,7 +72,10 @@ def build_openapi_spec(req, cluster_id, channel_name, rest_channel_list):
                     })
                     source_path = None
                     if hasattr(source_info, 'data') and source_info.data:
-                        source_path = source_info.data.get('source_path') if isinstance(source_info.data, dict) else getattr(source_info.data, 'source_path', None)
+                        if isinstance(source_info.data, dict):
+                            source_path = source_info.data.get('source_path')
+                        else:
+                            source_path = getattr(source_info.data, 'source_path', None)
                     security_name = getattr(rest_channel, 'security_name', None) or getattr(rest_channel, 'sec_def', None)
                     services_info.append({
                         'name': rest_channel.service_name,

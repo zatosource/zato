@@ -45,7 +45,7 @@ class CloudMicrosoft365Wrapper(Wrapper):
         try:
             conn = Microsoft365Client(self.config)
             _ = self.client.put_client(conn)
-        except Exception as e:
+        except Exception:
             logger.warning('Caught an exception while adding a Microsoft 365 client (%s); e:`%s`',
                 self.config['name'], format_exc())
 

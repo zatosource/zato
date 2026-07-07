@@ -18,7 +18,7 @@ from .api import (
 
 __all__ = [
     'create_context',
-    'get_metrics_data', 
+    'get_metrics_data',
     'push_start',
     'push_end',
     'incr_global',

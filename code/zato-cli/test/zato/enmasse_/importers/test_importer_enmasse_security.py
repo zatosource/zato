@@ -144,6 +144,35 @@ class TestEnmasseSecurity(TestCase):
 
 # ################################################################################################################################
 
+    def test_wss_creation(self):
+        """ Test the creation of WS-Security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only WS-Security definitions
+        wss_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'wss']
+        self.assertTrue(len(wss_defs) > 0, 'No WS-Security definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.security_importer.sync_security_definitions(wss_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(wss_defs), 'Not all WS-Security definitions were created')
+
+        # Verify each definition was created correctly
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            self.assertEqual(instance.name, 'enmasse.wss.1')
+            self.assertEqual(instance.username, 'enmasse.1')
+            self.assertIsNotNone(instance.password)
+
+            # The mode and its details live in opaque attributes
+            opaque = json.loads(instance.opaque1)
+            self.assertEqual(opaque['mode'], 'username_token')
+            self.assertTrue(opaque['use_digest'])
+
+# ################################################################################################################################
+
     def test_apikey_creation(self):
         """ Test the creation of API key security definitions.
         """
@@ -186,6 +215,7 @@ class TestEnmasseSecurity(TestCase):
         self.assertIn('bearer_token', security_types)
         self.assertIn('ntlm', security_types)
         self.assertIn('apikey', security_types)
+        self.assertIn('wss', security_types)
 
     def test_security_rate_limiting(self) -> 'None':
         """ Test that rate_limiting is correctly stored in opaque1 for security definitions.

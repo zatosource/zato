@@ -23,6 +23,8 @@ if 0:
     from zato.server.connection.server.rpc.config import ConfigSource, RPCServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker
 
+    any_ = any_
+    stranydict = stranydict
     ConfigSource = ConfigSource
     ParallelServer = ParallelServer
     PerPIDResponse = PerPIDResponse

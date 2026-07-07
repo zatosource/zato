@@ -43,7 +43,10 @@ class ChannelImporter:
         out = {}
         logger.info('Retrieving REST channels from database for cluster_id=%s', cluster_id)
 
-        query = session.query(HTTPSOAP).filter(HTTPSOAP.cluster_id==cluster_id).filter(HTTPSOAP.connection==CONNECTION.CHANNEL).filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
+        query = session.query(HTTPSOAP).\
+            filter(HTTPSOAP.cluster_id==cluster_id).\
+            filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
+            filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
         channels = to_json(query, return_as_dict=True)
         logger.info('Processing %d REST channels', len(channels))
 

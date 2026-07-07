@@ -71,7 +71,7 @@ try:
     revision = revision.decode('utf8')
     revision = revision.strip()
 
-except Exception as e:
+except Exception:
 
     if is_windows:
         suffix = 'windows'

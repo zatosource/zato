@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from http import HTTPStatus
-from operator import itemgetter
 from traceback import format_exc
 
 # Django

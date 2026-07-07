@@ -358,7 +358,7 @@ class Index(BaseView):
         for elem in self.input_required:
             if elem == 'cluster_id':
                 continue
-            if not elem in input_elems:
+            if elem not in input_elems:
                 logger.info('Elem `%s` not in input_elems `%s`', elem, input_elems)
                 return False
             value = self.req.GET.get(elem)

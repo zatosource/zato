@@ -526,7 +526,7 @@ class Consumer:
                             logger.info(f'[{self.cid}] Consumer cancelled, closing connection to `{conn_as_uri}` -> `{e.message}`')
 
                 # .. we are here on exception other than timeouts, in which case we need to reconnect ..
-                except Exception as e:
+                except Exception:
                     try:
 
                         # .. this flag is to ensure we don't log too much ..

@@ -21,7 +21,7 @@ from dateutil.parser import parse as dt_parse
 from requests import post as requests_post
 
 # Zato
-from zato.common.api import Data_Format, GENERIC, ZATO_NOT_GIVEN
+from zato.common.api import Data_Format, GENERIC
 from zato.common.exception import BackendInvocationError
 from zato.common.json_internal import loads as json_loads_internal
 from zato.common.odb.model import SecurityBase
@@ -306,7 +306,7 @@ class BearerTokenManager:
             info = self._get_bearer_token_from_auth_server(config, scopes, data_format)
 
             # .. then we can cache it ..
-            expiry = self._store_bearer_token_in_cache(info, scopes)
+            _ = self._store_bearer_token_in_cache(info, scopes)
 
             # .. build the result ..
             result.info = info

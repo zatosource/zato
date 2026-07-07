@@ -40,6 +40,8 @@ if 0:
     from zato.common.typing_ import any_
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
+    Certificate = Certificate
+    RSAPublicKey = RSAPublicKey
 
 # ################################################################################################################################
 # ################################################################################################################################

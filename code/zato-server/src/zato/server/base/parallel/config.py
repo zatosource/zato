@@ -12,7 +12,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.const import SECRETS, ServiceConst
+from zato.common.const import SECRETS
 from zato.common.json_internal import loads
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque

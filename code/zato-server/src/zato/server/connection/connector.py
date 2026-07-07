@@ -394,6 +394,7 @@ class ConnectorStore:
 
     def change_password(self, name:'str', config:'Bunch') -> 'None':
         with self.lock:
+            connector = self.connectors[name]
             new_config = deepcopy(connector.config)
             new_config.password = config.password
             self._edit(new_config.name, new_config)

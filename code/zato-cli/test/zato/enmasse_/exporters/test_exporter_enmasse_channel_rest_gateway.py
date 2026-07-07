@@ -25,8 +25,8 @@ from zato.common.defaults import default_server_base_dir
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, SASession
-    stranydict, SASession = stranydict, SASession
+    from zato.common.typing_ import anydict, stranydict, SASession
+    anydict, stranydict, SASession = anydict, stranydict, SASession
 
 # ################################################################################################################################
 # ################################################################################################################################

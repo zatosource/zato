@@ -16,9 +16,6 @@ from operator import attrgetter
 from traceback import format_exc
 from uuid import uuid4
 
-# Python 2/3 compatibility
-from builtins import bytes
-
 # Zato
 from zato.common.api import query_parameters
 from zato.common.broker_message import SERVICE
@@ -37,12 +34,6 @@ from zato.common.util.file_system import get_tmp_path
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -319,7 +310,7 @@ class GetDeploymentInfoList(AdminService):
         out = []
 
         # This is optional and if it does not exist we assume that it is True
-        if not 'include_internal' in self.request.input:
+        if 'include_internal' not in self.request.input:
             include_internal = True
         else:
             include_internal = self.request.input.get('include_internal')

@@ -7,7 +7,6 @@ The output goes to zato-server/src/zato/server/service/_internal_manifest.json
 """
 
 # stdlib
-import inspect
 import json
 import os
 import sys
@@ -24,7 +23,7 @@ def main():
 
     from zato.common.util.api import find_internal_modules
     from zato.server.service import Service, internal
-    from inspect import isclass, getmro
+    from inspect import isclass
 
     deploy_internal = find_internal_modules(internal)
     if not deploy_internal:

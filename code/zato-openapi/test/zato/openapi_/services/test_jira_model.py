@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 
 # Zato
+from zato.common.typing_ import list_
 from zato.server.service import Model
 
 # ################################################################################################################################

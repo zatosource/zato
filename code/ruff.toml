@@ -1,11 +1,12 @@
 line-length    = 160
-target-version = "py310"
+target-version = "py312"
 
 extend-exclude = [
     "**/brython",
     "**/playwright_/*.py",
     "**/src/zato/common/ext",
     "**/src/zato/common/py23_",
+    "patches",  # Vendored third-party code (passlib, ntlm, requests etc.) kept close to upstream
 ]
 
 [lint]
@@ -13,6 +14,10 @@ select = [
     "F",     # pyflakes (includes F841 unused variables, F811 redefined unused, F401 unused imports)
     "W",     # pycodestyle warnings
     "E",     # pycodestyle errors
+]
+ignore = [
+    "E402",  # module-import-not-at-top-of-file - imports deliberately follow section comments,
+             # gevent monkey-patching and sys.path setup, where import order is load-bearing
 ]
 
 [lint.flake8-quotes]
