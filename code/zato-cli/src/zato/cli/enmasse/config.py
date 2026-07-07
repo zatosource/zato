@@ -28,6 +28,7 @@ class _object_type:
 
     LDAP = 'ldap'                                 #
     SFTP = 'sftp'                                 #
+    SMB = 'smb'                                   #
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
     Microsoft_365 = 'cloud_microsoft_365'         #
@@ -53,6 +54,7 @@ _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SFTP] = 'outgoing_sftp'
+_object_alias[_object_type.SMB] = 'outgoing_smb'
 _object_alias[_object_type.SQL] = 'outconn_sql'
 
 # ################################################################################################################################

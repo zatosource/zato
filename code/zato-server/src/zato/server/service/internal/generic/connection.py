@@ -153,18 +153,6 @@ class _CreateEdit(_BaseService):
         self.logger.info('GenericConn _CreateEdit step 1b: type_=%s, name=%s',
             data.get('type_'), data.get('name'))
 
-        # Build a reusable flag indicating that a secret was sent on input.
-        secret = data.get('secret', ZATO_NONE)
-        if (secret is None) or (secret == ZATO_NONE):
-            has_input_secret  = False
-            input_secret = ''
-        else:
-            has_input_secret = True
-            input_secret = secret
-            if input_secret:
-                input_secret = self.crypto.encrypt(input_secret)
-                input_secret = input_secret.decode('utf8')
-
         raw_request = self.request.raw_request
         if isinstance(raw_request, (str, bytes)):
             raw_request = loads(raw_request)
@@ -186,6 +174,18 @@ class _CreateEdit(_BaseService):
                 value = parse_simple_type(value)
 
             data[key] = value
+
+        # Build a reusable flag indicating that a secret was sent on input. This is checked only after the
+        # raw_request merge above because the plaintext secret arrives in the raw request, not in self.request.input.
+        secret = data.get('secret', ZATO_NONE)
+        if (secret is None) or (secret == ZATO_NONE) or (secret == ''):
+            has_input_secret  = False
+            input_secret = ''
+        else:
+            has_input_secret = True
+            # Encrypt with the well-known prefix included - this is what lets
+            # self.server.decrypt recognize the value as encrypted later on.
+            input_secret = self.server.encrypt(secret)
 
         # If the is_active flag does exist but it is None, it should be treated as though it was set to False,
         # which is needed because None would be treated as NULL by the SQL database.
@@ -259,12 +259,16 @@ class _CreateEdit(_BaseService):
                 data.secret = secret # We need to set it here because we also publish this message to other servers
 
             # .. but if it is the create action, we need to create a new instance
-            # .. and ensure that its secret is auto-generated.
+            # .. and ensure that its secret is stored - either the one given on input,
+            # .. so that later edits without a secret can keep using it, or an auto-generated one.
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
-                secret = self.crypto.generate_secret().decode('utf8')
-                secret = self.server.encrypt('auto.generated.{}'.format(secret))
-                secret = cast_('str', secret)
+                if has_input_secret:
+                    secret = input_secret
+                else:
+                    secret = self.crypto.generate_secret().decode('utf8')
+                    secret = self.server.encrypt('auto.generated.{}'.format(secret))
+                    secret = cast_('str', secret)
                 conn.secret = secret
 
             conn_dict = conn.to_sql_dict()

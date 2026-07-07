@@ -36,6 +36,7 @@ from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.sftp import SFTPImporter
+from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
@@ -73,7 +74,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.graphql',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
-                        'zato.cli.enmasse.importers.sftp',
+                        'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
                         'zato.cli.enmasse.importers.pubsub_subscription', 'zato.cli.enmasse.util']:
@@ -113,6 +114,7 @@ class EnmasseYAMLImporter:
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
         self.sftp_defs = {}
+        self.smb_defs = {}
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
@@ -147,6 +149,7 @@ class EnmasseYAMLImporter:
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.sftp_importer = SFTPImporter(self)
+        self.smb_importer = SMBImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
@@ -577,6 +580,30 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_smb(self, smb_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes SMB connection definitions from a YAML configuration with the database.
+        """
+        if not smb_list:
+            return [], []
+
+        count = len(smb_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SMB connection {noun}')
+
+        # Examine each SMB connection item
+        for idx, item in enumerate(smb_list):
+            logger.info('SMB connection item %d: %s', idx, item)
+
+        smb_created, smb_updated = self.smb_importer.sync_definitions(smb_list, session)
+
+        # Get SMB definitions from the SMB importer
+        self.smb_defs = self.smb_importer.connection_defs
+        logger.info('Processed SMB connection definitions: created=%d updated=%d', len(smb_created), len(smb_updated))
+
+        return smb_created, smb_updated
+
+# ################################################################################################################################
+
     def sync_channel_hl7_mllp(self, channel_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
         if not channel_hl7_mllp_list:
             return [], []
@@ -976,6 +1003,14 @@ class EnmasseYAMLImporter:
             self.created_objects['sftp'] = sftp_created
         if sftp_updated:
             self.updated_objects['sftp'] = sftp_updated
+
+        # Process SMB connection definitions
+        smb_list = yaml_config.get('smb') or yaml_config.get('outgoing_smb', [])
+        smb_created, smb_updated = self.sync_smb(smb_list, session)
+        if smb_created:
+            self.created_objects['smb'] = smb_created
+        if smb_updated:
+            self.updated_objects['smb'] = smb_updated
 
         # Process Kafka channel definitions
         channel_kafka_list = yaml_config.get('channel_kafka', [])

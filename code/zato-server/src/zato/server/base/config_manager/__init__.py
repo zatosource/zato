@@ -71,6 +71,7 @@ from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
+from zato.server.generic.api.outconn_smb import OutconnSMBWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -216,6 +217,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - SFTP outconns
         self.outconn_sftp = {}
 
+        # Generic connections - SMB outconns
+        self.outconn_smb = {}
+
         # Pub/sub push subscriptions keyed by sub_key -> list of sub config dicts
         self._push_subs = {} # type: dict[str, list]
 
@@ -269,6 +273,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: self.outconn_smb,
         }
 
         self._generic_conn_handler = {
@@ -287,6 +292,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutconnSMBWrapper,
         }
 
         # Maps message actions against generic connection types and their message handlers
@@ -822,6 +828,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+        outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
@@ -840,6 +847,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_mongodb_map,
             outconn_sftp_map,
+            outconn_smb_map,
         ]
 
         password_maps = [
@@ -848,6 +856,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_mongodb_map,
             outconn_sftp_map,
+            outconn_smb_map,
         ]
 
         for regular_item in regular_maps:

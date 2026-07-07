@@ -40,6 +40,7 @@ from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
+from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
@@ -448,6 +449,24 @@ urlpatterns += [
         login_required(out_sftp.command_shell), name='out-sftp-command-shell'),
     url(r'^zato/outgoing/sftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
         login_required(out_sftp.command_shell_action), name='out-sftp-command-shell-action'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. SMB
+
+    url(r'^zato/outgoing/smb/$',
+        login_required(out_smb.Index()), name=out_smb.Index.url_name),
+    url(r'^zato/outgoing/smb/create/$',
+        login_required(out_smb.Create()), name=out_smb.Create.url_name),
+    url(r'^zato/outgoing/smb/edit/$',
+        login_required(out_smb.Edit()), name=out_smb.Edit.url_name),
+    url(r'^zato/outgoing/smb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_smb.Delete()), name=out_smb.Delete.url_name),
+    url(r'^zato/outgoing/smb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_smb.ping), name='out-smb-ping'),
     ]
 
 # ################################################################################################################################
