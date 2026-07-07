@@ -1,10 +1,15 @@
 {% extends "zato/detail_base.html" %}
 
-{% block page_title %}Audit log{% endblock %}
+{% block page_title %}{{ audit_log_title }}{% endblock %}
 
 {% block detail_css %}
 <style nonce="{{ CSP_NONCE }}">
 img.help-icon[id=""] { display: none; }
+
+/* There are no tabs on this page - everything on it is an event */
+.detail-page-audit-log .dashboard-tabs {
+    display: none;
+}
 
 .audit-log-search-form {
     display: flex;
@@ -24,7 +29,7 @@ img.help-icon[id=""] { display: none; }
 {% endblock %}
 
 {% block section_title %}
-<span id="detail-section-title">Audit log <span class="detail-component-pill">{{ section_title }}</span></span>
+<span id="detail-section-title">{{ audit_log_title }} <span class="detail-component-pill">{{ section_title }}</span></span>
 {% endblock %}
 {% block help_icon_id %}{% endblock %}
 
@@ -49,9 +54,7 @@ $(document).ready(function() {
 
 {% block actions %}{% endblock %}
 
-{% block tabs %}
-    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="events" role="tab" aria-selected="true">Events</button>
-{% endblock %}
+{% block tabs %}{% endblock %}
 
 {% block tab_panels %}
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
@@ -73,14 +76,13 @@ $(document).ready(function() {
                 <th>Event</th>
                 <th>Message id</th>
                 <th>Endpoint</th>
-                <th>Server</th>
                 <th style="text-align:right">Size</th>
                 <th>Data preview</th>
             </tr>
         </thead>
         <tbody id="audit-log-table-body">
             <tr class="detail-loading-row">
-                <td colspan="9">
+                <td colspan="8">
                     <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
                 </td>
             </tr>

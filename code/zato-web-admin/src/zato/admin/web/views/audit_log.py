@@ -44,13 +44,20 @@ _default_page_size = 25
 _data_preview_len = 200
 
 # The columns returned to the frontend, in the order they appear in the select below
-_row_columns = ('id', 'cid', 'source', 'event_type', 'event_time_iso', 'msg_id', 'endpoint', 'server_name', 'outcome',
-    'size', 'data')
+_row_columns = ('id', 'cid', 'source', 'event_type', 'event_time_iso', 'msg_id', 'endpoint', 'outcome', 'size', 'data')
 
-_select_columns = 'id, cid, source, event_type, event_time_iso, msg_id, endpoint, server_name, outcome, size, data'
+_select_columns = 'id, cid, source, event_type, event_time_iso, msg_id, endpoint, outcome, size, data'
 
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
+
+# Per-source page titles - more sources will follow, e.g. REST channels, REST outgoing connections and IMAP audit logs
+_source_title = {
+    'pubsub': 'Pub/sub audit log',
+}
+
+# The cross-source CID page covers all sources, so it uses a generic title
+_cid_page_title = 'Audit log'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,6 +131,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'object_name': object_name,
         'cid': '',
         'is_cid_page': False,
+        'audit_log_title': _source_title[source],
         'section_title': object_name,
         'poll_url': _poll_url,
         'zato_clusters': True,
@@ -142,6 +150,7 @@ def cid_index(req:'any_', cid:'str') -> 'TemplateResponse':
         'object_name': '',
         'cid': cid,
         'is_cid_page': True,
+        'audit_log_title': _cid_page_title,
         'section_title': cid,
         'poll_url': _poll_url,
         'zato_clusters': True,

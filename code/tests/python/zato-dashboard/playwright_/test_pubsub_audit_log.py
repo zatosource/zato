@@ -35,21 +35,23 @@ _CID_Page_Url_Prefix  = '/zato/audit-log/cid/'
 _Event_Type_Published = 'published'
 _No_Events_Text       = 'No events found'
 
+# The section title for the pub/sub source, compared lowercase because the heading is styled with CSS
+_PubSub_Title = 'pub/sub audit log'
+
 # What the table shows for empty values, from the config object in audit_log.js
 _Empty_Value = '---'
 
 # How long a permission needs to reach the runtime pattern matcher after a form submission
 _Config_Propagation_Delay = 1.0
 
-# Column indexes on the per-object page: Time, CID, Event, Message id, Endpoint, Server, Size, Data preview
+# Column indexes on the per-object page: Time, CID, Event, Message id, Endpoint, Size, Data preview
 _Object_Column_Time     = 0
 _Object_Column_CID      = 1
 _Object_Column_Event    = 2
 _Object_Column_Msg_ID   = 3
 _Object_Column_Endpoint = 4
-_Object_Column_Server   = 5
-_Object_Column_Size     = 6
-_Object_Column_Data     = 7
+_Object_Column_Size     = 5
+_Object_Column_Data     = 6
 
 # Column indexes on the cross-source CID page, which adds a Source column after CID
 _CID_Column_Source = 2
@@ -169,11 +171,26 @@ class TestPubSubAuditLog:
         # .. open the audit log page for that topic ..
         _goto_audit_log(page, base_url, topic['name'])
 
+        # .. the section title names the source, compared case-insensitively because of CSS styling ..
+        title_text = page.inner_text('#detail-section-title')
+        title_text = title_text.lower()
+        assert title_text.startswith(_PubSub_Title), f'Expected the title to start with "{_PubSub_Title}", got: "{title_text}"'
+
         # .. the section title pill shows the topic name, compared case-insensitively
         # .. because the pill is uppercased with CSS ..
         pill_text = page.inner_text('#detail-section-title .detail-component-pill')
         pill_text = pill_text.lower()
         assert pill_text == topic['name'], f'Expected topic name "{topic["name"]}" in the pill, got: "{pill_text}"'
+
+        # .. there are no tabs on the page because everything on it is an event ..
+        tab_count = len(page.query_selector_all('.dashboard-tab'))
+        assert tab_count == 0, f'Expected no tabs, got {tab_count}'
+
+        # .. the table has no server column, compared case-insensitively
+        # .. because the header is uppercased with CSS ..
+        header_text = page.inner_text('#audit-log-table thead')
+        header_text = header_text.lower()
+        assert 'server' not in header_text, f'Expected no Server column, got: "{header_text}"'
 
         # .. exactly one event exists for this topic ..
         rows = _get_rows(page)
@@ -183,11 +200,14 @@ class TestPubSubAuditLog:
         # .. the row describes the publication ..
         cells = _get_row_cells(rows[0])
 
+        # .. the time is shown in the browser's locale format, not as a raw ISO string ..
         assert cells[_Object_Column_Time] != '', 'Expected a non-empty event time'
+        assert '+00:00' not in cells[_Object_Column_Time], \
+            f'Expected a locale-formatted time, got a raw ISO string: "{cells[_Object_Column_Time]}"'
+
         assert cells[_Object_Column_Event] == _Event_Type_Published, \
             f'Expected event type "{_Event_Type_Published}", got: "{cells[_Object_Column_Event]}"'
         assert cells[_Object_Column_Msg_ID] != '', 'Expected a non-empty message id'
-        assert cells[_Object_Column_Server] != '', 'Expected a non-empty server name'
 
         # .. the endpoint is the publishing service since the message went out through the dashboard ..
         assert cells[_Object_Column_Endpoint] == 'zato.pubsub.topic.publish', \
