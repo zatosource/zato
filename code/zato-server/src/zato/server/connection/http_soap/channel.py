@@ -13,9 +13,7 @@ import socket
 import struct
 from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
 from email.utils import format_datetime as _format_datetime
-from gzip import GzipFile
 from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS
-from io import StringIO
 from traceback import format_exc
 from typing import NamedTuple
 
@@ -361,26 +359,16 @@ class RequestDispatcher:
 # ################################################################################################################################
 
     def _format_response(self, channel_item:'anydict', wsgi_environ:'stranydict', response:'any_') -> 'any_':
-        """ Sets response headers, applies gzip if needed, and unwraps I/O payload.
+        """ Sets response headers and unwraps I/O payload.
         """
         wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
         wsgi_environ['zato.http.response.headers'].update(response.headers)
         wsgi_environ['zato.http.response.status'] = status_response[response.status_code]
 
-        # SSE streaming responses bypass gzip and serialization entirely ..
+        # SSE streaming responses bypass serialization entirely ..
         if response.content_type == _content_type_sse:
             out = response.payload
             return out
-
-        if channel_item['content_encoding'] == 'gzip':
-
-            s = StringIO()
-            with GzipFile(fileobj=s, mode='w') as f: # type: ignore
-                _ = f.write(response.payload)
-            response.payload = s.getvalue()
-            s.close()
-
-            wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
         if isinstance(response.payload, IOPayload):
             out = response.payload.getvalue()

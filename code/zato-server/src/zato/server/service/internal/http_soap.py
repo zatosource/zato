@@ -85,7 +85,7 @@ class _BaseGet(AdminService):
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
         '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
         '-content_type', \
-        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list'
@@ -138,7 +138,7 @@ class GetList(_BaseGet):
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
         '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
         '-content_type', \
-        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
@@ -315,7 +315,7 @@ class Create(_CreateEdit):
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
         '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \
         '-serialization_type', '-timeout', '-content_type', \
-        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
@@ -363,9 +363,6 @@ class Create(_CreateEdit):
 
         if input_content_type:
             input.content_type = input_content_type.strip()
-
-        if input.content_encoding and input.content_encoding != 'gzip':
-            raise Exception('Content encoding must be empty or equal to `gzip`')
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
@@ -416,7 +413,6 @@ class Create(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.content_type = input.content_type
-                item.content_encoding = input.content_encoding
                 item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 
@@ -474,7 +470,7 @@ class Edit(_CreateEdit):
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', \
         '-data_format', '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', \
         '-params_pri', '-serialization_type', '-timeout', '-content_type', \
-        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
@@ -522,9 +518,6 @@ class Edit(_CreateEdit):
 
         if input_content_type:
             input.content_type = input_content_type.strip()
-
-        if input.content_encoding and input.content_encoding != 'gzip':
-            raise Exception('Content encoding must be empty or equal to `gzip`')
 
         with closing(self.odb.session()) as session:
 
@@ -588,7 +581,6 @@ class Edit(_CreateEdit):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.content_type = input.content_type
-                item.content_encoding = input.content_encoding
                 item.is_wrapper = bool(input.is_wrapper)
                 item.wrapper_type = input.wrapper_type
 

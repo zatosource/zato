@@ -441,7 +441,6 @@ def _http_soap(session, cluster_id):
             HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.timeout,
-        HTTPSOAP.content_encoding,
         HTTPSOAP.opaque1,
         SecurityBase.sec_type,
         Service.name.label('service_name'),

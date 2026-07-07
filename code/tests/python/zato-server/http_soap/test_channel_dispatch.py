@@ -55,7 +55,6 @@ def _make_channel_item(overrides:'anydict | None'=None) -> 'anydict':
         'match_target': '/test/path::GET::*::*',
         'data_format': DATA_FORMAT.JSON,
         'transport': 'plain_http',
-        'content_encoding': '',
         'merge_url_params_req': True,
         'url_params_pri': 'qs-over-path',
         'params_pri': 'qs-over-path',
@@ -506,32 +505,6 @@ class DispatchHappyPathTestCase(unittest.TestCase):
 
         self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], 'application/json')
         self.assertEqual(wsgi_environ['zato.http.response.status'], status_response[200])
-
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.GzipFile')
-    @patch('zato.server.connection.http_soap.channel.StringIO')
-    def test_gzip_response(self, mock_string_io_class:'MagicMock', mock_gzip_class:'MagicMock') -> 'None':
-        """ When content_encoding is 'gzip', the response payload is gzip-compressed
-        and the Content-Encoding header is set.
-        """
-        mock_sio = MagicMock()
-        mock_sio.getvalue.return_value = b'compressed-data'
-        mock_string_io_class.return_value = mock_sio
-
-        mock_gzip_ctx = MagicMock()
-        mock_gzip_class.return_value.__enter__ = MagicMock(return_value=mock_gzip_ctx)
-        mock_gzip_class.return_value.__exit__ = MagicMock(return_value=False)
-
-        response = _make_response(payload=b'hello world payload')
-        channel_item = _make_channel_item({'content_encoding': 'gzip'})
-        ctx = _make_dispatcher(channel_item=channel_item, response=response)
-        wsgi_environ = _make_wsgi_environ()
-
-        _ = _dispatch(ctx, wsgi_environ)
-
-        self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Encoding'], 'gzip')
-        mock_gzip_ctx.write.assert_called_once_with(b'hello world payload')
 
 # ################################################################################################################################
 
@@ -1052,7 +1025,6 @@ class DispatchHypothesisTestCase(unittest.TestCase):
     @given(
         is_active=st.booleans(),
         data_format=st.sampled_from([DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA, IO.FORMAT.FORM_DATA]),
-        content_encoding=st.sampled_from(['', 'gzip']),
         merge_url_params_req=st.booleans(),
     )
     @hypothesis_settings(max_examples=50, suppress_health_check=[HealthCheck.differing_executors])
@@ -1060,7 +1032,6 @@ class DispatchHypothesisTestCase(unittest.TestCase):
         self,
         is_active:'bool',
         data_format:'str',
-        content_encoding:'str',
         merge_url_params_req:'bool',
     ) -> 'None':
         """ Fuzz channel_item fields - dispatch never raises an unhandled exception.
@@ -1068,7 +1039,6 @@ class DispatchHypothesisTestCase(unittest.TestCase):
         channel_item = _make_channel_item({
             'is_active': is_active,
             'data_format': data_format,
-            'content_encoding': content_encoding,
             'merge_url_params_req': merge_url_params_req,
         })
 

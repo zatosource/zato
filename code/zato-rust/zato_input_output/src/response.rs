@@ -22,10 +22,6 @@ pub struct Response {
     /// Serialized payload body, either a raw Python object or a `Payload` instance.
     payload_inner: PyObject,
 
-    /// Optional content encoding applied to the response body (e.g. gzip).
-    #[pyo3(get, set)]
-    pub content_encoding: Option<String>,
-
     /// Correlation identifier carried through the service invocation chain.
     #[pyo3(get, set)]
     pub cid: Option<String>,
@@ -72,7 +68,6 @@ impl Response {
             result: "ZATO_OK".to_string(),
             result_details: String::new(),
             payload_inner: "".into_pyobject(py)?.into_any().unbind(),
-            content_encoding: None,
             cid: None,
             data_format: None,
             headers: headers.into_any().unbind(),

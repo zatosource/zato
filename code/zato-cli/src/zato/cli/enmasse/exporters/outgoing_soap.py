@@ -88,9 +88,8 @@ class OutgoingSOAPExporter:
             if outgoing_row.get('tls_verify') is False:
                 exported_conn['tls_verify'] = False
 
-            for field in ['content_type', 'content_encoding']:
-                if outgoing_row.get(field):
-                    exported_conn[field] = outgoing_row[field]
+            if outgoing_row.get('content_type'):
+                exported_conn['content_type'] = outgoing_row['content_type']
 
             exported_outgoing.append(exported_conn)
 

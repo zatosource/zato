@@ -99,7 +99,6 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'security_id': security_id,
         'security_groups': security_groups,
         'content_type': params.get(prefix + 'content_type'),
-        'content_encoding': params.get(prefix + 'content_encoding'),
         'validate_tls': params.get(prefix + 'validate_tls'),
         'data_encoding': params.get(prefix + 'data_encoding'),
         'gateway_service_list': params.get(prefix + 'gateway_service_list'),
@@ -237,7 +236,6 @@ def index(req): # type: ignore
                 http_soap.merge_url_params_req = item.merge_url_params_req
                 http_soap.url_params_pri = item.url_params_pri
                 http_soap.params_pri = item.params_pri
-                http_soap.content_encoding = item.content_encoding
 
                 match_slash = item.get('match_slash')
                 if match_slash == '':

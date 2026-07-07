@@ -153,7 +153,7 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
                     conn_required['soap_version'] = conn_def['soap_version']
 
                 # Add optional fields if present in the template
-                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'content_encoding', 'pool_size', 'ping_method', 'tls_verify']:
+                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'pool_size', 'ping_method', 'tls_verify']:
                     if field in conn_def and conn_def[field] is not None:
                         conn_required[field] = conn_def[field]
 

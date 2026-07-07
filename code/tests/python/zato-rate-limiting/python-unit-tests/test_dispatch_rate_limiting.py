@@ -68,7 +68,6 @@ def _make_url_match_result(channel_id=1, channel_name='test.channel'):
         'match_target': '/test/path',
         'is_active': True,
         'data_format': 'json',
-        'content_encoding': '',
     }
     result.channel_name = channel_name
     result.payload = ''
