@@ -37,7 +37,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     NTLM, SecurityBase, Server, Service
+     NTLM, SecurityBase, Server, Service, WSSecurity
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
@@ -751,6 +751,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
                 SEC_DEF_TYPE.NTLM: NTLM,
+                SEC_DEF_TYPE.WSS: WSSecurity,
             }
 
             result = {}
@@ -776,10 +777,6 @@ class ODBManager(SessionWrapper):
                 result[target].data_format = item.data_format
 
                 if item.security_id:
-
-                    # Ignore WS-Security (WSS) which has been removed in 3.2
-                    if item.sec_type == 'wss':
-                        continue
 
                     # For later use
                     result[target].sec_def = Bunch()
@@ -817,6 +814,15 @@ class ODBManager(SessionWrapper):
 
                     elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
+
+                    elif item.sec_type == SEC_DEF_TYPE.WSS:
+                        result[target].sec_def.username = sec_def.username
+
+                        # WS-Security enforcement needs the definition's mode and its
+                        # mode-specific details, all of which come from opaque attributes.
+                        for key, value in sec_def.items():
+                            if key not in result[target].sec_def:
+                                result[target].sec_def[key] = value
 
                 else:
                     result[target].sec_def = ZATO_NONE
@@ -1049,6 +1055,14 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.oauth_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_wss_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of WS-Security definitions existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return elems_with_opaque(query.wss_list(session, cluster_id, needs_columns))
 
 # ################################################################################################################################
 
