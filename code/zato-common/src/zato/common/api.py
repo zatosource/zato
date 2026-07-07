@@ -591,6 +591,14 @@ class EMAIL:
             # Name of the opaque attribute that a job carries to point back to its IMAP connection
             Conn_ID_Attr = 'imap_conn_id'
 
+            # Name of the internal service that the auto-created jobs invoke to poll a mailbox
+            Dispatch_Service = 'zato.email.imap.process-messages'
+
+            # Names of the keys in the extra data that an auto-created job carries
+            Extra_Conn_ID = 'imap_conn_id'
+            Extra_Conn_Name = 'imap_conn_name'
+            Extra_Service = 'service'
+
             # Names of the opaque attributes that an IMAP connection carries to describe its linked job
             Field_Run_Every = 'scheduler_run_every'
             Field_Run_Unit = 'scheduler_run_unit'

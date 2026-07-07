@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from json import dumps
 from time import time
+from traceback import format_exc
 
 # Python 2/3 compatibility
 from six import add_metaclass
@@ -167,12 +169,21 @@ def _sync_scheduler_job(service:'Service', input:'Bunch', instance:'any_', attrs
     # We are to keep a job in sync with what was given on input ..
     if has_config:
 
+        # The job invokes the internal dispatch service and its extra data carries the connection's identity
+        # along with the user's service, which the dispatch service invokes once per each message received.
+        extra = dumps({
+            _scheduler_common.Extra_Conn_ID: instance.id,
+            _scheduler_common.Extra_Conn_Name: input.name,
+            _scheduler_common.Extra_Service: input.scheduler_service,
+        })
+
         request = {
             'cluster_id': default_cluster_id,
             'is_active': input.is_active,
             'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-            'service': input.scheduler_service,
+            'service': _scheduler_common.Dispatch_Service,
             'start_date': input.scheduler_start_date,
+            'extra': extra,
             'imap_conn_id': instance.id,
         }
 
@@ -308,5 +319,40 @@ class Ping(AdminService):
 
             self.response.payload.info = 'Ping NOOP submitted, took:`{0:03.4f} s`, check server logs for details.'.format(
                 response_time)
+
+# ################################################################################################################################
+
+class ProcessMessages(AdminService):
+    """ Invoked by the scheduler on behalf of an IMAP connection - reads messages matching the connection's
+    get-criteria and invokes the configured service once per each message received.
+    """
+
+    def handle(self) -> 'None':
+
+        # The scheduler job carries the connection's identity and the target service in its extra data,
+        # which arrives here as a dict no matter if the invocation came from the scheduler or over HTTP.
+        context = self.request.payload
+
+        conn_name = context[_scheduler_common.Extra_Conn_Name]
+        target_service = context[_scheduler_common.Extra_Service]
+
+        # The email component may be disabled in server.conf
+        if not self.email:
+            self.logger.warning('Could not process IMAP messages for `%s`; ' \
+                'is component_enabled.email set to True in server.conf?', conn_name)
+            return
+
+        # Get a client for the mailbox that this connection points to ..
+        conn = self.email.imap.get(conn_name, True).conn
+
+        # .. and hand each message over to the target service. The service receives the message object itself
+        # .. and it is up to the service to mark the message as seen or to delete it. The invocation is synchronous
+        # .. so the underlying connection is still open while the service runs.
+        for _, message in conn.get():
+            try:
+                _ = self.invoke(target_service, message)
+            except Exception:
+                self.logger.warning('Could not invoke `%s` with an IMAP message from `%s` -> `%s`',
+                    target_service, conn_name, format_exc())
 
 # ################################################################################################################################

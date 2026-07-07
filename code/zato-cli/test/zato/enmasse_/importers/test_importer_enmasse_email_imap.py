@@ -9,12 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import tempfile
+from json import loads
 from unittest import TestCase, main
 
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
+from zato.common.api import EMAIL
 from zato.common.odb.model import IMAP, IntervalBasedJob, Job
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
@@ -118,11 +120,18 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.assertEqual(imap_opaque['scheduler_run_unit'], 'minutes')
         self.assertEqual(imap_opaque['scheduler_service'], 'demo.ping')
 
-        # The job itself must exist under the conventional name ..
+        # The job itself must exist under the conventional name and invoke the dispatch service ..
+        scheduler_common = EMAIL.IMAP.Scheduler
         job = self.session.query(Job).filter_by(name='imap.enmasse.email.imap.2').one() # type: ignore
         self.assertEqual(imap_opaque['scheduler_job_id'], job.id)
         self.assertEqual(job.job_type, 'interval_based')
-        self.assertEqual(job.service.name, 'demo.ping')
+        self.assertEqual(job.service.name, scheduler_common.Dispatch_Service)
+
+        # .. its extra data must carry the connection's identity and the per-message service ..
+        extra = loads(job.extra)
+        self.assertEqual(extra[scheduler_common.Extra_Conn_ID], imap.id)
+        self.assertEqual(extra[scheduler_common.Extra_Conn_Name], 'enmasse.email.imap.2')
+        self.assertEqual(extra[scheduler_common.Extra_Service], 'demo.ping')
 
         # .. it must point back to its connection ..
         job_opaque = parse_instance_opaque_attr(job)

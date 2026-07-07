@@ -7,7 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import time
+from datetime import datetime, timezone
+from json import dumps, loads
 from uuid import uuid4
 
 # PyPI
@@ -37,7 +40,11 @@ _custom_job_name_prefix = 'custom-imap-job-'
 _invoked_service = 'demo.ping'
 _start_date = '2099-01-01T00:00:00'
 
+_sender = 'sender@example.com'
+_recipient = 'recipient@example.com'
+
 _ping_wait_seconds = 30
+_fire_wait_seconds = 45
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +57,7 @@ def client():
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def cleanup(client):
+def cleanup(client, imap_test_server):
     """ Deletes everything a test may have left behind so that each test starts from a clean slate.
     """
     yield
@@ -68,6 +75,9 @@ def cleanup(client):
     for item in data:
         if item['name'].startswith(_job_name_prefix) or item['name'].startswith(_custom_job_name_prefix):
             _ = client.delete(f'{_service_job}.delete', id=item['id'])
+
+    # The mailbox and the log of received commands start empty for each test
+    imap_test_server.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,12 +156,12 @@ def _conn_payload(imap_test_server, name):
 
 # ################################################################################################################################
 
-def _scheduler_fields(run_every, run_unit):
+def _scheduler_fields(run_every, run_unit, service=_invoked_service, start_date=_start_date):
     out = {
         'scheduler_run_every': run_every,
         'scheduler_run_unit': run_unit,
-        'scheduler_start_date': _start_date,
-        'scheduler_service': _invoked_service,
+        'scheduler_start_date': start_date,
+        'scheduler_service': service,
     }
 
     return out
@@ -179,6 +189,77 @@ def _edit_conn(client, imap_test_server, name, conn_id, **extra):
     _ = client.edit(f'{_service_imap}.edit', **payload)
 
 # ################################################################################################################################
+
+def _job_extra(conn_id, conn_name, service):
+    """ The extra data that an IMAP-linked job carries for the dispatch service.
+    """
+    out = {
+        _scheduler.Extra_Conn_ID: conn_id,
+        _scheduler.Extra_Conn_Name: conn_name,
+        _scheduler.Extra_Service: service,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _read_evidence(subject):
+    """ Returns the entries of the evidence file whose subject matches the given one.
+    """
+    out = []
+
+    # The file comes into existence only once the first message was recorded
+    if not os.path.exists(TestConfig.evidence_file):
+        return out
+
+    with open(TestConfig.evidence_file) as evidence:
+        for line in evidence:
+            line = line.strip()
+            if line:
+                entry = loads(line)
+                if entry['subject'] == subject:
+                    out.append(entry)
+
+    return out
+
+# ################################################################################################################################
+
+def _invoke_dispatch(client, conn_id, conn_name, service):
+    """ Invokes the dispatch service directly, the way a scheduler fire event does it, retrying until the newly
+    created connection has propagated to the server's connection store.
+    """
+    payload = _job_extra(conn_id, conn_name, service)
+
+    deadline = time.monotonic() + _ping_wait_seconds
+    last_error = None
+
+    while time.monotonic() < deadline:
+        try:
+            _ = client.invoke(_scheduler.Dispatch_Service, payload)
+        except Exception as e:
+            last_error = e
+            time.sleep(1)
+            continue
+        else:
+            return
+
+    raise AssertionError(f'Could not invoke the dispatch service, last error: {last_error}')
+
+# ################################################################################################################################
+
+def _prepare_dispatch_conn(client, imap_test_server, service):
+    """ Creates a connection whose linked job points to the given per-message service, sets its password
+    and returns the connection's name and ID.
+    """
+    conn_name = _new_conn_name()
+    conn_id = _create_conn(client, imap_test_server, conn_name, **_scheduler_fields(2, _unit.Minutes, service=service))
+
+    # The connection needs a password before it can log in anywhere
+    _ = client.invoke(f'{_service_imap}.change-password', {'id': conn_id, 'password': 'test-password'})
+
+    return conn_name, conn_id
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server):
@@ -192,9 +273,16 @@ def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server)
     job = _get_job(client, job_name)
 
     assert job['job_type'] == SCHEDULER.JOB_TYPE.INTERVAL_BASED
-    assert job['service_name'] == _invoked_service
+    assert job['service_name'] == _scheduler.Dispatch_Service
     assert int(job['minutes']) == 2
     assert int(job['imap_conn_id']) == int(conn_id)
+
+    # The job's extra data carries the connection's identity and the per-message service
+    extra = loads(job['extra'])
+
+    assert int(extra[_scheduler.Extra_Conn_ID]) == int(conn_id)
+    assert extra[_scheduler.Extra_Conn_Name] == conn_name
+    assert extra[_scheduler.Extra_Service] == _invoked_service
 
     # The connection's own row points to the job and mirrors its definition
     item = _get_imap_item(client, conn_name)
@@ -269,24 +357,26 @@ def test_job_edit_syncs_back_to_conn(client, imap_test_server):
     conn_id = _create_conn(client, imap_test_server, conn_name, **_scheduler_fields(2, _unit.Minutes))
     job_id = _get_job(client, job_name)['id']
 
-    # Edit the job directly, the way the scheduler UI does it - renaming it and changing its interval
+    # Edit the job directly, the way the scheduler UI does it - renaming it, changing its interval
+    # and pointing its extra data to another per-message service.
     _ = client.edit(f'{_service_job}.edit',
         cluster_id=default_cluster_id,
         id=job_id,
         name=custom_job_name,
         is_active=True,
         job_type=SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-        service=_invoked_service,
+        service=_scheduler.Dispatch_Service,
         start_date=_start_date,
         minutes=7,
+        extra=dumps(_job_extra(conn_id, conn_name, TestConfig.service_store_message)),
     )
 
-    # The connection now shows the job's new definition
+    # The connection now shows the job's new definition, including the service read out of the extra data
     item = _get_imap_item(client, conn_name)
 
     assert str(item['scheduler_run_every']) == '7'
     assert item['scheduler_run_unit'] == _unit.Minutes
-    assert item['scheduler_service'] == _invoked_service
+    assert item['scheduler_service'] == TestConfig.service_store_message
     assert int(item['scheduler_job_id']) == int(job_id)
 
     # A subsequent IMAP edit updates the same job without clobbering its custom name
@@ -418,6 +508,119 @@ def test_conn_without_scheduler_fields_creates_no_job(client, imap_test_server):
     _ = client.delete(f'{_service_imap}.delete', id=conn_id)
 
     assert _get_imap_item(client, conn_name) is None
+
+# ################################################################################################################################
+
+def test_dispatch_invokes_service_per_message(client, imap_test_server):
+
+    subject_first = 'Test message one ' + uuid4().hex[:8]
+    subject_second = 'Test message two ' + uuid4().hex[:8]
+
+    uid_first = imap_test_server.add_message(_sender, _recipient, subject_first, 'First message body')
+    uid_second = imap_test_server.add_message(_sender, _recipient, subject_second, 'Second message body')
+
+    conn_name, conn_id = _prepare_dispatch_conn(client, imap_test_server, TestConfig.service_store_message)
+
+    # Invoke the dispatch service directly, the way a scheduler fire event does it
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_message)
+
+    # The per-message service saw each of the two messages exactly once ..
+    entries_first = _read_evidence(subject_first)
+    entries_second = _read_evidence(subject_second)
+
+    assert len(entries_first) == 1
+    assert len(entries_second) == 1
+
+    # .. with the full details of each of them ..
+    entry = entries_first[0]
+
+    assert entry['uid'] == uid_first
+    assert entry['sent_from'] == _sender
+    assert entry['body'].strip() == 'First message body'
+
+    entry = entries_second[0]
+
+    assert entry['uid'] == uid_second
+    assert entry['sent_from'] == _sender
+    assert entry['body'].strip() == 'Second message body'
+
+    # .. and both messages were marked as seen because the service did it itself.
+    assert imap_test_server.is_seen(uid_first)
+    assert imap_test_server.is_seen(uid_second)
+
+# ################################################################################################################################
+
+def test_dispatch_skips_seen_messages(client, imap_test_server):
+
+    subject = 'Test message already seen ' + uuid4().hex[:8]
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body to process once')
+
+    conn_name, conn_id = _prepare_dispatch_conn(client, imap_test_server, TestConfig.service_store_message)
+
+    # The first dispatch processes the message and marks it as seen
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_store_message)
+
+    assert len(_read_evidence(subject)) == 1
+    assert imap_test_server.is_seen(uid)
+
+    # The second dispatch finds nothing to do because the UNSEEN criteria no longer matches the message
+    _ = client.invoke(_scheduler.Dispatch_Service, _job_extra(conn_id, conn_name, TestConfig.service_store_message))
+
+    assert len(_read_evidence(subject)) == 1
+
+# ################################################################################################################################
+
+def test_dispatch_error_leaves_message_unseen(client, imap_test_server):
+
+    subject = 'Test message that fails ' + uuid4().hex[:8]
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body that will not be processed')
+
+    conn_name, conn_id = _prepare_dispatch_conn(client, imap_test_server, TestConfig.service_always_raise)
+
+    # The dispatch itself succeeds even though the per-message service raises
+    _invoke_dispatch(client, conn_id, conn_name, TestConfig.service_always_raise)
+
+    # The message was fetched from the mailbox ..
+    assert imap_test_server.has_received('FETCH')
+
+    # .. yet it stays unseen because no service marked it, so it will be retried ..
+    assert not imap_test_server.is_seen(uid)
+
+    # .. and nothing was recorded about it either.
+    assert len(_read_evidence(subject)) == 0
+
+# ################################################################################################################################
+
+def test_dispatch_via_real_scheduler_fire(client, imap_test_server):
+
+    conn_name = _new_conn_name()
+    subject = 'Test message via scheduler ' + uuid4().hex[:8]
+
+    uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body delivered by the scheduler')
+
+    # The job starts now and runs every second so that the test does not wait long for a fire
+    start_date = datetime.now(timezone.utc).isoformat()
+    fields = _scheduler_fields(1, _unit.Seconds, service=TestConfig.service_store_message, start_date=start_date)
+
+    conn_id = _create_conn(client, imap_test_server, conn_name, **fields)
+    _ = client.invoke(f'{_service_imap}.change-password', {'id': conn_id, 'password': 'test-password'})
+
+    # Wait until a fire event polled the mailbox and the per-message service recorded the message
+    deadline = time.monotonic() + _fire_wait_seconds
+
+    while time.monotonic() < deadline:
+        if _read_evidence(subject):
+            break
+        time.sleep(1)
+    else:
+        raise AssertionError(f'The scheduler did not deliver the message `{subject}` in {_fire_wait_seconds} seconds')
+
+    assert imap_test_server.is_seen(uid)
+
+    # Further fires must not process the same message again
+    time.sleep(3)
+
+    assert len(_read_evidence(subject)) == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

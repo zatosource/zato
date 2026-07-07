@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
+from json import loads
 from traceback import format_exc
 
 # ciso8601
@@ -17,7 +18,7 @@ except ImportError:
     from dateutil.parser import parse as parse_datetime
 
 # Zato
-from zato.common.api import SCHEDULER, ZATO_NONE
+from zato.common.api import EMAIL, SCHEDULER, ZATO_NONE
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
@@ -38,6 +39,10 @@ _new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms',
 # This one is stored in the job's opaque attributes only - it points back to the IMAP connection
 # that the job was auto-created for and it must never be sent to the scheduler process itself.
 _imap_conn_id_param = 'imap_conn_id'
+
+# The key in a job's extra data under which an IMAP-linked job carries the service
+# that is to be invoked once per each message received.
+_imap_extra_service = EMAIL.IMAP.Scheduler.Extra_Service
 
 _opaque_stale_keys = frozenset(_ib_params + (
     'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
@@ -270,9 +275,22 @@ def _create_edit(self, action):
                 if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                     if imap_conn_id := job_opaque.get(_imap_conn_id_param):
                         run = unit_from_interval(data['weeks'], data['days'], data['hours'], data['minutes'], data['seconds'])
+
+                        # The job's own service is the internal dispatch service so the one to write back
+                        # is the per-message target service carried in the job's extra data. If the extra data
+                        # does not describe it, only the interval and start date are written back.
+                        target_service = None
+                        if extra:
+                            try:
+                                extra_data = loads(extra)
+                            except ValueError:
+                                extra_data = None
+                            if extra_data:
+                                target_service = extra_data.get(_imap_extra_service)
+
                         with closing(self.odb.session()) as session:
                             update_imap_scheduler_fields(
-                                session, imap_conn_id, run.run_every, run.run_unit, start_iso, service_name, job_id)
+                                session, imap_conn_id, run.run_every, run.run_unit, start_iso, target_service, job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name

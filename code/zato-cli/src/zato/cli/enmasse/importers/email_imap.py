@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import dumps
 from uuid import uuid4
 
 # Zato
@@ -107,12 +108,21 @@ class IMAPImporter:
         run_every = int(imap_def['scheduler_run_every'])
         run_unit = imap_def.get('scheduler_run_unit', _scheduler_common.Unit.Minutes)
 
+        # The job invokes the internal dispatch service and its extra data carries the connection's identity
+        # along with the user's service, which the dispatch service invokes once per each message received.
+        extra = dumps({
+            _scheduler_common.Extra_Conn_ID: imap_conn.id,
+            _scheduler_common.Extra_Conn_Name: imap_conn.name,
+            _scheduler_common.Extra_Service: imap_def['scheduler_service'],
+        })
+
         # Build a regular scheduler job definition out of the connection's scheduler fields
         job_def = {
             'name': _scheduler_common.Job_Prefix + imap_conn.name,
-            'service': imap_def['scheduler_service'],
+            'service': _scheduler_common.Dispatch_Service,
             'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
             'is_active': imap_def.get('is_active', True),
+            'extra': extra,
             _scheduler_common.Conn_ID_Attr: imap_conn.id,
         }
 
