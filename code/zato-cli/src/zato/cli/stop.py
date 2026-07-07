@@ -60,7 +60,7 @@ class Stop(ManageCommand):
 
         # stdlib
         import signal
-        
+
         # Zato
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='server-stop')
@@ -73,7 +73,7 @@ class Stop(ManageCommand):
 
         # stdlib
         import signal
-        
+
         # Zato
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='dashboard-stop')
@@ -86,7 +86,7 @@ class Stop(ManageCommand):
 
         # stdlib
         import signal
-        
+
         # Zato
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='scheduler-stop')

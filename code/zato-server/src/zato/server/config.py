@@ -33,6 +33,8 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 if 0:
     from zato.common.typing_ import anylist, stranydict
     from zato.server.connection.ftp import FTPStore
+    anylist = anylist
+    stranydict = stranydict
     FTPStore = FTPStore
 
 # ################################################################################################################################

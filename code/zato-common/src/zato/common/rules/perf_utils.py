@@ -251,10 +251,6 @@ class RulePerformanceTester:
             'premium_subscription_types': ['platinum', 'gold', 'enterprise'],
             'min_subscription_months': 6,
             'high_priority_regions': ['EMEA', 'APAC', 'NA'],
-            'legacy_platforms': ['TDM', 'PSTN', 'ISDN'],
-            'capacity_threshold': 75,
-            'min_outage_minutes': 30,
-            'iot_compatible_industries': ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities'],
             'support_tiers': ['standard', 'premium', 'platinum'],
             'response_time_thresholds': {'standard': 24, 'premium': 8, 'platinum': 4}
         }
@@ -292,7 +288,9 @@ class RulePerformanceTester:
         expected_matching_conditions = self.expected_matches.get(num_conditions, 1)
 
         # Use in-place printing for progress
-        sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} with {num_rules} rules, {num_conditions} conditions, {num_common} common conditions{' ' * 20}{Style.RESET_ALL}")
+        sys.stdout.write(
+            f"\r{Fore.YELLOW}Testing {file_name} with {num_rules} rules, {num_conditions} conditions, "
+            f"{num_common} common conditions{' ' * 20}{Style.RESET_ALL}")
         sys.stdout.flush()
 
         # Create a new rules manager for this test
@@ -371,7 +369,9 @@ class RulePerformanceTester:
 
         # Print completion message with proper spacing
         matched_str = f"matched={len(set(match_results))}"
-        print(f"\r{Fore.GREEN}Completed {file_name}: {Fore.CYAN}avg={avg_time:.4f}ms, total={total_time:.4f}ms, {Fore.MAGENTA}{matched_str}{' ' * 40}{Style.RESET_ALL}")
+        print(
+            f"\r{Fore.GREEN}Completed {file_name}: {Fore.CYAN}avg={avg_time:.4f}ms, total={total_time:.4f}ms, "
+            f"{Fore.MAGENTA}{matched_str}{' ' * 40}{Style.RESET_ALL}")
 
         return result
 
@@ -424,7 +424,7 @@ class RulePerformanceTester:
         print(f"\n{Fore.CYAN}{'=' * 30} Rule Engine Performance Tests {'=' * 30}{Style.RESET_ALL}")
         print(f"Found {total_files} rule files to test across {len(file_groups)} rule counts")
         print(f"Running {iterations} iterations with {runs_per_iteration} runs per iteration")
-        print(f"Press Ctrl+C at any time to stop testing and see results for completed tests\n")
+        print("Press Ctrl+C at any time to stop testing and see results for completed tests\n")
 
         for rule_count in sorted(file_groups.keys()):
             files = file_groups[rule_count]
@@ -606,11 +606,13 @@ class RulePerformanceTester:
         print(ASCIITable.make_table(table_data, headers))
 
         # Create side-by-side bar charts for average and total time
-        avg_chart_data = [(f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time'])
-                         for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
+        avg_chart_data = [
+            (f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time'])
+            for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
 
-        total_chart_data = [(f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time'])
-                           for result in sorted(sorted_results, key=lambda x: x['total_time'])]
+        total_chart_data = [
+            (f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time'])
+            for result in sorted(sorted_results, key=lambda x: x['total_time'])]
 
         # Find the maximum label length for alignment
         max_label_length = max(len(label) for label, _ in avg_chart_data)
@@ -762,14 +764,14 @@ Total test execution time: {total_time:.2f} seconds
         # Analyze impact of condition count
         all_condition_counts = set(result['num_conditions'] for result in sorted_results)
         if len(all_condition_counts) > 1:
-            explanation += f"\n2. The number of conditions per rule has a significant impact on performance. "
-            explanation += f"Rules with more conditions generally take longer to process.\n"
+            explanation += "\n2. The number of conditions per rule has a significant impact on performance. "
+            explanation += "Rules with more conditions generally take longer to process.\n"
 
         # Analyze impact of common conditions
         all_common_counts = set(result['num_common'] for result in sorted_results)
         if len(all_common_counts) > 1:
-            explanation += f"\n3. Increasing the number of common conditions tends to improve performance, "
-            explanation += f"as common conditions can be evaluated once for multiple rules.\n"
+            explanation += "\n3. Increasing the number of common conditions tends to improve performance, "
+            explanation += "as common conditions can be evaluated once for multiple rules.\n"
 
         # Add recommendations
         explanation += "\n## Recommendations\n\n"

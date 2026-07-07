@@ -31,7 +31,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
         # Initialize the rule test helper with the path to the rules directory
         rules_dir = Path(os.path.dirname(os.path.abspath(__file__)))
         self.helper = RuleTestHelper(rules_dir)
-        
+
         # Log all loaded rules and their conditions for debugging
         logger.info(f'Loaded rules: {list(self.helper.rule_conditions.keys())}')
         for rule_name, condition in self.helper.rule_conditions.items():
@@ -43,7 +43,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
         # Find rules with regex matching (=~)
         regex_rules = []
         for rule_name, condition in self.helper.rule_conditions.items():
-            if '=~' in condition:  
+            if '=~' in condition:
                 regex_rules.append(rule_name)
                 logger.info(f'Found regex rule: {rule_name} with condition: {condition}')
 
@@ -75,7 +75,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
                 'title': {'as_upper': 'QBC'},
-                'doc_id': 'AAABBB 123',  
+                'doc_id': 'AAABBB 123',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,
                 'default': {'transaction_amount': 500}
@@ -92,7 +92,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
                 'title': {'as_upper': 'QBC'},
-                'doc_id': 'XXXYYZ 123',  
+                'doc_id': 'XXXYYZ 123',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,
                 'default': {'transaction_amount': 500}
@@ -109,7 +109,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
                 'title': {'as_upper': 'QBC'},
-                'doc_id': 'AAABBB',  
+                'doc_id': 'AAABBB',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,
                 'default': {'transaction_amount': 500}
@@ -151,7 +151,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_amount': 600,
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
-                'title': {'as_upper': 'QBC'},  
+                'title': {'as_upper': 'QBC'},
                 'doc_id': 'AAABBB 123',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,
@@ -168,7 +168,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_amount': 600,
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
-                'title': {'as_upper': 'XYZ'},  
+                'title': {'as_upper': 'XYZ'},
                 'doc_id': 'AAABBB 123',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,
@@ -185,7 +185,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
                 'transaction_amount': 600,
                 'transaction_category': 'fixed',
                 'transaction_time_hour': 5,
-                'title': 'qbc',  
+                'title': 'qbc',
                 'doc_id': 'AAABBB 123',
                 'abc': '2025-01-01T00:00:00',
                 'hello': 123,

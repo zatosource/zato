@@ -353,7 +353,7 @@ class SecurityGroupsCtx:
         with self._lock:
 
             # Continue only if this group has been previously assigned to our context object ..
-            if not group_id in self.security_groups:
+            if group_id not in self.security_groups:
                 return
 
             # If we are here, it means that we really have a group to delete
@@ -422,7 +422,7 @@ class SecurityGroupsCtx:
         with self._lock:
 
             # Continue only if this group has been previously assigned to our context object ..
-            if not group_id in self.security_groups:
+            if group_id not in self.security_groups:
                 return
 
             sec_def = self._get_sec_def_by_id(security_id)
@@ -439,7 +439,7 @@ class SecurityGroupsCtx:
     def _on_member_removed_from_group(self, group_id:'int', security_id:'int') -> 'None':
 
         # Continue only if this group has been previously assigned to our context object ..
-        if not group_id in self.security_groups:
+        if group_id not in self.security_groups:
             return
 
         # First, remove the security ID from the input group ..

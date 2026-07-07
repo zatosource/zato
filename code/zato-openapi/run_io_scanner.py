@@ -19,11 +19,11 @@ def main():
     if len(sys.argv) < 2:
         print('Usage: python run_io_scanner.py DIRECTORY1 [DIRECTORY2...] [--output OUTPUT_FILE]')
         sys.exit(1)
-    
+
     # Parse command line arguments
     directories = []
     output_file = '/tmp/openapi.yaml'
-    
+
     i = 1
     while i < len(sys.argv):
         if sys.argv[i] == '--output' or sys.argv[i] == '-o':
@@ -36,11 +36,11 @@ def main():
         else:
             directories.append(sys.argv[i])
             i += 1
-    
+
     if not directories:
         print('Error: At least one directory must be specified')
         sys.exit(1)
-    
+
     # Run the scanner
     try:
         print(f'Scanning directories: {directories}')

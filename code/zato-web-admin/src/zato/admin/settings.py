@@ -41,7 +41,8 @@ ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_P
 from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
 from zato.common.util.api import get_engine_url
-from zato.admin.zato_settings import *  # type: ignore
+# Star import is how these settings are pulled into Django's settings module
+from zato.admin.zato_settings import *  # type: ignore # noqa: F403
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,13 +100,13 @@ else:
         if part.startswith('CN='):
             cn = part[3:]
             break
-    
+
     if not cn:
         cn = 'localhost'
-    
+
     dashboard_port = os.environ.get('Zato_Port_Dashboard', '8183')
     dashboard_ssl_port = os.environ.get('Zato_Port_Dashboard_SSL', '8184')
-    
+
     CSRF_TRUSTED_ORIGINS = [
         f'http://{cn}:{dashboard_port}',
         f'https://{cn}:{dashboard_ssl_port}'

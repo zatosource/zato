@@ -7,12 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass, field
-from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, UNAUTHORIZED
+from dataclasses import dataclass
 from typing import TypedDict
 
 # Zato
-from zato.common.api import PubSub
 from zato.common.typing_ import union_
 
 # ################################################################################################################################
@@ -20,7 +18,7 @@ from zato.common.typing_ import union_
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import any_, dataclass, field, list_
+    from zato.common.typing_ import any_, dataclass, list_
 
 # ################################################################################################################################
 # ################################################################################################################################

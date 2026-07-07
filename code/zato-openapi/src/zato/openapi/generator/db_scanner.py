@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.defaults import default_env_base_dir
+from zato.common.odb.model import APIKeySecurity, GenericObject, HTTPBasicAuth, HTTPSOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +44,9 @@ def fetch_all():
 
         # Show details about all HTTP/SOAP objects
         for i, channel in enumerate(all_http):
-            logger.debug(f'Channel {i}: name={channel.name}, transport={channel.transport}, connection={channel.connection}, is_active={channel.is_active}, path={channel.url_path}, service={channel.service}')
+            logger.debug(
+                f'Channel {i}: name={channel.name}, transport={channel.transport}, connection={channel.connection}, '
+                f'is_active={channel.is_active}, path={channel.url_path}, service={channel.service}')
 
         # Get all channels, regardless of status/transport
         channels = session.query(HTTPSOAP).filter(

@@ -80,8 +80,9 @@ def _add_party(parent:'any_', tag:'str', party_id:'str', party_type:'strnone') -
     party = etree.SubElement(element, qname(NS.EBXML2, 'PartyId'))
     party.text = party_id
 
+    # The ebMS 2.0 schema is attributeFormDefault="qualified", so this is eb:type.
     if party_type:
-        party.set('type', party_type)
+        party.set(qname(NS.EBXML2, 'type'), party_type)
 
 # ################################################################################################################################
 
@@ -172,12 +173,12 @@ def parse_message_header(envelope:'any_') -> 'EbXMLInfo':
     from_element = message_header.find(qname(NS.EBXML2, 'From'))
     from_party = from_element.find(qname(NS.EBXML2, 'PartyId'))
     out.from_party = from_party.text
-    out.from_party_type = from_party.get('type')
+    out.from_party_type = from_party.get(qname(NS.EBXML2, 'type'))
 
     to_element = message_header.find(qname(NS.EBXML2, 'To'))
     to_party = to_element.find(qname(NS.EBXML2, 'PartyId'))
     out.to_party = to_party.text
-    out.to_party_type = to_party.get('type')
+    out.to_party_type = to_party.get(qname(NS.EBXML2, 'type'))
 
     out.cpa_id          = _find_text(message_header, 'CPAId')
     out.conversation_id = _find_text(message_header, 'ConversationId')

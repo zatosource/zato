@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from datetime import datetime, timedelta
+from datetime import timedelta
 from time import sleep
 from traceback import format_exc
 
@@ -18,7 +18,6 @@ from gevent.lock import RLock
 from gevent.queue import Empty, Queue
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name, replace_query_string_items
 from zato.common.util.python_ import get_python_id

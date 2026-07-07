@@ -49,7 +49,8 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class Start(ManageCommand):
-    """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances. 'path' must point to a directory into which the given component has been installed. # noqa: E501
+    """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances.
+'path' must point to a directory into which the given component has been installed.
 
 Examples:
   - Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.
@@ -210,7 +211,7 @@ Examples:
             top_name = names[0]
             top_name_path = os.path.join(src_path, top_name)
             top_name_is_dir = os.path.isdir(top_name_path)
-            top_name_is_not_internal = not (top_name in ModuleCtx.Deploy_Dirs)
+            top_name_is_not_internal = top_name not in ModuleCtx.Deploy_Dirs
 
         should_recurse = top_name_is_dir and top_name_is_not_internal
 

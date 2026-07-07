@@ -43,6 +43,12 @@ if 0:
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     bytesnone = bytesnone
+    Ed25519PrivateKey = Ed25519PrivateKey
+    Ed25519PublicKey = Ed25519PublicKey
+    RSAPrivateKey = RSAPrivateKey
+    RSAPublicKey = RSAPublicKey
+    X25519PrivateKey = X25519PrivateKey
+    X25519PublicKey = X25519PublicKey
 
 # ################################################################################################################################
 # ################################################################################################################################

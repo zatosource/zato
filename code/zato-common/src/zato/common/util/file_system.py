@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import re
 import string
-from datetime import datetime, timedelta
+from datetime import timedelta
 from logging import getLogger
 from pathlib import Path
 from tempfile import gettempdir
@@ -51,13 +51,11 @@ def fs_safe_now(_utcnow:'callable_'=utcnow) -> 'str':
 
 def wait_for_file(path:'str', max_wait:'int'=5) -> 'None':
 
-    found = False
     now   = utcnow()
     until = now + timedelta(seconds=max_wait)
 
     while now < until:
         if os.path.exists(path):
-            found = True
             break
         else:
             sleep(0.05)

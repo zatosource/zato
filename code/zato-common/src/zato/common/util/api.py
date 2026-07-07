@@ -105,9 +105,8 @@ from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server
+from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 from zato.common.util.config import enrich_config_from_environment
-from zato.common.util.python_ import get_current_stack
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -120,7 +119,9 @@ from zato.common.util.time_ import utcnow
 if 0:
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlist, strlistnone, strnone, strset
+    from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strdict, strlist, strlistnone, strnone, \
+        strset
+    callable_ = callable_
     iterable = iterable
     strlistnone = strlistnone
     strnone = strnone
@@ -274,7 +275,7 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
 
     _to_avoid_list = getattr(_object, to_avoid_list, None) # Don't swallow exceptions
     if _to_avoid_list is not None:
-        attrs = ifilter(lambda elem: not elem in _to_avoid_list, attrs)
+        attrs = ifilter(lambda elem: elem not in _to_avoid_list, attrs)
 
     if sort:
         attrs = sorted(attrs)
@@ -1099,13 +1100,13 @@ def get_haproxy_agent_pidfile(component_dir):
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
     from logging import getLogger
     logger = getLogger(__name__)
-    
+
     pid = os.getpid()
     pidfile_path = os.path.join(component_dir, pidfile)
-    
+
     logger.info('store_pidfile: component_dir={}, pidfile={}, pid={}, full_path={}'.format(
         component_dir, pidfile, pid, pidfile_path))
-    
+
     try:
         with open(pidfile_path, 'w', encoding='utf8') as f:
             f.write('{}'.format(pid))
@@ -1567,7 +1568,7 @@ def start_connectors(config_manager, service_name, data):
 # ################################################################################################################################
 
 def require_tcp_port(address):
-    if not ':' in address:
+    if ':' not in address:
         raise Exception('No TCP port in {}'.format(address))
 
     port = address.split(':')[-1]

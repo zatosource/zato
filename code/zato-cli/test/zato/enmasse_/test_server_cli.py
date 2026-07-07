@@ -273,6 +273,20 @@ class TestEnmasseCLI(TestCase):
             for section in original_sections - _skip_sections:
                 self.assertIn(section, data_1, f'Section "{section}" missing from export')
 
+            # Idempotency alone cannot catch a field that is dropped consistently,
+            # so every security definition must also survive by name, with its type
+            # and with the details kept in opaque attributes.
+            input_security = {item['name']: item for item in yaml.safe_load(template_complex_01)['security']}
+            exported_security = {item['name']: item for item in data_1['security']}
+
+            for name, input_def in input_security.items():
+                self.assertIn(name, exported_security, f'Security definition "{name}" missing from export')
+                self.assertEqual(exported_security[name]['type'], input_def['type'], f'Type mismatch for "{name}"')
+
+            wss = exported_security['enmasse.wss.1']
+            self.assertEqual(wss['mode'], 'username_token')
+            self.assertTrue(wss['use_digest'])
+
             # Round 2: re-import the export, re-export
             self._import_file(export_1_path)
             self._export_file(export_2_path)

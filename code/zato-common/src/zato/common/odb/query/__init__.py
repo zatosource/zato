@@ -449,12 +449,12 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.connection,
         HTTPSOAP.content_type,
         case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
-        case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'),
-        case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'),
-        case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'),
-        case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'),
+        case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'), # noqa: E711
+        case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'), # noqa: E711
+        case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'), # noqa: E711
+        case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'), # noqa: E711
         case([(
-            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
+            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)], # noqa: E711
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.timeout,
         HTTPSOAP.opaque1,
@@ -660,7 +660,7 @@ def service_deployment_list(session, service_id=None, include_internal=None):
 
     if not include_internal:
         query = query.\
-            filter(Service.is_internal==False) # type: ignore
+            filter(Service.is_internal==False) # type: ignore # noqa: E712
 
         query = query.filter(
             not_(
@@ -884,7 +884,7 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
         func.count(PubSubSubscription.id).label('subscription_count')
     ).filter(
         PubSubSubscription.cluster_id == cluster_id,
-        PubSubSubscription.is_delivery_active == True
+        PubSubSubscription.is_delivery_active == True # noqa: E712
     ).group_by(PubSubSubscription.sec_base_id).subquery()
 
     # Main query with subscription counts

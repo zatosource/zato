@@ -412,8 +412,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         'base_dir': base_dir,
     })
 
-    server_software = server_config.misc.get('http_server_header', 'Apache')
-
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
         _ = locale.setlocale(locale.LC_ALL, user_locale)

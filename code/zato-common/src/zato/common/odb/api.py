@@ -11,7 +11,6 @@ import logging
 import os
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime
 from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
@@ -265,7 +264,7 @@ class SQLConnectionPool:
 
         # Check if Oracle DB connections are enabled
         if self._is_oracle_db:
-            if not (key := os.environ.get('Zato_License_Key')): # type: ignore
+            if not os.environ.get('Zato_License_Key'):
                 self.logger.warning('Zato license key not found. Oracle DB connections will not be available.')
                 return
 

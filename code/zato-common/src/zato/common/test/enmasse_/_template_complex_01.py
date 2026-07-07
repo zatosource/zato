@@ -60,6 +60,13 @@ security:
     password: abcdef123456
     type: ntlm
 
+  - name: enmasse.wss.1
+    username: enmasse.1
+    password: abcdef123456
+    type: wss
+    mode: username_token
+    use_digest: true
+
   - name: enmasse.apikey.1
     type: apikey
     username: enmasse.1

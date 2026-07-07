@@ -299,7 +299,6 @@ def test_packages(req):
 
         delete_count = 0
         if allow_delete:
-            installed = _get_installed_packages()
             previously_managed = _get_managed_package_names()
             to_delete = sorted(previously_managed - submitted_packages)
             delete_count = len(to_delete)

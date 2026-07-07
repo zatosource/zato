@@ -413,7 +413,9 @@ class Create(AdminService):
                 self.response.payload.topic_name_list = topic_objects_list
                 self.response.payload.topic_link_list = sorted(topic_link_list)
 
-                self.logger.info('CREATE: Subscription(s) created for %s -> %s (%s) with flags: %s', sec_base.name, topic_name_list, sub.sub_key, topic_objects_list)
+                self.logger.info(
+                    'CREATE: Subscription(s) created for %s -> %s (%s) with flags: %s',
+                    sec_base.name, topic_name_list, sub.sub_key, topic_objects_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

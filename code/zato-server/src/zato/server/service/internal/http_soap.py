@@ -25,7 +25,7 @@ from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
-from zato.server.service import AsIs, Boolean, Integer
+from zato.server.service import AsIs, Boolean
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################

@@ -96,7 +96,7 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
     permissions = session.query(PubSubPermission).filter(
         PubSubPermission.sec_base_id == sec_base_id,
         PubSubPermission.cluster_id == cluster_id,
-        PubSubPermission.is_active == True
+        PubSubPermission.is_active == True # noqa: E712
     ).all()
 
     result = []

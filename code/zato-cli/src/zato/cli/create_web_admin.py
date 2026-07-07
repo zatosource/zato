@@ -86,7 +86,8 @@ class Create(ZatoCommand):
         pymysql.install_as_MySQLdb()
 
         # stdlib
-        import os, json
+        import os
+        import json
         from random import getrandbits
         from uuid import uuid4
 

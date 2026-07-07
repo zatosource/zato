@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import errno
 import glob
 import logging
 import os
@@ -14,8 +15,6 @@ import platform
 import sys
 from pathlib import Path
 from subprocess import check_output, PIPE, Popen
-from sys import version as py_version
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1216,11 +1215,6 @@ def copy_file(src, dst, preserve_mode=1, preserve_times=1, update=0, # type: ign
         dst = os.path.join(dst, os.path.basename(src))
     else:
         dir = os.path.dirname(dst)
-
-    if False and update and not newer(src, dst):
-        if verbose >= 1:
-            logger.debug("not copying %s (output up-to-date)", src)
-        return (dst, 0)
 
     try:
         # for generating verbose output in 'copy_file()'

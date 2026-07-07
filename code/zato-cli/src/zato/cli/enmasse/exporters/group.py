@@ -113,7 +113,9 @@ class GroupExporter:
                     if sec_name:
                         member_names.append(sec_name)
                 except ValueError as e:
-                    logger.warning(f'Could not resolve security reference "{security_reference}" from member name "{member_full_name}" for group "{group_name}": {e}. Skipping member.')
+                    logger.warning(
+                        f'Could not resolve security reference "{security_reference}" from member name "{member_full_name}" '
+                        f'for group "{group_name}": {e}. Skipping member.')
 
             # Skip groups that are to be excluded
             if group_name in self.excluded_groups:

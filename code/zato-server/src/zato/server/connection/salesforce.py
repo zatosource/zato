@@ -18,6 +18,9 @@ from requests import get as request_get, post as requests_post
 if 0:
     from zato.common.typing_ import any_, anydict, dictnone, stranydict, strnone
 
+    dictnone = dictnone
+    strnone = strnone
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -25,7 +25,7 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, IO
+from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
@@ -42,7 +42,7 @@ from zato.server.service import Service
 from zato.input_output import IOProcessor
 
 # Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
+from zato.common.py23_.past.builtins import basestring, cmp, xrange
 
 # ################################################################################################################################
 # ################################################################################################################################

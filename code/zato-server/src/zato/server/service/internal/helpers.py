@@ -29,7 +29,7 @@ from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
 from zato.common.api import CONNECTION, GENERIC, SEC_DEF_TYPE, URL_TYPE
 from zato.common.util.auth import check_basic_auth
-from zato.server.connection.http_soap import Forbidden, Unauthorized
+from zato.server.connection.http_soap import Forbidden
 from zato.server.service import Model, Service
 
 # ################################################################################################################################

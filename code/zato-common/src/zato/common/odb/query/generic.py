@@ -73,7 +73,11 @@ class GenericObjectWrapper:
         # Local variables
         type_ = type_ or self.type_
 
-        item = self.session.query(self.model_class).filter(self.model_class.name==name).filter(self.model_class.type_==type_).filter(self.model_class.cluster_id==self.cluster_id).first() # type: ignore
+        item = self.session.query(self.model_class).\
+            filter(self.model_class.name==name).\
+            filter(self.model_class.type_==type_).\
+            filter(self.model_class.cluster_id==self.cluster_id).\
+            first() # type: ignore
 
         return cast_('any_', get_dict_with_opaque(item) if item else None)
 

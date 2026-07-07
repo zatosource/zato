@@ -266,7 +266,7 @@ class TestHotDeploy(TestCase):
             server_log = os.path.join(cls.server_dir, 'logs', 'server.log')
 
         if os.path.isfile(server_log):
-            print(f'\n--- server.log tail: ---', file=sys.stderr)
+            print('\n--- server.log tail: ---', file=sys.stderr)
             with open(server_log) as f:
                 for line in f.readlines()[-50:]:
                     print(line.rstrip(), file=sys.stderr)

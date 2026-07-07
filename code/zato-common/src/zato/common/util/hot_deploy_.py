@@ -105,7 +105,7 @@ def get_project_info(
                     continue
 
                 # .. and add it to the project's list of directories ..
-                if not pickup_dir in project.pickup_from_path:
+                if pickup_dir not in project.pickup_from_path:
                     project.pickup_from_path.append(pickup_dir)
 
         # .. we can append the project to our result ..

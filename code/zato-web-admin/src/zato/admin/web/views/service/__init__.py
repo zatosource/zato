@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from collections import namedtuple
 from http import HTTPStatus
-from json import dumps, loads
+from json import dumps
 from traceback import format_exc
 
 # Django

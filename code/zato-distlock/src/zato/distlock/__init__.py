@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 from errno import ENOENT
 from hashlib import sha256
 from tempfile import gettempdir

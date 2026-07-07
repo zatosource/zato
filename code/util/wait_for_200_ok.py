@@ -20,7 +20,7 @@ from zato.common.util.api import wait_for_200_ok
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    
+
     if len(sys.argv) != 2:
         logger.error('Invalid number of arguments')
         print('Usage: wait_for_200_ok.py <address>', file=sys.stderr)

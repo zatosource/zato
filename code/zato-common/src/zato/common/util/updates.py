@@ -604,7 +604,7 @@ class Updater:
                 if result.returncode != 0:
                     raise Exception(f'Git clone failed: {result.stderr}')
 
-                logger.info(f'check_latest_version: git clone succeeded')
+                logger.info('check_latest_version: git clone succeeded')
 
                 if result.stdout:
                     logger.info(f'check_latest_version: git clone stdout: {result.stdout}')

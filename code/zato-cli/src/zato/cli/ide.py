@@ -57,7 +57,6 @@ class SetIDEPassword(ManageCommand):
         encrypted = self._encrypt(ServerCryptoManager, self.args, password, False)
         encrypted = SECRETS.PREFIX + encrypted.decode('utf8')
 
-        session = None
         security_id = None
 
         # Obtain an SQL session to the configuration database ..

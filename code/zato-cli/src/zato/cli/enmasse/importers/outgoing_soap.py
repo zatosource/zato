@@ -44,7 +44,10 @@ class OutgoingSOAPImporter:
         out = {}
         logger.info('Retrieving outgoing SOAP connections from database for cluster_id=%s', cluster_id)
 
-        query = session.query(HTTPSOAP).filter(HTTPSOAP.cluster_id==cluster_id).filter(HTTPSOAP.connection==CONNECTION.OUTGOING).filter(HTTPSOAP.transport==URL_TYPE.SOAP) # type: ignore
+        query = session.query(HTTPSOAP).\
+            filter(HTTPSOAP.cluster_id==cluster_id).\
+            filter(HTTPSOAP.connection==CONNECTION.OUTGOING).\
+            filter(HTTPSOAP.transport==URL_TYPE.SOAP) # type: ignore
         connections = to_json(query, return_as_dict=True)
         logger.info('Processing %d outgoing SOAP connections', len(connections))
 

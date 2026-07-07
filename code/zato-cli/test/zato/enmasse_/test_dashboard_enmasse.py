@@ -219,7 +219,7 @@ class TestDashboardEnmasse(TestCase):
             server_log = os.path.join(cls.server_dir, 'logs', 'server.log')
 
         if os.path.isfile(server_log):
-            print(f'\n--- server.log tail: ---', file=sys.stderr)
+            print('\n--- server.log tail: ---', file=sys.stderr)
             with open(server_log) as f:
                 for line in f.readlines()[-50:]:
                     print(line.rstrip(), file=sys.stderr)
@@ -293,7 +293,7 @@ class TestDashboardEnmasse(TestCase):
 
         if isinstance(data, dict):
             if not data.get('is_ok', False):
-                print(f'\n--- DEBUG dashboard import failed:', file=sys.stderr)
+                print('\n--- DEBUG dashboard import failed:', file=sys.stderr)
                 print(f'--- DEBUG stdout:\n{data.get("stdout", "")}', file=sys.stderr)
                 print(f'--- DEBUG stderr:\n{data.get("stderr", "")}', file=sys.stderr)
                 print(f'--- DEBUG exit_code: {data.get("exit_code")}', file=sys.stderr)
@@ -367,8 +367,6 @@ class TestDashboardEnmasse(TestCase):
     def test_04_cli_import_dashboard_export(self):
         """Import via CLI, export via dashboard endpoint - cross-method consistency."""
         from zato.common.test.enmasse_._template_complex_01 import template_complex_01
-
-        skip_fields = _time_dependent_fields | _random_fields
 
         tmp_path = os.path.join(tempfile.gettempdir(), f'zato-dash-cli-{os.getpid()}.yaml')
         try:

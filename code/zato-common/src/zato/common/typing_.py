@@ -47,8 +47,8 @@ try:
 except Exception:
     from_dict = None
 
-# stdlib
-from dataclasses import * # type: ignore
+# stdlib - re-exported for other modules to import from here
+from dataclasses import * # type: ignore # noqa: F403
 
 # Zato
 from zato.common.marshal_.model import BaseModel

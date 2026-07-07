@@ -311,7 +311,15 @@ class PatternMatcher:
                 return self._create_success_result(client_id, topic, operation, pattern)
         return None
 
-    def _evaluate_and_cache_match(self, cache_key:'str', matches:'bool', client_id:'str', topic:'str', operation:'str', pattern:'str') -> 'EvaluationResult | None':
+    def _evaluate_and_cache_match(
+        self,
+        cache_key:'str',
+        matches:'bool',
+        client_id:'str',
+        topic:'str',
+        operation:'str',
+        pattern:'str',
+        ) -> 'EvaluationResult | None':
         """ Cache match result and return success result if matched.
         """
         self._evaluation_cache[cache_key] = matches

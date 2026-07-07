@@ -52,6 +52,8 @@ class _LocalSchemaResolver(etree.Resolver):
         'http://www.w3.org/TR/2002/REC-xmlenc-core-20021210/xenc-schema.xsd': 'xenc-schema.xsd',
         'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd':
             'oasis-200401-wss-wssecurity-utility-1.0.xsd',
+        'http://www.oasis-open.org/committees/ebxml-msg/schema/xlink.xsd': 'xlink.xsd',
+        'http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd': 'soap-envelope-1.1.xsd',
     }
 
     def resolve(self, url, public_id, context):
@@ -146,6 +148,50 @@ def saml_schema():
     """ The official OASIS SAML 2.0 assertion schema.
     """
     out = load_schema('saml-schema-assertion-2.0.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def wsa_schema():
+    """ The official W3C WS-Addressing 1.0 schema.
+    """
+    out = load_schema('ws-addr.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def xop_schema():
+    """ The official W3C XOP (XML-binary Optimized Packaging) schema.
+    """
+    out = load_schema('xop-include.xsd')
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def ebms2_schema():
+    """ The official OASIS ebXML Message Service 2.0 schema - it imports
+    the SOAP 1.1 envelope, XLink and XML Signature schemas.
+
+    The Acknowledgment type in the official file has a ds:Reference particle
+    followed by a ##other wildcard, which violates the XSD 1.0 deterministic
+    content model rule, so libxml2 refuses to compile the schema as published.
+    The fixture stays byte-for-byte official and the offending particle is
+    dropped here at load time instead - nothing in the suite produces
+    eb:Acknowledgment, so no validated element is affected.
+    """
+    parser = etree.XMLParser()
+    parser.resolvers.add(_LocalSchemaResolver())
+
+    document = etree.parse(os.path.join(Schemas_Dir, 'msg-header-2_0.xsd'), parser)
+
+    for element in document.iter('{http://www.w3.org/2001/XMLSchema}element'):
+        if element.get('ref') == 'ds:Reference':
+            element.getparent().remove(element)
+
+    out = etree.XMLSchema(document)
     return out
 
 # ################################################################################################################################

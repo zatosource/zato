@@ -11,7 +11,6 @@ import logging
 from datetime import datetime
 from http.client import OK
 from json import dumps, loads
-from traceback import format_exc
 
 # Bunch
 from zato.common.ext.bunch import bunchify
@@ -23,7 +22,7 @@ import requests
 from urllib3.util.retry import Retry
 
 # Zato
-from zato.common.api import URLInfo, ZATO_NOT_GIVEN
+from zato.common.api import URLInfo
 from zato.common.const import ServiceConst
 from zato.common.exception import ZatoException
 from zato.common.odb.model import Server
@@ -42,7 +41,7 @@ mod_logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strtuple
+    from zato.common.typing_ import strtuple
     strtuple = strtuple
 
 # ################################################################################################################################

@@ -20,8 +20,15 @@ from django.http import JsonResponse
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_security_id_from_select, get_security_groups_from_checkbox_list
-from zato.common.api import GENERIC, generic_attrs, HL7, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.api import GENERIC, generic_attrs, HL7, SEC_DEF_TYPE
 from zato.common.model.hl7 import HL7MLLPConfigObject
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################

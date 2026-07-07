@@ -114,7 +114,7 @@ class PrometheusTestServer:
             time.sleep(1)
             if not self.running:
                 break
-                
+
             # Sample aircraft handling process with varying data
             aircraft_ctx = create_context('AircraftHandling', 'ABC123')
             aircraft_ctx.push('bags_loaded', random.randint(100, 200))
