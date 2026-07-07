@@ -17,6 +17,10 @@ mcp_channel_name = 'zato.channel.mcp'
 mcp_channel_url_path = '/mcp/demo'
 mcp_service_name = 'zato.server.service.internal.channel.mcp.MCPEndpoint'
 
+as4_channel_name = 'zato.channel.as4'
+as4_channel_url_path = '/zato/as4'
+as4_service_name = 'zato.server.service.internal.channel.as4.AS4Endpoint'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -68,6 +72,49 @@ def ensure_openapi_channel_exists(session, cluster_id):
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
         URL_TYPE.PLAIN_HTTP, None, openapi_channel_url_path, None, '', None, DATA_FORMAT.JSON,
+        service=service, cluster=cluster)
+    session.add(channel)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as4_channel_exists(session, cluster_id):
+    """ Checks if the AS4 endpoint channel exists, creates it if not.
+    The channel routes /zato/as4 to the AS4Endpoint service with no data format,
+    which is what gives the service access to the raw multipart request body.
+    Returns True if created, False if already existed.
+    """
+    from zato.common.api import CONNECTION, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+
+    existing = session.query(HTTPSOAP).filter(
+        HTTPSOAP.name == as4_channel_name,
+        HTTPSOAP.cluster_id == cluster_id,
+        HTTPSOAP.connection == CONNECTION.CHANNEL,
+    ).first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
+
+    service = session.query(Service).filter(
+        Service.name == as4_service_name,
+        Service.cluster_id == cluster_id,
+    ).first()
+
+    if not service:
+        service = Service(None, as4_service_name, True, as4_service_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # No data format on purpose - AS4 requests are multipart MIME
+    # and the service reads the body through self.request.raw_request.
+    channel = HTTPSOAP(
+        None, as4_channel_name, True, True, CONNECTION.CHANNEL,
+        URL_TYPE.PLAIN_HTTP, None, as4_channel_url_path, None, '', None, None,
         service=service, cluster=cluster)
     session.add(channel)
 

@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns="http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:S11="http://schemas.xmlsoap.org/soap/envelope/" xmlns:S12="http://www.w3.org/2003/05/soap-envelope" xmlns:tns="http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/" targetNamespace="http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xsd:annotation>
+		<xsd:appinfo>Schema for ebMS-3 XML Infoset</xsd:appinfo>
+		<xsd:documentation xml:lang="en"> 
+			This schema defines the XML Infoset of ebMS-3 headers. These headers are 
+			placed within the SOAP Header element of either a SOAP 1.1 or SOAP 1.2 
+			message.
+		</xsd:documentation>
+	</xsd:annotation>
+	<xsd:import namespace="http://schemas.xmlsoap.org/soap/envelope/" schemaLocation="http://schemas.xmlsoap.org/soap/envelope/"/>
+	<xsd:import namespace="http://www.w3.org/2003/05/soap-envelope" schemaLocation="http://www.w3.org/2003/05/soap-envelope"/>
+	<xsd:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="http://www.w3.org/2001/03/xml.xsd"/>
+	<xsd:element name="Messaging" type="Messaging"/>
+	<xsd:complexType name="Messaging">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en"> 
+	The eb:Messaging element is the top element of ebMS-3 headers, and it is 
+	placed within the SOAP Header element (either SOAP 1.1 or SOAP 1.2). The 
+	eb:Messaging element may contain several instances of eb:SignalMessage 
+	and eb:UserMessage elements. However in the core part of the ebMS-3
+	specification, only one instance of either eb:UserMessage or eb:SignalMessage 
+	must be present. The second part of ebMS-3 specification may need to include 
+	multiple instances of either eb:SignalMessage, eb:UserMessage or both. 
+	Therefore, this schema is allowing multiple instances of eb:SignalMessage 
+	and eb:UserMessage elements for part 2 of the ebMS-3 specification. Note
+	that the eb:Messaging element cannot be empty (at least one of 
+	eb:SignalMessage or eb:UserMessage element must present).
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="SignalMessage" type="SignalMessage" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="UserMessage" type="UserMessage" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attributeGroup ref="tns:headerExtension"/>
+	</xsd:complexType>
+	<xsd:complexType name="SignalMessage">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en"> 
+	In the core part of ebMS-3 specification, an eb:Signal Message is allowed to
+	contain eb:MessageInfo and at most one Receipt Signal, at most one eb:PullRequest
+	element, and/or a series of eb:Error elements. In part 2 of the ebMS-3 
+	specification, new signals may be introduced, and for this reason, 
+	an extensibility point is added here to the eb:SignalMessage element to 
+	allow it to contain any elements.
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="MessageInfo" type="MessageInfo"/>
+			<xsd:element name="PullRequest" type="PullRequest" minOccurs="0"/>
+			<xsd:element name="Receipt" type="Receipt" minOccurs="0"/>
+			<xsd:element name="Error" type="Error" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Error">
+		<xsd:sequence>
+			<xsd:element name="Description" type="tns:Description" minOccurs="0"/>
+			<xsd:element name="ErrorDetail" type="xsd:token" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="category" type="xsd:token" use="optional"/>
+		<xsd:attribute name="refToMessageInError" type="xsd:token" use="optional"/>
+		<xsd:attribute name="errorCode" type="xsd:token" use="required"/>
+		<xsd:attribute name="origin" type="xsd:token" use="optional"/>
+		<xsd:attribute name="severity" type="xsd:token" use="required"/>
+		<xsd:attribute name="shortDescription" type="xsd:token" use="optional"/>
+	</xsd:complexType>
+	<xsd:complexType name="PullRequest">
+		<xsd:sequence>
+			<xsd:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attributeGroup ref="pullAttributes"/>
+	</xsd:complexType>
+	<xsd:complexType name="Receipt">
+		<xsd:sequence>
+			<xsd:any namespace="##other" processContents="lax" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="UserMessage">
+		<xsd:sequence>
+			<xsd:element name="MessageInfo" type="MessageInfo"/>
+			<xsd:element name="PartyInfo" type="PartyInfo"/>
+			<xsd:element name="CollaborationInfo" type="CollaborationInfo"/>
+			<xsd:element name="MessageProperties" type="tns:MessageProperties" minOccurs="0"/>
+			<xsd:element name="PayloadInfo" type="tns:PayloadInfo" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="mpc" type="xsd:anyURI" use="optional"/>
+	</xsd:complexType>
+	<xsd:complexType name="MessageInfo">
+		<xsd:sequence>
+			<xsd:element name="Timestamp" type="xsd:dateTime"/>
+			<xsd:element name="MessageId" type="tns:non-empty-string"/>
+			<xsd:element name="RefToMessageId" type="tns:non-empty-string" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="PartyInfo">
+		<xsd:sequence>
+			<xsd:element name="From" type="tns:From"/>
+			<xsd:element name="To" type="tns:To"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="PartyId">
+		<xsd:simpleContent>
+			<xsd:extension base="tns:non-empty-string">
+				<xsd:attribute name="type" type="tns:non-empty-string"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="From">
+		<xsd:sequence>
+			<xsd:element name="PartyId" type="tns:PartyId" maxOccurs="unbounded"/>
+			<xsd:element name="Role" type="tns:non-empty-string"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="To">
+		<xsd:sequence>
+			<xsd:element name="PartyId" type="tns:PartyId" maxOccurs="unbounded"/>
+			<xsd:element name="Role" type="tns:non-empty-string"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="CollaborationInfo">
+		<xsd:sequence>
+			<xsd:element name="AgreementRef" type="tns:AgreementRef" minOccurs="0"/>
+			<xsd:element name="Service" type="tns:Service"/>
+			<xsd:element name="Action" type="xsd:token"/>
+			<xsd:element name="ConversationId" type="xsd:token"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Service">
+		<xsd:simpleContent>
+			<xsd:extension base="tns:non-empty-string">
+				<xsd:attribute name="type" type="tns:non-empty-string" use="optional"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="AgreementRef">
+		<xsd:simpleContent>
+			<xsd:extension base="tns:non-empty-string">
+				<xsd:attribute name="type" type="tns:non-empty-string" use="optional"/>
+				<xsd:attribute name="pmode" type="tns:non-empty-string" use="optional"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="PayloadInfo">
+		<xsd:sequence>
+			<xsd:element name="PartInfo" type="tns:PartInfo" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="PartInfo">
+		<xsd:sequence>
+			<xsd:element name="Schema" type="tns:Schema" minOccurs="0"/>
+			<xsd:element name="Description" type="tns:Description" minOccurs="0"/>
+			<xsd:element name="PartProperties" type="tns:PartProperties" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="href" type="xsd:token"/>
+	</xsd:complexType>
+	<xsd:complexType name="Schema">
+		<xsd:attribute name="location" type="xsd:anyURI" use="required"/>
+		<xsd:attribute name="version" type="tns:non-empty-string" use="optional"/>
+		<xsd:attribute name="namespace" type="tns:non-empty-string" use="optional"/>
+	</xsd:complexType>
+	<xsd:complexType name="Property">
+		<xsd:simpleContent>
+			<xsd:extension base="tns:non-empty-string">
+				<xsd:attribute name="name" type="tns:non-empty-string" use="required"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="PartProperties">
+		<xsd:sequence>
+			<xsd:element name="Property" type="tns:Property" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="MessageProperties">
+		<xsd:sequence>
+			<xsd:element name="Property" type="Property" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:attributeGroup name="headerExtension">
+		<xsd:attribute name="id" type="xsd:ID" use="optional"/>
+		<xsd:attribute ref="S11:mustUnderstand" use="optional">
+			<xsd:annotation>
+				<xsd:documentation>
+	    if SOAP 1.1 is being used, this attribute is required
+			  </xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute ref="S12:mustUnderstand" use="optional">
+			<xsd:annotation>
+				<xsd:documentation>
+	    if SOAP 1.2 is being used, this attribute is required
+			  </xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:anyAttribute namespace="##other" processContents="lax"/>
+	</xsd:attributeGroup>
+	<xsd:attributeGroup name="pullAttributes">
+		<xsd:attribute name="mpc" type="xsd:anyURI" use="optional"/>
+		<xsd:anyAttribute namespace="##other" processContents="lax"/>
+	</xsd:attributeGroup>
+	<xsd:complexType name="Description">
+		<xsd:simpleContent>
+			<xsd:extension base="tns:non-empty-string">
+				<xsd:attribute ref="xml:lang" use="required"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:simpleType name="non-empty-string">
+		<xsd:restriction base="xsd:string">
+			<xsd:minLength value="1"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>
