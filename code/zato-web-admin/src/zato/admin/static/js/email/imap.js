@@ -119,6 +119,13 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
 
     // 9
     row += String.format("<td class='ignore'>{0}</td>", item.filter_criteria ? item.filter_criteria : "");
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_run_every ? item.scheduler_run_every : "");
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_run_unit ? item.scheduler_run_unit : "");
+
+    // 10
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_start_date ? item.scheduler_start_date : "");
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_service ? item.scheduler_service : "");
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id ? item.scheduler_job_id : "");
 
     if(include_tr) {
         row += '</tr>';

@@ -12,9 +12,10 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
-from zato.common.api import EMAIL as EMail_Common
-from zato.common.odb.model import IMAP, to_json
+from zato.common.api import EMAIL as EMail_Common, SCHEDULER
+from zato.common.odb.model import IMAP, Job, to_json
 from zato.common.odb.query import email_imap_list
+from zato.common.util.imap_scheduler import interval_from_unit
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -29,6 +30,11 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_scheduler_common = EMail_Common.IMAP.Scheduler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,6 +101,40 @@ class IMAPImporter:
 
 # ################################################################################################################################
 
+    def _sync_linked_job(self, imap_def:'anydict', imap_conn:'any_', session:'SASession') -> 'any_':
+        """ Creates or updates the scheduler job that runs the service configured for an IMAP connection.
+        """
+        run_every = int(imap_def['scheduler_run_every'])
+        run_unit = imap_def.get('scheduler_run_unit', _scheduler_common.Unit.Minutes)
+
+        # Build a regular scheduler job definition out of the connection's scheduler fields
+        job_def = {
+            'name': _scheduler_common.Job_Prefix + imap_conn.name,
+            'service': imap_def['scheduler_service'],
+            'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+            'is_active': imap_def.get('is_active', True),
+            _scheduler_common.Conn_ID_Attr: imap_conn.id,
+        }
+
+        interval = interval_from_unit(run_every, run_unit)
+        job_def.update(interval)
+
+        if start_date := imap_def.get('scheduler_start_date'):
+            job_def['start_date'] = start_date
+
+        # The job may already exist from a previous import, in which case it is updated in place
+        existing_job = session.query(Job).filter_by(name=job_def['name'], cluster_id=self.importer.cluster_id).first()
+
+        if existing_job:
+            job_def['id'] = existing_job.id
+            out = self.importer.scheduler_importer.update_job_definition(job_def, session)
+        else:
+            out = self.importer.scheduler_importer.create_job_definition(job_def, session)
+
+        return out
+
+# ################################################################################################################################
+
     def create_imap_definition(self, imap_def:'anydict', session:'SASession') -> 'any_':
 
         # Get the cluster instance from the importer
@@ -141,12 +181,17 @@ class IMAPImporter:
         else:
             imap_conn.password = uuid4().hex
 
-        # Set any opaque attributes from the configuration
-        set_instance_opaque_attrs(imap_conn, imap_def)
-
         # Add to session and flush to get ID
         session.add(imap_conn)
         session.flush()
+
+        # Create the scheduler job that this connection is linked to, if one was configured
+        if imap_def.get('scheduler_service'):
+            job = self._sync_linked_job(imap_def, imap_conn, session)
+            imap_def['scheduler_job_id'] = job.id
+
+        # Set any opaque attributes from the configuration
+        set_instance_opaque_attrs(imap_conn, imap_def)
 
         return imap_conn
 
@@ -156,7 +201,7 @@ class IMAPImporter:
 
         imap_id = imap_def['id']
         def_name = imap_def['name']
-        
+
         # Set default filter_criteria if not provided
         if 'filter_criteria' not in imap_def:
             imap_def['filter_criteria'] = 'isRead ne true'
@@ -177,6 +222,11 @@ class IMAPImporter:
 
                 # Set the attribute on the IMAP connection object
                 setattr(imap_conn, key, value)
+
+        # Create or update the scheduler job that this connection is linked to, if one was configured
+        if imap_def.get('scheduler_service'):
+            job = self._sync_linked_job(imap_def, imap_conn, session)
+            imap_def['scheduler_job_id'] = job.id
 
         # Set any opaque attributes
         set_instance_opaque_attrs(imap_conn, imap_def)

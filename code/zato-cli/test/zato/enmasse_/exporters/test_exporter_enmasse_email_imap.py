@@ -108,6 +108,14 @@ class TestEnmasseEmailIMAPExporter(TestCase):
                 if field in yaml_def:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for IMAP connection "{name}"')
 
+            # Scheduler fields must round-trip when they were given in YAML
+            for field in ['scheduler_run_every', 'scheduler_run_unit', 'scheduler_service']:
+                if field in yaml_def:
+                    self.assertEqual(exported_def.get(field), yaml_def.get(field), f'Field {field} mismatch for IMAP connection "{name}"')
+
+            # The linked job ID is internal and must never be exported
+            self.assertNotIn('scheduler_job_id', exported_def, f'scheduler_job_id was exported for IMAP connection "{name}"')
+
             # Verify password is not exported
             self.assertNotIn('password', exported_def, f'Password was exported for IMAP connection "{name}"')
 

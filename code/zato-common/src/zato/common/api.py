@@ -578,11 +578,27 @@ class EMAIL:
         class Scheduler:
 
             class Unit:
+                Seconds = 'seconds'
                 Minutes = 'minutes'
                 Hours = 'hours'
                 Days = 'days'
 
-            UnitList = (Unit.Minutes, Unit.Hours, Unit.Days)
+            UnitList = (Unit.Seconds, Unit.Minutes, Unit.Hours, Unit.Days)
+
+            # Prefix of the names of the jobs that are auto-created for IMAP connections
+            Job_Prefix = 'imap.'
+
+            # Name of the opaque attribute that a job carries to point back to its IMAP connection
+            Conn_ID_Attr = 'imap_conn_id'
+
+            # Names of the opaque attributes that an IMAP connection carries to describe its linked job
+            Field_Run_Every = 'scheduler_run_every'
+            Field_Run_Unit = 'scheduler_run_unit'
+            Field_Start_Date = 'scheduler_start_date'
+            Field_Service = 'scheduler_service'
+            Field_Job_ID = 'scheduler_job_id'
+
+            FieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Service, Field_Job_ID)
 
     class SMTP:
         class MODE:

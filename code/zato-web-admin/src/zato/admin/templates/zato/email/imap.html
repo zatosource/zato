@@ -70,6 +70,13 @@
 
             // 9
             'filter_criteria',
+            'scheduler_run_every',
+            'scheduler_run_unit',
+
+            // 10
+            'scheduler_start_date',
+            'scheduler_service',
+            'scheduler_job_id',
         ]
     }
     </script>
@@ -140,6 +147,13 @@
 
                         {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 10 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -207,6 +221,13 @@
 
                         {% comment %} 9 {% endcomment %}
                         <td class='ignore'>{{ item.filter_criteria|default:"" }}</td>
+                        <td class='ignore'>{{ item.scheduler_run_every|default:"" }}</td>
+                        <td class='ignore'>{{ item.scheduler_run_unit|default:"" }}</td>
+
+                        {% comment %} 10 {% endcomment %}
+                        <td class='ignore'>{{ item.scheduler_start_date|default:"" }}</td>
+                        <td class='ignore'>{{ item.scheduler_service|default:"" }}</td>
+                        <td class='ignore'>{{ item.scheduler_job_id|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
