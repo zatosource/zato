@@ -32,6 +32,7 @@ from zato.common.api import SCHEDULER
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
+from zato.server.connection.smb import SMBConnection
 
 ################################################################################################################################
 ################################################################################################################################
@@ -544,6 +545,32 @@ class SFTPFacade:
         wrapper = item['conn']
 
         out = SFTPConnection(self.cid, wrapper)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SMBFacade:
+    """ Provides dict-like access to SMB outgoing connections from services via self.smb.
+    """
+    cid: 'str'
+    _outconn_smb: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_smb = config_manager.outconn_smb
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'SMBConnection':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._outconn_smb[name]
+
+        # The wrapper holds a queue with the underlying SMB client
+        wrapper = item['conn']
+
+        out = SMBConnection(self.cid, wrapper)
         return out
 
 # ################################################################################################################################

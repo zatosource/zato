@@ -115,6 +115,8 @@ $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.redis');
 $.namespace('zato.outgoing.sftp');
 $.namespace('zato.outgoing.sftp.data_table');
+$.namespace('zato.outgoing.smb');
+$.namespace('zato.outgoing.smb.data_table');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.sap');
 $.namespace('zato.pubsub');

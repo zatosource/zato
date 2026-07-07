@@ -45,7 +45,7 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
-    SchedulerFacade, SFTPFacade
+    SchedulerFacade, SFTPFacade, SMBFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -491,6 +491,9 @@ class Service:
         # SFTP facade for outgoing connections
         self.sftp = SFTPFacade()
 
+        # SMB facade for outgoing connections
+        self.smb = SMBFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -612,6 +615,9 @@ class Service:
 
         # SFTP facade
         self.sftp.init(self.cid, self._config_manager)
+
+        # SMB facade
+        self.smb.init(self.cid, self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
