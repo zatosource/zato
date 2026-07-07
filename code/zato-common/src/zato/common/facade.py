@@ -107,9 +107,11 @@ class PubSubFacade:
                 out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
                 return out
 
-        # .. remap 'cid' to 'correl_id' for the Redis backend ..
+        # .. the CID stays in kwargs so the audit log can cross-reference this publication,
+        # .. and it also serves as the correlation ID unless the caller gave one explicitly ..
         if 'cid' in kwargs:
-            kwargs['correl_id'] = kwargs.pop('cid')
+            if 'correl_id' not in kwargs:
+                kwargs['correl_id'] = kwargs['cid']
 
         # .. always set the publisher to the calling service name ..
         kwargs['publisher'] = self.service_name

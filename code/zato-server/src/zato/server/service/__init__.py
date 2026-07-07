@@ -1094,6 +1094,11 @@ class Service:
                     for key in extra_keys:
                         data[key] = kwargs.pop(key)
 
+        # .. the service's own CID accompanies the publication, unless the caller gave another one,
+        # .. which is what lets the audit log cross-reference self-published messages ..
+        if 'cid' not in kwargs:
+            kwargs['cid'] = self.cid
+
         # .. now, publish the message with whatever remains in kwargs
         # .. (metadata like priority, expiration, etc.).
         return self.pubsub.publish(topic_name, data, **kwargs)

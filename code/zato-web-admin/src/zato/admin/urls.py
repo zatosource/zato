@@ -286,8 +286,8 @@ urlpatterns += [
         login_required(audit_log.object_index), name='audit-log'),
     url(r'^zato/audit-log/poll/$',
         login_required(audit_log.poll), name='audit-log-poll'),
-    path('zato/audit-log/cid/<str:cid>/',
-        login_required(audit_log.cid_index), name='audit-log-cid'),
+    url(r'^zato/audit-log/details/$',
+        login_required(audit_log.details), name='audit-log-details'),
 
     # Scheduler import demo config
 

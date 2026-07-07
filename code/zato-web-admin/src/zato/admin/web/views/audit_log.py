@@ -56,9 +56,6 @@ _source_title = {
     'pubsub': 'Pub/sub audit log',
 }
 
-# The cross-source CID page covers all sources, so it uses a generic title
-_cid_page_title = 'Audit log'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -84,21 +81,16 @@ def _escape_like(query:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _build_where(source:'str', object_name:'str', cid:'str', query:'str') -> 'tuple':
-    """ Builds the WHERE clause and its parameters for the poll query. A non-empty CID means
-    the cross-source page, which deliberately has no source filter - that is the cross-referencing.
+def _build_where(source:'str', object_name:'str', query:'str') -> 'tuple':
+    """ Builds the WHERE clause and its parameters for the poll query.
     """
     where_parts:'anylist' = []
     params:'anylist' = []
 
-    if cid:
-        where_parts.append('cid = ?')
-        params.append(cid)
-    else:
-        where_parts.append('source = ?')
-        params.append(source)
-        where_parts.append('object_name = ?')
-        params.append(object_name)
+    where_parts.append('source = ?')
+    params.append(source)
+    where_parts.append('object_name = ?')
+    params.append(object_name)
 
     if query:
         escaped = _escape_like(query)
@@ -129,29 +121,8 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'cluster_id': default_cluster_id,
         'source': source,
         'object_name': object_name,
-        'cid': '',
-        'is_cid_page': False,
         'audit_log_title': _source_title[source],
         'section_title': object_name,
-        'poll_url': _poll_url,
-        'zato_clusters': True,
-        'zato_template_name': 'zato/audit_log.html',
-    })
-
-# ################################################################################################################################
-
-@method_allowed('GET')
-def cid_index(req:'any_', cid:'str') -> 'TemplateResponse':
-    """ The cross-source audit log page for one CID, showing all events of that request.
-    """
-    return TemplateResponse(req, 'zato/audit_log.html', {
-        'cluster_id': default_cluster_id,
-        'source': '',
-        'object_name': '',
-        'cid': cid,
-        'is_cid_page': True,
-        'audit_log_title': _cid_page_title,
-        'section_title': cid,
         'poll_url': _poll_url,
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
@@ -167,7 +138,6 @@ def poll(req:'any_') -> 'HttpResponse':
 
     source = body['source']
     object_name = body['object_name']
-    cid = body['cid']
     query = body['query']
 
     page = body['page']
@@ -176,7 +146,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_clause, params = _build_where(source, object_name, cid, query)
+    where_clause, params = _build_where(source, object_name, query)
 
     rows:'anylist' = []
     total = 0
@@ -206,6 +176,33 @@ def poll(req:'any_') -> 'HttpResponse':
         conn.close()
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
+    response_bytes = response_json.encode('utf-8')
+
+    out = HttpResponse(response_bytes, content_type='application/json')
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def details(req:'any_') -> 'HttpResponse':
+    """ Returns the complete payload of one audit event, without any truncation.
+    """
+    body = json.loads(req.body)
+    event_id = body['id']
+
+    data = ''
+    conn = _open_audit_db()
+
+    # The database exists only after the first event was written.
+    if conn:
+
+        row = conn.execute('select data from event where id = ?', (event_id,)).fetchone()
+        if row:
+            data = row[0]
+
+        conn.close()
+
+    response_json = json.dumps({'data': data})
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')
