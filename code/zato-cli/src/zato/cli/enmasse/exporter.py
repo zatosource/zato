@@ -18,6 +18,7 @@ from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
+from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
@@ -71,6 +72,7 @@ class EnmasseYAMLExporter:
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
         self.channel_exporter = ChannelExporter(self)
+        self.channel_soap_exporter = ChannelSOAPExporter(self)
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
         self.outgoing_hl7_mllp_exporter = OutgoingHL7MLLPExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
@@ -171,6 +173,15 @@ class EnmasseYAMLExporter:
         """
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         channel_list = self.channel_exporter.export(session, self.cluster_id)
+        return channel_list
+
+# ################################################################################################################################
+
+    def export_channel_soap(self, session:'SASession') -> 'list':
+        """ Exports SOAP channel definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        channel_list = self.channel_soap_exporter.export(session, self.cluster_id)
         return channel_list
 
 # ################################################################################################################################
@@ -393,6 +404,11 @@ class EnmasseYAMLExporter:
         channel_rest_defs = self.export_channel_rest(session)
         if channel_rest_defs:
             output_dict['channel_rest'] = channel_rest_defs
+
+        # Export SOAP channel definitions
+        channel_soap_defs = self.export_channel_soap(session)
+        if channel_soap_defs:
+            output_dict['channel_soap'] = channel_soap_defs
 
         # Export HL7 MLLP channel definitions
         channel_hl7_mllp_defs = self.export_channel_hl7_mllp(session)
