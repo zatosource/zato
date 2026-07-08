@@ -179,6 +179,50 @@ class TestRESTChannelSecurity:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(*_Auth_Log_Patterns)
+    def test_apikey_custom_header(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an API key definition with a custom header and a channel using it, then verifies
+        the custom header passes while the default header, a wrong value and a missing header get 401.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'apikey-custom'
+        url_path = '/test/rest/sec-apikey-custom/' + rand_string()
+        custom_header = 'X-Custom-Token'
+
+        # Create the security definition with a custom header ..
+        definition = create_apikey_definition(page, base_url, _Test_Name_Prefix + 'apikey-custom-def', custom_header)
+
+        # .. create the channel with that definition assigned ..
+        _ = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
+            'security': f'API key/{definition["name"]}',
+        })
+
+        # .. the correct key in the custom header passes ..
+        headers = {custom_header: definition['key']}
+        response = invoke_until_status(server_port, url_path, OK, data='{"key": "valid"}', headers=headers)
+        assert response.status_code == OK, f'Expected OK with a valid key, got {response.status_code}: {response.text}'
+
+        # .. the same key in the default header is rejected ..
+        default_headers = {_API_Key_Header: definition['key']}
+        response = invoke_channel(server_port, url_path, data='{"key": "default-header"}', headers=default_headers)
+        assert response.status_code == UNAUTHORIZED, \
+            f'Expected UNAUTHORIZED with the key in the default header, got {response.status_code}'
+
+        # .. a wrong value in the custom header is rejected ..
+        wrong_headers = {custom_header: 'invalid.' + rand_string()}
+        response = invoke_channel(server_port, url_path, data='{"key": "invalid"}', headers=wrong_headers)
+        assert response.status_code == UNAUTHORIZED, f'Expected UNAUTHORIZED with a wrong key, got {response.status_code}'
+
+        # .. and a missing key header is rejected too.
+        response = invoke_channel(server_port, url_path, data='{"key": "missing"}')
+        assert response.status_code == UNAUTHORIZED, f'Expected UNAUTHORIZED with no key header, got {response.status_code}'
+
+# ################################################################################################################################
+
     def test_bearer_token_assignment(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a Bearer token definition, assigns it to a channel and verifies the assignment
         persists across the row and the edit dialog. Bearer token channels require an external

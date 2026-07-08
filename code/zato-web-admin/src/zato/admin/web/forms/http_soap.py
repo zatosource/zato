@@ -49,6 +49,7 @@ class CreateForm(DataFormatForm):
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
+    use_mtom = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))

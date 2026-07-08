@@ -908,7 +908,6 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When both HTTP_AUTHORIZATION and apikey header are present, BadRequest is raised.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
         ctx.dispatcher.url_data.basic_auth_get_by_id = MagicMock()
         ctx.dispatcher.url_data.apikey_get_by_id = MagicMock()
 
@@ -918,6 +917,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         })
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
 
         with self.assertRaises(BadRequest):
             ctx.dispatcher.check_security_via_groups(
@@ -929,9 +929,9 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When only HTTP_AUTHORIZATION is present, check_security_basic_auth is called.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_basic_auth.return_value = 123
         ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
 
@@ -953,9 +953,9 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When basic_auth check fails (returns falsy), Forbidden is raised.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_basic_auth.return_value = None
 
         wsgi_environ = _make_wsgi_environ({
@@ -973,9 +973,9 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When only apikey header is present, check_security_apikey is called.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_apikey.return_value = 456
         ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
 
@@ -996,9 +996,9 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When apikey check fails (returns falsy), Forbidden is raised.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         groups_ctx.check_security_apikey.return_value = None
 
         wsgi_environ = _make_wsgi_environ({
@@ -1015,14 +1015,89 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
         """ When neither basic auth nor apikey is present, Forbidden is raised.
         """
         ctx = _make_dispatcher()
-        ctx.dispatcher.server.api_key_header_wsgi = 'HTTP_X_API_KEY'
 
         groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_API_KEY'
         wsgi_environ = _make_wsgi_environ()
 
         with self.assertRaises(Forbidden):
             ctx.dispatcher.check_security_via_groups(
                 _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
+    """ Tests for check_security_via_groups with a custom, per-channel API key header.
+    """
+
+# ################################################################################################################################
+
+    def test_custom_header_calls_check_apikey(self) -> 'None':
+        """ When the custom header configured for the channel is present, check_security_apikey is called with its value.
+        """
+        ctx = _make_dispatcher()
+
+        groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_CUSTOM_TOKEN'
+        groups_ctx.check_security_apikey.return_value = 789
+        ctx.dispatcher.url_data.apikey_get_by_id.return_value = {'api_key': 'k', 'sec_type': 'apikey'}
+
+        wsgi_environ = _make_wsgi_environ({
+            'HTTP_X_CUSTOM_TOKEN': 'my-api-key',
+        })
+
+        with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
+            ctx.dispatcher.check_security_via_groups(
+                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+
+        groups_ctx.check_security_apikey.assert_called_once_with(_test_cid, 'test.channel', 'my-api-key')
+        mock_enrich.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_default_header_ignored_when_custom_configured(self) -> 'None':
+        """ When the channel is configured with a custom header, a key sent in the default X-API-Key header is ignored,
+        which means neither Basic Auth nor API key is found and Forbidden is raised.
+        """
+        ctx = _make_dispatcher()
+
+        groups_ctx = MagicMock()
+        groups_ctx.apikey_header = 'HTTP_X_CUSTOM_TOKEN'
+
+        wsgi_environ = _make_wsgi_environ({
+            'HTTP_X_API_KEY': 'my-api-key',
+        })
+
+        with self.assertRaises(Forbidden):
+            ctx.dispatcher.check_security_via_groups(
+                _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+
+        groups_ctx.check_security_apikey.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_no_apikey_header_configured_basic_auth_still_works(self) -> 'None':
+        """ When the ctx has no API key header configured at all (None), Basic Auth via groups still works.
+        """
+        ctx = _make_dispatcher()
+
+        groups_ctx = MagicMock()
+        groups_ctx.apikey_header = None
+        groups_ctx.check_security_basic_auth.return_value = 123
+        ctx.dispatcher.url_data.basic_auth_get_by_id.return_value = {'username': 'u', 'sec_type': 'basic_auth'}
+
+        wsgi_environ = _make_wsgi_environ({
+            'HTTP_AUTHORIZATION': 'Basic dXNlcjpwYXNz',
+        })
+
+        with patch('zato.server.connection.http_soap.channel.extract_basic_auth', return_value=('user', 'pass')):
+            with patch('zato.server.connection.http_soap.channel.enrich_with_sec_data') as mock_enrich:
+                ctx.dispatcher.check_security_via_groups(
+                    _test_cid, 'test.channel', groups_ctx, wsgi_environ)
+
+        groups_ctx.check_security_basic_auth.assert_called_once_with(_test_cid, 'test.channel', 'user', 'pass')
+        mock_enrich.assert_called_once()
 
 # ################################################################################################################################
 # ################################################################################################################################
