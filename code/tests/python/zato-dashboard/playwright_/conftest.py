@@ -593,6 +593,12 @@ _Log_Noise_Patterns = [
     'Invalid Basic Auth credentials (groups)',
     'URL not found',
     'is not active, raising NotFound',
+
+    # The quickstart environment runs without a broker or scheduler,
+    # so their connection listeners keep retrying in the background.
+    'listener loop exception',
+    'queue bridge recv listener',
+    'scheduler request listener',
 ]
 
 @pytest.fixture(autouse=True)

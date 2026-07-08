@@ -45,7 +45,7 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
-    SchedulerFacade, SFTPFacade, SMBFacade
+    SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -482,6 +482,9 @@ class Service:
         # REST facade for outgoing connections
         self.rest = RESTFacade()
 
+        # SOAP facade for outgoing connections
+        self.soap = SOAPFacade()
+
         # FHIR facade for outgoing connections
         self.fhir = FHIRFacade()
 
@@ -600,6 +603,9 @@ class Service:
 
         # REST facade
         self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)
+
+        # SOAP facade
+        self.soap.init(self.cid, self._config_store.out_soap)
 
         # Kafka facade
         self.out.kafka.init(self._config_manager)

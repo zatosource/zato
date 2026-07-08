@@ -68,6 +68,7 @@ class GetList(AdminService):
                 (SEC_DEF_TYPE.BASIC_AUTH, query.basic_auth_list),
                 (SEC_DEF_TYPE.NTLM, query.ntlm_list),
                 (SEC_DEF_TYPE.OAUTH, query.oauth_list),
+                (SEC_DEF_TYPE.WSS, query.wss_list),
             )
 
             for def_type, func in pairs:

@@ -153,7 +153,8 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
                     conn_required['soap_version'] = conn_def['soap_version']
 
                 # Add optional fields if present in the template
-                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'pool_size', 'ping_method', 'tls_verify']:
+                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'pool_size', 'ping_method', 'tls_verify',
+                    'use_ws_addressing', 'use_mtom', 'tls_client_cert', 'tls_client_key', 'body_credentials']:
                     if field in conn_def and conn_def[field] is not None:
                         conn_required[field] = conn_def[field]
 
@@ -183,6 +184,41 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
                             logger.info(f'Optional field {field} not found in exported connection {name}, but was in template')
         else:
             logger.warning('No outgoing SOAP connections found in test YAML template')
+
+# ################################################################################################################################
+
+    def test_outgoing_soap_export_opaque_fields(self) -> 'None':
+        """ Tests that addressing, MTOM, client-certificate and body-credential fields round-trip through the exporter.
+        """
+        self._setup_test_environment()
+
+        outgoing_soap_list = self.yaml_config['outgoing_soap']
+        _ = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
+        _ = self.session.commit()
+
+        cluster_id = self.importer.cluster_id
+        exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+
+        exported_by_name = {}
+        for conn in exported_connections:
+            exported_by_name[conn['name']] = conn
+
+        conn = exported_by_name['enmasse.outgoing.soap.2']
+
+        self.assertTrue(conn['use_ws_addressing'])
+        self.assertTrue(conn['use_mtom'])
+        self.assertEqual(conn['tls_client_cert'], '/opt/zato/certs/client-cert.pem')
+        self.assertEqual(conn['tls_client_key'], '/opt/zato/certs/client-key.pem')
+        self.assertEqual(conn['body_credentials'], [{'name': 'username'}, {'name': 'password', 'position': 2}])
+
+        # A connection without the new fields must not have them in its export either.
+        conn = exported_by_name['enmasse.outgoing.soap.1']
+
+        self.assertNotIn('use_ws_addressing', conn)
+        self.assertNotIn('use_mtom', conn)
+        self.assertNotIn('tls_client_cert', conn)
+        self.assertNotIn('tls_client_key', conn)
+        self.assertNotIn('body_credentials', conn)
 
 # ################################################################################################################################
 

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
@@ -90,6 +91,31 @@ class OutgoingSOAPExporter:
 
             if outgoing_row.get('content_type'):
                 exported_conn['content_type'] = outgoing_row['content_type']
+
+            # Unpack the opaque attributes carrying the remaining SOAP fields.
+            opaque = {}
+            if opaque1 := outgoing_row.get('opaque1'):
+                opaque = loads(opaque1) or {}
+
+            if opaque.get('use_ws_addressing'):
+                exported_conn['use_ws_addressing'] = True
+
+            if opaque.get('use_mtom'):
+                exported_conn['use_mtom'] = True
+
+            if tls_client_cert := opaque.get('tls_client_cert'):
+                exported_conn['tls_client_cert'] = tls_client_cert
+
+            if tls_client_key := opaque.get('tls_client_key'):
+                exported_conn['tls_client_key'] = tls_client_key
+
+            # Body-credential mappings are kept in the database as a JSON string
+            # and exported as a list of name/position rows.
+            if body_credentials := opaque.get('body_credentials'):
+                if isinstance(body_credentials, str):
+                    body_credentials = loads(body_credentials)
+                if body_credentials:
+                    exported_conn['body_credentials'] = body_credentials
 
             exported_outgoing.append(exported_conn)
 

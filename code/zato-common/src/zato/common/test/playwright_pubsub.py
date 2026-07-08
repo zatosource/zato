@@ -801,7 +801,7 @@ def create_rest_channel(page:'Page', base_url:'str', name:'str', service_name:'s
 def select_option_by_label(page:'Page', selector:'str', label:'str') -> 'None':
     """ Selects an option by its visible label via JS - needed because Chosen.js hides the underlying select element.
     """
-    page.evaluate(
+    was_found = page.evaluate(
         '(() => {'
         f'  var sel = document.querySelector("{selector}");'
         '  for (var i = 0; i < sel.options.length; i++) {'
@@ -814,6 +814,8 @@ def select_option_by_label(page:'Page', selector:'str', label:'str') -> 'None':
         '  return false;'
         '})()'
     )
+    if not was_found:
+        raise Exception(f'Option with label `{label}` not found in `{selector}`')
 
 # ################################################################################################################################
 

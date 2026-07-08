@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from copy import deepcopy
+from json import dumps, loads
 
 # Zato
 from zato.cli.enmasse.util import assign_security, preprocess_item, security_needs_update
@@ -28,6 +29,25 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _as_credential_list(value:'any_') -> 'anylist':
+    """ Normalizes body-credential mappings to a list of rows - the Dashboard stores them
+    in the database as a JSON string while YAML files carry them as a list of dicts.
+    """
+
+    # Our response to produce
+    out = []
+
+    if value:
+        if isinstance(value, str):
+            out = loads(value)
+        else:
+            out = value
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +75,14 @@ class OutgoingSOAPImporter:
             item = item['fields']
             name = item['name']
             logger.info('Processing outgoing SOAP connection: %s (id=%s)', name, item['id'])
+
+            # Unpack opaque attributes into top-level keys so comparisons see fields
+            # like use_ws_addressing, use_mtom, body_credentials or the client certificate paths.
+            if opaque1 := item.get('opaque1'):
+                opaque = loads(opaque1)
+                if opaque:
+                    item.update(opaque)
+
             out[name] = item
             self.connection_defs[name] = item
 
@@ -85,7 +113,26 @@ class OutgoingSOAPImporter:
 
                 # Compare standard attributes (excluding security)
                 for key, value in item.items():
-                    if key != 'security' and key in db_def and db_def[key] != value:
+
+                    if key in ('security', 'security_name'):
+                        continue
+
+                    # Body-credential mappings are compared as lists no matter
+                    # which of the two storage forms each side uses.
+                    if key == 'body_credentials':
+                        if _as_credential_list(value) != _as_credential_list(db_def.get(key)):
+                            logger.info('Body credentials mismatch for %s: YAML=%s DB=%s', name, value, db_def.get(key))
+                            needs_update = True
+                            break
+                        continue
+
+                    # A field the database row does not have yet means an update too.
+                    if key not in db_def:
+                        logger.info('Field %s.%s not in DB yet, will update', name, key)
+                        needs_update = True
+                        break
+
+                    if db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
@@ -142,7 +189,14 @@ class OutgoingSOAPImporter:
                 setattr(outgoing, key, value)
 
         outgoing_def = deepcopy(outgoing_def)
-        outgoing_def.update(connection_extra_field_defaults)
+
+        for key, value in connection_extra_field_defaults.items():
+            _ = outgoing_def.setdefault(key, value)
+
+        # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
+        if body_credentials := outgoing_def.get('body_credentials'):
+            if not isinstance(body_credentials, str):
+                outgoing_def['body_credentials'] = dumps(body_credentials)
 
         set_instance_opaque_attrs(outgoing, outgoing_def)
         assign_security(outgoing, outgoing_def, self.importer, session)
@@ -160,9 +214,20 @@ class OutgoingSOAPImporter:
 
         outgoing = session.query(HTTPSOAP).filter_by(id=outgoing_id).one()
 
+        outgoing_def = deepcopy(outgoing_def)
+
+        # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
+        if body_credentials := outgoing_def.get('body_credentials'):
+            if not isinstance(body_credentials, str):
+                outgoing_def['body_credentials'] = dumps(body_credentials)
+
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
+
+        # Fields that are not columns go into the opaque attributes,
+        # merged with whatever the row already keeps there.
+        set_instance_opaque_attrs(outgoing, outgoing_def)
 
         # Assign security if specified
         assign_security(outgoing, outgoing_def, self.importer, session)

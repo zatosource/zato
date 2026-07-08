@@ -321,6 +321,22 @@ outgoing_soap:
     tls_verify: false
     timeout: 20
 
+  - name: enmasse.outgoing.soap.2
+    host: https://registry.example.com
+    url_path: /iisb/services
+    security: enmasse.wss.1
+    soap_action: urn:cdc:iisb:2014:submitSingleMessage
+    soap_version: "1.2"
+    timeout: 30
+    use_ws_addressing: true
+    use_mtom: true
+    tls_client_cert: /opt/zato/certs/client-cert.pem
+    tls_client_key: /opt/zato/certs/client-key.pem
+    body_credentials:
+      - name: username
+      - name: password
+        position: 2
+
 microsoft_365:
 
   - name: enmasse.cloud.microsoft365.1

@@ -15,11 +15,11 @@ from lxml import etree
 # Zato
 from zato.common.as4.common import NS
 from zato.common.as4.ebms import Body_Element_ID, Messaging_Element_ID
-from zato.common.util.xml_.constants import Algorithm
+from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import part_list
 from zato.common.util.xml_.wssec import add_attachment_reference, add_binary_security_token, add_element_reference, \
-    add_key_info_token_reference, compute_signature_value
+    add_key_info_saml_reference, add_key_info_token_reference, add_saml_token, compute_signature_value
 from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################
@@ -75,7 +75,13 @@ def sign_envelope(
     the compressed plaintext, which is also the order in which receivers reverse it.
     """
     security = get_security_header(envelope)
-    token_id = add_binary_security_token(security, keystore, config.token_type)
+
+    # The signing certificate travels either as a binary token or, for exchanges keyed
+    # by a security token service, as a SAML assertion confirming the key holder.
+    if config.token_type == TokenType.SAML20:
+        token_id = add_saml_token(security, keystore.saml_assertion)
+    else:
+        token_id = add_binary_security_token(security, keystore, config.token_type)
 
     signature = etree.SubElement(security, qname(NS.DS, 'Signature'), nsmap=_signature_nsmap)
     signature.set('Id', f'SIG-{uuid4().hex}')
@@ -104,7 +110,10 @@ def sign_envelope(
     signature_value.text = encode_base64(signature_bytes)
 
     # The key info points back at the token so verifiers know which certificate signed this.
-    add_key_info_token_reference(signature, token_id, config.token_type)
+    if config.token_type == TokenType.SAML20:
+        add_key_info_saml_reference(signature, token_id)
+    else:
+        add_key_info_token_reference(signature, token_id, config.token_type)
 
     return signature
 

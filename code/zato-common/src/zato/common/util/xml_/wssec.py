@@ -153,6 +153,47 @@ def add_key_info_token_reference(signature:'any_', token_id:'str', token_type:'s
     reference.set('ValueType', token_type)
 
 # ################################################################################################################################
+
+def add_saml_token(security:'any_', assertion:'any_') -> 'str':
+    """ Places a SAML 2.0 assertion in the security header as the message's token,
+    per the SAML Token Profile 1.1 - security token services such as the Australian
+    SBR's VANguard issue these instead of certificates travelling as binary tokens.
+    Accepts the assertion as bytes or as an element and returns its ID for the
+    signature's key identifier to point at.
+    """
+    if assertion is None:
+        raise XMLSecurityException('No SAML assertion to add as a token')
+
+    if isinstance(assertion, bytes):
+        assertion = etree.fromstring(assertion)
+
+    assertion_id = assertion.get('ID')
+
+    if not assertion_id:
+        raise XMLSecurityException('SAML assertion has no ID')
+
+    security.append(assertion)
+
+    out = assertion_id
+    return out
+
+# ################################################################################################################################
+
+def add_key_info_saml_reference(signature:'any_', assertion_id:'str') -> 'None':
+    """ Appends the ds:KeyInfo that points a signature at a SAML assertion -
+    a SecurityTokenReference whose KeyIdentifier carries the assertion's ID,
+    per the SAML Token Profile 1.1.
+    """
+    key_info = etree.SubElement(signature, qname(NS.DS, 'KeyInfo'))
+
+    token_reference = etree.SubElement(key_info, qname(NS.WSSE, 'SecurityTokenReference'))
+    token_reference.set(qname(NS.WSSE11, 'TokenType'), TokenType.SAML20)
+
+    key_identifier = etree.SubElement(token_reference, qname(NS.WSSE, 'KeyIdentifier'))
+    key_identifier.set('ValueType', TokenType.SAML_ID)
+    key_identifier.text = assertion_id
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def find_by_any_id(root:'any_', element_id:'str') -> 'any_':
@@ -279,8 +320,9 @@ def _without_signature(element:'any_') -> 'any_':
 # ################################################################################################################################
 
 def extract_signer_chain(signature:'any_', security:'any_') -> 'certificate_list':
-    """ Resolves the signature's key info to the certificate chain carried
-    in the referenced BinarySecurityToken, leaf certificate first.
+    """ Resolves the signature's key info to the signer's certificate chain, leaf first -
+    either out of the referenced BinarySecurityToken or, for signatures keyed by
+    a SAML assertion, out of the assertion's holder-of-key confirmation.
     """
     key_info = signature.find(qname(NS.DS, 'KeyInfo'))
     token_reference = key_info.find(qname(NS.WSSE, 'SecurityTokenReference'))
@@ -291,6 +333,14 @@ def extract_signer_chain(signature:'any_', security:'any_') -> 'certificate_list
     reference = token_reference.find(qname(NS.WSSE, 'Reference'))
 
     if reference is None:
+
+        # With no direct reference, the token may be a SAML assertion named by its ID.
+        key_identifier = token_reference.find(qname(NS.WSSE, 'KeyIdentifier'))
+
+        if key_identifier is not None and key_identifier.get('ValueType') == TokenType.SAML_ID:
+            out = _extract_saml_signer_chain(security, key_identifier.text or '')
+            return out
+
         raise XMLSecurityException('SecurityTokenReference has no Reference')
 
     token_id = (reference.get('URI') or '')[1:]
@@ -309,6 +359,37 @@ def extract_signer_chain(signature:'any_', security:'any_') -> 'certificate_list
         leaf = parse_x509v3(token_bytes)
         out = [leaf]
 
+    return out
+
+# ################################################################################################################################
+
+def _extract_saml_signer_chain(security:'any_', assertion_id:'str') -> 'certificate_list':
+    """ Returns the signer's certificate out of a SAML assertion's holder-of-key
+    subject confirmation - the assertion vouches that whoever holds the matching
+    private key is the subject, so that certificate is what verifies the signature.
+    """
+    assertion = None
+
+    for candidate in security.findall(qname(NS.SAML2, 'Assertion')):
+        if candidate.get('ID') == assertion_id:
+            assertion = candidate
+            break
+
+    if assertion is None:
+        raise XMLSecurityException(f'SAML assertion `{assertion_id}` is missing')
+
+    confirmation = assertion.find(f'.//{qname(NS.SAML2, "SubjectConfirmation")}')
+
+    certificate_element = None
+    if confirmation is not None:
+        certificate_element = confirmation.find(f'.//{qname(NS.DS, "X509Certificate")}')
+
+    if certificate_element is None:
+        raise XMLSecurityException(f'SAML assertion `{assertion_id}` carries no signer certificate')
+
+    leaf = parse_x509v3(decode_base64(certificate_element.text or ''))
+
+    out = [leaf]
     return out
 
 # ################################################################################################################################

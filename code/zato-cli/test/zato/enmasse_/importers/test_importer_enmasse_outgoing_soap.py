@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import tempfile
+from json import loads
 from unittest import TestCase, main
 
 # Zato
@@ -99,7 +100,7 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_defs, self.session)
 
         # Should have created all connections from the template
-        self.assertEqual(len(created), 1)  # There's 1 SOAP connection in template_complex_01
+        self.assertEqual(len(created), 2)  # There are 2 SOAP connections in template_complex_01
         self.assertEqual(len(updated), 0)
 
         # Verify the outgoing SOAP connection was created correctly
@@ -115,6 +116,104 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         self.assertEqual(outgoing.soap_version, '1.1')
         self.assertEqual(outgoing.timeout, 20)
         self.assertFalse(outgoing.tls_verify)
+
+# ################################################################################################################################
+
+    def test_outgoing_soap_creation_with_opaque_fields(self):
+        """ Test that addressing, MTOM, client-certificate and body-credential fields
+        end up in the opaque attributes of a newly created connection.
+        """
+        self._setup_test_environment()
+
+        outgoing_soap_defs = self.yaml_config['outgoing_soap']
+        _ = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_defs, self.session)
+
+        outgoing = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.outgoing.soap.2',
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.SOAP
+        ).one()
+
+        # The column-level fields first ..
+        self.assertEqual(outgoing.host, 'https://registry.example.com')
+        self.assertEqual(outgoing.url_path, '/iisb/services')
+        self.assertEqual(outgoing.soap_action, 'urn:cdc:iisb:2014:submitSingleMessage')
+        self.assertEqual(outgoing.soap_version, '1.2')
+        self.assertEqual(outgoing.timeout, 30)
+
+        # .. and the new fields carried in the opaque attributes.
+        opaque = loads(outgoing.opaque1)
+
+        self.assertTrue(opaque['use_ws_addressing'])
+        self.assertTrue(opaque['use_mtom'])
+        self.assertEqual(opaque['tls_client_cert'], '/opt/zato/certs/client-cert.pem')
+        self.assertEqual(opaque['tls_client_key'], '/opt/zato/certs/client-key.pem')
+
+        # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
+        body_credentials = loads(opaque['body_credentials'])
+        self.assertEqual(body_credentials, [{'name': 'username'}, {'name': 'password', 'position': 2}])
+
+# ################################################################################################################################
+
+    def test_outgoing_soap_reimport_detects_no_changes(self):
+        """ Test that importing the same YAML twice detects no changes the second time,
+        including for the fields kept in the opaque attributes.
+        """
+        self._setup_test_environment()
+
+        outgoing_soap_defs = self.yaml_config['outgoing_soap']
+
+        created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_defs, self.session)
+        self.assertEqual(len(created), 2)
+        self.assertEqual(len(updated), 0)
+
+        # The second, identical import must be a no-op.
+        created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_defs, self.session)
+        self.assertEqual(len(created), 0)
+        self.assertEqual(len(updated), 0)
+
+# ################################################################################################################################
+
+    def test_outgoing_soap_update_opaque_fields(self):
+        """ Test that updates to the opaque fields persist and that untouched opaque fields survive an update.
+        """
+        self._setup_test_environment()
+
+        outgoing_soap_defs = self.yaml_config['outgoing_soap']
+        _ = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_defs, self.session)
+
+        outgoing = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.outgoing.soap.2',
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.SOAP
+        ).one()
+
+        # Change some of the opaque fields, leave others out of the update entirely.
+        update_def = {
+            'name': 'enmasse.outgoing.soap.2',
+            'id': outgoing.id,
+            'use_mtom': False,
+            'tls_client_cert': '/opt/zato/certs/rotated-cert.pem',
+            'body_credentials': [{'name': 'accessToken'}],
+        }
+
+        _ = self.outgoing_soap_importer.update_outgoing_soap(update_def, self.session)
+        self.session.commit()
+
+        self.session.expire_all()
+        outgoing = self.session.query(HTTPSOAP).filter_by(id=outgoing.id).one()
+        opaque = loads(outgoing.opaque1)
+
+        # The updated fields carry their new values ..
+        self.assertFalse(opaque['use_mtom'])
+        self.assertEqual(opaque['tls_client_cert'], '/opt/zato/certs/rotated-cert.pem')
+
+        body_credentials = loads(opaque['body_credentials'])
+        self.assertEqual(body_credentials, [{'name': 'accessToken'}])
+
+        # .. while the fields the update did not mention are preserved.
+        self.assertTrue(opaque['use_ws_addressing'])
+        self.assertEqual(opaque['tls_client_key'], '/opt/zato/certs/client-key.pem')
 
 # ################################################################################################################################
 

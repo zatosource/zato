@@ -53,6 +53,15 @@ def _invoke_with_retry(page:'Page', base_url:'str', outconn_name:'str', operatio
             last_error = invoke_error
             time.sleep(_Propagation_Poll_Interval)
         else:
+            # The service reports errors as a reply field, e.g. while the connection
+            # configured a moment ago is still propagating to the server. A fault is
+            # retried too - the test endpoints reject stale credentials with one until
+            # a password changed in the browser reaches the connection.
+            if error := (out.get('error') or out.get('fault_code')):
+                last_error = error
+                time.sleep(_Propagation_Poll_Interval)
+                continue
+
             return out
 
     raise Exception(f'Could not invoke `{outconn_name}` within {_Propagation_Timeout}s, last error: {last_error}')
@@ -92,7 +101,8 @@ class TestSOAPOutconnEndToEnd:
         change_wss_password(page, wss_id, password)
 
         # .. create the connection with the body-credential mappings ..
-        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.url(path), {
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
             'soap_version': '1.2',
             'security': f'WS-Security/{name}',
             'body_credentials': [
@@ -150,7 +160,8 @@ class TestSOAPOutconnEndToEnd:
         change_wss_password(page, wss_id, password)
 
         # .. create the connection with that definition attached ..
-        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.url(path), {
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
             'soap_version': '1.2',
             'security': f'WS-Security/{name}',
         })
@@ -217,7 +228,8 @@ class TestSOAPOutconnEndToEnd:
         })
 
         # .. create the connection with that definition attached ..
-        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.url(path), {
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
             'soap_version': '1.2',
             'security': f'WS-Security/{name}',
         })
@@ -256,7 +268,8 @@ class TestSOAPOutconnEndToEnd:
 
         # The test CA is not in the system trust store, so validation is off -
         # the client certificate is still presented during the handshake.
-        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server_mtls.url(path), {
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server_mtls.address, {
+            'url_path': path,
             'soap_version': '1.2',
             'validate_tls': 'False',
             'tls_client_cert': material.client_certificate_path,
@@ -294,7 +307,8 @@ class TestSOAPOutconnEndToEnd:
         path = '/end-to-end-mtom-addressing'
         soap_test_server.configure(path, respond_attachment=response_bytes)
 
-        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.url(path), {
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
             'soap_version': '1.2',
             'soap_action': 'urn:ihe:iti:2007:ProvideAndRegisterDocumentSet-b',
             'use_ws_addressing': True,
