@@ -97,6 +97,9 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.imap.delete_('{0}');\">Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
 
+    // Audit log link
+    row += String.format('<td><a href="/zato/audit-log/?source=email-imap&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+
     // 5
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);

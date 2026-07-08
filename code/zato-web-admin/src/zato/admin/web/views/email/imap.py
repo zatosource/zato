@@ -48,9 +48,10 @@ class Index(_Index):
 
     def on_before_append_item(self, item):
 
-        # The start date is stored in UTC and it is displayed in the user's own timezone and format
-        if item.scheduler_start_date:
-            item.scheduler_start_date = from_utc_to_user(item.scheduler_start_date + '+00:00', self.req.zato.user_profile)
+        # The start date is stored in UTC and it is displayed in the user's own timezone and format,
+        # and only connections with a scheduler configured carry it at all.
+        if scheduler_start_date := item.get('scheduler_start_date'):
+            item.scheduler_start_date = from_utc_to_user(scheduler_start_date + '+00:00', self.req.zato.user_profile)
 
         return item
 

@@ -16,6 +16,7 @@ from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.api import EMAIL
+from zato.common.audit_log.api import AuditLog
 from zato.server.connection.email import GenericIMAPConnection, Microsoft365IMAPConnection
 
 # ################################################################################################################################
@@ -200,7 +201,9 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             'server_type': EMAIL.IMAP.ServerType.Generic,
         })
 
-        conn = GenericIMAPConnection(config, config)
+        audit_log = AuditLog('test-email-imap')
+        conn = GenericIMAPConnection(config, config, audit_log)
+
         return conn
 
 # ################################################################################################################################
@@ -282,7 +285,9 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
             'server_type': EMAIL.IMAP.ServerType.Microsoft365,
         }
 
-        conn = Microsoft365IMAPConnection(config, config)
+        audit_log = AuditLog('test-email-imap')
+        conn = Microsoft365IMAPConnection(config, config, audit_log)
+
         return conn
 
 # ################################################################################################################################
