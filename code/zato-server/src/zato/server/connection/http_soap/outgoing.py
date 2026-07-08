@@ -29,7 +29,9 @@ from requests_ntlm import HttpNtlmAuth
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
+    Wrapper_Name_Prefix_List
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.soap.client import SOAPClient
@@ -123,6 +125,15 @@ class BaseHTTPSOAPWrapper:
         self.base_headers = {}
         self.sec_type = self.config['sec_type']
 
+        # Only user-defined outgoing REST connections go to the audit log - SOAP connections,
+        # internal ones and wrapper-prefixed ones would only flood it.
+        is_rest = self.config['transport'] == URL_TYPE.PLAIN_HTTP
+        is_wrapper_name = self.config['name'].startswith(tuple(Wrapper_Name_Prefix_List))
+        self.needs_audit = (server is not None) and is_rest and (not self.config['is_internal']) and (not is_wrapper_name)
+
+        if self.needs_audit:
+            self.audit_log = AuditLog(server.name)
+
         self.soap = {}
         self.soap['1.1'] = {}
         self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
@@ -182,6 +193,40 @@ class BaseHTTPSOAPWrapper:
         _ = zato_rest_outgoing_request_duration_seconds.labels(
             connection_name=connection_name
         ).observe(duration)
+
+# ################################################################################################################################
+
+    def _insert_audit_event(
+        self,
+        cid:'str',
+        event_type:'str',
+        endpoint:'str',
+        outcome:'str',
+        data:'any_',
+    ) -> 'None':
+        """ Writes one audit event describing a request sent to or a response received from an outgoing REST connection.
+        """
+
+        # Payloads may be bytes by the time they are sent out,
+        # which is why they are decoded here, replacing what cannot be decoded ..
+        if isinstance(data, bytes):
+            data = data.decode('utf-8', errors='replace')
+
+        # .. a payload may also be a non-string object, e.g. a dict or a multipart encoder ..
+        if not isinstance(data, str):
+            data = str(data)
+
+        # .. now, write out the event.
+        self.audit_log.insert(
+            AuditSource.Rest_Outgoing,
+            event_type,
+            self.config['name'],
+            cid=cid,
+            endpoint=endpoint,
+            size=len(data),
+            outcome=outcome,
+            data=data,
+        )
 
 # ################################################################################################################################
 
@@ -812,9 +857,29 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             if isinstance(data, str):
                 data = data.encode('utf-8')
 
+        # .. record the outgoing request in the audit log ..
+        if self.needs_audit:
+            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{method} {address}', AuditOutcome.OK, data)
+
         # .. do invoke the connection ..
-        response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        try:
+            response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        except Exception as e:
+
+            # .. record the error in the audit log before re-raising, sharing the request's CID ..
+            if self.needs_audit:
+                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', AuditOutcome.Error, str(e))
+            raise
+
         response = cast_('Response', response)
+
+        # .. record the received response in the audit log, sharing the request's CID ..
+        if self.needs_audit:
+            if response.ok:
+                response_outcome = AuditOutcome.OK
+            else:
+                response_outcome = AuditOutcome.Error
+            self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', response_outcome, response.text)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..

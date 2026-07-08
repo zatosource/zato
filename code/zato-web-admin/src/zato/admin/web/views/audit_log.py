@@ -55,6 +55,7 @@ _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
 _source_title = {
     'pubsub': 'Pub/sub audit log',
     'rest-channel': 'REST channel audit log',
+    'rest-outgoing': 'Outgoing REST audit log',
     'email-imap': 'IMAP audit log',
 }
 
@@ -80,6 +81,16 @@ _rest_channel_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_rest_outgoing_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 _email_imap_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -95,6 +106,7 @@ _email_imap_columns = [
 _source_columns = {
     'pubsub': _pubsub_columns,
     'rest-channel': _rest_channel_columns,
+    'rest-outgoing': _rest_outgoing_columns,
     'email-imap': _email_imap_columns,
 }
 

@@ -26,6 +26,12 @@ def check_attr_exists(req):
     filter_name = req.POST.get('filter_name', '')
     filter_value = req.POST.get('filter_value', '')
 
+    # Optional context for channel url_path checks - the server compares these
+    # the same way the create service does in ensure_channel_is_unique ..
+    soap_action = req.POST.get('soap_action', '')
+    method = req.POST.get('method', '')
+    http_accept = req.POST.get('http_accept', '')
+
     response = req.zato.client.invoke('zato.server.invoker', {
         'func_name': 'check_attr_exists',
         'entity_type': entity_type,
@@ -33,6 +39,9 @@ def check_attr_exists(req):
         'value': value,
         'filter_name': filter_name,
         'filter_value': filter_value,
+        'soap_action': soap_action,
+        'method': method,
+        'http_accept': http_accept,
     })
     data = response.data
     if isinstance(data, dict):

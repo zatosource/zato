@@ -867,6 +867,9 @@ class InvokeChannel(AdminService):
         wrapper_config = {
             'id': 'temp-invoke-{}'.format(self.cid),
             'is_active': True,
+
+            # The channel side already records this traffic in its own audit log
+            'is_internal': True,
             'method': method,
             'data_format': 'json',
             'name': 'temp-invoke-channel-{}'.format(self.cid),

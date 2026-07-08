@@ -2073,6 +2073,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         value:'any_',
         filter_name:'str'='',
         filter_value:'str'='',
+        soap_action:'str'='',
+        method:'str'='',
+        http_accept:'str'='',
         ) -> 'str':
         import json
         from contextlib import closing
@@ -2099,6 +2102,52 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         }
 
         table_name = _entity_type_to_table.get(entity_type, entity_type)
+
+        # A channel's url_path is shared across all transports, so this check must mirror
+        # ensure_channel_is_unique from the create service - scoped by connection and soap_action
+        # but not by transport, with a clash reported only when the existing channel also uses
+        # the same HTTP method and the same Accept header ..
+        if attr_name == 'url_path' and entity_type in ('channel_rest', 'channel_soap'):
+
+            url_path_query = "SELECT method, opaque1 FROM http_soap WHERE url_path = :val " \
+                "AND connection = 'channel' AND soap_action = :soap_action"
+            url_path_params = {'val': value, 'soap_action': soap_action}
+
+            with closing(self.odb.session()) as session:
+                result = session.execute(
+                    text(url_path_query),  # type: ignore[operator]
+                    url_path_params
+                )
+                rows = result.fetchall()
+
+            exists = False
+
+            for row in rows:
+
+                # .. the opaque JSON column genuinely may be NULL in the database ..
+                opaque_raw = row[1]
+                if opaque_raw is None:
+                    opaque = {}
+                else:
+                    opaque = json.loads(opaque_raw)
+
+                    # .. the column may be doubly-encoded depending on which code path saved it ..
+                    if isinstance(opaque, str):
+                        opaque = json.loads(opaque)
+
+                # .. the http_accept key genuinely may be absent from opaque data ..
+                row_http_accept = opaque.get('http_accept')
+
+                # .. this is the same rule the create service applies in ensure_channel_is_unique.
+                if row[0] == method and row_http_accept == http_accept:
+                    exists = True
+                    break
+
+            logger.debug('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s (url_path)',
+                entity_type, value, exists)
+
+            out = json.dumps({'exists': exists})
+            return out
 
         # The value we are checking for is always bound under this key ..
         params = {'val': value}

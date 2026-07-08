@@ -32,7 +32,8 @@ $(document).ready(function() {
     var _connection = $('input[name="connection"]').val();
     var _transport = $('input[name="transport"]').val();
     var _is_channel = (_connection === 'channel');
-    var _entity_type = _is_channel ? 'channel_' + (_transport === 'plain_http' ? 'rest' : 'soap') : 'outgoing_rest';
+    var _transport_suffix = _transport === 'plain_http' ? 'rest' : 'soap';
+    var _entity_type = (_is_channel ? 'channel_' : 'outgoing_') + _transport_suffix;
 
     var _required_fields = ['name', 'service', 'security', 'validate_tls'];
     if(_is_channel) {
@@ -43,15 +44,34 @@ $(document).ready(function() {
     }
     $.fn.zato.data_table.setup_forms(_required_fields);
 
+    // Returns a function that reads the current values of the fields the server compares
+    // in ensure_channel_is_unique, so the url_path check mirrors the create service exactly.
+    var _get_url_path_check_context = function(suffix) {
+        return function() {
+
+            // The soap_action field exists only on SOAP pages.
+            var soap_action_elem = $('#id_' + suffix + 'soap_action');
+            var soap_action = soap_action_elem.length ? soap_action_elem.val() : '';
+
+            return {
+                'soap_action': soap_action,
+                'method': $('#id_' + suffix + 'method').val(),
+                'http_accept': $('#id_' + suffix + 'http_accept').val()
+            };
+        };
+    };
+
     var unique_constraints = [
         {field: 'name', entity_type: _entity_type, attr_name: 'name'}
     ];
     if(_is_channel) {
-        unique_constraints.push({field: 'url_path', entity_type: _entity_type, attr_name: 'url_path'});
+        unique_constraints.push({field: 'url_path', entity_type: _entity_type, attr_name: 'url_path', needs_context: true});
     }
     $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+        var create_filter = c.needs_context ? _get_url_path_check_context('') : null;
+        var edit_filter = c.needs_context ? _get_url_path_check_context('edit-') : null;
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name, create_filter);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name, edit_filter);
     });
 
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
@@ -372,9 +392,13 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
     }
 
-    /* Audit log (REST channel only) */
+    /* Audit log (REST channels and REST outgoing connections only) */
     if(is_channel && !is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=rest-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
+    }
+
+    if(is_outgoing && !is_soap) {
+        row += String.format('<td><a href="/zato/audit-log/?source=rest-outgoing&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
     }
 
     /* 31, 32 */
