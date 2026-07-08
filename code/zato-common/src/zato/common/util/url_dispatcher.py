@@ -38,15 +38,16 @@ def get_match_target(config, sep=MISC.SEPARATOR, accept_any_http=accept_any_http
     http_accept = http_accept.replace('*', '{}'.format(accept_any_internal)).replace('/', 'HTTP_SEP')
 
     # Extract variables needed to build the pattern
-    soap_action = config['soap_action']
     url_path = config['url_path']
 
     # Support parentheses in URL paths
     url_path = url_path.replace('(', r'\(')
     url_path = url_path.replace(')', r'\)')
 
-    # Build the pattern ..
-    pattern = f'{soap_action}{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
+    # Build the pattern - its first slot used to carry a SOAP action but channels
+    # match by URL path alone now, the same way incoming requests do, and a channel's
+    # SOAPAction is metadata that never participates in matching.
+    pattern = f'{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
 
     # .. and return it to our caller
     return pattern

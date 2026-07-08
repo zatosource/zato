@@ -22,6 +22,7 @@ from sqlalchemy.engine.result import Row as KeyedTuple
 # Zato
 from zato.common.api import DATA_FORMAT, RESTAdapterResponse, simple_types, ZATO_OK
 from zato.common.marshal_.api import Model
+from zato.common.soap.message import SOAPMessage
 from zato.server.reqresp.payload import IOPayload
 
 # Python 2/3 compatibility
@@ -117,7 +118,14 @@ class Response:
 
         else:
 
-            if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
+            # A message assigned by a service behind a SOAP channel is stored as-is -
+            # the channel wraps it in an envelope of the request's SOAP version itself.
+            # It must be recognized before the to_dict probe below because dot access
+            # on these messages auto-vivifies any attribute that is asked about.
+            if isinstance(value, SOAPMessage):
+                self._payload = value
+
+            elif isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
                 self._payload = value
             else:
 
