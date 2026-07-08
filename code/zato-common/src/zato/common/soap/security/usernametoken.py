@@ -15,6 +15,7 @@ from os import urandom
 from lxml import etree
 
 # Zato
+from zato.common.crypto.api import is_string_equal
 from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.envelope import get_security_header
 from zato.common.util.xml_.core import qname, utc_timestamp
@@ -101,8 +102,8 @@ def verify_username_token(envelope:'any_', expected_username:'str', expected_pas
 
     username_element = token.find(qname(NS.WSSE, 'Username'))
 
-    if username_element is None or username_element.text != expected_username:
-        raise SOAPSecurityException('Username does not match')
+    if username_element is None:
+        raise SOAPSecurityException('UsernameToken has no Username')
 
     password_element = token.find(qname(NS.WSSE, 'Password'))
 
@@ -110,6 +111,16 @@ def verify_username_token(envelope:'any_', expected_username:'str', expected_pas
         raise SOAPSecurityException('UsernameToken has no Password')
 
     password_type = password_element.get('Type', _password_text)
+
+    # An empty XML element carries None instead of text and this is external input,
+    # so both credentials are normalized to empty strings for the comparisons below.
+    username_received = username_element.text
+    if username_received is None:
+        username_received = ''
+
+    password_received = password_element.text
+    if password_received is None:
+        password_received = ''
 
     # The digest form recomputes the digest from the message's own nonce and timestamp ..
     if password_type == _password_digest:
@@ -122,13 +133,16 @@ def verify_username_token(envelope:'any_', expected_username:'str', expected_pas
         nonce = decode_base64(nonce_element.text)
         expected_digest = _compute_digest(nonce, created_element.text, expected_password)
 
-        if password_element.text != expected_digest:
-            raise SOAPSecurityException('Password digest does not match')
+        password_matches = is_string_equal(password_received, expected_digest)
 
     # .. the clear-text form is a direct comparison.
     else:
-        if password_element.text != expected_password:
-            raise SOAPSecurityException('Password does not match')
+        password_matches = is_string_equal(password_received, expected_password)
+
+    username_matches = is_string_equal(username_received, expected_username)
+
+    if not (username_matches and password_matches):
+        raise SOAPSecurityException('Username or password does not match')
 
 # ################################################################################################################################
 # ################################################################################################################################

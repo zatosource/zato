@@ -618,7 +618,7 @@
 
                         {% if connection == 'channel' %}
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">URL params</td>
+                            <td style="vertical-align:middle"><label for="id_url_params_pri">URL params</label></td>
                             <td>
                                 {{ create_form.url_params_pri }}
                                 |
@@ -630,7 +630,7 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Params priority</td>
+                            <td style="vertical-align:middle"><label for="id_params_pri">Params priority</label></td>
                             <td>
                                 {{ create_form.params_pri }}
                                 {% if connection == 'channel' %}
@@ -643,14 +643,14 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Method</td>
+                            <td style="vertical-align:middle"><label for="id_method">Method</label></td>
                             <td>
                                 {{ create_form.method }}
                             </td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Accept header</td>
+                            <td style="vertical-align:middle"><label for="id_http_accept">Accept header</label></td>
                             <td>
                                 {{ create_form.http_accept }}
                             </td>
@@ -752,7 +752,7 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle">Security<br/>definition</td>
+                            <td style="vertical-align:middle"><label for="id_edit-security">Security<br/>definition</label></td>
                             <td>
                                 {{ edit_form.security }}
                             </td>
@@ -850,7 +850,7 @@
 
                         {% if connection == 'channel' %}
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">URL params</td>
+                            <td style="vertical-align:middle"><label for="id_edit-url_params_pri">URL params</label></td>
                             <td>
                                 {{ edit_form.url_params_pri }}
                                 |
@@ -862,7 +862,7 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Params priority</td>
+                            <td style="vertical-align:middle"><label for="id_edit-params_pri">Params priority</label></td>
                             <td>
                                 {{ edit_form.params_pri }}
                                 {% if connection == 'channel' %}
@@ -875,14 +875,14 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Method</td>
+                            <td style="vertical-align:middle"><label for="id_edit-method">Method</label></td>
                             <td>
                                 {{ edit_form.method }}
                             </td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Accept header</td>
+                            <td style="vertical-align:middle"><label for="id_edit-http_accept">Accept header</label></td>
                             <td>
                                 {{ edit_form.http_accept }}
                             </td>
@@ -891,7 +891,14 @@
                         {% endif %}
 
                         <tr>
+                            {% if transport == 'soap' %}
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                            {% else %}
                             <td colspan="2" style="text-align:right">
+                            {% endif %}
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

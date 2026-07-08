@@ -176,11 +176,46 @@ $.fn.zato.http_soap.edit_populate_groups_callback = function(data, status) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.http_soap.field_descriptions = {
+
+    'id_name': 'A unique name for this endpoint.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this endpoint accepts messages.<br>Requests to inactive endpoints are rejected.',
+    'id_url_path': 'URL path this endpoint listens on,<br>e.g. /services/endpoint.',
+    'id_service': 'The service invoked for each message<br>this endpoint receives.',
+    'id_security': 'Security definition each incoming message<br>must satisfy, e.g. WS-Security<br>or Basic Auth.',
+
+    'id_soap_action': 'Value of the SOAPAction header expected<br>with each request. Leave empty if callers<br>do not send one.',
+    'id_soap_version': 'SOAP protocol version this endpoint speaks.<br>1.2 is the most common choice today,<br>1.1 is used by older systems.',
+    'id_use_mtom': 'When on, binary data in responses is sent<br>as MTOM/XOP parts instead of being<br>embedded in the message as Base64.',
+
+    'id_url_params_pri': 'Whether parameters from the query string<br>or from the URL path win<br>when both carry the same name.',
+    'id_params_pri': 'Whether parameters from the URL<br>or from the message body win<br>when both carry the same name.',
+    'id_method': 'HTTP method required for incoming requests.<br>Leave empty to accept any method.',
+    'id_http_accept': 'Accept header required for incoming requests.<br>Leave the default to accept any content.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.init_how_it_works = function(action) {
+    var transport = $('input[name="transport"]').val();
+    if(transport != 'soap') {
+        return;
+    }
+    $.fn.zato.how_it_works.init({
+        badgeId: action + '-how-it-works',
+        divId: '#' + action + '-div',
+        descriptions: $.fn.zato.http_soap.field_descriptions
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.create = function(object_type) {
 
     var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/');
     $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
+    $.fn.zato.http_soap.init_how_it_works('create');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -189,6 +224,7 @@ $.fn.zato.http_soap.edit = function(id) {
     var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/?http_soap_channel_id=' + id);
     $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
     $.fn.zato.data_table._create_edit('edit', 'Update the object', id);
+    $.fn.zato.http_soap.init_how_it_works('edit');
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -283,10 +319,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td>{0}</td>', data.security_groups_info);
     }
 
-    /* 10, 11 */
+    /* 10, 11, 11a */
     if(is_soap) {
         row += soap_action_tr;
         row += soap_version_tr;
+        row += String.format("<td class='ignore'>{0}</td>", item.use_mtom == true ? 'True' : 'False');
     }
 
     /* 12, 13 */
