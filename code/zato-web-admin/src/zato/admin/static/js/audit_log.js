@@ -12,7 +12,9 @@ $.fn.zato.audit_log.config = {
     pageSize: 25,
     detailsURL: '/zato/audit-log/details/',
     emptyValue: '---',
-    columnCount: 7
+
+    // The per-source column list, assigned in init
+    columns: []
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -42,42 +44,77 @@ $.fn.zato.audit_log.renderCell = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Each cell type has its own renderer so any source can compose its columns freely
+$.fn.zato.audit_log.cellRenderers = {
+
+    // The event time is shown in the browser's timezone and locale format
+    'time': function(row, column) {
+        var renderCell = $.fn.zato.audit_log.renderCell;
+        var eventTime = new Date(row[column.key]);
+        return renderCell(eventTime.toLocaleString());
+    },
+
+    // Each CID opens the complete message of its event
+    'cid': function(row, column) {
+        var config = $.fn.zato.audit_log.config;
+        var escapeHTML = $.fn.zato.audit_log.escapeHTML;
+
+        var cid = row[column.key];
+
+        if (cid === '') {
+            return '<td>' + config.emptyValue + '</td>';
+        }
+
+        var html = '<td>';
+        html += '<a href="#" class="audit-log-cid-link" data-id="' + row.id + '" data-cid="' + escapeHTML(cid) + '">';
+        html += escapeHTML(cid);
+        html += '</a>';
+        html += '</td>';
+
+        return html;
+    },
+
+    // Plain text cells are escaped and shown as-is
+    'text': function(row, column) {
+        var renderCell = $.fn.zato.audit_log.renderCell;
+        return renderCell(row[column.key]);
+    },
+
+    // The size is right-aligned like all numeric columns
+    'size': function(row, column) {
+        return '<td style="text-align:right">' + row[column.key] + '</td>';
+    },
+
+    // The payload preview concludes the row
+    'data': function(row, column) {
+        var config = $.fn.zato.audit_log.config;
+        var escapeHTML = $.fn.zato.audit_log.escapeHTML;
+
+        var data = row[column.key];
+
+        if (data === '') {
+            return '<td>' + config.emptyValue + '</td>';
+        }
+
+        return '<td class="audit-log-data-preview">' + escapeHTML(data) + '</td>';
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.renderRow = function(row) {
     var config = $.fn.zato.audit_log.config;
-    var escapeHTML = $.fn.zato.audit_log.escapeHTML;
-    var renderCell = $.fn.zato.audit_log.renderCell;
+    var cellRenderers = $.fn.zato.audit_log.cellRenderers;
 
     var html = '<tr>';
 
-    // The event time always comes first, shown in the browser's timezone and locale format ..
-    var eventTime = new Date(row.event_time_iso);
-    html += renderCell(eventTime.toLocaleString());
-
-    // .. each CID opens the complete message of its event ..
-    if (row.cid === '') {
-        html += '<td>' + config.emptyValue + '</td>';
-    } else {
-        html += '<td>';
-        html += '<a href="#" class="audit-log-cid-link" data-id="' + row.id + '" data-cid="' + escapeHTML(row.cid) + '">';
-        html += escapeHTML(row.cid);
-        html += '</a>';
-        html += '</td>';
+    // Each cell is rendered by the renderer matching its column's type ..
+    for (var columnIdx = 0; columnIdx < config.columns.length; columnIdx++) {
+        var column = config.columns[columnIdx];
+        html += cellRenderers[column.type](row, column);
     }
 
-    html += renderCell(row.event_type);
-    html += renderCell(row.msg_id);
-    html += renderCell(row.endpoint);
-
-    // .. the size is right-aligned like all numeric columns ..
-    html += '<td style="text-align:right">' + row.size + '</td>';
-
-    // .. and the payload preview concludes the row.
-    if (row.data === '') {
-        html += '<td>' + config.emptyValue + '</td>';
-    } else {
-        html += '<td class="audit-log-data-preview">' + escapeHTML(row.data) + '</td>';
-    }
-
+    // .. and the row is complete.
     html += '</tr>';
 
     return html;
@@ -91,7 +128,7 @@ $.fn.zato.audit_log.renderPage = function($body, rows) {
 
     // The table shows a placeholder row when there are no events ..
     if (rows.length === 0) {
-        $body.html('<tr><td colspan="' + config.columnCount + '">No events found</td></tr>');
+        $body.html('<tr><td colspan="' + config.columns.length + '">No events found</td></tr>');
         return;
     }
 
@@ -173,7 +210,10 @@ $.fn.zato.audit_log.init = function(initConfig) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
 
-    // Wire up the paginated table ..
+    // The columns to render come from the server, per source ..
+    config.columns = initConfig.columns;
+
+    // .. wire up the paginated table ..
     var pagination = kit.pagination.init({
         poll_url: initConfig.poll_url,
         page_size: config.pageSize,

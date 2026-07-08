@@ -67,7 +67,9 @@ def _make_url_match_result(channel_id=1, channel_name='test.channel'):
         'service_name': 'test.service',
         'match_target': '/test/path',
         'is_active': True,
+        'is_internal': True,
         'data_format': 'json',
+        'transport': 'plain_http',
     }
     result.channel_name = channel_name
     result.payload = ''

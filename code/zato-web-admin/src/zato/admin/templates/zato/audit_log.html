@@ -45,7 +45,8 @@ $(document).ready(function() {
     $.fn.zato.audit_log.init({
         poll_url: '{{ poll_url }}',
         source: '{{ source }}',
-        object_name: '{{ object_name }}'
+        object_name: '{{ object_name }}',
+        columns: {{ columns_json|safe }}
     });
 });
 </script>
@@ -69,18 +70,18 @@ $(document).ready(function() {
     <table class="detail-table" id="audit-log-table">
         <thead>
             <tr>
-                <th>Time</th>
-                <th>CID</th>
-                <th>Event</th>
-                <th>Message id</th>
-                <th>Endpoint</th>
-                <th style="text-align:right">Size</th>
-                <th>Data preview</th>
+                {% for column in columns %}
+                {% if column.type == 'size' %}
+                <th style="text-align:right">{{ column.label }}</th>
+                {% else %}
+                <th>{{ column.label }}</th>
+                {% endif %}
+                {% endfor %}
             </tr>
         </thead>
         <tbody id="audit-log-table-body">
             <tr class="detail-loading-row">
-                <td colspan="8">
+                <td colspan="{{ columns|length }}">
                     <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
                 </td>
             </tr>

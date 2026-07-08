@@ -50,6 +50,7 @@ def _make_channel_item(overrides:'anydict | None'=None) -> 'anydict':
         'id': 1,
         'name': 'test.channel',
         'is_active': True,
+        'is_internal': True,
         'service_name': 'test.service',
         'service_impl_name': 'test.service.impl',
         'match_target': '/test/path::GET::*::*',
