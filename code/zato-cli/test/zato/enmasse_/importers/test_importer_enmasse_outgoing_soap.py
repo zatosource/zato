@@ -115,7 +115,10 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         self.assertEqual(outgoing.soap_action, 'urn:microsoft-dynamics-schemas/page/example:Create')
         self.assertEqual(outgoing.soap_version, '1.1')
         self.assertEqual(outgoing.timeout, 20)
-        self.assertFalse(outgoing.tls_verify)
+
+        # The YAML tls_verify key maps to the runtime's validate_tls flag, kept in the opaque attributes
+        opaque = loads(outgoing.opaque1)
+        self.assertFalse(opaque['validate_tls'])
 
 # ################################################################################################################################
 

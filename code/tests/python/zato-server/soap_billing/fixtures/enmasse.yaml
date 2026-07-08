@@ -1,0 +1,119 @@
+security:
+
+  # The account the ERP's SOAP endpoints expect
+  - name: billing.erp.gateway
+    type: basic_auth
+    username: gateway-user
+    password: Zato_Enmasse_Env.Billing_ERP_Gateway_Password
+    realm: 'Billing ERP'
+
+  # The account the external submitters use with our channels
+  - name: billing.erp.submitter
+    type: basic_auth
+    username: erp-submitter
+    password: Zato_Enmasse_Env.Billing_ERP_Submitter_Password
+    realm: 'Billing'
+
+channel_rest:
+
+# The invoicing app
+  - name: billing.channel.invoice-header.main
+    service: test.soap.billing.invoice-header.create.main
+    url_path: /billing/invoice-header/main
+    data_format: json
+
+  - name: billing.channel.invoice-header.branch
+    service: test.soap.billing.invoice-header.create.branch
+    url_path: /billing/invoice-header/branch
+    data_format: json
+
+  - name: billing.channel.invoice-header.slow
+    service: test.soap.billing.invoice-header.create.slow
+    url_path: /billing/invoice-header/slow
+    data_format: json
+
+  - name: billing.channel.invoice-lines
+    service: test.soap.billing.invoice-lines.create
+    url_path: /billing/invoice-lines
+    data_format: json
+
+  - name: billing.channel.payment-register
+    service: test.soap.billing.payment.register
+    url_path: /billing/payment-register
+    data_format: json
+
+# The SOAP submitters
+  - name: billing.channel.erp.invoice
+    service: test.soap.billing.channel.invoice-receive
+    security: billing.erp.submitter
+    url_path: /billing/erp/invoice
+
+  - name: billing.channel.erp.payment-status
+    service: test.soap.billing.channel.payment-status
+    security: billing.erp.submitter
+    url_path: /billing/erp/payment-status
+
+outgoing_rest:
+
+# The ERP
+  - name: Billing.ERP.Invoice.REST
+    host: {{plain_host}}
+    url_path: /v2.0/{env}/WS/{company}/Codeunit/InvoiceEntryService
+    timeout: 20
+
+  - name: Billing.ERP.PaymentStatus.REST
+    host: {{plain_host}}
+    url_path: /v2.0/{env}/WS/{company}/Page/PaymentStatus
+    timeout: 20
+
+outconn_soap:
+
+# The invoicing endpoints
+  # Main
+  - name: Billing.Invoice.Create.Header.Main
+    host: {{plain_host}}
+    url_path: /erp/WS/North Trading Ltd./Codeunit/InvoiceEntryService
+    security: billing.erp.gateway
+    soap_action: urn:example-erp/codeunit/InvoiceEntryService:CreateInvoiceHeader
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20
+
+  - name: Billing.Invoice.Create.Lines.Main
+    host: {{plain_host}}
+    url_path: /erp/WS/North Trading Ltd./Codeunit/InvoiceEntryService
+    security: billing.erp.gateway
+    soap_action: urn:example-erp/codeunit/InvoiceEntryService:CreateInvoiceLines
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20
+
+  # Branch
+  - name: Billing.Invoice.Create.Header.Branch
+    host: {{plain_host}}
+    url_path: /erp/WS/South%20Retail%20Group/Codeunit/InvoiceEntryService
+    security: billing.erp.gateway
+    soap_action: urn:example-erp/codeunit/InvoiceEntryService:CreateInvoiceHeader
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20
+
+  # A backend that is too slow to answer
+  - name: Billing.Invoice.Create.Header.Slow
+    host: {{plain_host}}
+    url_path: /erp/slow/Codeunit/InvoiceEntryService
+    security: billing.erp.gateway
+    soap_action: urn:example-erp/codeunit/InvoiceEntryService:CreateInvoiceHeader
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 1
+
+# The payments endpoint, over TLS with a certificate we do not validate
+  - name: Billing.Payment.Register
+    host: {{tls_host}}
+    url_path: /erp/WS/North Trading Ltd./Codeunit/PaymentEntryService
+    security: billing.erp.gateway
+    soap_action: urn:example-erp/codeunit/PaymentEntryService:RegisterPayment
+    soap_version: "1.1"
+    tls_verify: false
+    timeout: 20

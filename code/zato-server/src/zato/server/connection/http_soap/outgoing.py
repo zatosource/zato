@@ -598,8 +598,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             for name in self.path_params: # type: ignore
                 value = params.pop(name)
 
-                # Encode so a value cannot inject extra path segments into the address.
-                path_params[name] = quote(str(value), safe='')
+                # Encode so a value cannot inject extra path segments into the address,
+                # keeping percent signs intact so values that arrive already
+                # percent-encoded - like company names with %20 - are not encoded twice.
+                path_params[name] = quote(str(value), safe='%')
 
             address = self.address.format(**path_params)
 
