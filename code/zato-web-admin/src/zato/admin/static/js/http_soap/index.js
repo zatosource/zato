@@ -32,7 +32,7 @@ $(document).ready(function() {
     var _connection = $('input[name="connection"]').val();
     var _transport = $('input[name="transport"]').val();
     var _is_channel = (_connection === 'channel');
-    var _entity_type = (_is_channel ? 'channel' : 'outgoing') + '_' + (_transport === 'plain_http' ? 'rest' : 'soap');
+    var _entity_type = _is_channel ? 'channel_' + (_transport === 'plain_http' ? 'rest' : 'soap') : 'outgoing_rest';
 
     var _required_fields = ['name', 'service', 'security', 'validate_tls'];
     if(_is_channel) {
