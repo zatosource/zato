@@ -19,7 +19,8 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
-    TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
+    TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
@@ -83,6 +84,7 @@ def _datetime_utcnow():
     return _datetime_class.now(_utc)
 _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
+_transport_plain_http = URL_TYPE.PLAIN_HTTP
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 
@@ -208,6 +210,9 @@ class RequestDispatcher:
 
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
+
+        # All requests to and responses from user-defined REST channels go to the audit log
+        self.audit_log = AuditLog(server.name)
 
 # ################################################################################################################################
 
@@ -657,10 +662,22 @@ class RequestDispatcher:
         if _has_log_info:
             self._log_incoming_request(cid, meta, channel_item, channel_name, payload, user_agent, remote_addr)
 
+        # .. only user-defined REST channels go to the audit log, internal ones would flood it ..
+        needs_audit = False
+
+        if channel_item:
+            if channel_item['transport'] == _transport_plain_http:
+                if not channel_item['is_internal']:
+                    needs_audit = True
+
         # .. we have a match and we can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore
 
             now_us = current_time_us()
+
+            # .. record the incoming request in the audit log ..
+            if needs_audit:
+                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload)
 
             try:
 
@@ -671,10 +688,19 @@ class RequestDispatcher:
                     remote_addr, now_us,
                 )
 
+                # .. record the successful response in the audit log ..
+                if needs_audit:
+                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out)
+
                 return out
 
             except Exception as e:
                 out = self._handle_dispatch_error(cid, e, channel_item, wsgi_environ)
+
+                # .. record the error response in the audit log ..
+                if needs_audit:
+                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out)
+
                 return out
 
             finally:
@@ -695,6 +721,40 @@ class RequestDispatcher:
 
             # This is the payload for the caller
             return response
+
+# ################################################################################################################################
+
+    def _insert_audit_event(
+        self,
+        cid:'str',
+        channel_item:'anydict',
+        event_type:'str',
+        outcome:'str',
+        data:'any_',
+    ) -> 'None':
+        """ Writes one audit event describing a request to or a response from a REST channel.
+        """
+
+        # Payloads arrive from the wire as bytes and responses may be bytes too,
+        # which is why both are decoded here, replacing what cannot be decoded ..
+        if isinstance(data, bytes):
+            data = data.decode('utf-8', errors='replace')
+
+        # .. a response may also be a non-string object, e.g. a dict from an internal service ..
+        if not isinstance(data, str):
+            data = str(data)
+
+        # .. now, write out the event.
+        self.audit_log.insert(
+            AuditSource.Rest_Channel,
+            event_type,
+            channel_item['name'],
+            cid=cid,
+            endpoint=channel_item['service_name'],
+            size=len(data),
+            outcome=outcome,
+            data=data,
+        )
 
 # ################################################################################################################################
 

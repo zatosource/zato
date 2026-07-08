@@ -51,9 +51,38 @@ _select_columns = 'id, cid, source, event_type, event_time_iso, msg_id, endpoint
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
 
-# Per-source page titles - more sources will follow, e.g. REST channels, REST outgoing connections and IMAP audit logs
+# Per-source page titles - more sources will follow, e.g. REST outgoing connections and IMAP audit logs
 _source_title = {
     'pubsub': 'Pub/sub audit log',
+    'rest-channel': 'REST channel audit log',
+}
+
+# Each column tells the frontend which row key to read, what header label to show
+# and how to render the cell - the types are implemented in audit_log.js
+_pubsub_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
+_rest_channel_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
+# Per-source table columns
+_source_columns = {
+    'pubsub': _pubsub_columns,
+    'rest-channel': _rest_channel_columns,
 }
 
 # ################################################################################################################################
@@ -117,6 +146,10 @@ def object_index(req:'any_') -> 'TemplateResponse':
     source = req.GET['source']
     object_name = req.GET['object_name']
 
+    # The frontend renders the table headers and cells based on this source's columns
+    columns = _source_columns[source]
+    columns_json = json.dumps(columns)
+
     return TemplateResponse(req, 'zato/audit_log.html', {
         'cluster_id': default_cluster_id,
         'source': source,
@@ -124,6 +157,8 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'audit_log_title': _source_title[source],
         'section_title': object_name,
         'poll_url': _poll_url,
+        'columns': columns,
+        'columns_json': columns_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
     })

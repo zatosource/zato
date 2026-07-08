@@ -39,6 +39,7 @@ audit_db_file_name = 'audit.db'
 
 class AuditSource:
     PubSub = 'pubsub'
+    Rest_Channel = 'rest-channel'
 
 # ################################################################################################################################
 
@@ -48,6 +49,8 @@ class AuditEvent:
     Delivery_Failed = 'delivery-failed'
     Expired = 'expired'
     Received = 'received'
+    Request_Received = 'request-received'
+    Response_Sent = 'response-sent'
 
 # ################################################################################################################################
 

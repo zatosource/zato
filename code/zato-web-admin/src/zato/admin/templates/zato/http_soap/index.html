@@ -143,6 +143,11 @@
                 '_rate_limiting',
             {% endif %}
 
+            // Audit log link (REST channel only)
+            {% if connection == 'channel' and transport == 'plain_http' %}
+                '_audit_log',
+            {% endif %}
+
             // 31, 32
             '_edit',
             '_delete',
@@ -282,6 +287,10 @@
                         <th>&nbsp;</th> {% comment %} _rate_limiting {% endcomment %}
                         {% endif %}
 
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
+                        {% endif %}
+
                         <!-- 31, 32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
@@ -414,6 +423,10 @@
 
                         {% if connection == 'channel' %}
                         <td><a href="/zato/http-soap/rate-limiting/{{ item.id }}/?cluster={{ cluster_id }}">Rate limiting</a></td>
+                        {% endif %}
+
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        <td><a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         {% endif %}
 
                         <!-- 31, 32 -->
