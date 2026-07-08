@@ -747,7 +747,9 @@ class TestRESTOutconnAuditLog:
         body_text = page.inner_text('#audit-log-table-body')
         assert _No_Events_Text in body_text, f'Expected "{_No_Events_Text}" after pings only, got: "{body_text}"'
 
-        # .. while one actual invocation produces its two events.
+        # .. while one actual invocation produces its two events - the overlay only exists
+        # .. on the connections page, so that page must be opened again first.
+        open_outconn_page(page, base_url)
         _ = invoke_outconn_via_overlay(page, outconn['id'], request_body='{"audit": "after-ping"}')
 
         _goto_audit_log(page, base_url, outconn['name'])
