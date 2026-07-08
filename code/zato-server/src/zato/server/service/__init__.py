@@ -583,12 +583,14 @@ class Service:
         # for the whole of the Service class each time it is discovered they are needed. It cannot be done in ServiceStore
         # because at the time that ServiceStore executes the config store may still not be ready.
 
+        # The identity checks below cover config reloads (e.g. after an enmasse import) - config_manager.init()
+        # builds new API objects then, so the class-level facades have to be re-pinned to the new ones.
         if self.component_enabled_email:
-            if not Service.email:
+            if Service.email is None or Service.email.imap is not self._config_manager.email_imap_api:
                 Service.email = EMailAPI(self._config_manager.email_smtp_api, self._config_manager.email_imap_api)
 
         if self.component_enabled_search:
-            if not Service.search:
+            if Service.search is None or Service.search.es is not self._config_manager.search_es_api:
                 Service.search = SearchAPI(self._config_manager.search_es_api)
 
         if may_have_wsgi_environ:
