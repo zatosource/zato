@@ -86,9 +86,6 @@ class OutgoingSOAPExporter:
             if (ping_method := outgoing_row.get('ping_method')) and ping_method != 'GET':
                 exported_conn['ping_method'] = ping_method
 
-            if outgoing_row.get('tls_verify') is False:
-                exported_conn['tls_verify'] = False
-
             if outgoing_row.get('content_type'):
                 exported_conn['content_type'] = outgoing_row['content_type']
 
@@ -96,6 +93,10 @@ class OutgoingSOAPExporter:
             opaque = {}
             if opaque1 := outgoing_row.get('opaque1'):
                 opaque = loads(opaque1) or {}
+
+            # The runtime key is validate_tls while the YAML one is tls_verify
+            if opaque.get('validate_tls') is False:
+                exported_conn['tls_verify'] = False
 
             if opaque.get('use_ws_addressing'):
                 exported_conn['use_ws_addressing'] = True

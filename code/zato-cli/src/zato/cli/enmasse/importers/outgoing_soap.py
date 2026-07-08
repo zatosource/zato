@@ -98,6 +98,11 @@ class OutgoingSOAPImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
+
+            # Handle the previous tls_verify key which now is called validate_tls
+            if 'tls_verify' in item:
+                item['validate_tls'] = item.pop('tls_verify')
+
             name = item['name']
             logger.info('Checking YAML outgoing SOAP connection: name=%s', name)
 
@@ -170,7 +175,6 @@ class OutgoingSOAPImporter:
         outgoing.cluster = self.importer.get_cluster(session)
         outgoing.merge_url_params_req = outgoing_def.get('merge_url_params_req', True)
         outgoing.has_rbac = outgoing_def.get('has_rbac', False)
-        outgoing.tls_verify = outgoing_def.get('tls_verify', True)
         outgoing.serialization_type = outgoing_def.get('serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
         outgoing.is_internal = outgoing_def.get('is_internal', False)
 
