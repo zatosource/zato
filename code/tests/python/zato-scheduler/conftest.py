@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'zato-server', 
 import pytest
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.util.config import get_config_object, update_config_file
 
 def pytest_addoption(parser):
@@ -33,7 +34,7 @@ _ZATO_BASE = '/home/dsuch/projects/zatosource-zato/4.1'
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'code', 'bin', 'zato')
 _ZATO_PY = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
 
-_PASSWORD = 'test.invoke.' + os.urandom(8).hex()
+_PASSWORD = 'test.invoke.' + CryptoManager.generate_hex_string()
 
 _REPORTS_DIR = os.path.join(_ZATO_BASE, 'code', 'tests', 'python', 'zato-scheduler', 'reports')
 

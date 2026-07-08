@@ -19,6 +19,9 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+# Zato
+from zato.common.crypto.api import CryptoManager
+
 
 # pytest
 import pytest
@@ -35,8 +38,8 @@ if 0:
 _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
-_password        = 'test.django.' + os.urandom(8).hex()
-_django_password = 'test.django.channel.' + os.urandom(8).hex()
+_password        = 'test.django.' + CryptoManager.generate_hex_string()
+_django_password = 'test.django.channel.' + CryptoManager.generate_hex_string()
 
 _services_source = os.path.join(os.path.dirname(__file__), '_services.py')
 

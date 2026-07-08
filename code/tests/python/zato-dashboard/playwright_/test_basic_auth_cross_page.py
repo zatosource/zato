@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +27,7 @@ _Channel_Url_Pattern = '/zato/http-soap/?cluster=1&connection=channel&transport=
 _Outgoing_Url_Pattern = '/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http'
 _Groups_Url_Pattern = '/zato/groups/group/zato-api-creds/?cluster=1'
 
-_Test_Name_Prefix = 'test.xpage.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.xpage.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +39,7 @@ def _create_definition_via_ui(page:'Page', base_url:'str', suffix:'str') -> 'dic
     name = _Test_Name_Prefix + suffix
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Navigate to basic auth page ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')

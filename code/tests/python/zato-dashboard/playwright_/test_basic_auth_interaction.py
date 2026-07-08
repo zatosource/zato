@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +24,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
 
-_Test_Name_Prefix = 'test.inter.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.inter.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +36,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     name = _Test_Name_Prefix + suffix
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
@@ -105,7 +107,7 @@ class TestBasicAuthInteraction:
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
         page.fill('#id_realm', 'realm.' + name)
-        page.fill('#id_password', 'pwd.' + os.urandom(4).hex())
+        page.fill('#id_password', 'pwd.' + CryptoManager.generate_hex_string(32))
 
         # .. press Enter on the password field to submit ..
         page.press('#id_password', 'Enter')
@@ -238,7 +240,7 @@ class TestBasicAuthInteraction:
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
         page.fill('#id_realm', 'realm.' + name)
-        page.fill('#id_password', 'pwd.' + os.urandom(4).hex())
+        page.fill('#id_password', 'pwd.' + CryptoManager.generate_hex_string(32))
 
         # .. click submit - the overlay should disable the button immediately ..
         submit_button = page.query_selector('#create-div input[type="submit"]')
@@ -312,7 +314,7 @@ class TestBasicAuthInteraction:
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
         page.fill('#id_realm', 'realm.' + name)
-        page.fill('#id_password', 'pwd.' + os.urandom(4).hex())
+        page.fill('#id_password', 'pwd.' + CryptoManager.generate_hex_string(32))
 
         page.click('#create-div input[type="submit"]')
         page.wait_for_selector('#create-div', state='hidden', timeout=10000)

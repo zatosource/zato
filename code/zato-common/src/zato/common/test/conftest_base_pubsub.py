@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 import pytest
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
 
 # ################################################################################################################################
@@ -370,7 +371,7 @@ def create_zato_server_fixture(
 
         start_time = time.monotonic()
 
-        invoke_password = 'test.invoke.' + os.urandom(8).hex()
+        invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
         # .. let the callback build placeholders, passwords and any pre-server work ..
         server_port = find_free_port()

@@ -14,6 +14,9 @@ import time
 from datetime import datetime, timezone
 from textwrap import dedent
 
+# Zato
+from zato.common.crypto.api import CryptoManager
+
 # PyPI
 import pytest
 
@@ -25,7 +28,7 @@ import conftest
 
 JOB_SERVICE = 'zato.scheduler.job'
 
-_suffix = os.urandom(4).hex()
+_suffix = CryptoManager.generate_hex_string(32)
 
 _FAST_OK_NAME = f'test-scheduler.fast-ok-{_suffix}'
 _SLOW_TIMEOUT_NAME = f'test-scheduler.slow-timeout-{_suffix}'

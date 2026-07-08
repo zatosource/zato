@@ -14,6 +14,7 @@ import tempfile
 import pytest
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port
 
 # ################################################################################################################################
@@ -67,14 +68,14 @@ def _build_config(
     from zato.common.test.receiver import WebhookReceiver
     from zato.common.test.config_pubsub_push import EndpointConfig
 
-    publisher_password = 'test.pub.' + os.urandom(8).hex()
-    puller_password    = 'test.pull.' + os.urandom(8).hex()
+    publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
+    puller_password    = 'test.pull.' + CryptoManager.generate_hex_string()
 
     subscriber_passwords:'strstrdict' = {}
 
     for topic_name in _topic_names:
         key = _topic_to_key(topic_name)
-        subscriber_passwords[key] = 'test.sub.' + os.urandom(8).hex()
+        subscriber_passwords[key] = 'test.sub.' + CryptoManager.generate_hex_string()
 
     # .. allocate ports and start receivers ..
     state.test_data_directory = tempfile.mkdtemp(prefix='zato_pubsub_cleanup_data_')

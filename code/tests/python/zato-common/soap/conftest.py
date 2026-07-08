@@ -8,8 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+
+# The test server library uses flat imports, the way the dashboard suite's lib does.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
@@ -25,6 +29,10 @@ import pytest
 
 # Zato
 from zato.common.util.xml_.keystore import Keystore, new_keystore
+
+# ################################################################################################################################
+
+from soap_test_server import SOAPTestServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,6 +279,46 @@ def parties():
     out.receiver = receiver
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap_server():
+    """ A live plain-HTTP SOAP server shared by the client tests.
+    """
+    server = SOAPTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap_tls_server():
+    """ A live HTTPS SOAP server with a CA-signed certificate, for TLS verification tests.
+    """
+    server = SOAPTestServer(tls=True)
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap_mtls_server():
+    """ A live HTTPS SOAP server that demands a client certificate, for mutual-TLS tests.
+    """
+    server = SOAPTestServer(tls=True, require_client_cert=True)
+    server.start()
+
+    yield server
+
+    server.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

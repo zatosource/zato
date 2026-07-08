@@ -11,6 +11,7 @@ import os
 import tempfile
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port
 
 # ################################################################################################################################
@@ -39,9 +40,9 @@ def _build_config(
 
     from zato.common.test.receiver import WebhookReceiver
 
-    publisher_password       = 'test.pub.' + os.urandom(8).hex()
-    subscriber_password      = 'test.sub.' + os.urandom(8).hex()
-    push_subscriber_password = 'test.push.' + os.urandom(8).hex()
+    publisher_password       = 'test.pub.' + CryptoManager.generate_hex_string()
+    subscriber_password      = 'test.sub.' + CryptoManager.generate_hex_string()
+    push_subscriber_password = 'test.push.' + CryptoManager.generate_hex_string()
 
     # .. start the webhook receiver ..
     state.test_data_directory = tempfile.mkdtemp(prefix='zato_pubsub_topic_delete_data_')

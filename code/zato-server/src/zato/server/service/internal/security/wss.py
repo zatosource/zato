@@ -17,6 +17,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, WSSecurity
 from zato.common.odb.query import wss_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
@@ -29,13 +30,30 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The mode-specific details every definition may carry - they all travel as opaque attributes.
+_mode_fields = (
+
+    # UsernameToken - whether the password goes out in digest form.
+    Boolean('-use_digest'),
+
+    # X.509 and SAML - what to do and the PEM material to do it with.
+    Boolean('-sign'), Boolean('-encrypt'),
+    '-signing_key', '-signing_certificate_chain', '-decryption_key', '-peer_certificate', '-trust_anchors',
+
+    # SAML - the assertion fields.
+    '-issuer', '-subject', '-audience',
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
     _filter_by = WSSecurity.name,
 
     input = 'cluster_id', '-needs_password', *query_parameters
-    output = 'id', 'name', 'is_active', 'username', '-mode', '-password'
+    output = 'id', 'name', 'is_active', 'username', '-mode', '-password', *_mode_fields
 
     def get_data(self, session): # type: ignore
 
@@ -59,7 +77,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
-    input = 'name', 'is_active', 'username', 'mode', '-cluster_id'
+    input = 'name', 'is_active', 'username', 'mode', '-cluster_id', *_mode_fields
     output = 'id', 'name'
 
     def handle(self):
@@ -115,7 +133,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a WS-Security definition.
     """
-    input = 'name', 'is_active', 'username', 'mode', '-id', '-cluster_id'
+    input = 'name', 'is_active', 'username', 'mode', '-id', '-cluster_id', *_mode_fields
     output = 'id', 'name'
 
     def handle(self):

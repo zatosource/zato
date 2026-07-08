@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, get_table_row_count, navigate_to_page, \
     open_create_dialog, submit_create_form
 
@@ -25,7 +25,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/pubsub/topic/?cluster=1'
 
-_Test_Name_Prefix = 'test.pubsub.topic.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.pubsub.topic.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -292,7 +292,7 @@ class TestPubSubTopicCreate:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        unique_name = _Test_Name_Prefix + 'unique-check-' + os.urandom(4).hex()
+        unique_name = _Test_Name_Prefix + 'unique-check-' + CryptoManager.generate_hex_string(32)
 
         # Navigate to the topics page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)

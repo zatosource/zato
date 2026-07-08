@@ -196,6 +196,18 @@ class CryptoManager:
 
 # ################################################################################################################################
 
+    @staticmethod
+    def generate_hex_string(bits:'int'=64) -> 'str':
+        """ Generates a random hex string of the given bit size, e.g. 64 bits is 16 hex characters -
+        for unique names of resources, correlation values and similar identifiers.
+        """
+        size = int(bits / 8)
+
+        out = os.urandom(size).hex()
+        return out
+
+# ################################################################################################################################
+
     @classmethod
     def from_repo_dir(cls, secret_key, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).

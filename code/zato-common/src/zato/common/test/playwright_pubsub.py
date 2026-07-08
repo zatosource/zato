@@ -7,11 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -379,7 +381,7 @@ def create_basic_auth(page:'Page', base_url:'str', name_prefix:'str', suffix:'st
 
     name = name_prefix + 'auth.' + suffix
     username = 'user.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Navigate to the Basic Auth page ..
     navigate_to_page(page, base_url, _Basic_Auth_Page_Url)

@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.smb_ import SMBTestServer
 
 # ################################################################################################################################
@@ -25,7 +25,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/outgoing/smb/?cluster=1'
 
-_Test_Name_Prefix = 'test.smb.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.smb.' + CryptoManager.generate_hex_string(32) + '.'
 
 # Letters from three alphabets - one of the tests below runs a whole create-edit-delete
 # cycle with a connection whose name contains them all.
@@ -119,7 +119,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
 
     # .. create ..
     name = _Test_Name_Prefix + suffix
-    _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + os.urandom(8).hex())
+    _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
     # .. edit everything except the password ..
     item_id = _get_item_id(page, name)
@@ -221,7 +221,7 @@ class TestOutgoingSMBLifecycle:
 
         # .. create ..
         name = _Test_Name_Prefix + 'crud'
-        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + os.urandom(8).hex())
+        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -281,7 +281,7 @@ class TestOutgoingSMBLifecycle:
 
         # .. create a connection with a Unicode name ..
         name = _Test_Name_Prefix + _Dutch_Letters + '.' + _Greek_Letters + '.' + _Korean_Letters
-        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + os.urandom(8).hex())
+        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')

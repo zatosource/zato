@@ -1,0 +1,411 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}WS-Security{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/wss.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'username',
+            '_mode',
+            '_change_password',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'mode',
+            'use_digest',
+            'sign',
+            'encrypt',
+            'issuer',
+            'subject',
+            'audience',
+            'signing_key',
+            'signing_certificate_chain',
+            'decryption_key',
+            'peer_certificate',
+            'trust_anchors',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <h2 class="zato">WS-Security</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show definitions"%}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.security.wss.create()">Create a new WS-Security definition</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+
+                        <th><a href="#">Username</a></th>
+                        <th><a href="#">Mode</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        <td>{{ item.username }}</td>
+                        <td>
+                            {% if item.mode == 'username_token' %}Username token
+                            {% elif item.mode == 'x509' %}X.509
+                            {% elif item.mode == 'saml' %}SAML
+                            {% else %}<span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.security.wss.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.security.wss.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.mode|default:'username_token' }}</td>
+                        <td class='ignore'>{{ item.use_digest|default:'False' }}</td>
+                        <td class='ignore'>{{ item.sign|default:'False' }}</td>
+                        <td class='ignore'>{{ item.encrypt|default:'False' }}</td>
+                        <td class='ignore'>{{ item.issuer|default:'' }}</td>
+                        <td class='ignore'>{{ item.subject|default:'' }}</td>
+                        <td class='ignore'>{{ item.audience|default:'' }}</td>
+                        <td class='ignore'>{{ item.signing_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.signing_certificate_chain|default:'' }}</td>
+                        <td class='ignore'>{{ item.decryption_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.peer_certificate|default:'' }}</td>
+                        <td class='ignore'>{{ item.trust_anchors|default:'' }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='23'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "security-wss-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Definition settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="token" role="tab" aria-selected="false">Username token</button>
+                        <button type="button" class="dashboard-tab" data-tab="saml" role="tab" aria-selected="false">SAML</button>
+                        <button type="button" class="dashboard-tab" data-tab="crypto" role="tab" aria-selected="false">Crypto material</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_mode">Mode</label></td>
+                                <td>{{ create_form.mode }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_username">Username</label></td>
+                                <td>{{ create_form.username }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-create-tab-panel-token" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_use_digest">Password digest</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_digest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-create-tab-panel-saml" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_issuer">Issuer</label></td>
+                                <td>{{ create_form.issuer }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_subject">Subject</label></td>
+                                <td>{{ create_form.subject }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_audience">Audience</label></td>
+                                <td>{{ create_form.audience }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-create-tab-panel-crypto" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_sign">Sign</label></td>
+                                <td><label class="toggle-switch">{{ create_form.sign }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_encrypt">Encrypt</label></td>
+                                <td><label class="toggle-switch">{{ create_form.encrypt }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_signing_key">Signing key</label></td>
+                                <td>{{ create_form.signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_signing_certificate_chain">Signing certificates</label></td>
+                                <td>{{ create_form.signing_certificate_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_decryption_key">Decryption key</label></td>
+                                <td>{{ create_form.decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_peer_certificate">Peer certificate</label></td>
+                                <td>{{ create_form.peer_certificate }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_trust_anchors">Trust anchors</label></td>
+                                <td>{{ create_form.trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "security-wss-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Definition settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="token" role="tab" aria-selected="false">Username token</button>
+                        <button type="button" class="dashboard-tab" data-tab="saml" role="tab" aria-selected="false">SAML</button>
+                        <button type="button" class="dashboard-tab" data-tab="crypto" role="tab" aria-selected="false">Crypto material</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-mode">Mode</label></td>
+                                <td>{{ edit_form.mode }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-username">Username</label></td>
+                                <td>{{ edit_form.username }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-edit-tab-panel-token" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-use_digest">Password digest</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_digest }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-edit-tab-panel-saml" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-issuer">Issuer</label></td>
+                                <td>{{ edit_form.issuer }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-subject">Subject</label></td>
+                                <td>{{ edit_form.subject }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-audience">Audience</label></td>
+                                <td>{{ edit_form.audience }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="wss-edit-tab-panel-crypto" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-sign">Sign</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.sign }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-encrypt">Encrypt</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.encrypt }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-signing_key">Signing key</label></td>
+                                <td>{{ edit_form.signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-signing_certificate_chain">Signing certificates</label></td>
+                                <td>{{ edit_form.signing_certificate_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-decryption_key">Decryption key</label></td>
+                                <td>{{ edit_form.decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-peer_certificate">Peer certificate</label></td>
+                                <td>{{ edit_form.peer_certificate }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-trust_anchors">Trust anchors</label></td>
+                                <td>{{ edit_form.trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "security-wss-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -1,0 +1,446 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Outgoing SOAP connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'host',
+            'url_path',
+            'soap_action',
+            'soap_version',
+            '_security',
+            '_ping',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'security_id',
+            'validate_tls',
+            'ping_method',
+            'timeout',
+            'content_type',
+            'serialization_type',
+            'use_ws_addressing',
+            'use_mtom',
+            'body_credentials',
+            'tls_client_cert',
+            'tls_client_key',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <h2 class="zato">Outgoing SOAP connections</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.soap.create()">Create a new outgoing SOAP connection</a>
+        </div>
+
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Host</a></th>
+                        <th><a href="#">URL path</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th><a href="#">SOAP action</a></th>
+                        <th><a href="#">SOAP version</a></th>
+                        <th><a href="#">Security</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.host }}</td>
+                        <td>{{ item.url_path }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.soap_action|default:'' }}</td>
+                        <td>{{ item.soap_version }}</td>
+                        <td>
+                            {% if item.security_name %}
+                                {{ item.sec_type_name }}
+                                <br/>
+                                {{ item.security_name }}
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.soap.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.soap.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>
+                            {% if item.sec_type %}
+                                {{ item.sec_type }}/{{ item.security_id }}
+                            {% else %}
+                            ZATO_NONE
+                            {% endif %}
+                        </td>
+                        <td class='ignore'>{{ item.validate_tls }}</td>
+
+                        <td class='ignore'>{{ item.ping_method }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+
+                        <td class='ignore'>{{ item.content_type|default:'' }}</td>
+                        <td class='ignore'>{{ item.serialization_type }}</td>
+
+                        <td class='ignore'>{{ item.use_ws_addressing|default:'False' }}</td>
+                        <td class='ignore'>{{ item.use_mtom|default:'False' }}</td>
+                        <td class='ignore'>{{ item.body_credentials|default:'' }}</td>
+                        <td class='ignore'>{{ item.tls_client_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.tls_client_key|default:'' }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='25'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-soap-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:14%"><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_host">Host</label></td>
+                                <td>{{ create_form.host }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_url_path">URL path</label></td>
+                                <td>{{ create_form.url_path }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_soap_action">SOAP action</label></td>
+                                <td>{{ create_form.soap_action }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_timeout">Timeout</label></td>
+                                <td>{{ create_form.timeout }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-soap" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_soap_version">SOAP version</label></td>
+                                <td>{{ create_form.soap_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_use_ws_addressing">WS-Addressing</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_ws_addressing }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_use_mtom">MTOM</label></td>
+                                <td><label class="toggle-switch">{{ create_form.use_mtom }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_security_id">Security definition</label></td>
+                                <td>{{ create_form.security_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_validate_tls">Validate TLS</label></td>
+                                <td>{{ create_form.validate_tls }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_tls_client_cert">Client certificate</label></td>
+                                <td>{{ create_form.tls_client_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_tls_client_key">Client key</label></td>
+                                <td>{{ create_form.tls_client_key }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-credentials" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%;vertical-align:top"><label for="id_body_credentials">Mappings</label></td>
+                                <td>
+                                    <div class="body-credentials-rows" id="body-credentials-create"></div>
+                                    <a href="javascript:$.fn.zato.outgoing.soap.add_body_credential_row('create')">Add a mapping</a>
+                                    {{ create_form.body_credentials }}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_ping_method">Ping method</label></td>
+                                <td>{{ create_form.ping_method }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_content_type">Content type</label></td>
+                                <td>{{ create_form.content_type }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    {{ create_form.serialization_type }}
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-soap-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:14%"><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-host">Host</label></td>
+                                <td>{{ edit_form.host }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-url_path">URL path</label></td>
+                                <td>{{ edit_form.url_path }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-soap_action">SOAP action</label></td>
+                                <td>{{ edit_form.soap_action }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-timeout">Timeout</label></td>
+                                <td>{{ edit_form.timeout }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-soap" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-soap_version">SOAP version</label></td>
+                                <td>{{ edit_form.soap_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-use_ws_addressing">WS-Addressing</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_ws_addressing }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-use_mtom">MTOM</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.use_mtom }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-security_id">Security definition</label></td>
+                                <td>{{ edit_form.security_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-validate_tls">Validate TLS</label></td>
+                                <td>{{ edit_form.validate_tls }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-tls_client_cert">Client certificate</label></td>
+                                <td>{{ edit_form.tls_client_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-tls_client_key">Client key</label></td>
+                                <td>{{ edit_form.tls_client_key }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-credentials" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%;vertical-align:top"><label for="id_edit-body_credentials">Mappings</label></td>
+                                <td>
+                                    <div class="body-credentials-rows" id="body-credentials-edit"></div>
+                                    <a href="javascript:$.fn.zato.outgoing.soap.add_body_credential_row('edit')">Add a mapping</a>
+                                    {{ edit_form.body_credentials }}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-ping_method">Ping method</label></td>
+                                <td>{{ edit_form.ping_method }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-content_type">Content type</label></td>
+                                <td>{{ edit_form.content_type }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    {{ edit_form.serialization_type }}
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

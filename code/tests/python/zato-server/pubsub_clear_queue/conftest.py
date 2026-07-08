@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 
 # ################################################################################################################################
@@ -36,9 +37,9 @@ def _build_config(
     invoke_password:'str',
 ) -> 'anydict':
 
-    publisher_password = 'test.pub.' + os.urandom(8).hex()
-    puller_a_password  = 'test.pull.a.' + os.urandom(8).hex()
-    puller_b_password  = 'test.pull.b.' + os.urandom(8).hex()
+    publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
+    puller_a_password  = 'test.pull.a.' + CryptoManager.generate_hex_string()
+    puller_b_password  = 'test.pull.b.' + CryptoManager.generate_hex_string()
 
     placeholders:'strstrdict' = {
         'publisher_password': publisher_password,

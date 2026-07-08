@@ -24,6 +24,9 @@ from urllib.request import Request, urlopen
 # pytest
 import pytest
 
+# Zato
+from zato.common.crypto.api import CryptoManager
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -172,8 +175,7 @@ def zato_server() -> 'any_':
 
     start_time = time.monotonic()
 
-    random_bytes = os.urandom(8)
-    random_suffix = random_bytes.hex()
+    random_suffix = CryptoManager.generate_hex_string()
     invoke_password = 'test.hotdeploy.' + random_suffix
 
     # Create quickstart

@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,7 +23,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
 
-_Test_Name_Prefix = 'test.basic.auth.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.basic.auth.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +85,7 @@ class TestBasicAuthCreate:
         definition_name = _Test_Name_Prefix + 'create-one'
         definition_username = 'user.' + definition_name
         definition_realm = 'realm.' + definition_name
-        definition_password = 'password.' + os.urandom(8).hex()
+        definition_password = 'password.' + CryptoManager.generate_hex_string()
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
@@ -143,7 +145,7 @@ class TestBasicAuthCreate:
             name = _Test_Name_Prefix + f'multi-{index}'
             username = f'user.{name}'
             realm = f'realm.{name}'
-            password = 'password.' + os.urandom(8).hex()
+            password = 'password.' + CryptoManager.generate_hex_string()
             definitions.append((name, username, realm, password))
 
         # Navigate to the basic auth page ..
@@ -199,7 +201,7 @@ class TestBasicAuthCreate:
         base_url = zato_dashboard['dashboard_url']
 
         definition_name = _Test_Name_Prefix + 'reopen-empty'
-        definition_password = 'password.' + os.urandom(8).hex()
+        definition_password = 'password.' + CryptoManager.generate_hex_string()
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
@@ -335,7 +337,7 @@ class TestBasicAuthCreate:
         base_url = zato_dashboard['dashboard_url']
 
         existing_name = _Test_Name_Prefix + 'duplicate-check'
-        existing_password = 'password.' + os.urandom(8).hex()
+        existing_password = 'password.' + CryptoManager.generate_hex_string()
 
         # Navigate and create a definition to have a known name ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
@@ -383,7 +385,7 @@ class TestBasicAuthCreate:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        unique_name = _Test_Name_Prefix + 'unique-check-' + os.urandom(4).hex()
+        unique_name = _Test_Name_Prefix + 'unique-check-' + CryptoManager.generate_hex_string(32)
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')

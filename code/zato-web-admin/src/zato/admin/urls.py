@@ -41,10 +41,11 @@ from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
+from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
-from zato.admin.web.views.security import apikey, basic_auth, ntlm
+from zato.admin.web.views.security import apikey, basic_auth, ntlm, wss
 from zato.admin.web.views.security import posture as security_posture
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
@@ -211,6 +212,24 @@ urlpatterns += [
         login_required(ntlm.change_password), name='security-ntlm-change-password'),
     url(r'^zato/security/ntlm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(ntlm.Delete()), name=ntlm.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. WS-Security
+
+    url(r'^zato/security/wss/$',
+        login_required(wss.Index()), name=wss.Index.url_name),
+    url(r'^zato/security/wss/create/$',
+        login_required(wss.Create()), name=wss.Create.url_name),
+    url(r'^zato/security/wss/edit/$',
+        login_required(wss.Edit()), name=wss.Edit.url_name),
+    url(r'^zato/security/wss/change-password/$',
+        login_required(wss.change_password), name='security-wss-change-password'),
+    url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(wss.Delete()), name=wss.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -565,6 +584,24 @@ urlpatterns += [
         login_required(out_sap.change_password), name='out-sap-change-password'),
     url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_sap.ping), name='out-sap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Outgoing SOAP connections
+
+    url(r'^zato/outgoing/soap/$',
+        login_required(out_soap.Index()), name=out_soap.Index.url_name),
+    url(r'^zato/outgoing/soap/create/$',
+        login_required(out_soap.Create()), name=out_soap.Create.url_name),
+    url(r'^zato/outgoing/soap/edit/$',
+        login_required(out_soap.Edit()), name=out_soap.Edit.url_name),
+    url(r'^zato/outgoing/soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_soap.Delete()), name=out_soap.Delete.url_name),
+    url(r'^zato/outgoing/soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_soap.ping), name='out-soap-ping'),
     ]
 
 # ################################################################################################################################
