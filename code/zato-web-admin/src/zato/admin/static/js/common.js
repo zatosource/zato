@@ -2522,9 +2522,15 @@ $.fn.zato.build_unique_check_data = function(entity_type, attr_name, value, filt
         'value': value
     };
 
-    // .. and, when a scoping filter is supplied, narrow the check down to that sub-group
+    // .. when the filter is a function, call it at check time so the payload carries
+    // .. the current values of related form fields ..
+    if(typeof filter === 'function') {
+        $.extend(data, filter());
+    }
+
+    // .. and, when a scoping filter object is supplied, narrow the check down to that sub-group
     // .. (e.g. a username is unique per sec_type rather than globally).
-    if(filter) {
+    else if(filter) {
         data['filter_name'] = filter.filter_name;
         data['filter_value'] = filter.filter_value;
     }

@@ -489,6 +489,7 @@ class ConfigManager(_ConfigManagerBase):
         wrapper_config = {
             'id':config.id,
             'is_active':config.is_active,
+            'is_internal':config.is_internal,
             'method':config.method,
             'data_format':config.get('data_format'),
             'name':config.name,
