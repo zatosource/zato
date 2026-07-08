@@ -22,7 +22,7 @@ from zato.common.groups import Member
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
+    from zato.common.typing_ import anydict, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist, strnone
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -43,6 +43,7 @@ class _BasicAuthSecDef:
 
 class _APIKeySecDef:
     security_id: 'int'
+    header: 'str'
     header_value: 'str'
 
 # ################################################################################################################################
@@ -66,6 +67,10 @@ class SecurityGroupsCtx:
     # Maps header values to _APIKeySecDef objects
     apikey_credentials: 'dict_[str, _APIKeySecDef]'
 
+    # The environ key of the one header that all API key definitions of this channel use,
+    # e.g. HTTP_X_API_KEY. It is None until the first API key definition is added.
+    apikey_header: 'strnone'
+
     def __init__(self, server:'ParallelServer') -> 'None':
 
         self.server = server
@@ -75,6 +80,7 @@ class SecurityGroupsCtx:
 
         self.basic_auth_credentials = {}
         self.apikey_credentials = {}
+        self.apikey_header = None
 
         self._lock = RLock()
 
@@ -165,16 +171,33 @@ class SecurityGroupsCtx:
     def _create_apikey(
         self,
         security_id:'int',
+        header:'str',
         header_value:'str',
-    ) -> 'None':
+    ) -> 'bool':
+
+        # All API key definitions of one channel must use the same header, ..
+        # .. so reject this member if its header differs from the one already in use ..
+        if self.apikey_header is not None:
+            if header != self.apikey_header:
+                logger.error(f'API key header conflict; expected={self.apikey_header}; given={header}; ' + \
+                    f'security_id={security_id}')
+                return False
+
+        # .. this may be the first API key definition, in which case its header becomes the channel-wide one ..
+        if self.apikey_header is None:
+            self.apikey_header = header
 
         # .. build a business object containing all the data needed in runtime ..
         item = _APIKeySecDef()
         item.security_id = security_id
+        item.header = header
         item.header_value = header_value
 
-        # .. add the business object to our container.
+        # .. add the business object to our container ..
         self.apikey_credentials[item.header_value] = item
+
+        # .. and confirm to our caller that the member was added.
+        return True
 
 # ################################################################################################################################
 
@@ -187,8 +210,15 @@ class SecurityGroupsCtx:
 
     def edit_apikey(self, security_id:'int', header_value:'str') -> 'None':
 
-        if self._delete_apikey(security_id):
-            self._create_apikey(security_id, header_value)
+        # Continue only if we recognize such an API key definition ..
+        if sec_info := self._get_apikey_by_security_id(security_id):
+
+            # .. keep the header so the new value is stored under the same one ..
+            header = sec_info.header
+
+            # .. and replace the definition with the new value.
+            if self._delete_apikey(security_id):
+                _ = self._create_apikey(security_id, header, header_value)
 
 # ################################################################################################################################
 
@@ -218,6 +248,10 @@ class SecurityGroupsCtx:
 
             # .. remove it from maps too ..
             self._after_auth_deleted(security_id)
+
+            # .. if that was the last API key definition, there is no channel-wide header anymore ..
+            if not self.apikey_credentials:
+                self.apikey_header = None
 
             # .. and indicate to our caller that we are done.
             return True
@@ -302,14 +336,15 @@ class SecurityGroupsCtx:
         self,
         group_id:'int',
         security_id:'int',
+        header:'str',
         header_value:'str',
     ) -> 'None':
 
         # Create the base object ..
-        self._create_apikey(security_id, header_value)
+        if self._create_apikey(security_id, header, header_value):
 
-        # .. and populate common containers.
-        self._after_auth_created(group_id, security_id)
+            # .. and populate common containers.
+            self._after_auth_created(group_id, security_id)
 
 # ################################################################################################################################
 
@@ -317,17 +352,33 @@ class SecurityGroupsCtx:
         self,
         group_id:'int',
         security_id:'int',
+        header:'str',
         header_value:'str',
     ) -> 'None':
 
         with self._lock:
-            self._on_apikey_created(group_id, security_id, header_value)
+            self._on_apikey_created(group_id, security_id, header, header_value)
 
 # ################################################################################################################################
 
     def set_current_apikey(self, security_id:'int', header_value:'str') -> 'None':
         with self._lock:
             self.edit_apikey(security_id, header_value)
+
+# ################################################################################################################################
+
+    def set_current_apikey_header(self, security_id:'int', header:'str') -> 'None':
+        with self._lock:
+
+            # Continue only if we recognize such an API key definition ..
+            if sec_info := self._get_apikey_by_security_id(security_id):
+
+                # .. keep the current value so it can be stored under the possibly new header ..
+                header_value = sec_info.header_value
+
+                # .. and replace the definition, which re-applies the one-header-per-channel rule.
+                if self._delete_apikey(security_id):
+                    _ = self._create_apikey(security_id, header, header_value)
 
 # ################################################################################################################################
 
@@ -378,6 +429,10 @@ class SecurityGroupsCtx:
             # .. remove security definitions (API keys) ..
             for item in apikey_list:
                 _ = self.apikey_credentials.pop(item, None)
+
+            # .. if no API key definitions remain, there is no channel-wide header anymore ..
+            if not self.apikey_credentials:
+                self.apikey_header = None
 
             # .. and remove the group itself.
             try:
@@ -432,7 +487,7 @@ class SecurityGroupsCtx:
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
                 self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
             else:
-                self._on_apikey_created(group_id, security_id, sec_def['password'])
+                self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
 
 # ################################################################################################################################
 
@@ -500,6 +555,7 @@ class SecurityGroupsCtx:
                 self.on_apikey_created(
                     group_id,
                     sec_def['id'],
+                    sec_def['header'],
                     sec_def.get('password') or 'Zato-Not-Provided-API-Key-' + uuid4().hex,
                 )
 

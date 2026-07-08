@@ -1549,8 +1549,15 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_APIKEY_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing API key security definition.
         """
-        # Update channels and outgoing connections.
+        # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY, self._visit_wrapper_edit, keys=('username', 'name'))
+
+        # .. the call above already updated URL data, so the definition's header is the current one ..
+        sec_def = self.apikey_get_by_id(msg.id)
+
+        # .. and now security groups can be updated with the possibly new header.
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.set_current_apikey_header(msg.id, sec_def['header'])
 
 # ################################################################################################################################
 
