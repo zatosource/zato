@@ -41,6 +41,7 @@ from zato.common.util.api import make_repr, new_cid, payload_from_request, servi
 from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
+from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
@@ -773,7 +774,7 @@ class Service:
         # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
-        if not isinstance(payload, ObjectifiedElement) and not payload:
+        if not isinstance(payload, (ObjectifiedElement, XMLMessage)) and not payload:
             payload = payload_from_request(server.json_parser, cid, raw_request, data_format, transport, channel_item)
 
         job_type = kwargs.get('job_type') or ''
@@ -1282,6 +1283,9 @@ class Service:
         service.request.merge_channel_params = merge_channel_params
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
+
+        # SOAP channels put the protocol context of the request here - other channels have none.
+        service.request.soap = wsgi_environ.get('zato.request.soap')
 
         channel_item = wsgi_environ.get('zato.channel_item') or {}
         channel_item = cast_('strdict', channel_item)

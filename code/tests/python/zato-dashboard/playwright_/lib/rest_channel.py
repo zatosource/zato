@@ -15,7 +15,7 @@ import time
 import requests
 
 # Zato
-from zato.common.api import ZATO_NONE
+from zato.common.api import API_Key, ZATO_NONE
 from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, select_option_by_label, \
     set_select_value, submit_create_form, submit_edit_form
 
@@ -559,7 +559,7 @@ def _create_definition_on_page(page:'Page', base_url:'str', page_url:'str', fiel
 
 # ################################################################################################################################
 
-def create_apikey_definition(page:'Page', base_url:'str', name:'str') -> 'anydict':
+def create_apikey_definition(page:'Page', base_url:'str', name:'str', header:'str'=API_Key.Default_Header) -> 'anydict':
     """ Creates an API key security definition via the UI and returns its details.
     """
 
@@ -567,6 +567,7 @@ def create_apikey_definition(page:'Page', base_url:'str', name:'str') -> 'anydic
 
     fields = {
         'name': name,
+        'header': header,
         'password': key,
     }
 
@@ -574,6 +575,7 @@ def create_apikey_definition(page:'Page', base_url:'str', name:'str') -> 'anydic
 
     out = {
         'name': name,
+        'header': header,
         'key': key,
     }
 

@@ -154,7 +154,7 @@ class Request:
 
     __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'enforce_string_encoding')
+        'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding')
 
     def __init__(
         self,
@@ -175,6 +175,7 @@ class Request:
         self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
+        self.soap = None # type: any_
         self.encrypt_func = None
         self.encrypt_secrets = True
         self.bytes_to_str_encoding = cast_('str', None)

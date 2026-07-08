@@ -148,7 +148,12 @@ class URLData(PyURLData):
         """ Enforces the channel's WS-Security definition on the incoming SOAP envelope.
         """
         try:
-            envelope = parse_envelope(body)
+            # A SOAP channel has already parsed the envelope, so enforcement runs against
+            # that shared element - what it decrypts in place is what the service reads.
+            if soap_context := wsgi_environ.get('zato.request.soap'):
+                envelope = soap_context.element
+            else:
+                envelope = parse_envelope(body)
             enforce_wss(envelope, sec_def)
         except Exception:
             if enforce_auth:
@@ -526,7 +531,7 @@ class URLData(PyURLData):
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
             'match_slash',
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
-            'security_groups', 'security_groups_ctx', 'gateway_service_list'):
+            'security_groups', 'security_groups_ctx', 'gateway_service_list', 'use_mtom'):
 
             channel_item[name] = msg.get(name)
 

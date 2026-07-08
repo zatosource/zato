@@ -26,6 +26,8 @@ from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, Servic
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
+from zato.common.soap.common import SOAPVersion
+from zato.common.soap.message import SOAPMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
@@ -34,6 +36,8 @@ from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDic
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
+from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
+    parse_soap_request, resolve_soap_payload
 from zato.server.groups.ctx import SecurityGroupsCtx
 from zato.server.service.internal import AdminService
 
@@ -85,6 +89,8 @@ def _datetime_utcnow():
 _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
+_transport_soap = URL_TYPE.SOAP
+_default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
 
@@ -409,8 +415,27 @@ class RequestDispatcher:
 
         post_data = self._extract_post_data(channel_item, wsgi_environ)
 
+        # A SOAP channel has its envelope parsed once, up front, so security enforcement
+        # and the service both work with the same element - what enforcement decrypts
+        # in place is what the service reads.
+        if channel_item['transport'] == _transport_soap:
+
+            content_type = wsgi_environ.get('CONTENT_TYPE')
+            if content_type is None:
+                content_type = ''
+
+            soap_context = parse_soap_request(cid, payload, content_type, channel_item)
+            wsgi_environ['zato.request.soap'] = soap_context
+        else:
+            soap_context = None
+
         # .. this will raise an exception if credentials are invalid ..
         self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, config_manager)
+
+        # .. with security enforced, the operation element becomes the service's payload ..
+        if soap_context:
+            resolve_soap_payload(cid, soap_context, wsgi_environ)
+            wsgi_environ['zato.request.payload'] = soap_context.payload
 
         # .. now that auth succeeded, check sec_def rate limiting first ..
         sec_def_rate_limit_result = self._check_sec_def_rate_limiting(wsgi_environ, remote_addr, now_us)
@@ -548,6 +573,11 @@ class RequestDispatcher:
 
         err = self._classify_error(cid, e, channel_item, wsgi_environ)
 
+        # SOAP channels answer with well-formed faults of the request's version.
+        if channel_item['transport'] == _transport_soap:
+            out = self._handle_soap_dispatch_error(cid, e, err, wsgi_environ, channel_item, _exc_formatted)
+            return out
+
         if channel_item['data_format'] == DATA_FORMAT.JSON:
             headers['Content-Type'] = _content_type_json
 
@@ -558,6 +588,37 @@ class RequestDispatcher:
         wsgi_environ['zato.http.response.status'] = err.status
 
         out = response
+        return out
+
+# ################################################################################################################################
+
+    def _handle_soap_dispatch_error(
+        self,
+        cid:'str',
+        e:'Exception',
+        err:'_ErrorClassification',
+        wsgi_environ:'stranydict',
+        channel_item:'anydict',
+        _exc_formatted:'str',
+    ) -> 'any_':
+        """ Turns an exception raised on a SOAP channel into a fault of the request's SOAP version.
+        """
+
+        # The version comes from the parsed request when there is one - when parsing itself
+        # failed, the channel's configured version is all there is to go by.
+        if soap_context := wsgi_environ.get('zato.request.soap'):
+            soap_version = soap_context.soap_version
+        else:
+            soap_version = channel_item['soap_version'] or _default_soap_version
+
+        self._log_dispatch_error(cid, e, err.status_code, _exc_formatted)
+
+        body, content_type = build_soap_fault_response(soap_version, e, self.default_error_message)
+
+        wsgi_environ['zato.http.response.headers']['Content-Type'] = content_type
+        wsgi_environ['zato.http.response.status'] = err.status
+
+        out = body
         return out
 
 # ################################################################################################################################
@@ -1052,6 +1113,19 @@ class RequestHandler:
         """ Sets the actual payload to represent the service's response out of what the service produced.
         This includes converting dictionaries into JSON or adding Zato metadata.
         """
+
+        # A message assigned by a service behind a SOAP channel is wrapped in an envelope
+        # matching the request - strings and bytes keep passing through as they are.
+        if transport == _transport_soap:
+            if isinstance(response.payload, SOAPMessage):
+
+                soap_context = service_instance.request.soap
+                body, content_type = build_soap_response(soap_context, response.payload)
+
+                response.payload = body
+                response.content_type = content_type
+
+                return
 
         if self._needs_admin_response(service_instance):
             if data_format in {ModuleCtx.IO_JSON, ModuleCtx.IO_FORM_DATA}:

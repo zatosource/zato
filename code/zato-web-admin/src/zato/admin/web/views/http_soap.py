@@ -23,7 +23,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
         method_allowed, SecurityList
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
-     SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
+     SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -90,6 +90,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', None),
+        'use_mtom': bool(params.get(prefix + 'use_mtom')),
         'data_format': params.get(prefix + 'data_format') or None,
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
@@ -155,6 +156,10 @@ def index(req): # type: ignore
         logger.debug(log_msg)
         return HttpResponseRedirect('/')
 
+    # Outgoing SOAP connections have their own dedicated page
+    if connection == 'outgoing' and transport == 'soap':
+        return HttpResponseRedirect(f'/zato/outgoing/soap/?cluster={req.zato.cluster_id}')
+
     create_form = None
     edit_form = None
     meta = {}
@@ -163,7 +168,7 @@ def index(req): # type: ignore
     colspan = 17
 
     if transport == 'soap':
-        colspan += 2
+        colspan += 3
 
     if req.zato.cluster_id:
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
@@ -173,10 +178,8 @@ def index(req): # type: ignore
 
             _security.append(def_item)
 
-        _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
-
-        create_form = CreateForm(_security, _soap_versions, req=req)
-        edit_form = EditForm(_security, _soap_versions, prefix='edit', req=req)
+        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS, req=req)
+        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit', req=req)
 
         if connection == 'outgoing':
             create_form.fields['url_path'].required = False
@@ -222,6 +225,13 @@ def index(req): # type: ignore
             http_soap.method = item.method
             http_soap.soap_action = item.soap_action
             http_soap.soap_version = item.soap_version
+
+            # The MTOM flag is an opaque attribute, so it is absent from channels that never set it.
+            if transport == 'soap':
+                use_mtom = item.get('use_mtom')
+                if use_mtom is None:
+                    use_mtom = False
+                http_soap.use_mtom = use_mtom
             http_soap.data_format = item.data_format
             http_soap.security_id = security_id
             http_soap.security_name = security_name
