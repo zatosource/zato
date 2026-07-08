@@ -89,6 +89,36 @@ class TestUsernameToken:
         with pytest.raises(SOAPSecurityException):
             verify_username_token(envelope, 'MYUSER', 'MYPASS')
 
+    def test_wrong_username(self):
+        envelope = _sample_envelope()
+        _ = add_username_token(envelope, 'WRONGUSER', 'MYPASS')
+
+        with pytest.raises(SOAPSecurityException):
+            verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS')
+
+    def test_wrong_username_correct_password(self):
+        envelope = _sample_envelope()
+        _ = add_username_token(envelope, 'WRONGUSER', 'MYPASS', use_digest=True)
+
+        with pytest.raises(SOAPSecurityException):
+            verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS')
+
+    def test_wrong_username_and_wrong_password_same_message(self):
+        envelope_wrong_username = _sample_envelope()
+        _ = add_username_token(envelope_wrong_username, 'WRONGUSER', 'MYPASS')
+
+        envelope_wrong_password = _sample_envelope()
+        _ = add_username_token(envelope_wrong_password, 'MYUSER', 'WRONGPASS')
+
+        with pytest.raises(SOAPSecurityException) as wrong_username_info:
+            verify_username_token(_reparse(envelope_wrong_username), 'MYUSER', 'MYPASS')
+
+        with pytest.raises(SOAPSecurityException) as wrong_password_info:
+            verify_username_token(_reparse(envelope_wrong_password), 'MYUSER', 'MYPASS')
+
+        # Neither failure may reveal which part was wrong.
+        assert str(wrong_username_info.value) == str(wrong_password_info.value)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
