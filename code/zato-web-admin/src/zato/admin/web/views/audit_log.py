@@ -51,10 +51,11 @@ _select_columns = 'id, cid, source, event_type, event_time_iso, msg_id, endpoint
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
 
-# Per-source page titles - more sources will follow, e.g. REST outgoing connections and IMAP audit logs
+# Per-source page titles - more sources will follow, e.g. REST outgoing connections
 _source_title = {
     'pubsub': 'Pub/sub audit log',
     'rest-channel': 'REST channel audit log',
+    'email-imap': 'IMAP audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -79,10 +80,22 @@ _rest_channel_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_email_imap_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Folder', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # Per-source table columns
 _source_columns = {
     'pubsub': _pubsub_columns,
     'rest-channel': _rest_channel_columns,
+    'email-imap': _email_imap_columns,
 }
 
 # ################################################################################################################################

@@ -247,7 +247,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
-        self.email_imap_api = IMAPAPI(IMAPConnStore())
+        self.email_imap_api = IMAPAPI(IMAPConnStore(self.server.name))
 
         # AMQP
         self.amqp_api = ConnectorStore(Connector_Type.duplex.amqp, ConnectorAMQP, self.server)

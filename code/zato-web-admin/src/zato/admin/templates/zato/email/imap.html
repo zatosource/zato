@@ -48,6 +48,9 @@
             '_delete',
             '_ping',
 
+            // Audit log link
+            '_audit_log',
+
             // 5
             'id',
             'is_active',
@@ -128,6 +131,9 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
+                        {% comment %} _audit_log {% endcomment %}
+                        <th>&nbsp;</th>
+
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -204,6 +210,9 @@
                         <td><a href="javascript:$.fn.zato.email.imap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.email.imap.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+
+                        {% comment %} _audit_log {% endcomment %}
+                        <td><a href="/zato/audit-log/?source=email-imap&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
 
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

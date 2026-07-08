@@ -40,6 +40,7 @@ audit_db_file_name = 'audit.db'
 class AuditSource:
     PubSub = 'pubsub'
     Rest_Channel = 'rest-channel'
+    Email_IMAP = 'email-imap'
 
 # ################################################################################################################################
 
@@ -51,6 +52,9 @@ class AuditEvent:
     Received = 'received'
     Request_Received = 'request-received'
     Response_Sent = 'response-sent'
+    Message_Received = 'message-received'
+    Message_Marked_Seen = 'message-marked-seen'
+    Message_Deleted = 'message-deleted'
 
 # ################################################################################################################################
 

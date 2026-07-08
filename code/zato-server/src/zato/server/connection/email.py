@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from base64 import b64decode
 from contextlib import contextmanager
 from io import BytesIO
+from json import dumps
 from logging import getLogger, INFO
 from mimetypes import guess_type as guess_mime_type
 from traceback import format_exc
@@ -27,6 +28,8 @@ from zato.common.py23_.past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import IMAPMessage, EMAIL
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.util.api import new_cid_server
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
 from zato.server.store import BaseAPI, BaseStore
 
@@ -36,7 +39,7 @@ from zato.server.store import BaseAPI, BaseStore
 if 0:
     from O365.mailbox import MailBox
     from O365.message import Message as MS365Message
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, strnone
     MailBox = MailBox
     MS365Message = MS365Message
 
@@ -57,13 +60,129 @@ _modes = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _uid_as_str(uid:'any_') -> 'str':
+    """ Generic IMAP servers report uids as bytes while Microsoft 365 uses str, this normalizes them.
+    """
+    if isinstance(uid, bytes):
+        out = uid.decode('utf-8')
+    else:
+        out = uid
+
+    return out
+
+# ################################################################################################################################
+
+def _get_message_summary(data:'any_') -> 'str':
+    """ Builds a JSON summary of an IMAP message for the audit log.
+    """
+
+    # The subject header is optional in e-mail messages
+    if 'subject' in data.keys():
+        subject = data.subject
+    else:
+        subject = ''
+
+    # A message carries a plain-text body, an HTML one or both - the first available one goes to the summary ..
+    body = data.body
+
+    if body['plain']:
+        body_text = body['plain'][0]
+    elif body['html']:
+        body_text = body['html'][0]
+    else:
+        body_text = ''
+
+    # .. body parts may arrive as bytes, depending on the message's encoding ..
+    if isinstance(body_text, bytes):
+        body_text = body_text.decode('utf-8', errors='replace')
+
+    # .. and now the summary can be serialized.
+    out = dumps({
+        'subject': subject,
+        'sent_from': data.sent_from,
+        'sent_to': data.sent_to,
+        'body': body_text,
+    })
+
+    return out
+
+# ################################################################################################################################
+
+def _insert_imap_audit_event(
+    audit_log:'AuditLog',
+    event_type:'str',
+    conn_name:'str',
+    *,
+    cid:'str',
+    msg_id:'str' = '',
+    folder:'str' = '',
+    outcome:'str',
+    data:'str' = '',
+    ) -> 'None':
+    """ Writes one audit event describing an IMAP operation.
+    """
+    audit_log.insert(
+        AuditSource.Email_IMAP,
+        event_type,
+        conn_name,
+        cid=cid,
+        msg_id=msg_id,
+        endpoint=folder,
+        size=len(data),
+        outcome=outcome,
+        data=data,
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GenericIMAPMessage(IMAPMessage):
 
-    def delete(self):
-        self.conn.delete(self.uid)
+    # The audit context is attached by the connection that yields the message
+    audit_log: 'AuditLog'
+    audit_conn_name: 'str'
+    audit_folder: 'str'
+    audit_cid: 'str'
 
-    def mark_seen(self):
-        self.conn.mark_seen(self.uid)
+    def delete(self) -> 'None':
+
+        # The message's uid goes to the audit log in its textual form
+        msg_id = _uid_as_str(self.uid)
+
+        try:
+            self.conn.delete(self.uid)
+        except Exception:
+
+            # Record the failed deletion before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        else:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
+
+# ################################################################################################################################
+
+    def mark_seen(self) -> 'None':
+
+        # The message's uid goes to the audit log in its textual form
+        msg_id = _uid_as_str(self.uid)
+
+        try:
+            self.conn.mark_seen(self.uid)
+        except Exception:
+
+            # Record the failed operation before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        else:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,11 +190,45 @@ class GenericIMAPMessage(IMAPMessage):
 class Microsoft365IMAPMessage(IMAPMessage):
     impl: 'MS365Message'
 
-    def delete(self):
-        _ = self.impl.delete()
+    # The audit context is attached by the connection that yields the message
+    audit_log: 'AuditLog'
+    audit_conn_name: 'str'
+    audit_folder: 'str'
+    audit_cid: 'str'
 
-    def mark_seen(self):
-        _ = self.impl.mark_as_read()
+    def delete(self) -> 'None':
+
+        try:
+            _ = self.impl.delete()
+        except Exception:
+
+            # Record the failed deletion before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        else:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
+
+# ################################################################################################################################
+
+    def mark_seen(self) -> 'None':
+
+        try:
+            _ = self.impl.mark_as_read()
+        except Exception:
+
+            # Record the failed operation before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        else:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -239,9 +392,10 @@ class SMTPConnStore(BaseStore):
 
 class _IMAPConnection(_Connection):
 
-    def __init__(self, config, config_no_sensitive):
+    def __init__(self, config:'any_', config_no_sensitive:'any_', audit_log:'AuditLog') -> 'None':
         self.config = config
         self.config_no_sensitive = config_no_sensitive
+        self.audit_log = audit_log
 
     def get(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
@@ -267,27 +421,105 @@ class GenericIMAPConnection(_IMAPConnection):
         conn.close()
         conn.server.server.sock.close()
 
-    def get(self, folder='INBOX'):
-        with self.get_connection() as conn: # type: Imbox
-            conn.connection.select(folder)
+    def get(self, folder:'str'='INBOX') -> 'any_':
 
-            for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
-                yield (uid, GenericIMAPMessage(uid, conn, msg))
+        # All messages received in this call share one correlation ID
+        cid = new_cid_server()
+
+        try:
+            with self.get_connection() as conn: # type: Imbox
+                _ = conn.connection.select(folder)
+
+                for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
+
+                    # Build the message wrapper first ..
+                    message = GenericIMAPMessage(uid, conn, msg)
+
+                    # .. attach the audit context so that message-level operations share this call's correlation ID ..
+                    message.audit_log = self.audit_log
+                    message.audit_conn_name = self.config.name
+                    message.audit_folder = folder
+                    message.audit_cid = cid
+
+                    # .. record the received message in the audit log ..
+                    msg_id = _uid_as_str(uid)
+                    data = _get_message_summary(msg)
+
+                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+                        cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+
+                    # .. and hand the message over to the caller.
+                    yield (uid, message)
+
+        except Exception:
+
+            # Record the failure before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+                cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
+            raise
+
+# ################################################################################################################################
 
     def ping(self):
         with self.get_connection() as conn: # type: Imbox
-            conn.connection.noop()
+            _ = conn.connection.noop()
 
-    def delete(self, *uids):
-        with self.get_connection() as conn: # type: Imbox
-            for uid in uids:
-                mov, data = self.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
-            conn.connection.expunge()
+# ################################################################################################################################
 
-    def mark_seen(self, *uids):
-        with self.get_connection() as conn: # type: Imbox
-            for uid in uids:
-                conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
+    def delete(self, *uids:'any_') -> 'None':
+
+        # All deletions in this call share one correlation ID
+        cid = new_cid_server()
+
+        try:
+            with self.get_connection() as conn: # type: Imbox
+                for uid in uids:
+
+                    # Flag the message as deleted first ..
+                    _ = conn.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
+
+                    # .. and record the deletion in the audit log.
+                    msg_id = _uid_as_str(uid)
+                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                        cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+
+                _ = conn.connection.expunge()
+
+        except Exception:
+
+            # Record the failure before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                cid=cid, outcome=AuditOutcome.Error, data=error)
+            raise
+
+# ################################################################################################################################
+
+    def mark_seen(self, *uids:'any_') -> 'None':
+
+        # All operations in this call share one correlation ID
+        cid = new_cid_server()
+
+        try:
+            with self.get_connection() as conn: # type: Imbox
+                for uid in uids:
+
+                    # Flag the message as seen first ..
+                    _ = conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
+
+                    # .. and record the operation in the audit log.
+                    msg_id = _uid_as_str(uid)
+                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                        cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+
+        except Exception:
+
+            # Record the failure before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                cid=cid, outcome=AuditOutcome.Error, data=error)
+            raise
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -342,7 +574,7 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
 # ################################################################################################################################
 
-    def _convert_to_imap_message(self, msg_id:'str', native_message:'MS365Message') -> 'IMAPMessage':
+    def _convert_to_imap_message(self, msg_id:'str', native_message:'MS365Message') -> 'Microsoft365IMAPMessage':
 
         # A dict object to base the resulting message's struct on ..
         data_dict = {}
@@ -400,30 +632,57 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
 # ################################################################################################################################
 
-    def get(self, folder='INBOX', filter=None):
+    def get(self, folder:'str'='INBOX', filter:'strnone'=None) -> 'any_':
 
         filter = filter or self.config['filter_criteria']
 
         # By default, we have nothing to return.
         default = []
 
-        # Obtain a handle to a mailbox ..
-        mailbox = self._get_mailbox()
+        # All messages received in this call share one correlation ID
+        cid = new_cid_server()
 
-        # .. try to look up a folder by its name ..
-        folder = mailbox.get_folder(folder_name=folder)
+        try:
 
-        # .. if found, we can return all of its messages ..
-        if folder:
-            messages = folder.get_messages(limit=10_000, query=filter, download_attachments=True)
-            for item in messages:
-                msg_id = item.internet_message_id
-                imap_message = self._convert_to_imap_message(msg_id, item)
-                yield msg_id, imap_message
+            # Obtain a handle to a mailbox ..
+            mailbox = self._get_mailbox()
 
-        else:
-            for item in default:
-                yield item
+            # .. try to look up a folder by its name ..
+            mailbox_folder = mailbox.get_folder(folder_name=folder)
+
+            # .. if found, we can return all of its messages ..
+            if mailbox_folder:
+                messages = mailbox_folder.get_messages(limit=10_000, query=filter, download_attachments=True)
+                for item in messages:
+                    msg_id = item.internet_message_id
+                    imap_message = self._convert_to_imap_message(msg_id, item)
+
+                    # Attach the audit context so that message-level operations share this call's correlation ID ..
+                    imap_message.audit_log = self.audit_log
+                    imap_message.audit_conn_name = self.config['name']
+                    imap_message.audit_folder = folder
+                    imap_message.audit_cid = cid
+
+                    # .. record the received message in the audit log ..
+                    data = _get_message_summary(imap_message.data)
+
+                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                        cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+
+                    # .. and hand the message over to the caller.
+                    yield msg_id, imap_message
+
+            else:
+                for item in default:
+                    yield item
+
+        except Exception:
+
+            # Record the failure before letting the exception propagate
+            error = format_exc()
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
+            raise
 
 # ################################################################################################################################
 
@@ -446,11 +705,17 @@ class IMAPConnStore(BaseStore):
         EMAIL.IMAP.ServerType.Microsoft365: Microsoft365IMAPConnection,
     }
 
-    def create_impl(self, config, config_no_sensitive):
+    def __init__(self, server_name:'str') -> 'None':
+        super().__init__()
+
+        # All IMAP connections write their audit events through this object
+        self.audit_log = AuditLog(server_name)
+
+    def create_impl(self, config:'any_', config_no_sensitive:'any_') -> '_IMAPConnection':
 
         server_type = config.server_type or EMAIL.IMAP.ServerType.Generic
         class_ = self._impl_class[server_type]
-        instance = class_(config, config_no_sensitive)
+        instance = class_(config, config_no_sensitive, self.audit_log)
 
         return instance
 
