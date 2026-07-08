@@ -429,7 +429,7 @@
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
-                        <td><a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 31, 32 -->
@@ -443,7 +443,7 @@
 
                         <!-- Invoke -->
                         {% if transport == 'plain_http' %}
-                            <td><a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a></td>
+                            <td>{% if connection == 'channel' and item.is_internal %}<span class="form_hint">Invoke</span>{% else %}<a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 38a -->

@@ -186,7 +186,7 @@ $.fn.zato.http_soap.field_descriptions = {
 
     'id_soap_action': 'Value of the SOAPAction header expected<br>with each request. Leave empty if callers<br>do not send one.',
     'id_soap_version': 'SOAP protocol version this endpoint speaks.<br>1.2 is the most common choice today,<br>1.1 is used by older systems.',
-    'id_use_mtom': 'When on, binary data in responses is sent<br>as MTOM/XOP parts instead of being<br>embedded in the message as Base64.',
+    'id_use_mtom': 'When on and your service returns files or images,<br>this channel sends them back to the caller as they are (MTOM) instead of converting them to Base64 text, which would make them bigger and slower to transfer.',
 
     'id_url_params_pri': 'Whether parameters from the query string<br>or from the URL path win<br>when both carry the same name.',
     'id_params_pri': 'Whether parameters from the URL<br>or from the message body win<br>when both carry the same name.',
