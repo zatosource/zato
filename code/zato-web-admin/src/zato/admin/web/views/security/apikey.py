@@ -51,7 +51,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'username'
+    input_required = 'name', 'is_active', 'header'
     output_required = 'id', 'name'
 
     def success_message(self, item):

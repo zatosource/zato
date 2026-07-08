@@ -863,8 +863,11 @@ class RequestDispatcher:
         # Extract Basic Auth information from input ..
         basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
 
-        # .. extract API key information too ..
-        apikey_header_value = wsgi_environ.get(self.server.api_key_header_wsgi)
+        # .. extract API key information too, using the one header ..
+        # .. that this channel's group members are configured with ..
+        apikey_header_value = None
+        if security_groups_ctx.apikey_header:
+            apikey_header_value = wsgi_environ.get(security_groups_ctx.apikey_header)
 
         # .. we cannot have both on input ..
         if basic_auth_info and apikey_header_value:
