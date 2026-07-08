@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 
 # ################################################################################################################################
@@ -44,8 +45,8 @@ def _build_config(
     _ = redis_connection.flushdb()
     redis_connection.close()
 
-    publisher_password  = 'test.pub.' + os.urandom(8).hex()
-    subscriber_password = 'test.sub.' + os.urandom(8).hex()
+    publisher_password  = 'test.pub.' + CryptoManager.generate_hex_string()
+    subscriber_password = 'test.sub.' + CryptoManager.generate_hex_string()
 
     placeholders:'strstrdict' = {
         'publisher_password': publisher_password,

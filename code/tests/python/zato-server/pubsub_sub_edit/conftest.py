@@ -11,6 +11,7 @@ import os
 import tempfile
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port
 
 # ################################################################################################################################
@@ -39,8 +40,8 @@ def _build_config(
 
     from zato.common.test.receiver import WebhookReceiver
 
-    publisher_password  = 'test.pub.' + os.urandom(8).hex()
-    subscriber_password = 'test.sub.' + os.urandom(8).hex()
+    publisher_password  = 'test.pub.' + CryptoManager.generate_hex_string()
+    subscriber_password = 'test.sub.' + CryptoManager.generate_hex_string()
 
     # .. allocate port and start the webhook receiver ..
     webhook_port = find_free_port()

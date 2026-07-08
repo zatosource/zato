@@ -23,6 +23,9 @@ from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+# Zato
+from zato.common.crypto.api import CryptoManager
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 # PyPI
@@ -214,9 +217,9 @@ def zato_server() -> 'any_':
     start_time = time.monotonic()
 
     # Generate credentials ..
-    basic_auth_password = 'test.ba.' + os.urandom(8).hex()
-    apikey_value        = 'test.ak.' + os.urandom(8).hex()
-    invoke_password     = 'test.invoke.' + os.urandom(8).hex()
+    basic_auth_password = 'test.ba.' + CryptoManager.generate_hex_string()
+    apikey_value        = 'test.ak.' + CryptoManager.generate_hex_string()
+    invoke_password     = 'test.invoke.' + CryptoManager.generate_hex_string()
 
     # Start the GraphQL test server (no auth for now - we set it per-test via handler class attrs) ..
     graphql_port = _find_free_port()

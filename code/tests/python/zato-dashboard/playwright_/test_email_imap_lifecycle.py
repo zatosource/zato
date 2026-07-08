@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.api import EMAIL
 
 # ################################################################################################################################
@@ -28,7 +28,7 @@ _scheduler = EMAIL.IMAP.Scheduler
 _Page_Url_Pattern = '/zato/email/imap/?cluster=1'
 _Scheduler_Page_Url_Pattern = '/zato/scheduler/?cluster=1'
 
-_Test_Name_Prefix = 'test.imap.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.imap.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Invoked_Service = 'demo.ping'
 

@@ -142,7 +142,8 @@ class GetList(_BaseGet):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
-        '-connection', '-transport'
+        '-connection', '-transport', \
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
 
     def get_data(self, session):
 
@@ -319,7 +320,8 @@ class Create(_CreateEdit):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list'
+        '-gateway_service_list', \
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -474,7 +476,8 @@ class Edit(_CreateEdit):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list'
+        '-gateway_service_list', \
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
     output = '-id', '-name'
 
     def handle(self):

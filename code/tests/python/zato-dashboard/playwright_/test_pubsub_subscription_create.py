@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_all_subscription_prerequisites, \
     create_outgoing_rest, get_table_row_count, navigate_to_page, open_create_dialog_via_js, \
     select_sec_def_and_wait_for_topics, setup_alert_handler, submit_create_form, wait_for_sec_def_dropdown
@@ -27,7 +27,7 @@ if 0:
 
 _Subscription_Page_Url = '/zato/pubsub/subscription/?cluster=1'
 
-_Test_Name_Prefix = 'test.sub.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.sub.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################

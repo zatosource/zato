@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +24,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
 
-_Test_Name_Prefix = 'test.life.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.life.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Console_Noise_Patterns = [
     'favicon.ico',
@@ -41,7 +43,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     name = _Test_Name_Prefix + suffix
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
@@ -97,7 +99,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     name = _Test_Name_Prefix + suffix
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     page.click('#markup .page_prompt a')
     page.wait_for_selector('#create-div', state='visible')

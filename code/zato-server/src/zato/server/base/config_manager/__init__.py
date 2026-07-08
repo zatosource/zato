@@ -503,9 +503,22 @@ class ConfigManager(_ConfigManagerBase):
             'timeout':config.timeout,
             'content_type':config.content_type,
             'validate_tls':config.validate_tls,
+
+            # SOAP-specific and mutual-TLS details - they arrive as opaque attributes
+            # and are absent from connections created before these fields existed.
+            'use_ws_addressing':config.get('use_ws_addressing'),
+            'use_mtom':config.get('use_mtom'),
+            'body_credentials':config.get('body_credentials'),
+            'tls_client_cert':config.get('tls_client_cert'),
+            'tls_client_key':config.get('tls_client_key'),
         }
 
         wrapper_config.update(sec_config)
+
+        # A WS-Security definition carries its whole mode-specific configuration - the wrapper
+        # passes it to the SOAP client, which applies it to each outgoing envelope.
+        if sec_config['sec_type'] == SEC_DEF_TYPE.WSS and _sec_config:
+            wrapper_config['security'] = dict(_sec_config)
 
         return HTTPSOAPWrapper(self.server, wrapper_config)
 

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64encode
+from copy import deepcopy
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -18,8 +19,8 @@ from lxml import etree
 import pytest
 
 # Zato
-from zato.common.soap.common import SOAPException
 from zato.common.soap.message import parse, serialize, SOAPMessage
+from zato.common.util.xml_.core import XMLException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -237,7 +238,7 @@ class TestValueTypes:
         request = SOAPMessage()
         request.value = object()
 
-        with pytest.raises(SOAPException):
+        with pytest.raises(XMLException):
             _ = serialize(request, 'request')
 
     def test_none_is_xsi_nil(self):
@@ -273,6 +274,156 @@ class TestVivification:
 
         request.real = 'value'
         assert request
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestNodeProtocol:
+    """ The Python-side behavior of a node - reading back what was assigned,
+    string forms, and how the node responds to protocol probes.
+    """
+
+    def test_namespace_reads_back(self):
+        request = SOAPMessage()
+
+        # A fresh node has no namespace until one is assigned.
+        assert request.namespace is None
+
+        request.namespace = _ns_cdc
+        assert request.namespace == _ns_cdc
+
+        # The bracket form reads the same value.
+        assert request['namespace'] == _ns_cdc
+
+    def test_attribute_reads_back_through_brackets(self):
+        slot = SOAPMessage()
+        slot['name'] = 'creationTime'
+        slot['text'] = '20260401'
+
+        assert slot['name'] == 'creationTime'
+        assert slot['text'] == '20260401'
+
+        assert 'name' in slot
+        assert 'other' not in slot
+
+        # The reserved keys are not attributes, so they never answer to `in`.
+        assert 'text' not in slot
+
+    def test_str_is_the_node_text(self):
+        slot = SOAPMessage()
+
+        # A node without text is an empty string, never None.
+        assert str(slot) == ''
+
+        slot['text'] = 'PDQ Supplier'
+        assert str(slot) == 'PDQ Supplier'
+
+    def test_repr_names_children_and_attributes(self):
+        request = SOAPMessage()
+        request.facilityID = 'FL0001'
+        request['status'] = 'Approved'
+
+        text = repr(request)
+
+        assert 'facilityID' in text
+        assert 'status' in text
+
+    def test_underscore_probes_fail_normally(self):
+        request = SOAPMessage()
+
+        # Protocol probes such as pickling or deepcopy look for underscore
+        # attributes - they must see a normal failure, not a vivified node.
+        with pytest.raises(AttributeError):
+            _ = request._ipython_canary_method_should_not_exist_
+
+    def test_deepcopy_gives_an_independent_message(self):
+        request = SOAPMessage()
+        request.namespace = _ns_cdc
+        request.facilityID = 'FL0001'
+
+        copied = deepcopy(request)
+        copied.facilityID = 'FL9999'
+
+        assert request.facilityID == 'FL0001'
+        assert copied.facilityID == 'FL9999'
+        assert copied.namespace == _ns_cdc
+
+    def test_list_content_decides_node_truth(self):
+        request = SOAPMessage()
+
+        # A list of contentless nodes carries nothing.
+        request.classifications = [SOAPMessage(), SOAPMessage()]
+        assert not request
+
+        # One list item with real content is enough - even after empty ones.
+        slot = SOAPMessage()
+        slot.value = 'urn:uuid:1'
+        request.classifications = [SOAPMessage(), slot]
+        assert request
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestParsingEdges:
+    """ The wire shapes real registries and gateways produce that a schema-free
+    reader has to take in stride.
+    """
+
+    def test_comments_are_skipped(self):
+        data = b'<response><!-- audit trail --><status>Success</status></response>'
+
+        result = parse(data)
+
+        assert result.status == 'Success'
+        assert list(result._children) == ['status']
+
+    def test_empty_leaf_reads_as_empty_string(self):
+        data = b'<response><middleName/><familyName>Smith</familyName></response>'
+
+        result = parse(data)
+
+        assert result.middleName == ''
+        assert result.familyName == 'Smith'
+
+    def test_mixed_text_and_attributes(self):
+        data = b'<response><code system="2.16.840.1.113883">PA</code></response>'
+
+        result = parse(data)
+
+        # An element carrying both an attribute and text keeps both apart.
+        assert result.code['system'] == '2.16.840.1.113883'
+        assert result.code['text'] == 'PA'
+        assert str(result.code) == 'PA'
+
+    def test_whitespace_between_elements_is_formatting(self):
+        data = b'<response>\n  <status>Success</status>\n</response>'
+
+        result = parse(data)
+
+        # Pretty-printing whitespace is not text content.
+        assert result['text'] is None
+        assert result.status == 'Success'
+
+    def test_comment_only_leaf_reads_as_empty_string(self):
+        data = b'<response><notes><!-- reviewed --></notes></response>'
+
+        result = parse(data)
+
+        assert result.notes == ''
+
+    def test_nil_false_marker_never_surfaces_as_attribute(self):
+        data = (
+            b'<response xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            b'<middleName xsi:nil="false" partial="true">Ann</middleName>'
+            b'</response>'
+        )
+
+        result = parse(data)
+
+        # The xsi:nil marker is a value marker, not data - only the real attribute remains.
+        assert 'nil' not in result.middleName
+        assert result.middleName['partial'] == 'true'
+        assert str(result.middleName) == 'Ann'
 
 # ################################################################################################################################
 # ################################################################################################################################

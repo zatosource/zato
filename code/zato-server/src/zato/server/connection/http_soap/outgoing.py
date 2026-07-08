@@ -32,6 +32,7 @@ from requests_toolbelt import MultipartEncoder
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
+from zato.common.soap.client import SOAPClient
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
@@ -190,6 +191,9 @@ class BaseHTTPSOAPWrapper:
         self.requests_auth = None
         self.username = None
 
+        # The SOAP client is built lazily and dropped here so security changes take effect on the next call.
+        self._soap_client = None
+
         # #######################################
         #
         # API Keys
@@ -247,6 +251,25 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
+    def _get_tls_client_cert(self) -> 'any_':
+        """ Returns what to pass to requests as its client certificate - a single PEM path holding
+        both the certificate and its private key, a (certificate, key) path pair when the key lives
+        in its own file, or None when the connection does not present a client certificate.
+        """
+        client_cert = self.config.get('tls_client_cert')
+
+        if not client_cert:
+            return None
+
+        if client_key := self.config.get('tls_client_key'):
+            out = (client_cert, client_key)
+        else:
+            out = client_cert
+
+        return out
+
+# ################################################################################################################################
+
     def invoke_http(
         self,
         cid:'str',
@@ -270,6 +293,10 @@ class BaseHTTPSOAPWrapper:
             tls_verify = False
         else:
             tls_verify = self.config.get('validate_tls', True)
+
+        # A mutual-TLS endpoint needs our client certificate, whose file is mounted into the
+        # container - a single PEM holding both the certificate and its key, or a separate pair.
+        tls_client_cert = self._get_tls_client_cert()
 
         # This is optional and, if not given, we will use the security configuration from self.config
         sec_def_name = kwargs.pop('sec_def_name', NotGiven)
@@ -371,7 +398,7 @@ class BaseHTTPSOAPWrapper:
                     # .. do send it ..
                     response = self.session.request(
                         method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
-                        verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
+                        verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'], *args, **kwargs)
 
                     # Update metrics
                     self._push_metrics(start_time, str(response.status_code))
@@ -631,6 +658,84 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             return soap_config['message'].format(header='', data=data), headers
         else:
             return data, headers
+
+# ################################################################################################################################
+
+    def _new_soap_client(self) -> 'SOAPClient':
+        """ Builds a SOAP client out of this connection's configuration - the transport details,
+        the mutual-TLS material, the WS-Security definition and the body-credential mappings.
+        """
+        config:'stranydict' = {
+            'address': self.address,
+            'soap_version': self.config.get('soap_version') or '1.1',
+            'soap_action': self.config.get('soap_action') or '',
+            'timeout': self.config.get('timeout'),
+            'validate_tls': self.config.get('validate_tls', True),
+            'content_type': self.config.get('content_type'),
+            'ping_method': self.config.get('ping_method') or 'HEAD',
+            'tls_client_cert': self.config.get('tls_client_cert'),
+            'tls_client_key': self.config.get('tls_client_key'),
+            'use_ws_addressing': self.config.get('use_ws_addressing') or False,
+            'use_mtom': self.config.get('use_mtom') or False,
+        }
+
+        # Body credentials pair the mapping rows with the username and password
+        # of the security definition attached to the connection.
+        if mappings := self.config.get('body_credentials'):
+            if isinstance(mappings, str):
+                mappings = loads(mappings)
+            if mappings:
+                config['body_credentials'] = {
+                    'username': self.config.get('username'),
+                    'password': self.config.get('password'),
+                    'mappings': mappings,
+                }
+
+        # A WS-Security definition travels whole, with the connection-level password kept
+        # authoritative so a password change reaches the client without a full reload.
+        if security := self.config.get('security'):
+            security = dict(security)
+            if password := self.config.get('password'):
+                security['password'] = password
+            config['security'] = security
+
+        return SOAPClient(config)
+
+# ################################################################################################################################
+
+    def _get_soap_client(self) -> 'SOAPClient':
+        """ Returns the underlying SOAP client, building it on first access.
+        """
+        if self._soap_client is None:
+            self._soap_client = self._new_soap_client()
+        return self._soap_client
+
+    soap_client = property(fget=_get_soap_client, doc=_get_soap_client.__doc__)
+
+# ################################################################################################################################
+
+    def invoke(self, cid:'str', operation:'str', message:'any_') -> 'any_':
+        """ Invokes a SOAP operation over this connection - the message is a dot-accessed
+        SOAPMessage that becomes the operation element in soap:Body, and the parsed response
+        body comes back the same way, with faults raised as SOAPFault.
+        """
+        self._enforce_is_active()
+
+        logger.info('SOAP out -> cid=%s; %s %s; name:%s', cid, operation, self.address, self.config['name'])
+
+        return self.soap_client.invoke(operation, message)
+
+# ################################################################################################################################
+
+    def invoke_ebxml(self, cid:'str', info:'any_', parts:'any_', sign:'bool'=False, encrypt:'bool'=False) -> 'any_':
+        """ Sends an ebXML Message Service message over this connection - payloads travel
+        as MIME parts, each optionally signed and encrypted for the recipient.
+        """
+        self._enforce_is_active()
+
+        logger.info('ebXML out -> cid=%s; %s; name:%s', cid, self.address, self.config['name'])
+
+        return self.soap_client.invoke_ebxml(info, parts, sign=sign, encrypt=encrypt)
 
 # ################################################################################################################################
 

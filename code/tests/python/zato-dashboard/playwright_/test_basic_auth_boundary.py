@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +24,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
 
-_Test_Name_Prefix = 'test.bnd.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.bnd.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +35,7 @@ def _create_definition(page:'Page', name:'str') -> 'dict':
 
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
@@ -69,7 +71,7 @@ def _create_definition_with_realm(page:'Page', name:'str', realm:'str') -> 'dict
     """
 
     username = 'user.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
@@ -404,7 +406,7 @@ class TestBasicAuthBoundary:
         base_url = zato_dashboard['dashboard_url']
 
         name = _Test_Name_Prefix + 'pwd-hidden'
-        password = 'secret-pw-' + os.urandom(4).hex()
+        password = 'secret-pw-' + CryptoManager.generate_hex_string(32)
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')

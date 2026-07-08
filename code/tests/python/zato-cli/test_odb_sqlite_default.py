@@ -19,13 +19,16 @@ import threading
 import time
 from unittest import main, TestCase
 
+# Zato
+from zato.common.crypto.api import CryptoManager
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 _ZATO_BASE = '/home/dsuch/projects/zatosource-zato/4.1'
 _ZATO_BIN = os.path.join(_ZATO_BASE, 'code', 'bin', 'zato')
 
-_PASSWORD = 'test.odb.sqlite.' + os.urandom(8).hex()
+_PASSWORD = 'test.odb.sqlite.' + CryptoManager.generate_hex_string()
 
 _server_proc = None
 _tmpdir = None

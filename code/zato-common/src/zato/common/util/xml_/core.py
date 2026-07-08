@@ -37,6 +37,14 @@ def utc_timestamp() -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+class XMLException(Exception):
+    """ Raised when generic XML processing fails - e.g. a message carries
+    a value of a type that has no XML lexical form.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class XMLSecurityException(Exception):
     """ Raised when a shared XML security primitive fails - signature verification,
     trust validation, token parsing or key recovery.

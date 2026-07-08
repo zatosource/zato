@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.soap.common import NS, SOAPSecurityException
-from zato.common.soap.security.saml import add_assertion, add_attribute, get_assertion, new_assertion
+from zato.common.soap.security.saml import add_assertion, add_attribute, get_assertion, new_assertion, sign_assertion, \
+    verify_assertion
 from zato.common.soap.security.usernametoken import add_username_token, verify_username_token
 from zato.common.soap.security.x509 import decrypt_body, encrypt_body, sign, verify
 from zato.common.util.xml_.core import qname
@@ -99,7 +100,8 @@ def _apply_x509(envelope:'any_', config:'stranydict') -> 'None':
 # ################################################################################################################################
 
 def _apply_saml(envelope:'any_', config:'stranydict') -> 'None':
-    """ Builds a sender-vouches assertion out of the definition and places it in the security header.
+    """ Builds a sender-vouches assertion out of the definition and places it in the security header,
+    signing it first when the definition calls for it - which is what XUA-based exchanges require.
     """
     audience = config.get('audience')
     assertion = new_assertion(config['issuer'], config['subject'], audience)
@@ -108,6 +110,11 @@ def _apply_saml(envelope:'any_', config:'stranydict') -> 'None':
     if attributes := config.get('attributes'):
         for name, value in attributes.items():
             add_attribute(assertion, name, value)
+
+    # A signed assertion is signed before it enters the header so the signature covers its final form.
+    if config.get('sign'):
+        keystore = keystore_from_config(config)
+        _ = sign_assertion(assertion, keystore)
 
     add_assertion(envelope, assertion)
 
@@ -137,7 +144,8 @@ def _enforce_x509(envelope:'any_', config:'stranydict') -> 'None':
 # ################################################################################################################################
 
 def _enforce_saml(envelope:'any_', config:'stranydict') -> 'None':
-    """ Checks that the incoming message carries an assertion from the expected issuer.
+    """ Checks that the incoming message carries an assertion from the expected issuer,
+    verifying its signature too when the definition calls for a signed assertion.
     """
     assertion = get_assertion(envelope)
     issuer_element = assertion.find(qname(NS.SAML2, 'Issuer'))
@@ -147,6 +155,11 @@ def _enforce_saml(envelope:'any_', config:'stranydict') -> 'None':
 
     if issuer_element.text != config['issuer']:
         raise SOAPSecurityException('SAML issuer does not match')
+
+    # A definition that expects signed assertions verifies the signature against its trust material.
+    if config.get('sign'):
+        keystore = keystore_from_config(config)
+        _ = verify_assertion(assertion, keystore)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_basic_auth, create_permission, \
     create_topic, get_table_row_count, navigate_to_page, open_create_dialog, open_create_dialog_via_js, \
     setup_alert_handler, submit_create_form, wait_for_sec_def_dropdown
@@ -28,7 +28,7 @@ if 0:
 _Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
 _Topic_Page_Url = '/zato/pubsub/topic/?cluster=1'
 
-_Test_Name_Prefix = 'test.permission.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.permission.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -343,7 +343,7 @@ class TestPubSubPermissionCreate:
         base_url = zato_dashboard['dashboard_url']
 
         # Create multiple topics that share a common prefix ..
-        suffix = os.urandom(3).hex()
+        suffix = CryptoManager.generate_hex_string(24)
         topic_prefix = _Test_Name_Prefix + 'wc.' + suffix
 
         topic_name_1 = topic_prefix + '.orders'

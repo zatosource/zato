@@ -24,11 +24,17 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
 
+# The live SOAP test server lives in the zato-common SOAP suite so both suites share one implementation.
+_soap_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'soap', 'lib'))
+if _soap_lib_dir not in sys.path:
+    sys.path.insert(0, _soap_lib_dir)
+
 # pytest
 import pytest
 from playwright.sync_api import sync_playwright
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -49,7 +55,7 @@ logger = logging.getLogger('zato.test.playwright')
 _Zato_Base = os.environ['ZATO_TEST_BASE_DIR']
 _Zato_Bin  = os.path.join(_Zato_Base, 'code', 'bin', 'zato')
 
-_Password = 'test.dashboard.' + os.urandom(8).hex()
+_Password = 'test.dashboard.' + CryptoManager.generate_hex_string()
 
 # The server process gets its environment once, at start, which is why the variable
 # with the path to an SFTP private key must be exported here - the key file itself
@@ -242,6 +248,20 @@ def zato_dashboard() -> 'any_':
 
     time_after_config = time.monotonic()
     logger.info(f'[TIMING] config patch: {time_after_config - time_after_quickstart:.1f}s')
+
+    # .. 3b) copy fixture services into the pickup directory so they deploy during
+    # server boot, with no hot-deployment wait ..
+
+    fixtures_services_dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'services')
+    pickup_services_dir = os.path.join(server_dir, 'pickup', 'incoming', 'services')
+
+    if os.path.isdir(fixtures_services_dir):
+        os.makedirs(pickup_services_dir, exist_ok=True)
+        for file_name in os.listdir(fixtures_services_dir):
+            if file_name.endswith('.py'):
+                source_path = os.path.join(fixtures_services_dir, file_name)
+                _ = shutil.copy(source_path, pickup_services_dir)
+                logger.info('[FIXTURES] copied %s to %s', file_name, pickup_services_dir)
 
     # .. 4) start the server ..
 
@@ -514,6 +534,38 @@ def logged_in_page(
     # which is also why its close listener must be detached here.
     page.close()
     context.remove_listener('close', _on_context_close)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap_test_server() -> 'any_':
+    """ A session-scoped live SOAP server over plain HTTP.
+    """
+    from soap_test_server import SOAPTestServer
+
+    server = SOAPTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def soap_test_server_mtls() -> 'any_':
+    """ A session-scoped live SOAP server over HTTPS that requires client certificates.
+    """
+    from soap_test_server import SOAPTestServer
+
+    server = SOAPTestServer(tls=True, require_client_cert=True)
+    server.start()
+
+    yield server
+
+    server.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

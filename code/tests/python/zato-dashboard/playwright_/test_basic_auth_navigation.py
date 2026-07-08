@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,7 +23,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/security/basic-auth/?cluster=1'
 
-_Test_Name_Prefix = 'test.nav.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.nav.' + CryptoManager.generate_hex_string(32) + '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +35,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     name = _Test_Name_Prefix + suffix
     username = 'user.' + name
     realm = 'realm.' + name
-    password = 'password.' + os.urandom(8).hex()
+    password = 'password.' + CryptoManager.generate_hex_string()
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')

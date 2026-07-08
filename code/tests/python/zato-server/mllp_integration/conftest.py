@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pytest
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient as ZatoClient
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
@@ -55,7 +56,7 @@ _mllp_test_server_path = os.path.join(_current_dir, '..', '..', 'zato-common', '
 _listener_path = os.path.join(
     _zato_base_dir, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 
-_password_suffix = os.urandom(8).hex()
+_password_suffix = CryptoManager.generate_hex_string()
 _password = 'test.invoke.' + _password_suffix
 
 _server_ready_timeout    = 60

@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, collect_console_errors, collect_http_errors, \
     confirm_delete, create_basic_auth, create_permission, create_permission_with_two_patterns, create_topic, \
     filter_console_noise, navigate_to_page, open_edit_dialog, submit_edit_form, trigger_delete
@@ -27,7 +27,7 @@ if 0:
 
 _Permission_Page_Url = '/zato/pubsub/permission/?cluster=1'
 
-_Test_Name_Prefix = 'test.permission.lc.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.permission.lc.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Console_Noise_Patterns = [
     'favicon.ico',

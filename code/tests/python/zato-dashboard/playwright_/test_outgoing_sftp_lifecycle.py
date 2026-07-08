@@ -13,6 +13,7 @@ import subprocess
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.sftp_ import SFTPTestServer
 
 # ################################################################################################################################
@@ -27,7 +28,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/outgoing/sftp/?cluster=1'
 
-_Test_Name_Prefix = 'test.sftp.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.sftp.' + CryptoManager.generate_hex_string(32) + '.'
 
 # Letters from three alphabets - one of the tests below runs a whole create-edit-delete
 # cycle with a connection whose name contains them all.
@@ -142,7 +143,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
 
     # .. create ..
     name = _Test_Name_Prefix + suffix
-    _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + os.urandom(8).hex())
+    _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + CryptoManager.generate_hex_string())
 
     # .. edit everything except the password, flipping the host key checking slider too ..
     item_id = _get_item_id(page, name)
@@ -245,7 +246,7 @@ class TestOutgoingSFTPLifecycle:
 
         # .. create ..
         name = _Test_Name_Prefix + 'crud'
-        _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + os.urandom(8).hex())
+        _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -310,7 +311,7 @@ class TestOutgoingSFTPLifecycle:
 
         # .. create a connection with a Unicode name ..
         name = _Test_Name_Prefix + _Dutch_Letters + '.' + _Greek_Letters + '.' + _Korean_Letters
-        _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + os.urandom(8).hex())
+        _create_connection(page, name, 'sftp.example.com:22', 'sftp-user', 'sftp-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')

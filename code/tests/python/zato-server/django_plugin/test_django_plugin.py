@@ -8,11 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
-import os
 import time
 import unittest
 from base64 import b64encode
 from urllib.request import Request, urlopen
+
+# Zato
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,7 +147,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
         data = {'test_key': test_value}
 
         # .. invoke the echo service via the Django plugin ..
@@ -174,7 +176,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
         data = {'test_key': test_value}
 
         response = client.invoke('test.django.echo', data)
@@ -193,7 +195,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
         mock_request = self._make_mock_request(username='testuser_' + test_value)
 
         _ = client.invoke('test.django.echo', {'test_key': test_value}, request=mock_request)
@@ -216,7 +218,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
         mock_request = self._make_mock_request(remote_addr='10.0.0.1')
 
         _ = client.invoke('test.django.echo', {'test_key': test_value}, request=mock_request)
@@ -244,7 +246,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
         mock_request = self._make_mock_request(remote_addr='192.168.1.42')
 
         _ = client.invoke('test.django.echo', {'test_key': test_value}, request=mock_request)
@@ -267,8 +269,8 @@ class TestDjangoPlugin(unittest.TestCase):
         # Zato
         from django_zato import client
 
-        test_value = os.urandom(8).hex()
-        known_correlation_id = os.urandom(16).hex()
+        test_value = CryptoManager.generate_hex_string()
+        known_correlation_id = CryptoManager.generate_hex_string(128)
         mock_request = self._make_mock_request(
             remote_addr='10.0.0.1',
             correlation_id=known_correlation_id,
@@ -326,7 +328,7 @@ class TestDjangoPlugin(unittest.TestCase):
         # .. make sure no request is in context ..
         clear_request()
 
-        test_value = os.urandom(8).hex()
+        test_value = CryptoManager.generate_hex_string()
 
         _ = client.invoke('test.django.echo', {'test_key': test_value})
 

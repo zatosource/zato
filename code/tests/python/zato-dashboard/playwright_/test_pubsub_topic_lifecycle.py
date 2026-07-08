@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import time
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import collect_console_errors, collect_http_errors, confirm_delete, create_topic, \
     filter_console_noise, get_item_id, get_table_row_count, navigate_to_page, open_create_dialog, open_edit_dialog, \
     open_publish_overlay, submit_create_form, submit_edit_form, trigger_delete
@@ -27,7 +27,7 @@ if 0:
 
 _Page_Url_Pattern = '/zato/pubsub/topic/?cluster=1'
 
-_Test_Name_Prefix = 'test.life.' + os.urandom(4).hex() + '.'
+_Test_Name_Prefix = 'test.life.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Page_Size = 20
 
