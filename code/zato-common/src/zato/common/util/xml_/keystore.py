@@ -56,6 +56,11 @@ class Keystore:
     # trust is pinned to peer_signing_certificate instead. Assigned by new_keystore.
     trust_anchors: 'certificate_list'
 
+    # An externally issued SAML 2.0 assertion travelling as the message's security token
+    # instead of a certificate - security token services such as the Australian SBR's
+    # VANguard hand these out, confirming the holder of the signing key below.
+    saml_assertion: 'bytesnone' = None
+
 # ################################################################################################################################
 
     @property

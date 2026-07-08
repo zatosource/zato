@@ -50,7 +50,11 @@ class Index(_Index):
 # ################################################################################################################################
 
     def on_before_append_item(self, item):
-        if item.security_id and item.security_id != ZATO_NONE:
+
+        # Connections without security never had the attribute set at all.
+        security_id = getattr(item, 'security_id', None)
+
+        if security_id and security_id != ZATO_NONE:
             item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
 
         return item

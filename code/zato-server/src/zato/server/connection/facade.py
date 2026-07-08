@@ -341,6 +341,59 @@ class RESTInvoker:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SOAPInvoker:
+    """ Wraps a single SOAP outgoing connection for use from services.
+    """
+    conn: 'HTTPSOAPWrapper'
+    cid: 'str'
+
+    def __init__(self, conn:'HTTPSOAPWrapper', cid:'str') -> 'None':
+        self.conn = conn
+        self.cid = cid
+
+    def __repr__(self) -> 'str':
+        return f'SOAPInvoker({self.conn.config["name"]} at {hex(id(self))})'
+
+# ################################################################################################################################
+
+    def invoke(self, operation:'str', message:'any_') -> 'any_':
+        return self.conn.invoke(self.cid, operation, message)
+
+# ################################################################################################################################
+
+    def invoke_ebxml(self, info:'any_', parts:'any_', sign:'bool'=False, encrypt:'bool'=False) -> 'any_':
+        return self.conn.invoke_ebxml(self.cid, info, parts, sign=sign, encrypt=encrypt)
+
+# ################################################################################################################################
+
+    def ping(self) -> 'any_':
+        return self.conn.ping(self.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SOAPFacade:
+    """ Provides dict-like access to SOAP outgoing connections from services via self.soap.
+    """
+    cid: 'str'
+    _out_soap: 'ConfigDict'
+
+    def init(self, cid:'str', _out_soap:'ConfigDict') -> 'None':
+        self.cid = cid
+        self._out_soap = _out_soap
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'SOAPInvoker':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._out_soap[name]
+
+        return SOAPInvoker(item.conn, self.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class KeysightVisionFacade(RESTFacade):
     name_prefix = 'KeysightVision.'
     has_path_in_args = True

@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode, b64encode
-from json import dumps
+from json import dumps, loads
 
 # Zato
 from zato.common.soap.common import SOAPFault
@@ -26,7 +26,11 @@ class InvokeSOAPOutconnForTests(Service):
 
     def handle(self):
 
+        # The IDE invoker delivers the payload as a raw JSON string.
         request = self.request.payload
+        if isinstance(request, str):
+            request = loads(request)
+
         mode = request['mode']
 
         # A readiness probe sent while the test waits for this service to deploy ..
@@ -34,8 +38,14 @@ class InvokeSOAPOutconnForTests(Service):
             out = {'is_ready': True}
 
         # .. otherwise, call the outgoing connection and report what came back.
+        # Errors turn into a field in the reply rather than a 500 - the tests retry
+        # while browser-made configuration propagates to the server and these
+        # transient failures must not litter the server log with tracebacks.
         else:
-            out = self._invoke_outconn(request)
+            try:
+                out = self._invoke_outconn(request)
+            except Exception as invoke_error:
+                out = {'error': repr(invoke_error)}
 
         self.response.payload = dumps(out)
         self.response.content_type = 'application/json'
@@ -61,10 +71,10 @@ class InvokeSOAPOutconnForTests(Service):
         for name, value in (request.get('bytes_fields') or {}).items():
             setattr(message, name, b64decode(value))
 
-        conn = self.out.soap[outconn_name].conn
+        conn = self.soap[outconn_name]
 
         try:
-            response = conn.invoke(self.cid, operation, message)
+            response = conn.invoke(operation, message)
         except SOAPFault as fault:
             out = {
                 'fault_code': fault.code,
@@ -72,11 +82,13 @@ class InvokeSOAPOutconnForTests(Service):
             }
             return out
 
-        # Read back the fields the caller asked for ..
+        # Read back the fields the caller asked for - they live under the response's
+        # operation element, e.g. submitSingleMessageResponse for submitSingleMessage ..
         response_fields = {}
+        operation_response = getattr(response, f'{operation}Response')
 
         for name in (request.get('response_fields') or []):
-            value = getattr(response, name, None)
+            value = getattr(operation_response, name, None)
             if isinstance(value, bytes):
                 response_fields[name] = b64encode(value).decode()
             elif value is not None:

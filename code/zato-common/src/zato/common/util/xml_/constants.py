@@ -60,11 +60,18 @@ class Transform:
 # ################################################################################################################################
 
 class TokenType:
-    """ WS-Security X.509 token profile identifiers for the BinarySecurityToken ValueType attribute.
+    """ WS-Security token profile identifiers - the X.509 profile values go into
+    the BinarySecurityToken ValueType attribute and the SAML Token Profile 1.1 values
+    into the SecurityTokenReference of signatures keyed by a SAML assertion.
     """
     X509v3       = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3'
     PKIPath      = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509PKIPathv1'
     Base64Binary = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'
+
+    # SAML Token Profile 1.1 - SAML20 names the token type of a SAML 2.0 assertion
+    # and SAML_ID says a KeyIdentifier carries the assertion's ID.
+    SAML20  = 'http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLV2.0'
+    SAML_ID = 'http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLID'
 
 # ################################################################################################################################
 # ################################################################################################################################
