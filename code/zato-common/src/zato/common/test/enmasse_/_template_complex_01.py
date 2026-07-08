@@ -144,6 +144,34 @@ channel_rest:
       - enmasse.group.1
       - enmasse.group.2
 
+channel_soap:
+
+  - name: enmasse.channel.soap.1
+    service: demo.ping
+    url_path: /enmasse.soap.1
+    soap_action: urn:enmasse:soap:1
+    soap_version: "1.1"
+
+  - name: enmasse.channel.soap.2
+    service: demo.ping
+    url_path: /enmasse.soap.2
+    security: enmasse.basic_auth.1
+    soap_action: urn:enmasse:soap:2
+    soap_version: "1.2"
+    use_mtom: true
+    groups:
+      - enmasse.group.1
+      - enmasse.group.2
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 1000
+            limit_unit: day
+            disabled: false
+            disallowed: false
+
 outgoing_rest:
 
   - name: enmasse.outgoing.rest.1

@@ -317,6 +317,14 @@ def wait_for_services(
                 logger.info('channel_rest item service field: %r', service)
                 service_names.add(service)
 
+    # .. same for channel_soap definitions ..
+    if channel_soap := config_dict.get('channel_soap'):
+        for item in channel_soap:
+            if service := item.get('service'):
+                service = get_value_from_environment(service)
+                logger.info('channel_soap item service field: %r', service)
+                service_names.add(service)
+
     # .. same for scheduler definitions.
     if scheduler := config_dict.get('scheduler'):
         for item in scheduler:

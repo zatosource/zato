@@ -19,6 +19,7 @@ from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Timeout
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
+from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
@@ -64,6 +65,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 
 for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
+                        'zato.cli.enmasse.importers.channel_soap',
                         'zato.cli.enmasse.importers.group',
                         'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
@@ -132,6 +134,7 @@ class EnmasseYAMLImporter:
         # Initialize importers
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
+        self.channel_soap_importer = ChannelSOAPImporter(self)
         self.group_importer = GroupImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
@@ -359,6 +362,24 @@ class EnmasseYAMLImporter:
         created_count = len(channels_created)
         updated_count = len(channels_updated)
         logger.info(f'Processed REST channels: created={created_count} updated={updated_count}')
+
+        return channels_created, channels_updated
+
+# ################################################################################################################################
+
+    def sync_channel_soap(self, channel_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes SOAP channels from a YAML configuration with the database.
+        """
+        if not channel_list:
+            return [], []
+
+        count = len(channel_list)
+        noun = 'channel' if count == 1 else 'channels'
+        logger.info(f'Processing {count} SOAP {noun}')
+        channels_created, channels_updated = self.channel_soap_importer.sync_channel_soap(channel_list, session)
+        created_count = len(channels_created)
+        updated_count = len(channels_updated)
+        logger.info(f'Processed SOAP channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
 
@@ -897,7 +918,7 @@ class EnmasseYAMLImporter:
             logger.info('About to call wait_for_services with timeout=%s, server_dir=%s', timeout, server_dir)
 
             # Log raw service names from YAML before env var resolution
-            for section_name in ('channel_rest', 'scheduler'):
+            for section_name in ('channel_rest', 'channel_soap', 'scheduler'):
                 if section_items := yaml_config.get(section_name):
                     for item in section_items:
                         if svc := item.get('service'):
@@ -930,6 +951,13 @@ class EnmasseYAMLImporter:
             self.created_objects['channel_rest'] = channels_created
         if channels_updated:
             self.updated_objects['channel_rest'] = channels_updated
+
+        # Process SOAP channels which may depend on security definitions
+        channels_soap_created, channels_soap_updated = self.sync_channel_soap(yaml_config.get('channel_soap', []), session)
+        if channels_soap_created:
+            self.created_objects['channel_soap'] = channels_soap_created
+        if channels_soap_updated:
+            self.updated_objects['channel_soap'] = channels_soap_updated
 
         # Process Odoo connection definitions
         odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)

@@ -190,6 +190,7 @@ def get_top_level_order() -> 'strlist':
         'security',
         'groups',
         'channel_rest',
+        'channel_soap',
         'outgoing_rest',
         'scheduler',
         'ldap',
@@ -226,6 +227,8 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order['groups'] = 'name', 'is_active', 'members:list',
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',
+    order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \
+        'groups:list', 'rate_limiting:list',
     order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
