@@ -1,0 +1,17 @@
+{
+    "d": {
+        "__metadata": {
+            "uri": "http://host/service/Customers('ALFKI')",
+            "type": "NorthwindModel.Customer",
+            "etag": "W/\"X'00000000000007D1'\""
+        },
+        "CustomerID": "ALFKI",
+        "CompanyName": "Alfreds Futterkiste",
+        "ContactName": "Maria Anders",
+        "Orders": {
+            "__deferred": {
+                "uri": "http://host/service/Customers('ALFKI')/Orders"
+            }
+        }
+    }
+}

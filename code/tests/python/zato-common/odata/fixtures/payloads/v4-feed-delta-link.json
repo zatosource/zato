@@ -1,0 +1,8 @@
+{
+    "@odata.context": "http://host/service/$metadata#Customers",
+    "value": [
+        {"ID": "ALFKI", "CompanyName": "Alfreds Futterkiste"},
+        {"ID": "ANATR", "CompanyName": "Ana Trujillo Emparedados y helados"}
+    ],
+    "@odata.deltaLink": "http://host/service/Customers?$deltatoken=1234"
+}
