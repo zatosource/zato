@@ -35,6 +35,7 @@ from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.reqresp.payload import IOPayload
+from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
@@ -90,6 +91,7 @@ _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
 _transport_soap = URL_TYPE.SOAP
+_transport_as4 = URL_TYPE.AS4
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -458,6 +460,12 @@ class RequestDispatcher:
                     cid, channel_rate_limit_result, wsgi_environ, remote_addr, channel_item)
                 return out
 
+        # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
+        # the pipeline itself routes accepted payloads to the channel's topic or service ..
+        if channel_item['transport'] == _transport_as4:
+            out = self._handle_as4_channel(cid, channel_item, wsgi_environ, payload)
+            return out
+
         # .. invoke the service ..
         response = self._invoke_service(
             cid, meta, url_match, channel_item, wsgi_environ,
@@ -465,6 +473,44 @@ class RequestDispatcher:
 
         out = self._format_response(channel_item, wsgi_environ, response)
 
+        return out
+
+# ################################################################################################################################
+
+    def _handle_as4_channel(
+        self,
+        cid:'str',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+    ) -> 'bytes':
+        """ Runs one incoming request through the AS4 inbound pipeline of the matched channel,
+        returning the signed receipt or an ebMS error signal.
+        """
+
+        # The runtime lives as long as this channel_item does -
+        # a configuration change rebuilds the item, which rebuilds the runtime.
+        runtime = channel_item.get('as4_runtime')
+
+        if runtime is None:
+            runtime = AS4ChannelRuntime(self.server, channel_item)
+            channel_item['as4_runtime'] = runtime
+
+        # The pipeline works with the raw wire bytes.
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+
+        content_type = wsgi_environ.get('CONTENT_TYPE')
+        if content_type is None:
+            content_type = ''
+
+        result = runtime.handle(cid, payload, content_type)
+
+        # What goes back is always a SOAP document - a receipt or an error signal.
+        wsgi_environ['zato.http.response.headers']['Content-Type'] = result.content_type
+        wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
+
+        out = result.body
         return out
 
 # ################################################################################################################################

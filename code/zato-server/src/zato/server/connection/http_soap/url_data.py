@@ -17,7 +17,7 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.api import AS4, CONNECTION, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
@@ -551,7 +551,7 @@ class URLData(PyURLData):
             security_groups_ctx = self.config_manager.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
             channel_item['security_groups_ctx'] = security_groups_ctx
 
-        channel_item['service_impl_name'] = msg['impl_name']
+        channel_item['service_impl_name'] = msg.get('impl_name')
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 

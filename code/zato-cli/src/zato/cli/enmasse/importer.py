@@ -19,6 +19,7 @@ from zato.cli.enmasse.config import ModuleCtx
 from zato.cli.enmasse.client import wait_for_services, Default_Service_Wait_Timeout
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
+from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
@@ -38,6 +39,7 @@ from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
+from zato.cli.enmasse.importers.outgoing_as4 import OutgoingAS4Importer
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
@@ -66,6 +68,7 @@ handler.setFormatter(formatter)
 
 for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
                         'zato.cli.enmasse.importers.channel_soap',
+                        'zato.cli.enmasse.importers.channel_as4', 'zato.cli.enmasse.importers.outgoing_as4',
                         'zato.cli.enmasse.importers.group',
                         'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
@@ -120,6 +123,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
+        self.outgoing_as4_defs = {}
         self.pubsub_topic_defs = {}
         self.pubsub_permission_defs = {}
         self.pubsub_subscription_defs = {}
@@ -135,6 +139,7 @@ class EnmasseYAMLImporter:
         self.security_importer = SecurityImporter(self)
         self.channel_importer = ChannelImporter(self)
         self.channel_soap_importer = ChannelSOAPImporter(self)
+        self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
@@ -156,6 +161,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
+        self.outgoing_as4_importer = OutgoingAS4Importer(self)
         self.pubsub_topic_importer = PubSubTopicImporter(self)
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
         self.pubsub_subscription_importer = PubSubSubscriptionImporter(self)
@@ -380,6 +386,24 @@ class EnmasseYAMLImporter:
         created_count = len(channels_created)
         updated_count = len(channels_updated)
         logger.info(f'Processed SOAP channels: created={created_count} updated={updated_count}')
+
+        return channels_created, channels_updated
+
+# ################################################################################################################################
+
+    def sync_channel_as4(self, channel_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes AS4 channels from a YAML configuration with the database.
+        """
+        if not channel_list:
+            return [], []
+
+        count = len(channel_list)
+        noun = 'channel' if count == 1 else 'channels'
+        logger.info(f'Processing {count} AS4 {noun}')
+        channels_created, channels_updated = self.channel_as4_importer.sync_channel_as4(channel_list, session)
+        created_count = len(channels_created)
+        updated_count = len(channels_updated)
+        logger.info(f'Processed AS4 channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
 
@@ -831,6 +855,16 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_outgoing_as4(self, outgoing_list:'list', session:'SASession') -> 'tuple':
+        """Synchronizes outgoing AS4 connection definitions from a YAML configuration with the database.
+        """
+        if not outgoing_list:
+            return [], []
+
+        return self.outgoing_as4_importer.sync_outgoing_as4(outgoing_list, session)
+
+# ################################################################################################################################
+
     def sync_pubsub_permission(self, permission_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes pubsub permission definitions from a YAML configuration with the database.
         """
@@ -958,6 +992,13 @@ class EnmasseYAMLImporter:
             self.created_objects['channel_soap'] = channels_soap_created
         if channels_soap_updated:
             self.updated_objects['channel_soap'] = channels_soap_updated
+
+        # Process AS4 channels which may depend on security definitions
+        channels_as4_created, channels_as4_updated = self.sync_channel_as4(yaml_config.get('channel_as4', []), session)
+        if channels_as4_created:
+            self.created_objects['channel_as4'] = channels_as4_created
+        if channels_as4_updated:
+            self.updated_objects['channel_as4'] = channels_as4_updated
 
         # Process Odoo connection definitions
         odoo_created, odoo_updated = self.sync_odoo(yaml_config.get('odoo', []), session)
@@ -1123,6 +1164,13 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
             self.updated_objects['outgoing_soap'] = outgoing_soap_updated
+
+        # Process outgoing AS4 connection definitions
+        outgoing_as4_created, outgoing_as4_updated = self.sync_outgoing_as4(yaml_config.get('outgoing_as4', []), session)
+        if outgoing_as4_created:
+            self.created_objects['outgoing_as4'] = outgoing_as4_created
+        if outgoing_as4_updated:
+            self.updated_objects['outgoing_as4'] = outgoing_as4_updated
 
         # Process pubsub topic definitions
         pubsub_topic_created, pubsub_topic_updated = self.sync_pubsub_topic(yaml_config.get('pubsub_topic', []), session)

@@ -172,6 +172,29 @@ channel_soap:
             disabled: false
             disallowed: false
 
+channel_as4:
+
+  - name: enmasse.channel.as4.1
+    url_path: /enmasse.as4.1
+    as4_profile: peppol
+    as4_to_party: enmasse-ap
+    as4_serviced_participants: |-
+      0192:991825827
+      0088:7315458756324
+    as4_inbound_topic: enmasse.as4.inbound
+
+  - name: enmasse.channel.as4.2
+    url_path: /enmasse.as4.2
+    service: demo.ping
+    security: enmasse.basic_auth.1
+    as4_profile: edelivery1
+    as4_from_party: enmasse-peer
+    as4_to_party: enmasse-ap
+    as4_service: enmasse:service:1
+    as4_action: enmasse:action:1
+    as4_extra_pmodes: |-
+      enmasse:service:2|enmasse:action:2
+
 outgoing_rest:
 
   - name: enmasse.outgoing.rest.1
@@ -364,6 +387,30 @@ outgoing_soap:
       - name: username
       - name: password
         position: 2
+
+outgoing_as4:
+
+  - name: enmasse.outgoing.as4.1
+    host: https://ap.example.com
+    url_path: /as4
+    timeout: 20
+    as4_profile: peppol
+    as4_from_party: enmasse-ap
+    as4_original_sender: 0192:991825827
+    as4_use_discovery: true
+    as4_sml_domain: acc.edelivery.tech.ec.europa.eu
+
+  - name: enmasse.outgoing.as4.2
+    host: https://customs.example.com
+    url_path: /domibus/services/msh
+    timeout: 30
+    validate_tls: false
+    as4_profile: ics2
+    as4_from_party: enmasse-eori
+    as4_to_party: sti-taxud
+    as4_service: eu.customs.ics2
+    as4_action: IE3F26
+    as4_mpc: urn:fdc:ec.europa.eu:2019:mpc
 
 microsoft_365:
 

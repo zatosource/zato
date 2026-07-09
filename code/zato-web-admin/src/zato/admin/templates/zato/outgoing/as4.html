@@ -1,0 +1,497 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Outgoing AS4 connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/as4.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'as4_profile',
+            'host',
+            'url_path',
+            'as4_from_party',
+            'as4_to_party',
+            'as4_cert_expiry',
+            '_ping',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'timeout',
+            'validate_tls',
+            'as4_service',
+            'as4_action',
+            'as4_agreement',
+            'as4_mpc',
+            'as4_original_sender',
+            'as4_final_recipient',
+            'as4_extra_pmodes',
+            'as4_signing_key',
+            'as4_signing_cert_chain',
+            'as4_decryption_key',
+            'as4_peer_signing_cert',
+            'as4_peer_encryption_cert',
+            'as4_trust_anchors',
+            'as4_use_discovery',
+            'as4_sml_domain',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <h2 class="zato">Outgoing AS4 connections</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.as4.create()">Create a new outgoing AS4 connection</a>
+        </div>
+
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Profile</a></th>
+                        <th><a href="#">Host</a></th>
+                        <th><a href="#">URL path</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th><a href="#">From party</a></th>
+                        <th><a href="#">To party</a></th>
+                        <th><a href="#">Cert. expires</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.as4_profile|default:'' }}</td>
+                        <td>{{ item.host }}</td>
+                        <td>{{ item.url_path }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.as4_from_party|default:'' }}</td>
+                        <td>{{ item.as4_to_party|default:'' }}</td>
+                        <td>{% if item.as4_cert_expiry %}{{ item.as4_cert_expiry }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Test</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.as4.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.as4.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.validate_tls }}</td>
+
+                        <td class='ignore'>{{ item.as4_service|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_action|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_agreement|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_mpc|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.as4_original_sender|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_final_recipient|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_extra_pmodes|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.as4_signing_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_signing_cert_chain|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_decryption_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_peer_signing_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_peer_encryption_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_trust_anchors|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.as4_use_discovery|default:'False' }}</td>
+                        <td class='ignore'>{{ item.as4_sml_domain|default:'' }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='32'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-as4-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_profile">Profile</label></td>
+                                <td>{{ create_form.as4_profile }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_from_party">From party</label></td>
+                                <td>{{ create_form.as4_from_party }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_to_party">To party</label></td>
+                                <td>{{ create_form.as4_to_party }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_service">Service</label></td>
+                                <td>{{ create_form.as4_service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_action">Action</label></td>
+                                <td>{{ create_form.as4_action }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_agreement">Agreement</label></td>
+                                <td>{{ create_form.as4_agreement }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-create-tab-panel-delivery" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_host">Host</label></td>
+                                <td>{{ create_form.host }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_url_path">URL path</label></td>
+                                <td>{{ create_form.url_path }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_use_discovery">Use discovery</label></td>
+                                <td><label class="toggle-switch">{{ create_form.as4_use_discovery }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_sml_domain">SML domain</label></td>
+                                <td>{{ create_form.as4_sml_domain }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_mpc">MPC</label></td>
+                                <td>{{ create_form.as4_mpc }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_timeout">Timeout</label></td>
+                                <td>{{ create_form.timeout }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_validate_tls">Validate TLS</label></td>
+                                <td>{{ create_form.validate_tls }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-create-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%;vertical-align:top"><label for="id_as4_signing_key">Signing key</label></td>
+                                <td>{{ create_form.as4_signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_signing_cert_chain">Signing certificate chain</label></td>
+                                <td>{{ create_form.as4_signing_cert_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_decryption_key">Decryption key</label></td>
+                                <td>{{ create_form.as4_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_peer_signing_cert">Peer signing certificate</label></td>
+                                <td>{{ create_form.as4_peer_signing_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_peer_encryption_cert">Peer encryption certificate</label></td>
+                                <td>{{ create_form.as4_peer_encryption_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_trust_anchors">Trust anchors</label></td>
+                                <td>{{ create_form.as4_trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-create-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_as4_original_sender">Original sender</label></td>
+                                <td>{{ create_form.as4_original_sender }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_final_recipient">Final recipient</label></td>
+                                <td>{{ create_form.as4_final_recipient }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_extra_pmodes">Extra P-Modes</label></td>
+                                <td>{{ create_form.as4_extra_pmodes }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-as4-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_profile">Profile</label></td>
+                                <td>{{ edit_form.as4_profile }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_from_party">From party</label></td>
+                                <td>{{ edit_form.as4_from_party }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_to_party">To party</label></td>
+                                <td>{{ edit_form.as4_to_party }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_service">Service</label></td>
+                                <td>{{ edit_form.as4_service }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_action">Action</label></td>
+                                <td>{{ edit_form.as4_action }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_agreement">Agreement</label></td>
+                                <td>{{ edit_form.as4_agreement }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-edit-tab-panel-delivery" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-host">Host</label></td>
+                                <td>{{ edit_form.host }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-url_path">URL path</label></td>
+                                <td>{{ edit_form.url_path }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_use_discovery">Use discovery</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.as4_use_discovery }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_sml_domain">SML domain</label></td>
+                                <td>{{ edit_form.as4_sml_domain }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_mpc">MPC</label></td>
+                                <td>{{ edit_form.as4_mpc }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-timeout">Timeout</label></td>
+                                <td>{{ edit_form.timeout }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-validate_tls">Validate TLS</label></td>
+                                <td>{{ edit_form.validate_tls }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-edit-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%;vertical-align:top"><label for="id_edit-as4_signing_key">Signing key</label></td>
+                                <td>{{ edit_form.as4_signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_signing_cert_chain">Signing certificate chain</label></td>
+                                <td>{{ edit_form.as4_signing_cert_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_decryption_key">Decryption key</label></td>
+                                <td>{{ edit_form.as4_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_peer_signing_cert">Peer signing certificate</label></td>
+                                <td>{{ edit_form.as4_peer_signing_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_peer_encryption_cert">Peer encryption certificate</label></td>
+                                <td>{{ edit_form.as4_peer_encryption_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_trust_anchors">Trust anchors</label></td>
+                                <td>{{ edit_form.as4_trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as4-edit-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="width:16%"><label for="id_edit-as4_original_sender">Original sender</label></td>
+                                <td>{{ edit_form.as4_original_sender }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_final_recipient">Final recipient</label></td>
+                                <td>{{ edit_form.as4_final_recipient }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_extra_pmodes">Extra P-Modes</label></td>
+                                <td>{{ edit_form.as4_extra_pmodes }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
