@@ -171,6 +171,10 @@ class ConfigLoader:
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
 
+        # AS4
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'as4', True)
+        self.config.out_as4 = ConfigDict.from_query('out_as4', query, decrypt_func=self.decrypt)
+
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)

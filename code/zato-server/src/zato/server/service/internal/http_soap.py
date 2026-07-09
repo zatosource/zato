@@ -12,8 +12,8 @@ from time import time
 from traceback import format_exc
 
 # Zato
-from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, \
+from zato.common.api import AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, SECRETS, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ServiceMissingException
@@ -38,6 +38,18 @@ if 0:
 # ################################################################################################################################
 
 _GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# All the AS4 fields, each optional on input - the boolean one is declared separately below.
+_as4_fields = []
+
+for _as4_field_name in AS4.Common_Fields + AS4.Channel_Fields + ('as4_sml_domain',):
+    _as4_fields.append('-' + _as4_field_name)
+
+_as4_fields = tuple(_as4_fields)
+_as4_input = _as4_fields + (Boolean('-as4_use_discovery'),)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,7 +100,8 @@ class _BaseGet(AdminService):
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
-        '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list'
+        '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
+        *_as4_input
 
 # ################################################################################################################################
 
@@ -143,7 +156,8 @@ class GetList(_BaseGet):
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
         '-connection', '-transport', \
-        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_as4_input
 
     def get_data(self, session):
 
@@ -307,6 +321,32 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
             return service
 
 # ################################################################################################################################
+
+    def _get_channel_service_from_input(self, session, input):
+        """ Returns the service a channel routes to - AS4 channels may have none
+        because their messages can go to a pub/sub topic instead.
+        """
+        if input.transport == URL_TYPE.AS4:
+            if not (input.service or input.service_id):
+                return None
+
+        out = self._get_service_from_input(session, input)
+        return out
+
+# ################################################################################################################################
+
+    def _encrypt_as4_secrets(self, input):
+        """ Encrypts the AS4 private keys unless they are encrypted already.
+        """
+        if input.transport != URL_TYPE.AS4:
+            return
+
+        for name in AS4.Secret_Fields:
+            if value := input.get(name):
+                if not value.startswith(SECRETS.PREFIX):
+                    input[name] = self.server.encrypt(value)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -321,7 +361,8 @@ class Create(_CreateEdit):
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
-        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_as4_input
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -343,6 +384,9 @@ class Create(_CreateEdit):
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
+
+        # AS4 private keys are stored encrypted
+        self._encrypt_as4_secrets(input)
 
         # Remove extra whitespace
         input_name = input.name
@@ -378,7 +422,7 @@ class Create(_CreateEdit):
                 raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_service_from_input(session, input)
+                service = self._get_channel_service_from_input(session, input)
             else:
                 service = None
 
@@ -440,9 +484,10 @@ class Create(_CreateEdit):
                 session.commit()
 
                 if input.connection == CONNECTION.CHANNEL:
-                    input.impl_name = service.impl_name
-                    input.service_id = service.id
-                    input.service_name = service.name
+                    if service:
+                        input.impl_name = service.impl_name
+                        input.service_id = service.id
+                        input.service_name = service.name
 
                 input.id = item.id
                 input.update(sec_info)
@@ -477,7 +522,8 @@ class Edit(_CreateEdit):
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
-        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key'
+        Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_as4_input
     output = '-id', '-name'
 
     def handle(self):
@@ -499,6 +545,9 @@ class Edit(_CreateEdit):
         input.data_format = input.get('data_format') or ''
 
         input.data_encoding = input.get('data_encoding') or 'utf-8'
+
+        # AS4 private keys are stored encrypted
+        self._encrypt_as4_secrets(input)
 
         # Remove extra whitespace
         input_name = input.name
@@ -544,7 +593,7 @@ class Edit(_CreateEdit):
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_service_from_input(session, input)
+                service = self._get_channel_service_from_input(session, input)
             else:
                 service = None
 
@@ -604,9 +653,10 @@ class Edit(_CreateEdit):
                 session.commit()
 
                 if input.connection == CONNECTION.CHANNEL:
-                    input.impl_name = service.impl_name
-                    input.service_id = service.id
-                    input.service_name = service.name
+                    if service:
+                        input.impl_name = service.impl_name
+                        input.service_id = service.id
+                        input.service_name = service.name
                     input.merge_url_params_req = item.merge_url_params_req
                     input.url_params_pri = item.url_params_pri
                     input.params_pri = item.params_pri

@@ -535,6 +535,11 @@ class URLData(PyURLData):
 
             channel_item[name] = msg.get(name)
 
+        # AS4 channels carry their own configuration fields
+        if channel_item['transport'] == URL_TYPE.AS4:
+            for name in AS4.Common_Fields + AS4.Channel_Fields:
+                channel_item[name] = msg.get(name)
+
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
