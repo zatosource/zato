@@ -16,8 +16,15 @@ import tempfile
 import time
 import shutil
 
-sys.path.insert(0, os.path.dirname(__file__))
+# This directory must stay first so `import conftest` in test modules resolves to this very file,
+# not to the conftest of the config_store suite added below.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'zato-server', 'config_store'))
+sys.path.insert(0, os.path.dirname(__file__))
+
+# Pytest imports this file under a package-qualified name, while test modules do `import conftest`.
+# Alias this very module instance under that plain name so both refer to the same object
+# and the service files test modules register below are seen by the zato_server fixture.
+sys.modules['conftest'] = sys.modules[__name__]
 
 # PyPI
 import pytest
@@ -42,6 +49,7 @@ _COVERAGE_SOURCE = os.path.join(
     _ZATO_BASE, 'code', 'zato-server', 'src', 'zato', 'server', 'service', 'internal')
 
 _server_proc = None
+_scheduler_proc = None
 _tmpdir = None
 _pre_start_service_files = []
 
@@ -70,8 +78,63 @@ def _kill_server():
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _find_scheduler_binary():
+    """ Locates the Rust scheduler binary, preferring the release build.
+    """
+    candidates = [
+        os.path.join(_ZATO_BASE, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
+        os.path.join(_ZATO_BASE, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
+    ]
+
+    for path in candidates:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+
+    raise RuntimeError('Could not find the Rust scheduler binary, looked in: {}'.format(', '.join(candidates)))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _wait_for_scheduler_api(timeout=30):
+    """ Polls the scheduler's HTTP query API until it answers, proving the scheduler
+    completed its initial job reload handshake with the server.
+    """
+    from urllib.request import urlopen
+
+    url = 'http://127.0.0.1:35100/metrics'
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(url, timeout=5) as response:
+                if response.status == 200:
+                    return
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+    raise RuntimeError(f'Scheduler HTTP API at {url} did not respond within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _kill_scheduler():
+    global _scheduler_proc
+    if _scheduler_proc and _scheduler_proc.poll() is None:
+        _scheduler_proc.terminate()
+        try:
+            _scheduler_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _scheduler_proc.kill()
+            _scheduler_proc.wait(timeout=5)
+    _scheduler_proc = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _cleanup():
     _kill_server()
+    _kill_scheduler()
     global _tmpdir
     if _tmpdir and os.path.isdir(_tmpdir):
         shutil.rmtree(_tmpdir, ignore_errors=True)
@@ -244,15 +307,54 @@ def zato_server(request):
         _kill_server()
         raise
 
+    # Start the scheduler component now that the server can answer its initial job request.
+    # The Rust binary is run directly, not through `zato start`, so that terminating it
+    # actually stops the scheduler instead of leaving it behind as a reparented child.
+    global _scheduler_proc
+
+    scheduler_dir = os.path.join(_tmpdir, 'scheduler')
+    scheduler_env = os.environ.copy()
+    scheduler_env.pop('COVERAGE_PROCESS_START', None)
+
+    _scheduler_proc = subprocess.Popen(
+        [_find_scheduler_binary()],
+        env=scheduler_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    _scheduler_output_lines = []
+
+    def _capture_scheduler_output():
+        for line in iter(_scheduler_proc.stdout.readline, b''):
+            text = line.decode('utf-8', errors='replace').rstrip()
+            _scheduler_output_lines.append(f'[SCHEDULER] {text}')
+
+    _scheduler_stdout_thread = threading.Thread(target=_capture_scheduler_output, daemon=True)
+    _scheduler_stdout_thread.start()
+
+    try:
+        _wait_for_scheduler_api()
+    except Exception:
+        print('\n--- Scheduler did not become ready, captured output: ---')
+        for line in _scheduler_output_lines:
+            print(line)
+        print('--- End of scheduler output ---\n')
+        _kill_server()
+        _kill_scheduler()
+        raise
+
     yield {
         'host': host,
         'port': port,
         'password': _PASSWORD,
         'server_dir': server_dir,
+        'scheduler_dir': scheduler_dir,
         'tmpdir': _tmpdir,
     }
 
     _kill_server()
+    _kill_scheduler()
 
     if use_coverage and cov_data_dir and coveragerc_path:
         time.sleep(2)
