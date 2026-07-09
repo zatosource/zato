@@ -238,6 +238,48 @@ list_key=sample,list
 
 # ################################################################################################################################
 
+hl7_fhir_demo_contents = """
+# Settings for msg.to_fhir(config='hl7-fhir-demo') - each section and key is optional
+# and msg.to_fhir() with no config at all uses the defaults described below.
+
+# What kind of bundle to produce - transaction, batch or collection.
+# The default is transaction.
+[bundle]
+type=transaction
+
+# The timezone offset applied to HL7 date/time values that do not carry their own.
+# The default is +00:00.
+[datetime]
+default_timezone=+00:00
+
+# Maps assigning authorities from your HL7 messages to FHIR identifier system URIs.
+# The authority is what your messages carry, e.g. in PID-3.4, and the system
+# is the URI the resulting FHIR identifiers should use.
+[identifiers]
+
+[[patient_mrn]]
+authority=MYHOSP
+system=http://example.org/mrn
+
+[[visit_number]]
+authority=MYHOSP
+system=http://example.org/visit
+
+# Overrides or additions to the standard code mappings, one subsection per map.
+# For instance, patient_class maps PV1-2 codes to FHIR encounter classes.
+[codes]
+
+[[patient_class]]
+P=AMB
+
+# Where extensions built from Z-segments and other unmapped data are published.
+# The default is urn:zato:hl7v2:extension.
+[extensions]
+base_url=http://example.org/fhir/ext
+""".lstrip()
+
+# ################################################################################################################################
+
 secrets_conf_template = """
 [secret_keys]
 key1={keys_key1}
@@ -586,6 +628,12 @@ class Create(ZatoCommand):
                 demo_zrules = open_w(demo_zrules_loc)
                 _ = demo_zrules.write(demo_zrules_contents)
                 demo_zrules.close()
+
+                # Add the demo HL7-FHIR mapping config
+                hl7_fhir_demo_loc = os.path.join(user_conf_dir, 'hl7-fhir-demo.ini')
+                hl7_fhir_demo = open_w(hl7_fhir_demo_loc)
+                _ = hl7_fhir_demo.write(hl7_fhir_demo_contents)
+                hl7_fhir_demo.close()
 
             fernet1 = Fernet(secret_key)
 

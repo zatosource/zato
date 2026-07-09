@@ -12,7 +12,7 @@ from time import time
 from traceback import format_exc
 
 # Zato
-from zato.common.api import AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
@@ -51,6 +51,14 @@ for _as4_field_name in AS4.Common_Fields + AS4.Channel_Fields + ('as4_sml_domain
 
 _as4_fields = tuple(_as4_fields)
 _as4_input = _as4_fields + (Boolean('-as4_use_discovery'),)
+
+# All the AS2 fields, each optional on input.
+_as2_fields = []
+
+for _as2_field_name in AS2.Common_Fields + AS2.Channel_Fields:
+    _as2_fields.append('-' + _as2_field_name)
+
+_as2_input = tuple(_as2_fields)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,7 +110,8 @@ class _BaseGet(AdminService):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
-        *_as4_input
+        *_as4_input, \
+        *_as2_input
 
 # ################################################################################################################################
 
@@ -158,7 +167,8 @@ class GetList(_BaseGet):
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
         '-connection', '-transport', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
-        *_as4_input
+        *_as4_input, \
+        *_as2_input
 
     def get_data(self, session):
 
@@ -348,6 +358,19 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                     input[name] = self.server.encrypt(value)
 
 # ################################################################################################################################
+
+    def _encrypt_as2_secrets(self, input):
+        """ Encrypts the AS2 private keys unless they are encrypted already.
+        """
+        if input.transport != URL_TYPE.AS2:
+            return
+
+        for name in AS2.Secret_Fields:
+            if value := input.get(name):
+                if not value.startswith(SECRETS.PREFIX):
+                    input[name] = self.server.encrypt(value)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -363,7 +386,8 @@ class Create(_CreateEdit):
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
-        *_as4_input
+        *_as4_input, \
+        *_as2_input
     output = 'id', 'name', '-url_path'
 
     def handle(self):
@@ -388,6 +412,9 @@ class Create(_CreateEdit):
 
         # AS4 private keys are stored encrypted
         self._encrypt_as4_secrets(input)
+
+        # AS2 private keys are stored encrypted too
+        self._encrypt_as2_secrets(input)
 
         # Remove extra whitespace
         input_name = input.name
@@ -524,7 +551,8 @@ class Edit(_CreateEdit):
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
-        *_as4_input
+        *_as4_input, \
+        *_as2_input
     output = '-id', '-name'
 
     def handle(self):
@@ -549,6 +577,9 @@ class Edit(_CreateEdit):
 
         # AS4 private keys are stored encrypted
         self._encrypt_as4_secrets(input)
+
+        # AS2 private keys are stored encrypted too
+        self._encrypt_as2_secrets(input)
 
         # Remove extra whitespace
         input_name = input.name

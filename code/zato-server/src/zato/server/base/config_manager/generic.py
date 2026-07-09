@@ -20,6 +20,8 @@ from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, channel_int_config_keys
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
+from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
+    outconn_odata_int_config_keys
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys
 from zato.server.generic.api.outconn_smb import outconn_smb_config_defaults, outconn_smb_int_config_keys
@@ -38,6 +40,10 @@ if 0:
 # ################################################################################################################################
 
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
+
+# The prefix GenericConnection.from_model gives to column-backed fields
+# that the incoming message did not carry at all.
+_no_value_marker = '<no-value-given-'
 
 # The auth types a FHIR outgoing connection's security definition can resolve to
 _fhir_auth_type_basic = HL7.Const.FHIR_Auth_Type.Basic_Auth.id
@@ -357,6 +363,33 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_odata(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric and boolean fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None - column-backed fields
+        # the message did not carry arrive as no-value markers and count as missing too ..
+        for key, default in outconn_odata_config_defaults.items():
+            value = config.get(key)
+            is_marker = isinstance(value, str) and value.startswith(_no_value_marker)
+            if value is None or is_marker:
+                config[key] = default
+
+        # .. make sure numeric fields are integers ..
+        for key in outconn_odata_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. and make sure boolean fields are booleans.
+        for key in outconn_odata_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
 
 # ################################################################################################################################
 

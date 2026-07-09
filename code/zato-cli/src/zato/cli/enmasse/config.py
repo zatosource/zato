@@ -30,6 +30,7 @@ class _object_type:
     Groups = 'groups'                             #
 
     LDAP = 'ldap'                                 #
+    OData = 'odata'                               #
     SFTP = 'sftp'                                 #
     SMB = 'smb'                                   #
     Confluence = 'confluence'                     #
@@ -52,6 +53,7 @@ _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
+_object_alias[_object_type.OData] = 'outgoing_odata'
 _object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'

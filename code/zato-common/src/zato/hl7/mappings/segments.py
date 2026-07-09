@@ -39,6 +39,15 @@ intfrozen = frozenset[int]
 # The status an Encounter gets when the patient class does not say otherwise
 Default_Encounter_Status = 'in-progress'
 
+# The class an Encounter gets when PV1-2 is empty or carries an unknown code - FHIR requires one
+Default_Encounter_Class = {'system': 'http://terminology.hl7.org/CodeSystem/v3-NullFlavor', 'code': 'UNK'}
+
+# The code an Observation or DiagnosticReport gets when the message carries none - FHIR requires one
+Unknown_Code = {'text': 'unknown'}
+
+# The name the payor Organization gets when IN1 does not identify the insurance company
+Unknown_Payor_Name = 'unknown'
+
 # The status an Encounter gets once a discharge time is present
 Finished_Encounter_Status = 'finished'
 
@@ -526,6 +535,7 @@ def map_pv1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Encount
     else:
         if class_code:
             context.warn(f'PV1-2 code `{class_code}` not mapped')
+        out.class_ = Default_Encounter_Class
 
     # .. where a discharge time always means the encounter is over.
     discharge_time = accessor.value(45)
@@ -634,11 +644,14 @@ def map_obx(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Observa
     if context.encounter_reference:
         out.encounter = context.encounter_reference
 
-    # The observation identifier is the code ..
+    # The observation identifier is the code, which FHIR requires ..
     code_repetition = accessor.first(3)
 
     if code := cwe_to_codeable_concept(code_repetition, config):
         out.code = code
+    else:
+        context.warn('OBX-3 is empty, the observation code is unknown')
+        out.code = Unknown_Code
 
     # .. the result status is required, with a constant default ..
     status_code = accessor.value(11)
@@ -988,9 +1001,13 @@ def map_in1(accessor:'SegmentAccessor', context:'ConversionContext') -> 'Coverag
         organization.identifier = company_identifiers
         has_organization = True
 
-    if has_organization:
-        payor_reference = context.add(organization)
-        out.payor = [payor_reference]
+    # FHIR requires a payor even when IN1 does not identify the insurance company
+    if not has_organization:
+        context.warn('IN1-3 and IN1-4 are empty, the payor is unknown')
+        organization.name = Unknown_Payor_Name
+
+    payor_reference = context.add(organization)
+    out.payor = [payor_reference]
 
     # .. the plan type maps to the coverage type ..
     plan_type_repetition = accessor.first(15)
@@ -1173,11 +1190,14 @@ def map_obr_to_diagnostic_report(
             context.warn(f'OBR-25 code `{status_code}` not mapped')
         out.status = Default_Report_Status
 
-    # .. the universal service identifier is the report code ..
+    # .. the universal service identifier is the report code, which FHIR requires ..
     service_repetition = obr_accessor.first(4)
 
     if code := cwe_to_codeable_concept(service_repetition, config):
         out.code = code
+    else:
+        context.warn('OBR-4 is empty, the report code is unknown')
+        out.code = Unknown_Code
 
     # .. placer and filler order numbers become identifiers ..
     identifiers:'anylist' = []

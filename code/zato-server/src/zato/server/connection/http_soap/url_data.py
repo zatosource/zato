@@ -17,7 +17,7 @@ from zato.common.ext.future.utils import iteritems
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.api import AS4, CONNECTION, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import AS2, AS4, CONNECTION, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
@@ -538,6 +538,11 @@ class URLData(PyURLData):
         # AS4 channels carry their own configuration fields
         if channel_item['transport'] == URL_TYPE.AS4:
             for name in AS4.Common_Fields + AS4.Channel_Fields:
+                channel_item[name] = msg.get(name)
+
+        # AS2 channels carry their own configuration fields too
+        if channel_item['transport'] == URL_TYPE.AS2:
+            for name in AS2.Common_Fields + AS2.Channel_Fields:
                 channel_item[name] = msg.get(name)
 
         if msg.get('security_id'):

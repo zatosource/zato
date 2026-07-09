@@ -17,6 +17,8 @@ mcp_channel_name = 'zato.channel.mcp'
 mcp_channel_url_path = '/mcp/demo'
 mcp_service_name = 'zato.server.service.internal.channel.mcp.MCPEndpoint'
 
+as2_mdn_service_name = 'zato.server.service.internal.channel.as2.AS2MDNEndpoint'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -197,6 +199,77 @@ def ensure_mcp_rest_channel(session, channel_name, url_path, cluster_id, is_acti
             service=mcp_service, cluster=cluster, security=None)
         set_instance_opaque_attrs(http_channel, {'security_groups': security_groups})
         session.add(http_channel)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as2_channel_exists(session, cluster_id):
+    """ Checks if the AS2 inbound channel exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+    from zato.common.api import AS2, CONNECTION, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP
+
+    existing = session.query(HTTPSOAP).filter(
+        HTTPSOAP.name == AS2.Default.Channel_Name,
+        HTTPSOAP.cluster_id == cluster_id,
+        HTTPSOAP.connection == CONNECTION.CHANNEL,
+    ).first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
+
+    # The dispatcher handles AS2 channels itself, so there is no service to point to,
+    # and the data format is None so the raw MIME body arrives untouched.
+    channel = HTTPSOAP(
+        None, AS2.Default.Channel_Name, True, True, CONNECTION.CHANNEL,
+        URL_TYPE.AS2, None, AS2.Default.Channel_URL_Path, None, '', None, None,
+        cluster=cluster)
+    session.add(channel)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as2_mdn_channel_exists(session, cluster_id):
+    """ Checks if the channel for incoming asynchronous AS2 MDNs exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+    from zato.common.api import AS2, CONNECTION, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
+
+    existing = session.query(HTTPSOAP).filter(
+        HTTPSOAP.name == AS2.Default.MDN_Channel_Name,
+        HTTPSOAP.cluster_id == cluster_id,
+        HTTPSOAP.connection == CONNECTION.CHANNEL,
+    ).first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).filter(Cluster.id == cluster_id).one()
+
+    service = session.query(Service).filter(
+        Service.name == as2_mdn_service_name,
+        Service.cluster_id == cluster_id,
+    ).first()
+
+    if not service:
+        service = Service(None, as2_mdn_service_name, True, as2_mdn_service_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # The data format is None so the raw MDN body arrives untouched.
+    channel = HTTPSOAP(
+        None, AS2.Default.MDN_Channel_Name, True, True, CONNECTION.CHANNEL,
+        URL_TYPE.PLAIN_HTTP, None, AS2.Default.MDN_Channel_URL_Path, None, '', None, None,
+        service=service, cluster=cluster)
+    session.add(channel)
+
+    return True
 
 # ################################################################################################################################
 # ################################################################################################################################
