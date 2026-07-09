@@ -14,6 +14,8 @@ import pytest
 
 # Zato
 from zato.common.test.playwright_pubsub import open_create_dialog
+from as4_channel import fill_as4_channel_form, open_as4_channel_page
+from as4_outconn import fill_as4_outconn_form, open_as4_outconn_page
 from soap_channel import fill_soap_channel_form, open_soap_channel_page
 from soap_outconn import fill_soap_outconn_form, open_soap_outconn_page
 from wss_definition import fill_wss_form, open_wss_page
@@ -239,6 +241,103 @@ class TestDocsScreenshots:
         })
 
         _screenshot(page, 'ihe-channel')
+        _close_create_dialog(page)
+
+# ################################################################################################################################
+
+    def test_generate_as4_screenshots(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        page.set_viewport_size(_Viewport)
+
+        #
+        # An outgoing Peppol connection - the access-point sender - photographed
+        # on its Main tab, its Delivery tab with the discovery toggle and SML domain,
+        # and its Security tab with the pasted-PEM keystore
+        #
+        open_as4_outconn_page(page, base_url)
+        open_create_dialog(page)
+
+        fill_as4_outconn_form(page, {
+            'name': 'Peppol Test Network',
+            'as4_profile': 'peppol',
+            'as4_from_party': 'PDK000592',
+            'host': 'https://',
+            'as4_use_discovery': True,
+            'as4_sml_domain': 'acc.edelivery.tech.ec.europa.eu',
+            'as4_signing_key': _Pem_Key,
+            'as4_signing_cert_chain': _Pem_Certificate,
+            'as4_decryption_key': _Pem_Key,
+            'as4_trust_anchors': _Pem_Certificate,
+        })
+
+        _activate_create_tab(page, 'main')
+        _screenshot(page, 'as4-outconn-main')
+
+        _activate_create_tab(page, 'delivery')
+        _screenshot(page, 'as4-outconn-delivery')
+
+        _activate_create_tab(page, 'security')
+        _screenshot(page, 'as4-outconn-security')
+        _close_create_dialog(page)
+
+        #
+        # An outgoing ICS2 connection - push to customs with a static endpoint,
+        # photographed on its Main tab
+        #
+        open_as4_outconn_page(page, base_url)
+        open_create_dialog(page)
+
+        fill_as4_outconn_form(page, {
+            'name': 'ICS2 Conformance',
+            'as4_profile': 'ics2',
+            'as4_from_party': 'PL000000123456',
+            'as4_to_party': 'sti-taxud',
+            'host': 'https://conformance.customs.ec.europa.eu:443',
+            'url_path': '/domibus/services/msh',
+            'as4_signing_key': _Pem_Key,
+            'as4_signing_cert_chain': _Pem_Certificate,
+            'as4_decryption_key': _Pem_Key,
+            'as4_trust_anchors': _Pem_Certificate,
+        })
+
+        _activate_create_tab(page, 'main')
+        _screenshot(page, 'as4-outconn-ics2-main')
+        _close_create_dialog(page)
+
+        #
+        # A Peppol channel - the access-point receiver - photographed on its Main tab,
+        # its Participants tab with the serviced participants and its Routing tab
+        #
+        open_as4_channel_page(page, base_url)
+        open_create_dialog(page)
+
+        fill_as4_channel_form(page, {
+            'name': 'Peppol Inbound',
+            'url_path': '/peppol',
+            'as4_profile': 'peppol',
+            'as4_to_party': 'PDK000592',
+            'as4_signing_key': _Pem_Key,
+            'as4_signing_cert_chain': _Pem_Certificate,
+            'as4_decryption_key': _Pem_Key,
+            'as4_trust_anchors': _Pem_Certificate,
+            'as4_serviced_participants': '0192:991825827\n0088:7315458756324',
+            'service': 'invoicing.process-inbound',
+        })
+
+        _activate_create_tab(page, 'main')
+        _screenshot(page, 'as4-channel-main')
+
+        _activate_create_tab(page, 'security')
+        _screenshot(page, 'as4-channel-security')
+
+        _activate_create_tab(page, 'participants')
+        _screenshot(page, 'as4-channel-participants')
+
+        _activate_create_tab(page, 'routing')
+        _screenshot(page, 'as4-channel-routing')
         _close_create_dialog(page)
 
 # ################################################################################################################################

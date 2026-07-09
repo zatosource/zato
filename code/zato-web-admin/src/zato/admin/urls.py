@@ -17,6 +17,7 @@ from zato.admin.web.views import account, datadog, env_variables, grafana_cloud,
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
+from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import openapi_ as channel_openapi
@@ -35,6 +36,7 @@ from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.channel import mcp as channel_mcp
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import kafka as out_kafka
+from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
@@ -614,6 +616,24 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # Outgoing AS4 connections
+
+    url(r'^zato/outgoing/as4/$',
+        login_required(out_as4.Index()), name=out_as4.Index.url_name),
+    url(r'^zato/outgoing/as4/create/$',
+        login_required(out_as4.Create()), name=out_as4.Create.url_name),
+    url(r'^zato/outgoing/as4/edit/$',
+        login_required(out_as4.Edit()), name=out_as4.Edit.url_name),
+    url(r'^zato/outgoing/as4/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_as4.Delete()), name=out_as4.Delete.url_name),
+    url(r'^zato/outgoing/as4/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_as4.ping), name='out-as4-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
     # SQL connection pools
 
     url(r'^zato/outgoing/sql/$',
@@ -649,6 +669,22 @@ urlpatterns += [
         login_required(channel_amqp.edit), name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. AS4
+
+    url(r'^zato/channel/as4/$',
+        login_required(channel_as4.Index()), name=channel_as4.Index.url_name),
+    url(r'^zato/channel/as4/create/$',
+        login_required(channel_as4.Create()), name=channel_as4.Create.url_name),
+    url(r'^zato/channel/as4/edit/$',
+        login_required(channel_as4.Edit()), name=channel_as4.Edit.url_name),
+    url(r'^zato/channel/as4/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_as4.Delete()), name=channel_as4.Delete.url_name),
     ]
 
 # ################################################################################################################################

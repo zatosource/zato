@@ -53,7 +53,7 @@ code/*/dist
 /data
 geckodriver.log
 hotfixes
-lib/
+/lib/
 node_modules/
 package-lock.json
 package.json

@@ -13,9 +13,10 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, SECRETS, \
+     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
+from zato.common.const import SECRETS
 from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service

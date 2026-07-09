@@ -1469,6 +1469,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 
+        # The built-in subscriber that delivers messages published to the outbound AS4 topic -
+        # it has to exist before any user service publishes its first AS4 message.
+        self._setup_as4_delivery_subscription()
+
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)
 
@@ -1476,18 +1480,39 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def _setup_as4_delivery_subscription(self) -> 'None':
+        """ Registers the built-in push subscription that consumes the outbound AS4 topic
+        and hands each message over to the AS4 delivery service.
+        """
+        from zato.common.api import AS4, PubSub
+        from zato.common.facade import _service_sub_key_prefix
+
+        sub_key = _service_sub_key_prefix + AS4.Delivery_Service
+
+        # Create the topic stream and the consumer group in Redis ..
+        self.pubsub_redis.subscribe(sub_key, AS4.Default.Outbound_Topic)
+
+        # .. and register the push config so a delivery greenlet picks it up.
+        self.config_manager._push_subs[sub_key] = [{
+            'sub_key': sub_key,
+            'topic_name': AS4.Default.Outbound_Topic,
+            'push_type': PubSub.Push_Type.Service,
+            'push_service_name': AS4.Delivery_Service,
+            'rest_push_endpoint_id': None,
+        }]
+
+# ################################################################################################################################
+
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_as4_channel_exists, ensure_mcp_channel_exists, \
-            ensure_openapi_channel_exists
+        from zato.common.util.channel import ensure_mcp_channel_exists, ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
-            as4_created = ensure_as4_channel_exists(session, self.cluster_id)
 
-            if openapi_created or mcp_created or as4_created:
+            if openapi_created or mcp_created:
                 session.commit()
 
             if openapi_created:
@@ -1495,9 +1520,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
-
-            if as4_created:
-                logger.info('Created AS4 handler channel')
 
 # ################################################################################################################################
 
@@ -2087,8 +2109,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'generic_connection': 'generic_conn',
             'outgoing_rest': 'http_soap',
             'outgoing_soap': 'http_soap',
+            'outgoing_as4': 'http_soap',
             'channel_rest': 'http_soap',
             'channel_soap': 'http_soap',
+            'channel_as4': 'http_soap',
             'outgoing_amqp': 'out_amqp',
         }
 
@@ -2097,8 +2121,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _entity_type_to_extra_where = {
             'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
             'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
+            'outgoing_as4':  "connection = 'outgoing' AND transport = 'as4'",
             'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
             'channel_soap':  "connection = 'channel' AND transport = 'soap'",
+            'channel_as4':   "connection = 'channel' AND transport = 'as4'",
         }
 
         table_name = _entity_type_to_table.get(entity_type, entity_type)

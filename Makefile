@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp _test-mcp test-graphql test-as4 test-soap test-hl7 test-ui test-ui-pubsub test-ui-mapper _test-ui test-common test-distlock \
+	test-cli test-mcp _test-mcp test-graphql test-as4 test-edifact test-soap test-hl7 test-ui test-ui-pubsub test-ui-mapper _test-ui test-common test-distlock \
 	test-audit-log test-audit-log-ui \
 	test-all test \
 	health-ruff health-clippy \
@@ -510,6 +510,12 @@ test-as4: ## AS4 messaging tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as4 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-edifact: ## EDIFACT tests - fully offline, no external services needed.
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/edifact/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_edifact -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-soap: ## SOAP messaging tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/soap/ \
@@ -600,7 +606,7 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-ui test-audit-log test-audit-log-ui test-common test-distlock ## Everything.
+	test-cli test-mcp test-graphql test-edifact test-hl7 test-ui test-audit-log test-audit-log-ui test-common test-distlock ## Everything.
 
 test: test-all ## Alias for test-all.
 

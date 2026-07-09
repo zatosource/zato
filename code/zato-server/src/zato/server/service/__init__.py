@@ -45,8 +45,8 @@ from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, RESTFacade, \
-    SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.facade import AS4Facade, FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, \
+    RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -362,6 +362,7 @@ class Service:
     logger: 'Logger'
     process_name:'str' = 'No name'
 
+    as4: 'AS4Facade'
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -478,7 +479,11 @@ class Service:
             self._config_store.out_sap,
             self._config_manager.outconn_ldap,
             self._config_manager.outconn_mongodb,
+            as4=self._config_manager.config_store.out_as4,
         ) # type: Outgoing
+
+        # AS4 facade for outgoing connections
+        self.as4 = AS4Facade()
 
         # REST facade for outgoing connections
         self.rest = RESTFacade()
@@ -603,6 +608,9 @@ class Service:
 
         # Cache is always enabled
         self.cache = self._config_manager.cache_api
+
+        # AS4 facade
+        self.as4.init(self.cid, self._config_manager.config_store.out_as4)
 
         # REST facade
         self.rest.init(self.cid, self._config_manager.config_store.out_plain_http)

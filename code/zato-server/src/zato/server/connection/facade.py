@@ -28,7 +28,7 @@ from requests import \
     put    as requests_put
 
 # Zato
-from zato.common.api import SCHEDULER
+from zato.common.api import AS4, SCHEDULER
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
@@ -39,10 +39,13 @@ from zato.server.connection.smb import SMBConnection
 
 if 0:
     from requests import Response
-    from zato.common.typing_ import any_, anydict, callnone
+    from zato.common.as4.outbound import PullResult, SendResult
+    from zato.common.pubsub.redis_backend import PublishResult
+    from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict
+    from zato.server.connection.as4 import AS4Wrapper
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
     from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
     from zato.server.queue_bridge.client import QueueBridgeClient
@@ -393,6 +396,126 @@ class SOAPFacade:
         item = self._out_soap[name]
 
         return SOAPInvoker(item.conn, self.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS4Invoker:
+    """ Wraps a single AS4 outgoing connection for use from services.
+    """
+    conn: 'AS4Wrapper'
+    cid: 'str'
+
+    def __init__(self, conn:'AS4Wrapper', cid:'str') -> 'None':
+        self.conn = conn
+        self.cid = cid
+
+    def __repr__(self) -> 'str':
+        return f'AS4Invoker({self.conn.config["name"]} at {hex(id(self))})'
+
+# ################################################################################################################################
+
+    def send(
+        self,
+        data:'strbytes',
+        mime_type:'str'=AS4.Default.Payload_MIME_Type,
+        conversation_id:'strnone'=None,
+        ) -> 'SendResult':
+        """ Sends one AS4 message to the connection's configured endpoint,
+        verifying the synchronous receipt.
+        """
+        out = self.conn.send(data, mime_type, conversation_id)
+        return out
+
+# ################################################################################################################################
+
+    def send_to(
+        self,
+        participant_id:'str',
+        document_type:'str',
+        data:'strbytes',
+        from_participant:'strnone'=None,
+        conversation_id:'strnone'=None,
+        ) -> 'SendResult':
+        """ The access-point one-liner - discovers the receiver's endpoint through SML and SMP,
+        wraps the business document in an SBDH and delivers it there, verifying the receipt.
+        """
+        out = self.conn.send_to(participant_id, document_type, data, from_participant, conversation_id)
+        return out
+
+# ################################################################################################################################
+
+    def pull(self, mpc:'strnone'=None) -> 'PullResult':
+        """ Sends one pull request to the connection's configured endpoint -
+        the generic One-Way/Pull exchange - and returns whatever came back.
+        """
+        out = self.conn.pull(mpc)
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'str':
+        """ Performs a signed ping exchange with the connection's configured endpoint.
+        """
+        out = self.conn.ping(self.cid)
+        return out
+
+# ################################################################################################################################
+
+    def publish(
+        self,
+        data:'strbytes',
+        mime_type:'str'=AS4.Default.Payload_MIME_Type,
+        conversation_id:'strnone'=None,
+        participant_id:'strnone'=None,
+        document_type:'strnone'=None,
+        from_participant:'strnone'=None,
+        ) -> 'PublishResult':
+        """ Publishes the message to the outbound AS4 topic instead of posting it directly -
+        the built-in delivery subscriber performs the HTTP delivery, so redelivery on failure
+        is pub/sub's built-in behavior. With a participant id the delivery runs send_to,
+        without one it runs send.
+        """
+        if isinstance(data, bytes):
+            data = data.decode('utf8')
+
+        # Everything the delivery service needs to replay this call travels in the message.
+        message = {
+            'connection': self.conn.config['name'],
+            'data': data,
+            'mime_type': mime_type,
+            'conversation_id': conversation_id,
+            'participant_id': participant_id,
+            'document_type': document_type,
+            'from_participant': from_participant,
+        }
+
+        server = self.conn.server
+        out = server.pubsub_redis.publish(AS4.Default.Outbound_Topic, message, cid=self.cid, correl_id=self.cid)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS4Facade:
+    """ Provides dict-like access to AS4 outgoing connections from services via self.as4.
+    """
+    cid: 'str'
+    _out_as4: 'ConfigDict'
+
+    def init(self, cid:'str', _out_as4:'ConfigDict') -> 'None':
+        self.cid = cid
+        self._out_as4 = _out_as4
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'AS4Invoker':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._out_as4[name]
+
+        return AS4Invoker(item.conn, self.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################

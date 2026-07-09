@@ -117,8 +117,11 @@ def build_pmodes(config:'stranydict') -> 'pmode_list':
     out = [main]
 
     # Each extra line names one more service and action pair served
-    # under otherwise the same P-Mode parameters.
+    # under otherwise the same P-Mode parameters. The opaque column genuinely
+    # stores a null when the channel was saved without any extra pairs.
     extra_pmodes = config['as4_extra_pmodes']
+    if extra_pmodes is None:
+        extra_pmodes = ''
 
     for line in extra_pmodes.splitlines():
 

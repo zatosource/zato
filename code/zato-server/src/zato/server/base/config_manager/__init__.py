@@ -420,6 +420,16 @@ class ConfigManager(_ConfigManagerBase):
         """ Creates a new AS4 connection wrapper out of a configuration dictionary.
         The private keys stay encrypted here - the wrapper decrypts them on first use.
         """
+        # The ODB columns are an integer and a boolean but a config event published
+        # by an edit in the Dashboard carries the raw form values, which are strings.
+        timeout = config['timeout']
+        if isinstance(timeout, str):
+            timeout = int(timeout)
+
+        validate_tls = config['validate_tls']
+        if isinstance(validate_tls, str):
+            validate_tls = validate_tls == 'True'
+
         wrapper_config = {
             'id':config['id'],
             'name':config['name'],
@@ -427,8 +437,8 @@ class ConfigManager(_ConfigManagerBase):
             'transport':config['transport'],
             'address_host':config['host'],
             'address_url_path':config['url_path'],
-            'timeout':config['timeout'],
-            'validate_tls':config['validate_tls'],
+            'timeout':timeout,
+            'validate_tls':validate_tls,
         }
 
         for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:

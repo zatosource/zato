@@ -197,9 +197,15 @@ class AS4:
         Inbound_Topic  = 'zato.as4.inbound'
         Outbound_Topic = 'zato.as4.outbound'
 
+        # The MIME type payloads are sent with unless the caller says otherwise.
+        Payload_MIME_Type = 'application/xml'
+
         # How long information about an already-processed eb:MessageId is kept
         # for duplicate detection, in seconds.
         Duplicate_Detection_TTL = 172800
+
+        # The cache key prefix that duplicate detection stores eb:MessageId values under.
+        Duplicate_Cache_Prefix = 'zato.as4.msg.'
 
     # The service that delivers messages published to the outbound topic.
     Delivery_Service = 'zato.outgoing.as4.deliver'

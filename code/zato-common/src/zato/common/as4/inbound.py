@@ -99,7 +99,7 @@ def _serialize(envelope:'any_') -> 'bytes':
 
 # ################################################################################################################################
 
-def _build_error_response(
+def build_error_response(
     ref_to_message_id:'strnone',
     error_code:'str',
     detail:'str',
@@ -169,6 +169,7 @@ def handle(
     pmodes:'pmode_list',
     keystore:'Keystore',
     is_duplicate:'callable_ | None'=None,
+    validate:'callable_ | None'=None,
     ) -> 'InboundResult':
     """ The transport-neutral inbound pipeline. Takes the raw HTTP body and content type
     of an incoming AS4 request and returns what to send back plus the delivered payloads.
@@ -176,6 +177,10 @@ def handle(
     The is_duplicate callable, when given, receives an eb:MessageId and returns True
     if that message was already processed - the receipt is then repeated without
     delivering the payloads again.
+
+    The validate callable, when given, receives the user message and the restored payloads
+    once their signature is verified - it raises AS4ProtocolException to reject the message,
+    which turns into a signed ebMS error signal on the response.
     """
 
     # Our response to produce
@@ -221,6 +226,11 @@ def handle(
         # .. restore the payloads to what the sender submitted ..
         payloads = _restore_payloads(user_message, parts)
 
+        # .. give the caller a chance to reject the message on business grounds,
+        # .. e.g. a receiver that this endpoint does not serve ..
+        if validate:
+            validate(user_message, payloads)
+
         # .. and only deliver them if this is not a replay of a message we already have.
         if is_duplicate:
             out.is_duplicate = is_duplicate(user_message.message_id)
@@ -241,7 +251,7 @@ def handle(
     except AS4ProtocolException as e:
         out.is_error = True
         out.error_code = e.error_code
-        out.body = _build_error_response(ref_to_message_id, e.error_code, e.detail, keystore, pmode)
+        out.body = build_error_response(ref_to_message_id, e.error_code, e.detail, keystore, pmode)
 
     return out
 

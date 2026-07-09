@@ -191,11 +191,13 @@ def get_top_level_order() -> 'strlist':
         'groups',
         'channel_rest',
         'channel_soap',
+        'channel_as4',
         'outgoing_rest',
         'scheduler',
         'ldap',
         'sql',
         'outgoing_soap',
+        'outgoing_as4',
         'microsoft_365',
         'confluence',
         'jira',
@@ -234,6 +236,14 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
     order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
+    order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
+        'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', 'as4_final_recipient', \
+        'as4_extra_pmodes', 'as4_serviced_participants', 'as4_inbound_topic', 'as4_signing_key', 'as4_signing_cert_chain', \
+        'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
+    order['outgoing_as4'] = 'name', 'is_active', 'host', 'url_path', 'timeout', 'validate_tls', 'as4_profile', \
+        'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', \
+        'as4_final_recipient', 'as4_extra_pmodes', 'as4_use_discovery', 'as4_sml_domain', 'as4_signing_key', \
+        'as4_signing_cert_chain', 'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
     order['microsoft_365'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
