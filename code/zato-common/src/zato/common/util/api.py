@@ -507,9 +507,13 @@ def get_config_from_file(conf_location, config_name):
 # ################################################################################################################################
 
 def set_up_logging(repo_location:'str') -> 'None':
+    from zato.common.util.logging_ import apply_logging_env_overrides, attach_service_context_filter
+
     with open_r(os.path.join(repo_location, 'logging.conf')) as f:
-        dictConfig(yaml.load(f, yaml.FullLoader))
-    from zato.common.util.logging_ import attach_service_context_filter
+        logging_config = yaml.load(f, yaml.FullLoader)
+        logging_config = apply_logging_env_overrides(logging_config)
+        dictConfig(logging_config)
+
     attach_service_context_filter()
 
 # ################################################################################################################################
