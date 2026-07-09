@@ -217,7 +217,7 @@ def zato_server() -> 'any_':
 
     The environment is created with Zato_Server_Log_Max_Size and Zato_Server_Log_Backup_Count set
     so the generated logging.conf carries their values, and the server itself starts with
-    Zato_Log_Level and Zato_Log_Level_Rest so the runtime overrides are exercised.
+    Zato_Log_Level and Zato_Log_Level_REST so the runtime overrides are exercised.
     """
     time_start = time.monotonic()
 
@@ -289,7 +289,7 @@ def zato_server() -> 'any_':
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Log_Level']        = Log_Level_Global
-    server_env['Zato_Log_Level_Rest']   = Log_Level_Rest
+    server_env['Zato_Log_Level_REST']   = Log_Level_Rest
     server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
