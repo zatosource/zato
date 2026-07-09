@@ -175,9 +175,52 @@ class API_Key:
 class URL_TYPE:
     SOAP       = 'soap' # Used only by outgoing connections
     PLAIN_HTTP = 'plain_http'
+    AS4        = 'as4'
 
     def __iter__(self):
         return iter([self.PLAIN_HTTP])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS4:
+    """ Constants for AS4 channels and outgoing connections.
+    """
+    class Profile:
+        EDelivery1 = 'edelivery1'
+        EDelivery2 = 'edelivery2'
+        Peppol     = 'peppol'
+        ICS2       = 'ics2'
+
+    class Default:
+        Profile        = 'edelivery1'
+        Inbound_Topic  = 'zato.as4.inbound'
+        Outbound_Topic = 'zato.as4.outbound'
+
+        # How long information about an already-processed eb:MessageId is kept
+        # for duplicate detection, in seconds.
+        Duplicate_Detection_TTL = 172800
+
+    # The service that delivers messages published to the outbound topic.
+    Delivery_Service = 'zato.outgoing.as4.deliver'
+
+    # The service that scheduler-driven pull jobs invoke.
+    Pull_Service = 'zato.outgoing.as4.pull'
+
+    # The AS4 configuration fields shared by channels and outgoing connections.
+    Common_Fields = ('as4_profile', 'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement',
+        'as4_mpc', 'as4_original_sender', 'as4_final_recipient', 'as4_extra_pmodes', 'as4_signing_key',
+        'as4_signing_cert_chain', 'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert',
+        'as4_trust_anchors')
+
+    # The fields that only outgoing AS4 connections use.
+    Outgoing_Fields = ('as4_use_discovery', 'as4_sml_domain')
+
+    # The fields that only AS4 channels use.
+    Channel_Fields = ('as4_serviced_participants', 'as4_inbound_topic')
+
+    # The fields that hold private keys - they are encrypted at rest.
+    Secret_Fields = ('as4_signing_key', 'as4_decryption_key')
 
 # ################################################################################################################################
 # ################################################################################################################################

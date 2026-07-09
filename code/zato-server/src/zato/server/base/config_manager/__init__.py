@@ -30,8 +30,8 @@ from orjson import dumps
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, AS4 as COMMON_AS4, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
+     PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -46,6 +46,7 @@ from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, 
 from zato.common.util.retry import get_remaining_time, get_sleep_time
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
+from zato.server.connection.as4 import AS4Wrapper
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -415,9 +416,38 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
+    def _as4_wrapper_from_config(self, config:'bunch_') -> 'AS4Wrapper':
+        """ Creates a new AS4 connection wrapper out of a configuration dictionary.
+        The private keys stay encrypted here - the wrapper decrypts them on first use.
+        """
+        wrapper_config = {
+            'id':config['id'],
+            'name':config['name'],
+            'is_active':config['is_active'],
+            'transport':config['transport'],
+            'address_host':config['host'],
+            'address_url_path':config['url_path'],
+            'timeout':config['timeout'],
+            'validate_tls':config['validate_tls'],
+        }
+
+        for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:
+            wrapper_config[name] = config[name]
+
+        out = AS4Wrapper(self.server, wrapper_config)
+        return out
+
+# ################################################################################################################################
+
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'any_':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
+
+        # AS4 connections have their own wrapper class - everything they need
+        # is in their own configuration fields, not in security definitions.
+        if config['transport'] == URL_TYPE.AS4:
+            out = self._as4_wrapper_from_config(config)
+            return out
 
         # Populate it upfront
         conn_name = config['name']
@@ -529,7 +559,7 @@ class ConfigManager(_ConfigManagerBase):
 
         out:'any_' = []
 
-        for transport in('soap', 'plain_http'):
+        for transport in('soap', 'plain_http', 'as4'):
             config_dict = getattr(self.config_store, 'out_' + transport)
             for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
