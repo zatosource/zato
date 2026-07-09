@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 
 from enum import Enum
-from typing import Generic, Protocol, TypeVar, overload
+from typing import Generic, Protocol, Self, TypeVar, overload
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -378,7 +378,7 @@ class EDISegment:
 # ################################################################################################################################
 
     @classmethod
-    def from_raw(cls, raw_segment:'EDIRawSegment') -> 'EDISegment':
+    def from_raw(cls, raw_segment:'EDIRawSegment') -> 'Self':
         """ Wraps a raw segment in a typed segment instance.
         """
         segment = cls.__new__(cls)
@@ -626,7 +626,7 @@ class EDIGroup:
 # ################################################################################################################################
 
     @classmethod
-    def from_raw(cls, raw_segments:'raw_segment_list') -> 'EDIGroup':
+    def from_raw(cls, raw_segments:'raw_segment_list') -> 'Self':
         """ Wraps a slice of raw segments in a typed group instance.
         """
         group = cls.__new__(cls)
@@ -841,7 +841,7 @@ class EDIMessage:
 # ################################################################################################################################
 
     @classmethod
-    def from_raw(cls, raw_segments:'raw_segment_list', separators:'any_') -> 'EDIMessage':
+    def from_raw(cls, raw_segments:'raw_segment_list', separators:'any_') -> 'Self':
         """ Wraps the raw segments of one message in a typed message instance.
         """
         message = cls.__new__(cls)
