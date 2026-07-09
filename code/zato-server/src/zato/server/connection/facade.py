@@ -68,6 +68,10 @@ _http_methods = {'delete', 'get', 'head', 'patch', 'post', 'put'}
 # while the connection queue is still being built at startup.
 _fhir_block_timeout = 30
 
+# How many seconds to wait for a pooled OData client, which covers the window
+# while the connection queue is still being built at startup.
+_odata_block_timeout = 30
+
 ################################################################################################################################
 ################################################################################################################################
 
@@ -629,6 +633,63 @@ class KafkaFacade:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class IBMMQInvoker:
+    _conn_name: 'str'
+    _queue_bridge: 'QueueBridgeClient'
+
+    def __init__(self, conn_name:'str', queue_bridge:'QueueBridgeClient') -> 'None':
+        self._conn_name = conn_name
+        self._queue_bridge = queue_bridge
+
+    def __repr__(self) -> 'str':
+        return f'IBMMQInvoker({self._conn_name} at {hex(id(self))})'
+
+    def to_dict(self) -> 'anydict':
+        return {'conn_name': self._conn_name}
+
+# ################################################################################################################################
+
+    def send(self, data:'any_') -> 'None':
+        if isinstance(data, bytes):
+            to_send = data
+        elif isinstance(data, str):
+            to_send = data.encode('utf-8')
+        else:
+            to_send = json.dumps(data).encode('utf-8')
+
+        reply = self._queue_bridge.send_message(self._conn_name, to_send) # type: anydict
+
+        status = reply['status']
+        if status == 'ok':
+            return
+
+        if status == 'error':
+            raise Exception('IBM MQ send to `{}` failed: {}'.format(self._conn_name, reply['data']))
+
+        raise Exception('IBM MQ send to `{}` timed out'.format(self._conn_name))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IBMMQFacade:
+    """ Provides dict-like access to outgoing IBM MQ connections from services via self.ibm_mq.
+    """
+    _outconn_ibm_mq: 'anydict'
+    _queue_bridge: 'QueueBridgeClient'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_ibm_mq = config_manager.outconn_ibm_mq
+        self._queue_bridge = config_manager.server._queue_bridge
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'IBMMQInvoker':
+        self._outconn_ibm_mq[name]
+        return IBMMQInvoker(name, self._queue_bridge)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HL7MLLPInvoker:
     """ Wraps a single HL7 MLLP outgoing connection for use from services.
     """
@@ -933,6 +994,123 @@ class GraphQLFacade:
     def __getitem__(self, name:'str') -> 'GraphQLInvoker':
         self._outconn_graphql[name]
         return GraphQLInvoker(name, self._outconn_graphql)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODataConnection:
+    """ Exposes the OData client API for one outgoing connection - each call borrows
+    a pooled client, invokes it and returns it to the pool, so user code never handles
+    the pool itself.
+    """
+    _conn_name: 'str'
+    _outconn_odata: 'anydict'
+
+    def __init__(self, conn_name:'str', outconn_odata:'anydict') -> 'None':
+        self._conn_name = conn_name
+        self._outconn_odata = outconn_odata
+
+# ################################################################################################################################
+
+    def __repr__(self) -> 'str':
+        out = f'ODataConnection({self._conn_name} at {hex(id(self))})'
+        return out
+
+# ################################################################################################################################
+
+    def _borrow(self) -> 'any_':
+        """ Returns a context manager that yields a pooled client, blocking to cover
+        the window while the connection queue is still being built at startup.
+        """
+        wrapper = self._outconn_odata[self._conn_name].conn
+
+        out = wrapper.client(should_block=True, block_timeout=_odata_block_timeout)
+        return out
+
+# ################################################################################################################################
+
+    def read(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.read(*args, **kwargs)
+        return out
+
+    def iter(self, *args:'any_', **kwargs:'any_') -> 'any_':
+
+        # The client stays borrowed for as long as the caller iterates.
+        with self._borrow() as client:
+            for item in client.iter(*args, **kwargs):
+                yield item
+
+    def get(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.get(*args, **kwargs)
+        return out
+
+    def create(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.create(*args, **kwargs)
+        return out
+
+    def update(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.update(*args, **kwargs)
+        return out
+
+    def delete(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.delete(*args, **kwargs)
+        return out
+
+    def call_function(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.call_function(*args, **kwargs)
+        return out
+
+    def call_action(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.call_action(*args, **kwargs)
+        return out
+
+    def count(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.count(*args, **kwargs)
+        return out
+
+    def batch(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.batch(*args, **kwargs)
+        return out
+
+    def metadata(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        with self._borrow() as client:
+            out = client.metadata(*args, **kwargs)
+        return out
+
+    def ping(self) -> 'any_':
+        with self._borrow() as client:
+            out = client.ping()
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODataFacade:
+    """ Provides dict-like access to OData outgoing connections from services via self.odata.
+    """
+    _outconn_odata: 'anydict'
+
+    def init(self, config_manager:'ConfigManager') -> 'None':
+        self._outconn_odata = config_manager.outconn_odata
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'ODataConnection':
+
+        # This will raise a KeyError if there is no such connection
+        self._outconn_odata[name]
+
+        out = ODataConnection(name, self._outconn_odata)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

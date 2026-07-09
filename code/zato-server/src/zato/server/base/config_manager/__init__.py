@@ -64,13 +64,16 @@ from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
+from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
+from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
+from zato.server.generic.api.outconn_odata import OutconnODataWrapper
 from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
 from zato.server.generic.api.outconn_smb import OutconnSMBWrapper
 
@@ -203,6 +206,12 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - HL7 MLLP outconns
         self.outconn_hl7_mllp = {}
 
+        # Generic connections - IBM MQ channels
+        self.channel_ibm_mq = {}
+
+        # Generic connections - IBM MQ outconns
+        self.outconn_ibm_mq = {}
+
         # Generic connections - Kafka channels
         self.channel_kafka = {}
 
@@ -214,6 +223,9 @@ class ConfigManager(_ConfigManagerBase):
 
         # Generic connections - MongoDB outconns
         self.outconn_mongodb = {}
+
+        # Generic connections - OData outconns
+        self.outconn_odata = {}
 
         # Generic connections - SFTP outconns
         self.outconn_sftp = {}
@@ -269,10 +281,13 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: self.channel_ibm_mq,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: self.outconn_ibm_mq,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: self.channel_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: self.outconn_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: self.outconn_odata,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: self.outconn_smb,
         }
@@ -288,10 +303,13 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: ChannelIBMMQWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: OutconnIBMMQWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: ChannelKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: OutconnKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: OutconnODataWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutconnSMBWrapper,
         }
@@ -876,6 +894,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # Local aliases
         channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
+        channel_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
@@ -886,15 +905,18 @@ class ConfigManager(_ConfigManagerBase):
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
         outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
+        outconn_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ, {})
         outconn_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
+        outconn_odata_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_hl7_mllp_map,
+            channel_ibm_mq_map,
             channel_kafka_map,
             channel_mcp_map,
             channel_openapi_map,
@@ -905,18 +927,22 @@ class ConfigManager(_ConfigManagerBase):
             outconn_graphql_map,
             outconn_hl7_fhir_map,
             outconn_hl7_mllp_map,
+            outconn_ibm_mq_map,
             outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,
+            outconn_odata_map,
             outconn_sftp_map,
             outconn_smb_map,
         ]
 
         password_maps = [
             outconn_hl7_fhir_map,
+            outconn_ibm_mq_map,
             outconn_kafka_map,
             outconn_ldap_map,
             outconn_mongodb_map,
+            outconn_odata_map,
             outconn_sftp_map,
             outconn_smb_map,
         ]
@@ -937,6 +963,14 @@ class ConfigManager(_ConfigManagerBase):
         outconn_kafka_map[_generic_msg.edit]   = self._edit_kafka_outconn
         outconn_kafka_map[_generic_msg.delete] = self._delete_kafka_outconn
 
+        channel_ibm_mq_map[_generic_msg.create] = self._create_ibm_mq_channel
+        channel_ibm_mq_map[_generic_msg.edit]   = self._edit_ibm_mq_channel
+        channel_ibm_mq_map[_generic_msg.delete] = self._delete_ibm_mq_channel
+
+        outconn_ibm_mq_map[_generic_msg.create] = self._create_ibm_mq_outconn
+        outconn_ibm_mq_map[_generic_msg.edit]   = self._edit_ibm_mq_outconn
+        outconn_ibm_mq_map[_generic_msg.delete] = self._delete_ibm_mq_outconn
+
 
 # ################################################################################################################################
 
@@ -947,10 +981,12 @@ class ConfigManager(_ConfigManagerBase):
         try:
             name = msg.get('name', '')
             self.logger.info('Queue bridge channel %s: %s', action, name)
+            config = dict(msg)
+            self.server._enrich_queue_bridge_config(config)
             if action == 'create':
-                bridge.add_channel(dict(msg))
+                bridge.add_channel(config)
             elif action == 'edit':
-                bridge.edit_channel(dict(msg))
+                bridge.edit_channel(config)
             elif action == 'delete':
                 bridge.delete_channel(name)
         except Exception:
@@ -963,10 +999,12 @@ class ConfigManager(_ConfigManagerBase):
         try:
             name = msg.get('name', '')
             self.logger.info('Queue bridge outconn %s: %s', action, name)
+            config = dict(msg)
+            self.server._enrich_queue_bridge_config(config)
             if action == 'create':
-                bridge.add_outgoing(dict(msg))
+                bridge.add_outgoing(config)
             elif action == 'edit':
-                bridge.edit_outgoing(dict(msg))
+                bridge.edit_outgoing(config)
             elif action == 'delete':
                 bridge.delete_outgoing(name)
         except Exception:
@@ -993,6 +1031,30 @@ class ConfigManager(_ConfigManagerBase):
         self._notify_queue_bridge_outconn('edit', msg)
 
     def _delete_kafka_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._delete_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('delete', msg)
+
+    def _create_ibm_mq_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._create_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('create', msg)
+
+    def _edit_ibm_mq_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._edit_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('edit', msg)
+
+    def _delete_ibm_mq_channel(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._delete_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_channel('delete', msg)
+
+    def _create_ibm_mq_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._create_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('create', msg)
+
+    def _edit_ibm_mq_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
+        self._edit_generic_connection(msg, *args, **kwargs)
+        self._notify_queue_bridge_outconn('edit', msg)
+
+    def _delete_ibm_mq_outconn(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
         self._delete_generic_connection(msg, *args, **kwargs)
         self._notify_queue_bridge_outconn('delete', msg)
 
@@ -1797,6 +1859,11 @@ class ConfigManager(_ConfigManagerBase):
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
             wsgi_environ['zato.zato_ctx'] = zato_ctx
+
+        # Extra WSGI environ keys given by the caller, e.g. queue bridge message headers
+        extra_environ = msg.get('wsgi_environ')
+        if extra_environ:
+            wsgi_environ.update(extra_environ)
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')

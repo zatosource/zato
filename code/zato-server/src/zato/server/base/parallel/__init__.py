@@ -53,6 +53,7 @@ from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
+from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.config_manager import ConfigManager
@@ -605,6 +606,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _read_user_config_from_directory(self, dir_name:'str') -> 'None':
+
+        # Let HL7-FHIR mapping configs resolve their names against this directory too
+        hl7_add_config_location(dir_name)
 
         # We assume that it will be always one of these file name suffixes,
         # note that we are not reading enmasse (.yaml and .yml) files here,
@@ -1302,11 +1306,24 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _invoke_queue_service(self, service_name:'str', data:'any_') -> 'None':
+    def _invoke_queue_service(self, service_name:'str', data:'any_', headers:'anydict') -> 'any_':
         """ Invoked by the recv listener greenlet when a message is received
-        from an external queue (Kafka, SQS, etc.) via the queue bridge binary.
+        from an external queue (Kafka, IBM MQ, etc.) via the queue bridge binary.
         """
-        self.invoke(service_name, data)
+        wsgi_environ = {'zato.request.headers': headers}
+        response = self.invoke(service_name, data, wsgi_environ=wsgi_environ)
+        return response
+
+# ################################################################################################################################
+
+    def _enrich_queue_bridge_config(self, config:'anydict') -> 'None':
+        """ Decrypts the connection's secret, if any, into the password field the bridge expects.
+        """
+        secret = config.get('secret')
+        if isinstance(secret, str) and secret:
+            if secret.startswith(SECRETS.Encrypted_Indicator) or secret.startswith(SECRETS.PREFIX):
+                secret = self.decrypt(secret)
+            config['password'] = secret
 
 # ################################################################################################################################
 
@@ -1328,15 +1345,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             channels = []
             outgoing = []
 
+            channel_types = (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ)
+            outgoing_types = (GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ)
+
             with closing(self.odb.session()) as session:
-                for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+                for type_ in channel_types + outgoing_types:
                     items = connection_list(session, self.cluster_id, type_, False)
                     for item in items:
                         conn = GenericConnection.from_model(item)
                         config = conn.to_dict()
+                        self._enrich_queue_bridge_config(config)
                         logger.info('Queue bridge loading %s', type_)
 
-                        if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                        if type_ in channel_types:
                             channels.append(config)
                         else:
                             outgoing.append(config)
@@ -1365,13 +1386,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         channels = []
         outgoing = []
 
+        channel_types = (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ)
+        outgoing_types = (GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ)
+
         with closing(self.odb.session()) as session:
-            for type_ in (GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA):
+            for type_ in channel_types + outgoing_types:
                 items = connection_list(session, self.cluster_id, type_, False)
                 for item in items:
                     conn = GenericConnection.from_model(item)
                     config = conn.to_dict()
-                    if type_ == GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA:
+                    self._enrich_queue_bridge_config(config)
+                    if type_ in channel_types:
                         channels.append(config)
                     else:
                         outgoing.append(config)
@@ -1386,6 +1411,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_queue_bridge_recv_listener(self, b64decode:'any_') -> 'None':
         """ Starts a dedicated greenlet that consumes recv events from the queue bridge via Redis Streams.
         """
+        from json import dumps as json_dumps, loads as json_loads
+
         recv_redis = self._queue_bridge.new_redis_conn()  # type: ignore[union-attr]
 
         recv_stream = 'zato:queue_bridge:stream:recv'
@@ -1417,7 +1444,34 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             service_name = fields['service']
                             payload_b64 = fields['payload']
                             payload = b64decode(payload_b64)
-                            self._invoke_queue_service(service_name, payload)
+
+                            headers_json = fields['headers']
+                            if headers_json:
+                                headers = json_loads(headers_json)
+                            else:
+                                headers = {}
+
+                            response = self._invoke_queue_service(service_name, payload, headers)
+
+                            # Messages that carry a reply-to queue get the service's response
+                            # sent back automatically, with no action needed in the service itself.
+                            reply_to_queue = fields['reply_to_queue']
+                            if reply_to_queue and response:
+                                if isinstance(response, bytes):
+                                    reply_data = response
+                                elif isinstance(response, str):
+                                    reply_data = response.encode('utf8')
+                                else:
+                                    reply_data = json_dumps(response).encode('utf8')
+
+                                _ = self._queue_bridge.send_reply( # type: ignore[union-attr]
+                                    fields['channel_name'],
+                                    reply_to_queue,
+                                    fields['reply_to_queue_manager'],
+                                    fields['message_id'],
+                                    reply_data,
+                                )
+
                             _ = recv_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception:
@@ -1504,13 +1558,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_mcp_channel_exists, ensure_openapi_channel_exists
+        from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, \
+            ensure_mcp_channel_exists, ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
+            as2_created = ensure_as2_channel_exists(session, self.cluster_id)
+            as2_mdn_created = ensure_as2_mdn_channel_exists(session, self.cluster_id)
 
-            if openapi_created or mcp_created:
+            if openapi_created or mcp_created or as2_created or as2_mdn_created:
                 session.commit()
 
             if openapi_created:
@@ -1518,6 +1575,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
+
+            if as2_created:
+                logger.info('Created AS2 inbound channel')
+
+            if as2_mdn_created:
+                logger.info('Created AS2 async MDN channel')
 
 # ################################################################################################################################
 
@@ -1710,6 +1773,21 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.commands import CommandsFacade
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_import(config_path)
+        return result.is_ok
+
+# ################################################################################################################################
+
+    def import_demo_ibm_mq(self):
+
+        import zato.server.service.internal.ibm_mq
+        from zato.server.commands import CommandsFacade
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.ibm_mq.__file__), 'demo-enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)

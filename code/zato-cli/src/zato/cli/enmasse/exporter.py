@@ -24,6 +24,7 @@ from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
+from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
 from zato.cli.enmasse.exporters.smb import SMBExporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
@@ -31,6 +32,7 @@ from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
+from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import ChannelMCPExporter
 from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
@@ -79,11 +81,14 @@ class EnmasseYAMLExporter:
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
         self.outgoing_hl7_mllp_exporter = OutgoingHL7MLLPExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
+        self.channel_ibm_mq_exporter = ChannelIBMMQExporter(self)
+        self.outgoing_ibm_mq_exporter = OutgoingIBMMQExporter(self)
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
         self.channel_mcp_exporter = ChannelMCPExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
+        self.odata_exporter = ODataExporter(self)
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
         self.microsoft_365_exporter = Microsoft365Exporter(self)
@@ -217,6 +222,24 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_channel_ibm_mq(self, session:'SASession') -> 'list':
+        """ Exports IBM MQ channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_ibm_mq_list = self.channel_ibm_mq_exporter.export(session, self.cluster_id)
+        return channel_ibm_mq_list
+
+# ################################################################################################################################
+
+    def export_outgoing_ibm_mq(self, session:'SASession') -> 'list':
+        """ Exports IBM MQ outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_ibm_mq_list = self.outgoing_ibm_mq_exporter.export(session, self.cluster_id)
+        return outgoing_ibm_mq_list
+
+# ################################################################################################################################
+
     def export_channel_kafka(self, session:'SASession') -> 'list':
         """ Exports Kafka channel definitions.
         """
@@ -295,6 +318,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         ldap_list = self.ldap_exporter.export(session, self.cluster_id)
         return ldap_list
+
+# ################################################################################################################################
+
+    def export_odata(self, session:'SASession') -> 'list':
+        """ Exports OData connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        odata_list = self.odata_exporter.export(session, self.cluster_id)
+        return odata_list
 
 # ################################################################################################################################
 
@@ -447,6 +479,16 @@ class EnmasseYAMLExporter:
         if outgoing_hl7_mllp_defs:
             output_dict['outgoing_hl7_mllp'] = outgoing_hl7_mllp_defs
 
+        # Export IBM MQ channel definitions
+        channel_ibm_mq_defs = self.export_channel_ibm_mq(session)
+        if channel_ibm_mq_defs:
+            output_dict['channel_ibm_mq'] = channel_ibm_mq_defs
+
+        # Export IBM MQ outgoing definitions
+        outgoing_ibm_mq_defs = self.export_outgoing_ibm_mq(session)
+        if outgoing_ibm_mq_defs:
+            output_dict['outgoing_ibm_mq'] = outgoing_ibm_mq_defs
+
         # Export Kafka channel definitions
         channel_kafka_defs = self.export_channel_kafka(session)
         if channel_kafka_defs:
@@ -491,6 +533,11 @@ class EnmasseYAMLExporter:
         ldap_defs = self.export_ldap(session)
         if ldap_defs:
             output_dict['ldap'] = ldap_defs
+
+        # Export OData connection definitions
+        odata_defs = self.export_odata(session)
+        if odata_defs:
+            output_dict['odata'] = odata_defs
 
         # Export SFTP connection definitions
         sftp_defs = self.export_sftp(session)

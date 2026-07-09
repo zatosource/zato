@@ -315,6 +315,7 @@
                                                     <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">IBM MQ</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-mcp">MCP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
@@ -338,11 +339,13 @@
                                                 </ul>
                                             </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ibm-mq">IBM MQ</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                             {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "out-odata" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-odata">OData</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                             {% if 0 %}

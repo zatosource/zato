@@ -32,13 +32,16 @@ from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
+from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.channel import mcp as channel_mcp
 from zato.admin.web.views.outgoing import graphql as out_graphql
+from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
+from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
@@ -404,6 +407,21 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. IBM MQ channels
+
+    url(r'^zato/channel/ibm-mq/$',
+        login_required(channel_ibm_mq.Index()), name=channel_ibm_mq.Index.url_name),
+    url(r'^zato/channel/ibm-mq/create/$',
+        login_required(channel_ibm_mq.Create()), name=channel_ibm_mq.Create.url_name),
+    url(r'^zato/channel/ibm-mq/edit/$',
+        login_required(channel_ibm_mq.Edit()), name=channel_ibm_mq.Edit.url_name),
+    url(r'^zato/channel/ibm-mq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_ibm_mq.Delete()), name=channel_ibm_mq.Delete.url_name),
+    url(r'^zato/channel/ibm-mq/change-password/$',
+        login_required(channel_ibm_mq.change_password), name='channel-ibm-mq-change-password'),
+    url(r'^zato/channel/ibm-mq/import-demo-config$',
+        login_required(channel_ibm_mq.import_demo_config), name='channel-ibm-mq-import-demo-config'),
+
     # .. Kafka channels
 
     url(r'^zato/channel/kafka/$',
@@ -452,6 +470,26 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. OData
+
+    url(r'^zato/outgoing/odata/$',
+        login_required(out_odata.Index()), name=out_odata.Index.url_name),
+    url(r'^zato/outgoing/odata/create/$',
+        login_required(out_odata.Create()), name=out_odata.Create.url_name),
+    url(r'^zato/outgoing/odata/edit/$',
+        login_required(out_odata.Edit()), name=out_odata.Edit.url_name),
+    url(r'^zato/outgoing/odata/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odata.Delete()), name=out_odata.Delete.url_name),
+    url(r'^zato/outgoing/odata/change-password/$',
+        login_required(out_odata.change_password), name='out-odata-change-password'),
+    url(r'^zato/outgoing/odata/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odata.ping), name='out-odata-ping'),
     ]
 
 # ################################################################################################################################
@@ -519,6 +557,21 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
+
+    # .. IBM MQ outgoing
+
+    url(r'^zato/outgoing/ibm-mq/$',
+        login_required(out_ibm_mq.Index()), name=out_ibm_mq.Index.url_name),
+    url(r'^zato/outgoing/ibm-mq/create/$',
+        login_required(out_ibm_mq.Create()), name=out_ibm_mq.Create.url_name),
+    url(r'^zato/outgoing/ibm-mq/edit/$',
+        login_required(out_ibm_mq.Edit()), name=out_ibm_mq.Edit.url_name),
+    url(r'^zato/outgoing/ibm-mq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_ibm_mq.Delete()), name=out_ibm_mq.Delete.url_name),
+    url(r'^zato/outgoing/ibm-mq/change-password/$',
+        login_required(out_ibm_mq.change_password), name='out-ibm-mq-change-password'),
+    url(r'^zato/outgoing/ibm-mq/import-demo-config$',
+        login_required(out_ibm_mq.import_demo_config), name='out-ibm-mq-import-demo-config'),
 
     # .. Kafka outgoing
 

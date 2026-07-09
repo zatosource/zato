@@ -115,7 +115,16 @@ def _activate_tab(page:'Page', prefix:'str', tab_name:'str') -> 'None':
     """ Clicks a tab header in the create or edit dialog so the tab's fields become visible.
     """
     container = '#edit-div' if prefix else '#create-div'
+    print(f'QQQ _activate_tab: clicking {container} .dashboard-tab[data-tab="{tab_name}"]')
     page.click(f'{container} .dashboard-tab[data-tab="{tab_name}"]')
+    state = page.evaluate(f'''() => {{
+        var out = [];
+        document.querySelectorAll('{container} .dashboard-tab-panel').forEach(function(el) {{
+            out.push(el.id + ' hidden=' + el.hidden);
+        }});
+        return out.join(', ');
+    }}''')
+    print(f'QQQ _activate_tab: after click panels: {state}')
 
 # ################################################################################################################################
 
@@ -148,7 +157,21 @@ def fill_ibm_mq_channel_form(page:'Page', options:'anydict', prefix:'str'='') ->
                 _activate_tab(page, prefix, field_tab)
                 current_tab = field_tab
 
-            page.select_option(f'#id_{prefix}{field_name}', label=options[field_name])
+            selector = f'#id_{prefix}{field_name}'
+            info = page.evaluate(f'''() => {{
+                var el = document.querySelector('{selector}');
+                if (!el) return 'element not found';
+                var panel = el.closest('.dashboard-tab-panel');
+                var rect = el.getBoundingClientRect();
+                return 'panel=' + (panel ? panel.id + ' hidden=' + panel.hidden : 'none')
+                    + ' rect=' + rect.width + 'x' + rect.height
+                    + ' options=' + el.options.length
+                    + ' display=' + getComputedStyle(el).display
+                    + ' visibility=' + getComputedStyle(el).visibility;
+            }}''')
+            print(f'QQQ select field {selector}: {info}')
+
+            page.select_option(selector, label=options[field_name])
 
     # .. checkboxes, checked via JS because toggle-switch styling covers the inputs ..
     for field_name in _Checkbox_Fields:

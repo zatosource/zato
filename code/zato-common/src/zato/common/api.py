@@ -175,6 +175,7 @@ class API_Key:
 class URL_TYPE:
     SOAP       = 'soap' # Used only by outgoing connections
     PLAIN_HTTP = 'plain_http'
+    AS2        = 'as2'
     AS4        = 'as4'
 
     def __iter__(self):
@@ -227,6 +228,37 @@ class AS4:
 
     # The fields that hold private keys - they are encrypted at rest.
     Secret_Fields = ('as4_signing_key', 'as4_decryption_key')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS2:
+    """ Constants for AS2 channels and outgoing connections.
+    """
+    class Default:
+        Inbound_Topic = 'zato.as2.inbound'
+
+        # For how many days an already-processed Message-ID and its stored MDN
+        # are kept for duplicate detection.
+        Duplicate_Window_Days = 30
+
+        # The channel every server creates on startup for incoming AS2 messages.
+        Channel_Name     = 'zato.channel.as2'
+        Channel_URL_Path = '/zato/as2'
+
+        # The channel every server creates on startup for incoming asynchronous MDNs.
+        MDN_Channel_Name     = 'zato.channel.as2.mdn'
+        MDN_Channel_URL_Path = '/zato/as2/mdn'
+
+    # The AS2 configuration fields shared by channels and outgoing connections.
+    Common_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_peer_signing_cert',
+        'as2_peer_encryption_cert', 'as2_trust_anchors')
+
+    # The fields that only AS2 channels use.
+    Channel_Fields = ('as2_inbound_topic', 'as2_duplicate_window_days')
+
+    # The fields that hold private keys - they are encrypted at rest.
+    Secret_Fields = ('as2_signing_key', 'as2_decryption_key')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -784,6 +816,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_IBM_MQ = 'channel-ibm-mq'
             CHANNEL_MCP = 'channel-mcp'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
@@ -791,13 +824,16 @@ class GENERIC:
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
+            OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_LDAP = 'outconn-ldap'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_GRAPHQL = 'outconn-graphql'
+            OUTCONN_IBM_MQ = 'outconn-ibm-mq'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
+            OUTCONN_ODATA = 'outconn-odata'
             OUTCONN_SFTP = 'outconn-sftp'
             OUTCONN_SMB = 'outconn-smb'
 
@@ -885,6 +921,33 @@ class LDAP:
 
         def __iter__(self):
             return iter((self.EXTERNAL, self.GSSAPI))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODATA:
+
+    class DEFAULT:
+        ODATA_VERSION = '4.0'
+        PAGE_SIZE = 0
+        POOL_SIZE = 1
+        TIMEOUT = 60
+
+    class VERSION:
+        V4 = NameId('OData 4.0', '4.0')
+        V2 = NameId('OData 2.0', '2.0')
+
+        def __iter__(self):
+            return iter((self.V4, self.V2))
+
+    class AUTH_TYPE:
+        NO_AUTH = NameId('No auth', 'no-auth')
+        BASIC   = NameId('Basic', 'basic')
+        BEARER  = NameId('Bearer', 'bearer')
+        OAUTH2  = NameId('OAuth2', 'oauth2')
+
+        def __iter__(self):
+            return iter((self.NO_AUTH, self.BASIC, self.BEARER, self.OAUTH2))
 
 # ################################################################################################################################
 # ################################################################################################################################
