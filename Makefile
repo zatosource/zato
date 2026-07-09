@@ -553,6 +553,18 @@ test-soap: ## SOAP messaging tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-sql-cloud: ## Snowflake and Redshift SQL tests against local protocol simulators - fully offline.
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server against local protocol simulators.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \

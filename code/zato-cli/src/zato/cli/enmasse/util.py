@@ -38,6 +38,8 @@ SQL_TYPE_MAP = {
     'mysql': 'mysql+pymysql',
     'oracle': 'oracle',
     'postgresql': 'postgresql+pg8000',
+    'redshift': 'redshift+redshift_connector',
+    'snowflake': 'snowflake',
 }
 
 # ################################################################################################################################

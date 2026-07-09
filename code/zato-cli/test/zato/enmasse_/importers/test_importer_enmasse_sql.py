@@ -80,8 +80,8 @@ class TestEnmasseSQLFromYAML(TestCase):
         # Process all SQL definitions
         created, updated = self.sql_importer.sync_sql_definitions(sql_defs, self.session)
 
-        # Should have created 2 definitions (based on the number in the template)
-        self.assertEqual(len(created), 2)
+        # Should have created 4 definitions (based on the number in the template)
+        self.assertEqual(len(created), 4)
         self.assertEqual(len(updated), 0)
 
         # Verify SQL connection was created correctly
@@ -142,20 +142,20 @@ class TestEnmasseSQLFromYAML(TestCase):
         # Update importer's SQL definitions
         self.importer.sql_defs = self.sql_importer.sql_defs
 
-        # Verify SQL definitions were created (2 in the template)
-        self.assertEqual(len(sql_created), 2)
+        # Verify SQL definitions were created (4 in the template)
+        self.assertEqual(len(sql_created), 4)
         self.assertEqual(len(sql_updated), 0)
 
         # Verify the SQL definitions dictionary was populated
-        self.assertEqual(len(self.sql_importer.sql_defs), 2)
+        self.assertEqual(len(self.sql_importer.sql_defs), 4)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.sql_defs), 2)
+        self.assertEqual(len(self.importer.sql_defs), 4)
 
         # Try importing the same definitions again - should result in updates, not creations
         sql_created2, sql_updated2 = self.sql_importer.sync_sql_definitions(sql_list, self.session)
         self.assertEqual(len(sql_created2), 0)
-        self.assertEqual(len(sql_updated2), 2)
+        self.assertEqual(len(sql_updated2), 4)
 
 # ################################################################################################################################
 # ################################################################################################################################

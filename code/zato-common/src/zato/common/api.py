@@ -33,6 +33,9 @@ if 0:
 engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
 engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
+# Snowflake has no port segment - the host field holds the account identifier.
+engine_def_snowflake = '{engine}://{username}:{password}@{host}/{db_name}'
+
 # Convenience access functions and constants.
 
 class OS_Env:
@@ -124,6 +127,8 @@ ping_queries = {
     'oracle': 'SELECT 1 FROM dual',
     'postgresql': 'SELECT 1',
     'postgresql+pg8000': 'SELECT 1',
+    'redshift+redshift_connector': 'SELECT 1',
+    'snowflake': 'SELECT 1',
     'sqlite': 'SELECT 1',
 }
 
@@ -135,6 +140,8 @@ engine_display_name = {
     'oracle': 'Oracle',
     'postgresql': 'PostgreSQL',
     'postgresql+pg8000': 'PostgreSQL',
+    'redshift+redshift_connector': 'Amazon Redshift',
+    'snowflake': 'Snowflake',
     'sqlite': 'SQLite',
 }
 

@@ -15,6 +15,7 @@ from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
+from urllib.parse import urlencode
 
 # Bunch
 from zato.common.ext.bunch import Bunch, bunchify
@@ -292,7 +293,42 @@ class SQLConnectionPool:
             except Exception as e:
                 self.logger.error('Failed to decode hex-encoded extra parameter: %s', e)
 
-        _extra.update(parse_extra_into_dict(extra)) # type: ignore
+        extra_parsed = parse_extra_into_dict(extra) # type: ignore
+
+        # Snowflake turns engine URL query parameters into connect arguments,
+        # so everything from the connection's extra goes onto the URL, not into create_engine.
+        snowflake_url_params = {}
+
+        if self.engine_name == 'snowflake':
+
+            # The dialect rejects these keys on the URL - they go through connect_args instead.
+            connect_args = {}
+
+            for key in ('host', 'protocol'):
+                if key in extra_parsed:
+                    connect_args[key] = extra_parsed.pop(key)
+
+            if connect_args:
+                _extra['connect_args'] = connect_args # type: ignore
+
+            snowflake_url_params.update(extra_parsed)
+
+        # Redshift driver options cannot be given to create_engine directly - they belong in connect_args.
+        elif self.engine_name.startswith('redshift'):
+            connect_args = {}
+
+            for key in ('ssl', 'sslmode', 'client_protocol_version'):
+                if key in extra_parsed:
+                    connect_args[key] = extra_parsed.pop(key)
+
+            if connect_args:
+                _extra['connect_args'] = connect_args # type: ignore
+
+            _extra.update(extra_parsed)
+
+        # Any other engine passes its extra options to create_engine as they are.
+        else:
+            _extra.update(extra_parsed)
 
         # SQLite has no pools
         if self.engine_name != 'sqlite':
@@ -301,6 +337,10 @@ class SQLConnectionPool:
                 _extra['poolclass'] = NullPool # type: ignore
 
         engine_url = get_engine_url(self.config)
+
+        # Snowflake receives its extra options as engine URL query parameters.
+        if snowflake_url_params:
+            engine_url = engine_url + '?' + urlencode(snowflake_url_params)
 
         if engine_url.startswith('oracle://'):
             engine_url = engine_url.replace('oracle://', 'oracle+oracledb://')
