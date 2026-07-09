@@ -41,7 +41,8 @@ class AuditSource:
     PubSub = 'pubsub'
     REST_Channel = 'rest-channel'
     SOAP_Channel = 'soap-channel'
-    Rest_Outgoing = 'rest-outgoing'
+    REST_Outgoing = 'rest-outgoing'
+    SOAP_Outgoing = 'soap-outgoing'
     Email_IMAP = 'email-imap'
 
 # ################################################################################################################################

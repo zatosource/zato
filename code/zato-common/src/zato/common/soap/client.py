@@ -16,6 +16,7 @@ from lxml import etree
 import requests
 
 # Zato
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.soap.addressing import add_addressing, AddressingInfo, parse_addressing
 from zato.common.soap.common import Content_Type, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
@@ -76,6 +77,10 @@ class SOAPClient:
         self.body_credentials  = config.get('body_credentials')
 
         self.session = requests.Session()
+
+        # An owning connection wrapper may plug the client into the audit log here -
+        # standalone clients, e.g. in tests, run without one.
+        self.audit_callback = None
 
 # ################################################################################################################################
 
@@ -278,7 +283,37 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def invoke(self, operation:'str', message:'SOAPMessage') -> 'SOAPMessage':
+    def _audited_post(self, cid:'str', endpoint:'str', body:'bytes', content_type:'str') -> 'any_':
+        """ Sends one request through the audit log - the outgoing body, a transport-level
+        failure and the raw response are each recorded before the caller parses anything,
+        so fault envelopes are captured too. Returns the raw requests response.
+        """
+
+        # The request goes out exactly as recorded here ..
+        if self.audit_callback:
+            self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, body)
+
+        try:
+            out = self._post(body, content_type)
+        except Exception as e:
+
+            # .. a transport-level failure means no response ever arrived ..
+            if self.audit_callback:
+                self.audit_callback(cid, AuditEvent.Response_Received, endpoint, AuditOutcome.Error, str(e))
+
+            # .. which the caller still needs to see.
+            raise
+
+        # .. a fault envelope arrives with an HTTP error status, hence the outcome from response.ok.
+        if self.audit_callback:
+            outcome = AuditOutcome.OK if out.ok else AuditOutcome.Error
+            self.audit_callback(cid, AuditEvent.Response_Received, endpoint, outcome, out.content)
+
+        return out
+
+# ################################################################################################################################
+
+    def invoke(self, operation:'str', message:'SOAPMessage', cid:'str'='') -> 'SOAPMessage':
         """ Invokes a SOAP operation - builds the request from the message, sends it and returns
         the parsed response body. The operation name becomes the single child of soap:Body.
         """
@@ -286,7 +321,7 @@ class SOAPClient:
 
         logger.info('SOAP out -> %s %s; len=%d', operation, self.address, len(body))
 
-        response = self._post(body, content_type)
+        response = self._audited_post(cid, f'{operation} {self.address}', body, content_type)
 
         logger.info('SOAP out <- %s; %s len=%d', operation, response.status_code, len(response.content))
 
@@ -301,6 +336,7 @@ class SOAPClient:
         parts:'part_list',
         sign:'bool'=False,
         encrypt:'bool'=False,
+        cid:'str'='',
         ) -> 'any_':
         """ Sends an ebXML Message Service message - the envelope carries the message header
         and a manifest, the payloads travel as MIME parts, each optionally signed and encrypted
@@ -327,7 +363,7 @@ class SOAPClient:
         envelope_bytes = to_bytes(envelope)
         body, content_type = build_swa(envelope_bytes, parts, SOAPVersion.V11)
 
-        response = self._post(body, content_type)
+        response = self._audited_post(cid, f'{info.action} {self.address}', body, content_type)
 
         response_envelope_bytes, _ = parse_message(response.content, response.headers.get('Content-Type', ''))
         response_envelope = parse_envelope(response_envelope_bytes)

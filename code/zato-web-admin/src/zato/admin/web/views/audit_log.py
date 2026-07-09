@@ -57,6 +57,7 @@ _source_title = {
     'rest-channel': 'REST channel audit log',
     'soap-channel': 'SOAP channel audit log',
     'rest-outgoing': 'Outgoing REST audit log',
+    'soap-outgoing': 'Outgoing SOAP audit log',
     'email-imap': 'IMAP audit log',
 }
 
@@ -102,6 +103,16 @@ _rest_outgoing_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_soap_outgoing_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 _email_imap_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -119,6 +130,7 @@ _source_columns = {
     'rest-channel': _rest_channel_columns,
     'soap-channel': _soap_channel_columns,
     'rest-outgoing': _rest_outgoing_columns,
+    'soap-outgoing': _soap_outgoing_columns,
     'email-imap': _email_imap_columns,
 }
 

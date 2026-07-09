@@ -125,11 +125,10 @@ class BaseHTTPSOAPWrapper:
         self.base_headers = {}
         self.sec_type = self.config['sec_type']
 
-        # Only user-defined outgoing REST connections go to the audit log - SOAP connections,
+        # Only user-defined outgoing REST and SOAP connections go to the audit log -
         # internal ones and wrapper-prefixed ones would only flood it.
-        is_rest = self.config['transport'] == URL_TYPE.PLAIN_HTTP
         is_wrapper_name = self.config['name'].startswith(tuple(Wrapper_Name_Prefix_List))
-        self.needs_audit = (server is not None) and is_rest and (not self.config['is_internal']) and (not is_wrapper_name)
+        self.needs_audit = (server is not None) and (not self.config['is_internal']) and (not is_wrapper_name)
 
         if self.needs_audit:
             self.audit_log = AuditLog(server.name)
@@ -204,7 +203,8 @@ class BaseHTTPSOAPWrapper:
         outcome:'str',
         data:'any_',
     ) -> 'None':
-        """ Writes one audit event describing a request sent to or a response received from an outgoing REST connection.
+        """ Writes one audit event describing a request sent to or a response received
+        from an outgoing REST or SOAP connection.
         """
 
         # Payloads may be bytes by the time they are sent out,
@@ -216,9 +216,15 @@ class BaseHTTPSOAPWrapper:
         if not isinstance(data, str):
             data = str(data)
 
+        # .. the source depends on the connection's transport ..
+        if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
+            source = AuditSource.REST_Outgoing
+        else:
+            source = AuditSource.SOAP_Outgoing
+
         # .. now, write out the event.
         self.audit_log.insert(
-            AuditSource.Rest_Outgoing,
+            source,
             event_type,
             self.config['name'],
             cid=cid,
@@ -746,7 +752,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 security['password'] = password
             config['security'] = security
 
-        return SOAPClient(config)
+        out = SOAPClient(config)
+
+        # The client records what it sends and receives - it is the layer where
+        # the raw envelope bytes exist in both directions.
+        if self.needs_audit:
+            out.audit_callback = self._insert_audit_event
+
+        return out
 
 # ################################################################################################################################
 
@@ -770,7 +783,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('SOAP out -> cid=%s; %s %s; name:%s', cid, operation, self.address, self.config['name'])
 
-        return self.soap_client.invoke(operation, message)
+        return self.soap_client.invoke(operation, message, cid=cid)
 
 # ################################################################################################################################
 
@@ -782,7 +795,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('ebXML out -> cid=%s; %s; name:%s', cid, self.address, self.config['name'])
 
-        return self.soap_client.invoke_ebxml(info, parts, sign=sign, encrypt=encrypt)
+        return self.soap_client.invoke_ebxml(info, parts, sign=sign, encrypt=encrypt, cid=cid)
 
 # ################################################################################################################################
 
