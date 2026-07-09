@@ -1021,29 +1021,41 @@ TERMINATE = b'X'
 CLOSE = b'C'
 
 
-def _establish_ssl(_socket, ssl_params):
-    if not isinstance(ssl_params, dict):
-        ssl_params = {}
-
+def _establish_ssl(_socket, ssl_params, host=None):
     try:
         import ssl as sslmodule
 
-        keyfile = ssl_params.get('keyfile')
-        certfile = ssl_params.get('certfile')
-        ca_certs = ssl_params.get('ca_certs')
-        if ca_certs is None:
-            verify_mode = sslmodule.CERT_NONE
+        # An ssl.SSLContext instance is used as-is, otherwise one is built
+        # out of the legacy dict parameters.
+        if isinstance(ssl_params, sslmodule.SSLContext):
+            context = ssl_params
         else:
-            verify_mode = sslmodule.CERT_REQUIRED
+            if not isinstance(ssl_params, dict):
+                ssl_params = {}
+
+            keyfile = ssl_params.get('keyfile')
+            certfile = ssl_params.get('certfile')
+            ca_certs = ssl_params.get('ca_certs')
+
+            if ca_certs is None:
+                context = sslmodule.SSLContext(sslmodule.PROTOCOL_TLS_CLIENT)
+                context.check_hostname = False
+                context.verify_mode = sslmodule.CERT_NONE
+            else:
+                context = sslmodule.create_default_context(cafile=ca_certs)
+
+            if certfile is not None:
+                context.load_cert_chain(certfile, keyfile)
 
         # Int32(8) - Message length, including self.
         # Int32(80877103) - The SSL request code.
         _socket.sendall(ii_pack(8, 80877103))
         resp = _socket.recv(1)
         if resp == b'S':
-            return sslmodule.wrap_socket(
-                _socket, keyfile=keyfile, certfile=certfile,
-                cert_reqs=verify_mode, ca_certs=ca_certs)
+            if context.check_hostname:
+                return context.wrap_socket(_socket, server_hostname=host)
+            else:
+                return context.wrap_socket(_socket)
         else:
             raise InterfaceError("Server refuses SSL")
     except ImportError:
@@ -1167,7 +1179,7 @@ class Connection():
                 self._usock.connect(unix_sock)
 
             if ssl:
-                self._usock = _establish_ssl(self._usock, ssl)
+                self._usock = _establish_ssl(self._usock, ssl, host)
 
             self._sock = self._usock.makefile(mode="rwb")
             if tcp_keepalive:
