@@ -49,6 +49,7 @@ _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
 _template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
 _services_path = os.path.join(os.path.dirname(__file__), '_services.py')
+_compat_services_path = os.path.join(os.path.dirname(__file__), '_compat_services.py')
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
@@ -240,6 +241,7 @@ def zato_server() -> 'any_':
     # Render the enmasse template ..
     placeholders = {
         'bc_address': bc_server.service_root + '/',
+        'bc_host': bc_server.address,
         's4_address': s4_server.service_root + '/',
         'odata_password': odata_password,
     }
@@ -295,6 +297,7 @@ def zato_server() -> 'any_':
     # Hot-deploy the test services ..
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     shutil.copy2(_services_path, os.path.join(pickup_directory, 'odata_test_services.py'))
+    shutil.copy2(_compat_services_path, os.path.join(pickup_directory, 'odata_compat_services.py'))
 
     # Patch server.conf so CLI commands use the dynamic port ..
     server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')

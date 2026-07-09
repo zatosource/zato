@@ -1,3 +1,42 @@
+security:
+
+  - name: test.compat.basic_auth
+    type: basic_auth
+    username: test.odata.user
+    password: "{{odata_password}}"
+
+outgoing_rest:
+
+  - name: test.compat.discounts
+    host: {{bc_host}}
+    url_path: /v2.0/test-tenant/{env}/api/v2.0/companies({company})/discounts
+    security: test.compat.basic_auth
+    data_format: json
+
+  - name: test.compat.discount-entry
+    host: {{bc_host}}
+    url_path: /v2.0/test-tenant/{env}/api/v2.0/companies({company})/discounts({entry})
+    security: test.compat.basic_auth
+    data_format: json
+
+  - name: test.compat.invoice-rates
+    host: {{bc_host}}
+    url_path: /v2.0/test-tenant/{env}/api/v2.0/companies({company})/invoiceRates
+    security: test.compat.basic_auth
+    data_format: json
+
+  - name: test.compat.orders
+    host: {{bc_host}}
+    url_path: /v2.0/test-tenant/{env}/api/v2.0/companies({company})/salesOrders
+    security: test.compat.basic_auth
+    data_format: json
+
+  - name: test.compat.xml-import
+    host: {{bc_host}}
+    url_path: /v2.0/test-tenant/{env}/api/v2.0/xmlImport
+    security: test.compat.basic_auth
+    data_format: json
+
 odata:
 
   - name: test.odata.bc
