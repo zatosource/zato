@@ -261,6 +261,9 @@ class RESTInvoker:
         self.conn = conn
         self.container = container
 
+    def __repr__(self) -> 'str':
+        return f'RESTInvoker({self.conn.config["name"]} at {hex(id(self))})'
+
 # ################################################################################################################################
 
     def call_rest_func(self, func_name:'str', conn_name:'str', *args:'any_', **kwargs:'str') -> 'any_':
