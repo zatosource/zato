@@ -132,3 +132,75 @@ class TestOutgoingSQL:
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
         test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
         assert len(test_items) == 0
+
+    def test_13_create_snowflake(self, client):
+        resp = client.create(f'{SERVICE}.create',
+            cluster_id=1,
+            name='test-out-sql-snowflake',
+            is_active=True,
+            engine='snowflake',
+            host='myorg-myaccount',
+            port=443,
+            db_name='testdb',
+            username='testuser',
+            pool_size=1,
+            extra='warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC',
+        )
+        assert 'id' in resp
+        assert resp['name'] == 'test-out-sql-snowflake'
+        self.__class__.created_ids.append(resp['id'])
+
+    def test_14_create_redshift(self, client):
+        resp = client.create(f'{SERVICE}.create',
+            cluster_id=1,
+            name='test-out-sql-redshift',
+            is_active=True,
+            engine='redshift+redshift_connector',
+            host='examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com',
+            port=5439,
+            db_name='testdb',
+            username='testuser',
+            pool_size=1,
+            extra='sslmode=verify-ca',
+        )
+        assert 'id' in resp
+        assert resp['name'] == 'test-out-sql-redshift'
+        self.__class__.created_ids.append(resp['id'])
+
+    def test_15_get_list_cloud_engines(self, client):
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        by_name = {item['name']: item for item in data}
+
+        assert by_name['test-out-sql-snowflake']['engine'] == 'snowflake'
+        assert by_name['test-out-sql-redshift']['engine'] == 'redshift+redshift_connector'
+
+    def test_16_edit_snowflake(self, client):
+        item_id = self.__class__.created_ids[0]
+        resp = client.edit(f'{SERVICE}.edit',
+            id=item_id,
+            cluster_id=1,
+            name='test-out-sql-snowflake-edited',
+            is_active=True,
+            engine='snowflake',
+            host='myorg-myaccount2',
+            port=443,
+            db_name='testdb2',
+            username='testuser',
+            pool_size=2,
+            extra='warehouse=BATCH_WH;schema=STAGING',
+        )
+        assert resp['id'] == item_id
+
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        names = [item['name'] for item in data]
+        assert 'test-out-sql-snowflake-edited' in names
+        assert 'test-out-sql-snowflake' not in names
+
+    def test_17_delete_cloud_engines(self, client):
+        for item_id in self.__class__.created_ids[:]:
+            client.delete(f'{SERVICE}.delete', id=item_id)
+            self.__class__.created_ids.remove(item_id)
+
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1)
+        test_items = [item for item in data if item['name'].startswith('test-out-sql-')]
+        assert len(test_items) == 0

@@ -96,7 +96,7 @@ if PY3:
     from functools import cmp_to_key
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, MISC, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_snowflake, engine_def_sqlite, MISC, \
      Secret_Shadow, IO, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN
 from zato.common.broker_message import HOT_DEPLOY, SERVICE
 from zato.common.const import SECRETS, ServiceConst
@@ -1410,7 +1410,20 @@ def get_engine_url(args):
         if sqlite_path:
             attrs['db_name'] = sqlite_path
 
-    return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+    # Pick the URL template for the engine ..
+    if is_sqlite:
+        template = engine_def_sqlite
+
+    # .. Snowflake keeps the account identifier in the host field and has no port segment ..
+    elif attrs['engine'] == 'snowflake':
+        template = engine_def_snowflake
+
+    # .. anything else uses the standard host:port template.
+    else:
+        template = engine_def
+
+    out = template.format(**attrs)
+    return out
 
 # ################################################################################################################################
 

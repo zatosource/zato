@@ -27,7 +27,7 @@ actix-web = "4.13.0"
 libmqm-sys = { version = "0.10", default-features = false, features = ["dlopen2", "mqc_9_3_0_0"], optional = true }
 # The mqai feature is needed because mqi 0.3.0 does not compile without it
 mqi = { version = "0.3", default-features = false, features = ["dlopen2", "mqai", "mqc_9_3_0_0"], optional = true }
-openssl = { version = "0.10", optional = true }
+openssl = { version = "0.10.80", optional = true }
 parking_lot = "0.12"
 rdkafka = { version = "0.38", features = ["tokio"], optional = true }
 redis = "1.2.0"

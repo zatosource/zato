@@ -84,6 +84,7 @@ python-magic==0.4.27
 pytz==2025.2
 pyyaml==6.0.2
 redis==6.1.0
+redshift_connector==2.1.15
 regex==2022.3.2
 requests==2.33.0
 requests-ntlm==1.2.0
@@ -91,10 +92,14 @@ requests-toolbelt==0.9.1
 rule-engine==4.5.3
 sarge==0.1.7.post1
 setproctitle==1.3.2
+setuptools==80.9.0
 simple-parsing==0.0.17
 smbprotocol==1.17.0
+snowflake-connector-python==4.6.0
+snowflake-sqlalchemy==1.11.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.54
+sqlalchemy-redshift==0.8.14
 sqlalchemy2-stubs==0.0.2a38
 stroll==1.1.0
 stevedore==3.5.0
