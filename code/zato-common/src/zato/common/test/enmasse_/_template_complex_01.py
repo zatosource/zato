@@ -341,6 +341,26 @@ ldap:
     server_list: 127.0.0.1:389
     password: Zato_Enmasse_Env.Enmasse_LDAP_Password
 
+odata:
+
+  - name: enmasse.odata.1
+    address: https://example.com/sap/opu/odata/sap/API_SALES_ORDER_SRV/
+    odata_version: '2.0'
+    auth_type: basic
+    username: enmasse.odata.user.1
+    needs_csrf_token: true
+    secret: Zato_Enmasse_Env.Enmasse_OData_Secret
+
+  - name: enmasse.odata.2
+    address: https://example.com/v2.0/test-tenant/sandbox/api/v2.0/
+    odata_version: '4.0'
+    auth_type: oauth2
+    token_url: https://login.example.com/test-tenant/oauth2/v2.0/token
+    tenant_id: test-tenant
+    client_id: enmasse-odata-client-1
+    scopes: https://api.businesscentral.dynamics.com/.default
+    client_secret: Zato_Enmasse_Env.Enmasse_OData_Client_Secret
+
 sql:
 
   - name: enmasse.sql.1

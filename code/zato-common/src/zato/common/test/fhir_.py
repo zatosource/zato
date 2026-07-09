@@ -90,6 +90,12 @@ _token_lifetime = 3600
 # The only grant type the token endpoint implements
 _grant_type_client_credentials = 'client_credentials'
 
+# The bundle types the base-URL POST interaction accepts, per the spec's transaction interaction
+_bundle_request_types = {
+    'transaction': 'transaction-response',
+    'batch': 'batch-response',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -918,8 +924,167 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 
 # ################################################################################################################################
 
+    def _rewrite_references(self, node:'any_', url_map:'strstrdict') -> 'None':
+        """ Replaces every urn:uuid reference in a resource with the server location it now lives at.
+        """
+        if isinstance(node, dict):
+            for key in node:
+                value = node[key]
+
+                if key == 'reference':
+                    if isinstance(value, str):
+                        if value in url_map:
+                            node[key] = url_map[value]
+                            continue
+
+                self._rewrite_references(value, url_map)
+
+        elif isinstance(node, list):
+            for item in node:
+                self._rewrite_references(item, url_map)
+
+# ################################################################################################################################
+
+    def _apply_bundle_entry(self, entry:'stranydict') -> 'stranydict':
+        """ Applies one bundle entry per its request method and returns its response entry.
+        """
+        request = entry['request']
+        method = request['method']
+        url = request['url']
+
+        # A create stores the resource under the ID assigned during reference resolution ..
+        if method == 'POST':
+            resource = entry['resource']
+            resource_type = resource['resourceType']
+            resource_id = resource['id']
+
+            _ = self.server.store.put(resource_type, resource_id, resource)
+
+            version_id = resource['meta']['versionId']
+            location = f'{resource_type}/{resource_id}/_history/{version_id}'
+
+            out = {'response': {'status': '201 Created', 'location': location}}
+            return out
+
+        # .. an update stores the resource under the ID its URL names ..
+        if method == 'PUT':
+            resource = entry['resource']
+            resource_type, resource_id = url.split('/', 1)
+
+            resource['id'] = resource_id
+            was_created = self.server.store.put(resource_type, resource_id, resource)
+
+            version_id = resource['meta']['versionId']
+            location = f'{resource_type}/{resource_id}/_history/{version_id}'
+
+            if was_created:
+                status = '201 Created'
+            else:
+                status = '200 OK'
+
+            out = {'response': {'status': status, 'location': location}}
+            return out
+
+        # .. a delete removes what its URL names ..
+        if method == 'DELETE':
+            resource_type, resource_id = url.split('/', 1)
+            _ = self.server.store.delete(resource_type, resource_id)
+
+            out = {'response': {'status': '204 No Content'}}
+            return out
+
+        # .. a read returns what its URL names ..
+        if method == 'GET':
+            resource_type, resource_id = url.split('/', 1)
+            result = self.server.store.read(resource_type, resource_id)
+
+            if result.resource is None:
+                out = {'response': {'status': '404 Not Found'}}
+            else:
+                out = {'response': {'status': '200 OK'}, 'resource': result.resource}
+
+            return out
+
+        # .. and anything else is not a method bundles may carry.
+        out = {'response': {'status': '400 Bad Request'}}
+        return out
+
+# ################################################################################################################################
+
+    def _handle_bundle(self) -> 'None':
+        """ Handles the transaction and batch interactions - a Bundle posted to the base URL.
+        Each entry is processed per its request method and urn:uuid fullUrl references
+        resolve to the IDs the server assigns, across all the entries.
+        """
+        bundle = self._read_body()
+        if bundle is None:
+            return
+
+        # Only bundles belong at the base URL ..
+        body_type = bundle.get('resourceType')
+        if body_type != 'Bundle':
+            self._send_outcome(BAD_REQUEST, 'invalid', f'Expected a Bundle at the base URL, not `{body_type}`')
+            return
+
+        # .. and only the transaction and batch kinds.
+        bundle_type = bundle.get('type')
+        if bundle_type not in _bundle_request_types:
+            diagnostics = f'Expected a transaction or batch Bundle, not `{bundle_type}`'
+            self._send_outcome(BAD_REQUEST, 'invalid', diagnostics)
+            return
+
+        entries = bundle.get('entry')
+        if entries is None:
+            entries = []
+
+        # First pass - assign a server ID to every resource created by the bundle,
+        # so that urn:uuid references can point at the right location before anything is stored.
+        url_map:'strstrdict' = {}
+
+        for entry in entries:
+            request = entry.get('request')
+            if not request:
+                diagnostics = 'Each entry of a transaction or batch needs a request'
+                self._send_outcome(BAD_REQUEST, 'invalid', diagnostics)
+                return
+
+            if request['method'] == 'POST':
+                resource = entry['resource']
+                resource_type = resource['resourceType']
+
+                resource_id = uuid4().hex
+                resource['id'] = resource_id
+
+                full_url = entry.get('fullUrl')
+                if full_url:
+                    if full_url.startswith('urn:uuid:'):
+                        url_map[full_url] = f'{resource_type}/{resource_id}'
+
+        # Second pass - resolve the references now that all the IDs are known ..
+        for entry in entries:
+            if 'resource' in entry:
+                self._rewrite_references(entry['resource'], url_map)
+
+        # .. third pass - apply each entry and collect its response.
+        response_entries:'dictlist' = []
+
+        for entry in entries:
+            response_entry = self._apply_bundle_entry(entry)
+            response_entries.append(response_entry)
+
+        response = {
+            'resourceType': 'Bundle',
+            'id': uuid4().hex,
+            'type': _bundle_request_types[bundle_type],
+            'entry': response_entries,
+        }
+
+        self._send_json(OK, response)
+
+# ################################################################################################################################
+
     def do_POST(self) -> 'None': # noqa: N802
-        """ Handles the create interaction and, if OAuth is configured, the token endpoint.
+        """ Handles the create and transaction interactions and, if OAuth is configured, the token endpoint.
         """
         if not self._check_auth():
             return
@@ -936,7 +1101,12 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
         segments, _ = self._split_path()
         segment_count = len(segments)
 
-        # Create is the only POST interaction this server implements
+        # A POST to the base URL is a transaction or batch Bundle
+        if segment_count == 0:
+            self._handle_bundle()
+            return
+
+        # Otherwise, create is the POST interaction this server implements
         if segment_count != 1:
             self._send_outcome(NOT_FOUND, 'not-found', f'Unrecognized path -> {self.path}')
             return
@@ -1065,7 +1235,8 @@ class _FHIRRequestHandler(BaseHTTPRequestHandler):
 
 class FHIRTestServer:
     """ An in-memory FHIR R4 server for use in tests, listening on the loopback interface only.
-    It implements the spec's RESTful API - capabilities, create, read, vread, update, delete and search -
+    It implements the spec's RESTful API - capabilities, create, read, vread, update, delete, search
+    and the transaction and batch interactions with urn:uuid reference resolution -
     with resource versioning, searchset Bundles and OperationOutcome errors. Authentication is optional
     and matches what the FHIR outgoing connection supports - Basic Auth, or OAuth bearer tokens issued
     by the server's own RFC 6749 token endpoint, with the credentials acting as client_id and client_secret.

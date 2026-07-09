@@ -34,6 +34,10 @@ _segment_classes:'strtypedict'  = {}
 # to avoid circular imports (v2_9 imports from base, base cannot import v2_9 at module level).
 _v2_9_module:'any_' = None
 
+# Deferred reference to the zato.hl7.mappings module, populated on first use so that
+# parsing HL7 messages does not pull in the FHIR model until to_fhir is actually called.
+_mappings_module:'any_' = None
+
 # The standard MSH-2 encoding characters, used when a message is built
 # from scratch without assigning MSH-2 explicitly. Real-world senders may
 # use fewer characters (e.g. '^~&' with no escape character), in which case
@@ -110,6 +114,20 @@ def _get_v2_9_module() -> 'any_':
         _v2_9_module = module
 
     out = _v2_9_module
+    return out
+
+# ################################################################################################################################
+
+def _get_mappings_module() -> 'any_':
+    """ Return the zato.hl7.mappings module, importing it on first call.
+    """
+    global _mappings_module
+
+    if _mappings_module is None:
+        import zato.hl7.mappings as module
+        _mappings_module = module
+
+    out = _mappings_module
     return out
 
 # ################################################################################################################################
@@ -1394,6 +1412,37 @@ class HL7Message:
         """ Set a value by dotted path.
         """
         _set_by_path(self, path, value)
+
+# ################################################################################################################################
+
+    def to_fhir(self, config:'strnone' = None) -> 'any_':
+        """ Convert this message to a typed FHIR bundle.
+        The config argument names an .ini file with site-specific overrides, or is a path to one.
+        """
+        mappings = _get_mappings_module()
+
+        out = mappings.convert_to_fhir(self, config)
+        return out
+
+# ################################################################################################################################
+
+    def to_fhir_dict(self, config:'strnone' = None) -> 'stranydict':
+        """ Convert this message to a FHIR bundle returned as a dictionary.
+        """
+        bundle = self.to_fhir(config)
+
+        out = bundle.to_dict()
+        return out
+
+# ################################################################################################################################
+
+    def to_fhir_json(self, config:'strnone' = None, indent:'intnone' = None) -> 'str':
+        """ Convert this message to a FHIR bundle returned as a JSON string.
+        """
+        bundle = self.to_fhir(config)
+
+        out = bundle.to_json(indent=indent)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

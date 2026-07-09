@@ -35,6 +35,7 @@ from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.reqresp.payload import IOPayload
+from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
@@ -91,6 +92,7 @@ _content_type_json = CONTENT_TYPE['JSON']
 _content_type_sse = 'text/event-stream'
 _transport_plain_http = URL_TYPE.PLAIN_HTTP
 _transport_soap = URL_TYPE.SOAP
+_transport_as2 = URL_TYPE.AS2
 _transport_as4 = URL_TYPE.AS4
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
@@ -466,6 +468,11 @@ class RequestDispatcher:
             out = self._handle_as4_channel(cid, channel_item, wsgi_environ, payload)
             return out
 
+        # .. and so do AS2 channels with the AS2 inbound pipeline ..
+        if channel_item['transport'] == _transport_as2:
+            out = self._handle_as2_channel(cid, channel_item, wsgi_environ, payload)
+            return out
+
         # .. invoke the service ..
         response = self._invoke_service(
             cid, meta, url_match, channel_item, wsgi_environ,
@@ -508,6 +515,56 @@ class RequestDispatcher:
 
         # What goes back is always a SOAP document - a receipt or an error signal.
         wsgi_environ['zato.http.response.headers']['Content-Type'] = result.content_type
+        wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
+
+        out = result.body
+        return out
+
+# ################################################################################################################################
+
+    def _handle_as2_channel(
+        self,
+        cid:'str',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+    ) -> 'bytes':
+        """ Runs one incoming request through the AS2 inbound pipeline of the matched channel,
+        returning the MDN the sender asked for - a positive one or one with an error disposition.
+        """
+
+        # The runtime lives as long as this channel_item does -
+        # a configuration change rebuilds the item, which rebuilds the runtime.
+        runtime = channel_item.get('as2_runtime')
+
+        if runtime is None:
+            runtime = AS2ChannelRuntime(self.server, channel_item)
+            channel_item['as2_runtime'] = runtime
+
+        # The pipeline works with the raw wire bytes.
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
+
+        # The AS2 identities and the MIME headers of the top-level entity
+        # all travel as HTTP headers, which WSGI spells with the HTTP_ prefix ..
+        headers:'stranydict' = {}
+
+        for key, value in wsgi_environ.items():
+            if key.startswith('HTTP_'):
+                header_name = key[5:].replace('_', '-').lower()
+                headers[header_name] = value
+
+        # .. except for Content-Type, which WSGI keeps under its own key.
+        if content_type := wsgi_environ.get('CONTENT_TYPE'):
+            headers['content-type'] = content_type
+
+        result = runtime.handle(cid, payload, headers)
+
+        # What goes back is the MDN's own headers and body - or an empty response
+        # when no MDN was requested or an asynchronous one is to follow.
+        for name, value in result.headers.items():
+            wsgi_environ['zato.http.response.headers'][name] = value
+
         wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
 
         out = result.body

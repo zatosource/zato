@@ -90,6 +90,9 @@ extra_secret_keys = (
     'consumer_key',
     'consumer_secret',
 
+    # OData
+    'client_secret',
+
 )
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of I/O.
@@ -101,6 +104,7 @@ extra_simple_type = {
 skip_simple_type = {
     'api_version',
     'group_id',
+    'odata_version',
 }
 
 # ################################################################################################################################
