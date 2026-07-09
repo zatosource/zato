@@ -20,6 +20,14 @@ class AS2Error:
     Unexpected_Processing_Error   = 'unexpected-processing-error'
     Decompression_Failed          = 'decompression-failed'
 
+    # The additional registry modifiers of the AS2 specification modernization draft,
+    # recognized on input as known values.
+    Duplicate_Filename            = 'duplicate-filename'
+    Illegal_Filename              = 'illegal-filename'
+    Invalid_Message_ID            = 'invalid-message-id'
+    Unknown_Trading_Relationship  = 'unknown-trading-relationship'
+    Unknown_Trading_Partner       = 'unknown-trading-partner'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -27,6 +35,7 @@ class Failure:
     """ Failure descriptions for "failed/Failure:" dispositions, which RFC 4130 reserves
     for problems with the MDN request itself rather than with content processing.
     """
+    Unsupported_Format         = 'unsupported format'
     Unsupported_MIC_Algorithms = 'unsupported MIC-algorithms'
 
 # ################################################################################################################################
