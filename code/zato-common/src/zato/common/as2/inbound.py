@@ -453,6 +453,10 @@ def handle(
     else:
         part.content_transfer_encoding = _default_transfer_encoding
 
+    # An unwrapped payload carries its filename directly on the HTTP headers.
+    if content_disposition := lowered.get('content-disposition'):
+        part.content_disposition = content_disposition
+
     try:
         # Reverse the security layers and compute the MIC on the way ..
         part = _process_layers(out, part, partnership, keystore, request.mic_algorithms)

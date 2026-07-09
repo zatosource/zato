@@ -118,6 +118,11 @@ class Partnership:
     ack_overdue_after: int = 0
     resend_max_retries: int = 0
 
+    # Where this partner's inbound documents are routed - either one overrides
+    # the channel's own routing target when set, with the service taking precedence.
+    inbound_topic:   str = ''
+    inbound_service: str = ''
+
 # ################################################################################################################################
 # ################################################################################################################################
 
