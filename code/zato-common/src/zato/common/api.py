@@ -242,6 +242,9 @@ class AS2:
         # are kept for duplicate detection.
         Duplicate_Window_Days = 30
 
+        # How many pooled connections one outgoing AS2 connection keeps.
+        Pool_Size = 1
+
         # The channel every server creates on startup for incoming AS2 messages.
         Channel_Name     = 'zato.channel.as2'
         Channel_URL_Path = '/zato/as2'

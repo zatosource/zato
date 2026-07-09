@@ -36,6 +36,7 @@ from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
+from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
 from zato.cli.enmasse.importers.odata import ODataImporter
@@ -81,6 +82,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.graphql',
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
+                        'zato.cli.enmasse.importers.as2',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
                         'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
@@ -130,6 +132,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
+        self.outgoing_as2_defs = {}
         self.outgoing_as4_defs = {}
         self.pubsub_topic_defs = {}
         self.pubsub_permission_defs = {}
@@ -171,6 +174,7 @@ class EnmasseYAMLImporter:
         self.microsoft_365_importer = Microsoft365Importer(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
+        self.as2_importer = AS2Importer(self)
         self.outgoing_as4_importer = OutgoingAS4Importer(self)
         self.pubsub_topic_importer = PubSubTopicImporter(self)
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
@@ -608,6 +612,30 @@ class EnmasseYAMLImporter:
         logger.info('Processed LDAP connection definitions: created=%d updated=%d', len(ldap_created), len(ldap_updated))
 
         return ldap_created, ldap_updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_as2(self, as2_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes outgoing AS2 connection definitions from a YAML configuration with the database.
+        """
+        if not as2_list:
+            return [], []
+
+        count = len(as2_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} outgoing AS2 connection {noun}')
+
+        # Examine each outgoing AS2 connection item
+        for idx, item in enumerate(as2_list):
+            logger.info('Outgoing AS2 connection item %d: %s', idx, item)
+
+        as2_created, as2_updated = self.as2_importer.sync_definitions(as2_list, session)
+
+        # Get outgoing AS2 definitions from the AS2 importer
+        self.outgoing_as2_defs = self.as2_importer.connection_defs
+        logger.info('Processed outgoing AS2 connection definitions: created=%d updated=%d', len(as2_created), len(as2_updated))
+
+        return as2_created, as2_updated
 
 # ################################################################################################################################
 
@@ -1260,6 +1288,13 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:
             self.updated_objects['outgoing_soap'] = outgoing_soap_updated
+
+        # Process outgoing AS2 connection definitions
+        outgoing_as2_created, outgoing_as2_updated = self.sync_outgoing_as2(yaml_config.get('outgoing_as2', []), session)
+        if outgoing_as2_created:
+            self.created_objects['outgoing_as2'] = outgoing_as2_created
+        if outgoing_as2_updated:
+            self.updated_objects['outgoing_as2'] = outgoing_as2_updated
 
         # Process outgoing AS4 connection definitions
         outgoing_as4_created, outgoing_as4_updated = self.sync_outgoing_as4(yaml_config.get('outgoing_as4', []), session)
