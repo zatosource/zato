@@ -34,6 +34,7 @@ from zato.common.as2.common import AS2Error, AS2Exception, AS2ProtocolException,
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.core import XMLSecurityException
+from zato.common.util.xml_.keystore import active_decryption_entries
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 from zato.common.util.xml_.wssec import validate_certificate_chain
 
@@ -58,6 +59,7 @@ if 0:
 # ################################################################################################################################
 
 der_element_list = list['DERElement']
+decryption_candidate_list = list['DecryptionCandidate']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,6 +120,27 @@ class DERElement(NamedTuple):
     header_offset: int
     content_offset: int
     length: int
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DecryptionCandidate(NamedTuple):
+    """ One certificate-and-key pair an incoming message may be encrypted to -
+    during a rotation window of our own key there is more than one.
+    """
+    certificate: 'Certificate'
+    key: 'RSAPrivateKey'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RecipientMatch(NamedTuple):
+    """ The certificate-and-key pair a recipient entry named, along with the encrypted
+    content key that entry carries.
+    """
+    certificate: 'Certificate'
+    key: 'RSAPrivateKey'
+    encrypted_key: bytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -814,7 +837,12 @@ def _read_signing_time(der:'bytes', signed_attributes:'DERElement') -> 'dtnone':
 
 # ################################################################################################################################
 
-def _verify_signed_data(content:'bytes', der:'bytes', keystore:'Keystore') -> 'anytuple':
+def _verify_signed_data(
+    content:'bytes',
+    der:'bytes',
+    keystore:'Keystore',
+    accepted_certificates:'certificate_list | None'=None,
+    ) -> 'anytuple':
     """ Walks a CMS SignedData structure per RFC 5652: extracts the signer's certificate
     and signed attributes, checks the content digest and verifies the signature value.
     Returns the signer's certificate and the digest algorithm name.
@@ -913,28 +941,44 @@ def _verify_signed_data(content:'bytes', der:'bytes', keystore:'Keystore') -> 'a
     except InvalidSignature:
         raise AS2SecurityException(AS2Error.Integrity_Check_Failed, 'Signature verification failed') from None
 
-    # A cryptographically valid signature still needs a trusted signer -
-    # the chain starts at the signer's certificate, any others are potential intermediates.
-    chain:'certificate_list' = [signer_certificate]
+    # A cryptographically valid signature still needs a trusted signer. With a rotation list
+    # given, the list itself is the trust decision - the signer must be one of its entries,
+    # which during an overlap window means either the old or the new certificate ..
+    if accepted_certificates:
 
-    for certificate in certificates:
-        if certificate != signer_certificate:
-            chain.append(certificate)
+        if signer_certificate not in accepted_certificates:
+            raise AS2SecurityException(
+                AS2Error.Authentication_Failed, 'Signer certificate is not among the accepted ones')
 
-    try:
-        validate_certificate_chain(chain, keystore)
-    except XMLSecurityException as e:
-        raise AS2SecurityException(AS2Error.Authentication_Failed, str(e)) from None
+    # .. without one, the keystore decides - the chain starts at the signer's certificate
+    # and any other attached certificates are potential intermediates.
+    else:
+        chain:'certificate_list' = [signer_certificate]
+
+        for certificate in certificates:
+            if certificate != signer_certificate:
+                chain.append(certificate)
+
+        try:
+            validate_certificate_chain(chain, keystore)
+        except XMLSecurityException as e:
+            raise AS2SecurityException(AS2Error.Authentication_Failed, str(e)) from None
 
     out = (signer_certificate, digest_name, signing_time)
     return out
 
 # ################################################################################################################################
 
-def verify(part:'SMIMEPart', keystore:'Keystore') -> 'VerifyResult':
+def verify(
+    part:'SMIMEPart',
+    keystore:'Keystore',
+    accepted_certificates:'certificate_list | None'=None,
+    ) -> 'VerifyResult':
     """ Verifies a detached multipart/signed entity and returns what was signed, by whom
     and with which digest algorithm. Raises AS2SecurityException with integrity-check-failed
     for a cryptographically bad signature and authentication-failed for an untrusted signer.
+    A non-empty accepted_certificates list is the trust decision - the signer must be one
+    of its entries - while an absent one leaves trust to the keystore.
     """
     parameters = parse_header_parameters(part.content_type)
     media_type = parameters['']
@@ -948,7 +992,8 @@ def verify(part:'SMIMEPart', keystore:'Keystore') -> 'VerifyResult':
     content, signature_der = _split_signed(part.data, boundary)
 
     try:
-        signer_certificate, digest_name, signing_time = _verify_signed_data(content, signature_der, keystore)
+        signer_certificate, digest_name, signing_time = _verify_signed_data(
+            content, signature_der, keystore, accepted_certificates)
     except AS2Exception:
         raise
     except (IndexError, ValueError) as e:
@@ -1089,13 +1134,39 @@ def _collect_encrypted_content(der:'bytes', element:'DERElement') -> 'bytes':
 
 # ################################################################################################################################
 
-def _find_recipient_key(der:'bytes', recipient_infos:'DERElement', keystore:'Keystore') -> 'bytes':
-    """ Finds our recipient entry by issuer and serial number and RSA-decrypts
-    the content encryption key it carries.
+def _decryption_candidates(keystore:'Keystore') -> 'decryption_candidate_list':
+    """ Returns every certificate-and-key pair an incoming message may be encrypted to -
+    the primary pair plus each currently active rotation entry.
     """
-    own_certificate = keystore.signing_certificate
-    own_issuer = own_certificate.issuer.public_bytes()
-    own_serial = own_certificate.serial_number
+
+    # Our response to produce
+    out:'decryption_candidate_list' = []
+
+    # The primary pair - our signing certificate with the configured decryption key ..
+    if keystore.decryption_key:
+        key = cast_('RSAPrivateKey', keystore.decryption_key)
+        candidate = DecryptionCandidate(keystore.signing_certificate, key)
+        out.append(candidate)
+
+    # .. and the rotation entries, each with its own certificate.
+    for entry in active_decryption_entries(keystore):
+        key = cast_('RSAPrivateKey', entry.key)
+        certificate = cast_('Certificate', entry.certificate)
+        candidate = DecryptionCandidate(certificate, key)
+        out.append(candidate)
+
+    return out
+
+# ################################################################################################################################
+
+def _match_recipient(der:'bytes', recipient_infos:'DERElement', keystore:'Keystore') -> 'RecipientMatch':
+    """ Walks the recipient set looking for an entry that names any of our certificate-and-key
+    pairs by issuer and serial number, returning the pair and the encrypted content key.
+    """
+    candidates = _decryption_candidates(keystore)
+
+    # Our response to produce
+    out:'RecipientMatch | None' = None
 
     for recipient in _der_children(der, recipient_infos):
         fields = _der_children(der, recipient)
@@ -1110,17 +1181,39 @@ def _find_recipient_key(der:'bytes', recipient_infos:'DERElement', keystore:'Key
         serial_content = _element_content(der, rid_children[1])
         serial_number = int.from_bytes(serial_content, 'big')
 
-        if issuer_raw == own_issuer:
-            if serial_number == own_serial:
-                encrypted_key = _element_content(der, fields[3])
-                break
-    else:
+        # The first of our pairs this recipient entry names is the one to decrypt with ..
+        for candidate in candidates:
+
+            issuer = candidate.certificate.issuer.public_bytes()
+            if issuer_raw != issuer:
+                continue
+
+            if serial_number != candidate.certificate.serial_number:
+                continue
+
+            encrypted_key = _element_content(der, fields[3])
+            out = RecipientMatch(candidate.certificate, candidate.key, encrypted_key)
+            break
+
+        # .. and a matched pair concludes the search.
+        if out:
+            break
+
+    # No recipient entry names any of our certificates.
+    if not out:
         raise AS2SecurityException(AS2Error.Decryption_Failed, 'No recipient entry matches our certificate')
 
-    decryption_key = cast_('RSAPrivateKey', keystore.decryption_key)
+    return out
+
+# ################################################################################################################################
+
+def _recover_content_key(der:'bytes', recipient_infos:'DERElement', keystore:'Keystore') -> 'bytes':
+    """ Finds our recipient entry and RSA-decrypts the content encryption key it carries.
+    """
+    match = _match_recipient(der, recipient_infos, keystore)
 
     try:
-        out = decryption_key.decrypt(encrypted_key, PKCS1v15())
+        out = match.key.decrypt(match.encrypted_key, PKCS1v15())
     except ValueError:
         raise AS2SecurityException(AS2Error.Decryption_Failed, 'Content encryption key decryption failed') from None
 
@@ -1168,7 +1261,7 @@ def _decrypt_3des(der:'bytes', explicit_content:'DERElement', keystore:'Keystore
     recipient_infos = children[next_index]
     encrypted_content_info = children[next_index + 1]
 
-    content_key = _find_recipient_key(der, recipient_infos, keystore)
+    content_key = _recover_content_key(der, recipient_infos, keystore)
 
     # The algorithm identifier carries the IV as its parameter.
     info_children = _der_children(der, encrypted_content_info)
@@ -1196,10 +1289,21 @@ def _decrypt_3des(der:'bytes', explicit_content:'DERElement', keystore:'Keystore
 def _decrypt_enveloped(der:'bytes', explicit_content:'DERElement', keystore:'Keystore') -> 'bytes':
     """ Decrypts an EnvelopedData structure - AES-CBC through the library, 3DES in-house.
     """
-    decryption_key = cast_('RSAPrivateKey', keystore.decryption_key)
+    # Locate the recipient set so that whichever of our certificate-and-key pairs
+    # the message was encrypted to is the one that decrypts it.
+    enveloped = _read_der_element(der, explicit_content.content_offset)
+    children = _der_children(der, enveloped)
+
+    # Skip past the version and the optional originator info to the recipient set.
+    next_index = 1
+    if children[next_index].tag == _tag_context_0:
+        next_index += 1
+
+    recipient_infos = children[next_index]
+    match = _match_recipient(der, recipient_infos, keystore)
 
     try:
-        out = pkcs7_decrypt_der(der, keystore.signing_certificate, decryption_key, [])
+        out = pkcs7_decrypt_der(der, match.certificate, match.key, [])
 
     # The library only does AES-CBC - 3DES from legacy partners is decrypted in-house.
     except UnsupportedAlgorithm:
@@ -1238,7 +1342,7 @@ def _decrypt_auth_enveloped(der:'bytes', explicit_content:'DERElement', keystore
 
     mac = children[next_index]
 
-    content_key = _find_recipient_key(der, recipient_infos, keystore)
+    content_key = _recover_content_key(der, recipient_infos, keystore)
 
     info_children = _der_children(der, encrypted_content_info)
     algorithm_identifier = info_children[1]

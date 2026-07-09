@@ -120,3 +120,35 @@ def unrelated_ca_certificate():
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@dataclass(init=False)
+class RotatedPair:
+    """ A fresh key with its self-signed certificate - what a certificate rotation introduces.
+    """
+    key: 'object'
+    certificate: 'object'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def make_rotated_pair():
+    """ A factory issuing fresh keys with self-signed certificates for rotation tests -
+    the rotation lists pin exact certificates, so no CA needs to stand behind them.
+    """
+    def _make(common_name):
+
+        key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
+        name = _make_name(common_name)
+        certificate = make_certificate(common_name, key.public_key(), name, key)
+
+        out = RotatedPair()
+        out.key = key
+        out.certificate = certificate
+
+        return out
+
+    return _make
+
+# ################################################################################################################################
+# ################################################################################################################################

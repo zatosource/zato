@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 # cryptography
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -18,13 +19,36 @@ from cryptography.x509 import Certificate, load_pem_x509_certificates
 
 if 0:
     from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
-    from zato.common.typing_ import bytesnone
+    from zato.common.typing_ import bytesnone, dtnone
     bytesnone = bytesnone
+    dtnone = dtnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 certificate_list = list[Certificate]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class DecryptionEntry:
+    """ One of our own decryption keys, with the certificate the partner encrypts to -
+    the certificate is what recipient matching by issuer and serial number needs.
+    During a rotation window more than one entry is active, so that messages encrypted
+    to either the old or the new certificate still decrypt.
+    """
+    key: 'PrivateKeyTypes | None' = None
+    certificate: 'Certificate | None' = None
+
+    # The window this entry is accepted in - either end left empty means unbounded on that side.
+    valid_from:  'dtnone' = None
+    valid_until: 'dtnone' = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+decryption_entry_list = list[DecryptionEntry]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +69,10 @@ class Keystore:
     # Our own private key used to decrypt incoming messages - for RSA key transport
     # this is an RSA key, for X25519 key agreement it is an X25519 key.
     decryption_key: 'PrivateKeyTypes | None' = None
+
+    # Additional decryption keys, each paired with its certificate - during a rotation window
+    # of our own key both the old and the new pair are live. Assigned by new_keystore.
+    decryption_entries: 'decryption_entry_list'
 
     # The other side's certificates - one to encrypt to and one to verify their signatures with.
     # The verification certificate is optional because with token-based key identification
@@ -79,7 +107,37 @@ def new_keystore() -> 'Keystore':
     out = Keystore()
 
     out.signing_certificate_chain = []
+    out.decryption_entries = []
     out.trust_anchors = []
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def active_decryption_entries(keystore:'Keystore', now:'dtnone'=None) -> 'decryption_entry_list':
+    """ Returns every decryption entry whose validity window covers the given moment -
+    an empty end of the window means unbounded on that side.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    # Our response to produce
+    out:'decryption_entry_list' = []
+
+    for entry in keystore.decryption_entries:
+
+        # The entry is not active yet ..
+        if entry.valid_from:
+            if now < entry.valid_from:
+                continue
+
+        # .. or it is not active anymore.
+        if entry.valid_until:
+            if now > entry.valid_until:
+                continue
+
+        out.append(entry)
 
     return out
 

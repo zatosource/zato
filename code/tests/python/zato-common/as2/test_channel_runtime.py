@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime, timedelta, timezone
 from http.client import OK
 
 # cryptography
@@ -19,6 +20,7 @@ from zato.common.as2.common import AS2Error
 from zato.common.as2.outbound import build_message
 from zato.common.as2.partnership import new_partnership
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.util.xml_.keystore import new_keystore
 from zato.server.connection.as2 import AS2ChannelRuntime
 
 # ################################################################################################################################
@@ -90,7 +92,7 @@ class _FakeServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _partnership_config(inbound_topic='', inbound_service=''):
+def _partnership_config(inbound_topic='', inbound_service='', partner_cert='', next_cert='', next_cert_from=''):
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     as the receiving side sees the relationship.
     """
@@ -135,9 +137,9 @@ def _partnership_config(inbound_topic='', inbound_service=''):
         'ack_overdue_after': 0,
         'resend_max_retries': 0,
 
-        'as2_partner_cert': '',
-        'as2_partner_next_cert': '',
-        'as2_partner_next_cert_from': '',
+        'as2_partner_cert': partner_cert,
+        'as2_partner_next_cert': next_cert,
+        'as2_partner_next_cert_from': next_cert_from,
     }
 
     return out
@@ -159,6 +161,8 @@ def _channel_config(parties, service_name=None, inbound_topic=None):
         'as2_signing_key': receiver_key_pem,
         'as2_signing_cert_chain': receiver_certificate_pem,
         'as2_decryption_key': receiver_key_pem,
+        'as2_next_decryption_key': '',
+        'as2_next_decryption_cert': '',
         'as2_peer_signing_cert': _certificate_to_pem(parties.sender.signing_certificate_chain[0]),
         'as2_peer_encryption_cert': _certificate_to_pem(parties.sender.signing_certificate_chain[0]),
         'as2_trust_anchors': '',
@@ -176,6 +180,9 @@ def _make_runtime(
     with_partnership=True,
     partner_topic='',
     partner_service='',
+    partner_cert='',
+    next_cert='',
+    next_cert_from='',
     ):
     """ Builds a channel runtime on a fake server with a per-test SQLite audit database.
     """
@@ -187,7 +194,13 @@ def _make_runtime(
     server = _FakeServer()
 
     if with_partnership:
-        config = _partnership_config(inbound_topic=partner_topic, inbound_service=partner_service)
+        config = _partnership_config(
+            inbound_topic=partner_topic,
+            inbound_service=partner_service,
+            partner_cert=partner_cert,
+            next_cert=next_cert,
+            next_cert_from=next_cert_from,
+        )
         server.config_manager.config_store.generic_connection['PartnerCorp AS2'] = {'config': config}
 
     runtime = AS2ChannelRuntime(server, _channel_config(parties, service_name, channel_topic))
@@ -203,16 +216,33 @@ def _cleanup_env() -> 'None':
 
 # ################################################################################################################################
 
-def _build_wire_message(parties, message_id=None):
+def _build_wire_message(parties, message_id=None, sender_keystore=None):
     """ Builds one real AS2 message the way the sending side would.
     """
     partnership = new_partnership()
     partnership.as2_from = _sender_identifier
     partnership.as2_to = _receiver_identifier
 
-    body, headers, message_id, mic = build_message(partnership, parties.sender, _payload, message_id=message_id)
+    if sender_keystore is None:
+        sender_keystore = parties.sender
+
+    body, headers, message_id, mic = build_message(partnership, sender_keystore, _payload, message_id=message_id)
 
     out = body, headers, message_id, mic
+    return out
+
+# ################################################################################################################################
+
+def _rotated_sender_keystore(parties, rotated):
+    """ The sending side's keystore after it rotated its signing pair -
+    encryption still targets the receiver's current certificate.
+    """
+    out = new_keystore()
+
+    out.signing_key = rotated.key
+    out.signing_certificate_chain = [rotated.certificate]
+    out.peer_encryption_certificate = parties.receiver.signing_certificate_chain[0]
+
     return out
 
 # ################################################################################################################################
@@ -395,6 +425,66 @@ class TestDuplicates:
             assert not second.is_duplicate
 
             assert len(server.pubsub_redis.published) == 2
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCertificateRotation:
+
+    def test_message_signed_with_the_activated_next_certificate_is_accepted(self, parties, tmp_path, make_rotated_pair):
+        try:
+            # The partner rotated its signing pair and the next certificate activated yesterday.
+            rotated = make_rotated_pair('as2-sender-next')
+            activated = datetime.now(timezone.utc) - timedelta(days=1)
+
+            sender_certificate_pem = _certificate_to_pem(parties.sender.signing_certificate_chain[0])
+
+            server, runtime = _make_runtime(
+                tmp_path, parties,
+                partner_cert=sender_certificate_pem,
+                next_cert=_certificate_to_pem(rotated.certificate),
+                next_cert_from=activated.isoformat(),
+            )
+
+            sender_keystore = _rotated_sender_keystore(parties, rotated)
+            body, headers, _, _ = _build_wire_message(parties, sender_keystore=sender_keystore)
+
+            result = runtime.handle('cid-1', body, headers)
+
+            # The overlap window admits the new signer and the document was routed.
+            assert not result.is_error
+            assert len(server.pubsub_redis.published) == 1
+
+        finally:
+            _cleanup_env()
+
+    def test_message_signed_with_a_not_yet_activated_certificate_is_rejected(self, parties, tmp_path, make_rotated_pair):
+        try:
+            # The same rotation, except the next certificate only activates a month from now.
+            rotated = make_rotated_pair('as2-sender-next')
+            activation = datetime.now(timezone.utc) + timedelta(days=30)
+
+            sender_certificate_pem = _certificate_to_pem(parties.sender.signing_certificate_chain[0])
+
+            server, runtime = _make_runtime(
+                tmp_path, parties,
+                partner_cert=sender_certificate_pem,
+                next_cert=_certificate_to_pem(rotated.certificate),
+                next_cert_from=activation.isoformat(),
+            )
+
+            sender_keystore = _rotated_sender_keystore(parties, rotated)
+            body, headers, _, _ = _build_wire_message(parties, sender_keystore=sender_keystore)
+
+            result = runtime.handle('cid-1', body, headers)
+
+            # The signer is not live yet, so the message was rejected and nothing was routed.
+            assert result.is_error
+            assert result.error_modifier == AS2Error.Authentication_Failed
+            assert server.pubsub_redis.published == []
 
         finally:
             _cleanup_env()

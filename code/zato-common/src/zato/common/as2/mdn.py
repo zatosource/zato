@@ -23,9 +23,10 @@ from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 if 0:
     from cryptography.x509 import Certificate
     from zato.common.typing_ import anytuple, strlist, strstrdict
-    from zato.common.util.xml_.keystore import Keystore
+    from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
     Certificate = Certificate
+    certificate_list = certificate_list
     Keystore = Keystore
     strlist = strlist
     strstrdict = strstrdict
@@ -601,10 +602,17 @@ def _parse_report(info:'MDNInfo', body:'bytes', parameters:'strstrdict') -> 'Non
 
 # ################################################################################################################################
 
-def parse_mdn(body:'bytes', content_type:'str', keystore:'keystorenone'=None) -> 'MDNInfo':
+def parse_mdn(
+    body:'bytes',
+    content_type:'str',
+    keystore:'keystorenone'=None,
+    accepted_certificates:'certificate_list | None'=None,
+    ) -> 'MDNInfo':
     """ Parses an MDN - signed or unsigned, synchronous or delivered asynchronously - into its pieces.
     A signed MDN is verified against the keystore, so its signer certificate comes out along
-    with the disposition and the Received-Content-MIC.
+    with the disposition and the Received-Content-MIC. A non-empty accepted_certificates list
+    is the trust decision for the signer - during a rotation window it holds both the partner's
+    old and new certificate.
     """
 
     # Our response to produce
@@ -620,7 +628,7 @@ def parse_mdn(body:'bytes', content_type:'str', keystore:'keystorenone'=None) ->
             raise AS2Exception('A signed MDN requires a keystore to verify its signature')
 
         part = new_part(body, content_type)
-        result = verify(part, keystore)
+        result = verify(part, keystore, accepted_certificates)
 
         out.is_signed = True
         out.signer_certificate = result.signer_certificate

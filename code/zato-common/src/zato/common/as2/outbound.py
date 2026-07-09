@@ -19,7 +19,7 @@ from typing_extensions import TypeAlias
 # Zato
 from zato.common.as2.common import AS2Exception, Default, MDNMode, TransferMode
 from zato.common.as2.mdn import DispositionType, ModifierKind, new_message_id, normalize_message_id, parse_mdn
-from zato.common.as2.partnership import quote_as2_identifier
+from zato.common.as2.partnership import active_verification_certificates, quote_as2_identifier, select_encryption_certificate
 from zato.common.as2.smime import compress, compute_mic, encode_base64_lines, encrypt, new_part, \
     select_mic_algorithm, sign, SMIMEPart
 from zato.common.crypto.api import CryptoManager
@@ -31,8 +31,9 @@ if 0:
     from zato.common.as2.mdn import MDNInfo
     from zato.common.as2.partnership import Partnership
     from zato.common.typing_ import anytuple, strnone, strstrdict
-    from zato.common.util.xml_.keystore import Keystore
+    from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
+    certificate_list = certificate_list
     strnone = strnone
     strstrdict = strstrdict
 
@@ -257,13 +258,21 @@ def build_message(
         )
 
     # .. and encryption comes last, so that only ciphertext travels over the wire.
+    # The partner's rotation list decides what to encrypt to - during a migration window
+    # the most recently activated certificate wins - while a partnership without one
+    # uses the certificate pinned in the keystore.
     if partnership.encrypt:
-        if not keystore.peer_encryption_certificate:
+        encryption_certificate = select_encryption_certificate(partnership)
+
+        if not encryption_certificate:
+            encryption_certificate = keystore.peer_encryption_certificate
+
+        if not encryption_certificate:
             raise AS2Exception(f'No encryption certificate for partner `{partnership.as2_to}`')
 
         current = encrypt(
             current,
-            keystore.peer_encryption_certificate,
+            encryption_certificate,
             partnership.encryption_algorithm,
             partnership.force_base64,
             prevent_canonicalization,
@@ -364,17 +373,24 @@ def _post(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _reconcile_sync_mdn(result:'SendResult', keystore:'Keystore', response:'httpx.Response') -> 'None':
+def _reconcile_sync_mdn(
+    result:'SendResult',
+    keystore:'Keystore',
+    response:'httpx.Response',
+    accepted_certificates:'certificate_list | None'=None,
+    ) -> 'None':
     """ Parses and verifies the synchronous MDN riding on the HTTP response. A response whose body
     fails MDN parsing or signature verification counts as no MDN received, an Original-Message-ID
-    or Received-Content-MIC mismatch is a delivery failure.
+    or Received-Content-MIC mismatch is a delivery failure. A non-empty accepted_certificates list
+    is the trust decision for the MDN's signer - during a rotation window it holds both
+    the partner's old and new certificate.
     """
     if not (content_type := response.headers.get('content-type')):
         return
 
     # A body that does not parse and verify as an MDN counts as no MDN received ..
     try:
-        mdn = parse_mdn(response.content, content_type, keystore)
+        mdn = parse_mdn(response.content, content_type, keystore, accepted_certificates)
     except AS2Exception:
         return
 
@@ -438,9 +454,11 @@ def send(
     out.http_status = response.status_code
     out.response_body = response.content
 
-    # With a synchronous MDN requested, the response body is the proof of delivery ..
+    # With a synchronous MDN requested, the response body is the proof of delivery -
+    # the partner's rotation list says which certificates may have signed it.
     if partnership.mdn_mode == MDNMode.Sync:
-        _reconcile_sync_mdn(out, keystore, response)
+        accepted_certificates = active_verification_certificates(partnership)
+        _reconcile_sync_mdn(out, keystore, response, accepted_certificates)
 
     # .. otherwise transport-level success is all there is to check - an asynchronous MDN
     # arrives later through its own channel and reconciles against the stored MIC.

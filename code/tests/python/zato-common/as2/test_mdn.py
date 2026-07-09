@@ -542,6 +542,39 @@ class TestParseMDN:
         with pytest.raises(AS2Exception):
             _ = parse_mdn(body, headers['Content-Type'])
 
+    def test_accepted_certificates_admit_a_listed_signer(self, parties, make_rotated_pair):
+        request = _make_request(
+            requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
+        signing_config = _make_signing_config(parties)
+
+        body, headers = build_mdn(request, new_processed_disposition(), _sample_mic(), signing_config)
+
+        # The rotation list holds both of the partner's certificates and the actual signer is one of them.
+        rotated = make_rotated_pair('as2-receiver-rotation')
+        accepted = [rotated.certificate, parties.receiver.signing_certificate]
+
+        info = parse_mdn(body, headers['Content-Type'], parties.sender, accepted)
+
+        assert info.is_signed is True
+        assert info.signer_certificate == parties.receiver.signing_certificate
+
+    def test_accepted_certificates_reject_an_unlisted_signer(self, parties, make_rotated_pair):
+        request = _make_request(
+            requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
+        signing_config = _make_signing_config(parties)
+
+        body, headers = build_mdn(request, new_processed_disposition(), _sample_mic(), signing_config)
+
+        # The rotation list does not include the actual signer, so even the keystore's
+        # own trust does not admit it - the list is the trust decision.
+        rotated = make_rotated_pair('as2-receiver-rotation')
+        accepted = [rotated.certificate]
+
+        with pytest.raises(AS2SecurityException) as exception_info:
+            _ = parse_mdn(body, headers['Content-Type'], parties.sender, accepted)
+
+        assert exception_info.value.modifier == AS2Error.Authentication_Failed
+
     def test_non_mdn_content_type_is_rejected(self):
         with pytest.raises(AS2ProtocolException) as exception_info:
             _ = parse_mdn(b'Not an MDN at all', 'text/plain')

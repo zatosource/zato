@@ -13,11 +13,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 
 # cryptography
-from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
-from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
-from cryptography.x509 import BasicConstraints, CertificateBuilder, Name, NameAttribute, random_serial_number
-from cryptography.x509.oid import NameOID
 
 # httpx
 import httpx
@@ -26,7 +22,7 @@ import httpx
 import pytest
 
 # Zato
-from zato.common.as2.common import AS2Exception
+from zato.common.as2.common import AS2Error, AS2Exception
 from zato.common.as2.inbound import handle
 from zato.common.as2.mdn import normalize_message_id
 from zato.common.as2.partnership import new_partnership
@@ -45,10 +41,6 @@ _payload = (
     + b'ST*850*0001~BEG*00*NE*4523891**20260709~SE*3*0001~GE*1*1~IEA*1*000000001~'
 )
 
-# RSA parameters for throwaway test keys.
-_rsa_public_exponent = 65537
-_rsa_key_size = 2048
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -60,27 +52,6 @@ def _key_to_pem(key):
 
 def _certificate_to_pem(certificate):
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
-    return out
-
-# ################################################################################################################################
-
-def _make_next_certificate():
-    """ Issues a self-signed certificate to stand in for a partner's next one, valid around the current moment.
-    """
-    key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-    name = Name([NameAttribute(NameOID.COMMON_NAME, 'as2-receiver-next')])
-    now = datetime.now(timezone.utc)
-
-    builder = CertificateBuilder()
-    builder = builder.subject_name(name)
-    builder = builder.issuer_name(name)
-    builder = builder.public_key(key.public_key())
-    builder = builder.serial_number(random_serial_number())
-    builder = builder.not_valid_before(now - timedelta(days=1))
-    builder = builder.not_valid_after(now + timedelta(days=365))
-    builder = builder.add_extension(BasicConstraints(ca=False, path_length=None), critical=True)
-
-    out = builder.sign(key, SHA256())
     return out
 
 # ################################################################################################################################
@@ -170,6 +141,8 @@ def _connection_config(parties, **overrides):
     out['as2_signing_key'] = sender_key_pem
     out['as2_signing_cert_chain'] = sender_certificate_pem
     out['as2_decryption_key'] = sender_key_pem
+    out['as2_next_decryption_key'] = ''
+    out['as2_next_decryption_cert'] = ''
     out['as2_peer_signing_cert'] = ''
     out['as2_peer_encryption_cert'] = ''
     out['as2_trust_anchors'] = ''
@@ -292,43 +265,75 @@ class TestConfigBridging:
 
     def test_rotation_list_supplies_the_peer_certificates(self, parties):
 
-        connection, _, _, _ = _make_connection(parties)
+        connection, _, _, results = _make_connection(parties)
 
-        # With no explicit peer certificates configured, the partner's rotation list
-        # is what encryption and MDN verification use.
-        receiver_certificate = parties.receiver.signing_certificate_chain[0]
+        # No peer certificates are pinned in the keystore ..
+        assert connection.keystore.peer_encryption_certificate is None
+        assert connection.keystore.peer_signing_certificate is None
 
-        assert connection.keystore.peer_encryption_certificate.serial_number == receiver_certificate.serial_number
-        assert connection.keystore.peer_signing_certificate.serial_number == receiver_certificate.serial_number
+        # .. yet the send encrypts to the partner and the returned MDN verifies,
+        # because the rotation list supplies both certificates at send time.
+        result = connection.send('cid-1', _payload)
 
-    def test_an_activated_next_certificate_supersedes_the_current_one(self, parties):
+        assert result.is_ok
+        assert not results[0].is_error
+
+    def test_an_activated_next_certificate_supersedes_the_current_one(self, parties, make_rotated_pair):
 
         # A fresh partner certificate whose activation date has already passed.
-        next_certificate = _make_next_certificate()
+        rotated = make_rotated_pair('as2-receiver-next')
         activated = datetime.now(timezone.utc) - timedelta(days=1)
 
-        connection, _, _, _ = _make_connection(
+        connection, _, _, results = _make_connection(
             parties,
-            as2_partner_next_cert=_certificate_to_pem(next_certificate),
+            as2_partner_next_cert=_certificate_to_pem(rotated.certificate),
             as2_partner_next_cert_from=activated.isoformat(),
         )
 
-        assert connection.keystore.peer_encryption_certificate.serial_number == next_certificate.serial_number
+        result = connection.send('cid-1', _payload)
 
-    def test_a_future_next_certificate_leaves_the_current_one_in_place(self, parties):
+        # The receiver only holds the key of the current certificate, so a message
+        # encrypted to the activated next certificate does not decrypt there -
+        # the proof that outgoing encryption switched over.
+        assert not result.is_ok
+        assert results[0].is_error
+        assert results[0].error_modifier == AS2Error.Decryption_Failed
+
+    def test_a_future_next_certificate_leaves_the_current_one_in_place(self, parties, make_rotated_pair):
 
         # A fresh partner certificate that only activates a month from now.
-        next_certificate = _make_next_certificate()
+        rotated = make_rotated_pair('as2-receiver-next')
         activation = datetime.now(timezone.utc) + timedelta(days=30)
 
-        connection, _, _, _ = _make_connection(
+        connection, _, _, results = _make_connection(
             parties,
-            as2_partner_next_cert=_certificate_to_pem(next_certificate),
+            as2_partner_next_cert=_certificate_to_pem(rotated.certificate),
             as2_partner_next_cert_from=activation.isoformat(),
         )
 
-        receiver_certificate = parties.receiver.signing_certificate_chain[0]
-        assert connection.keystore.peer_encryption_certificate.serial_number == receiver_certificate.serial_number
+        result = connection.send('cid-1', _payload)
+
+        # Encryption stayed with the current certificate, so the receiver decrypts fine.
+        assert result.is_ok
+        assert not results[0].is_error
+
+    def test_next_decryption_pair_joins_the_rotation_entries(self, parties, make_rotated_pair):
+
+        # Our own next key with its certificate, configured ahead of the rotation.
+        rotated = make_rotated_pair('as2-sender-next')
+
+        connection, server, _, _ = _make_connection(
+            parties,
+            as2_next_decryption_key=_key_to_pem(rotated.key),
+            as2_next_decryption_cert=_certificate_to_pem(rotated.certificate),
+        )
+
+        # The pair joined the keystore's rotation entries ..
+        entry = connection.keystore.decryption_entries[0]
+        assert entry.certificate.serial_number == rotated.certificate.serial_number
+
+        # .. and the next key went through the server's decryption like every private key.
+        assert _key_to_pem(rotated.key) in server.decrypted
 
 # ################################################################################################################################
 # ################################################################################################################################
