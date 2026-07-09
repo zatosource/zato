@@ -1,0 +1,9 @@
+{
+    "@odata.context": "http://host/service/$metadata#Customers",
+    "@odata.count": 5,
+    "value": [
+        {"ID": "ALFKI", "CompanyName": "Alfreds Futterkiste"},
+        {"ID": "ANATR", "CompanyName": "Ana Trujillo Emparedados y helados"}
+    ],
+    "@odata.nextLink": "http://host/service/Customers?$skiptoken=ANATR"
+}

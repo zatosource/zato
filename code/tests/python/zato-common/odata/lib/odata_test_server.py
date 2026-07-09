@@ -14,7 +14,7 @@ import ssl
 import threading
 import time
 from base64 import b64decode
-from http.client import BAD_REQUEST, CREATED, FORBIDDEN, METHOD_NOT_ALLOWED, NO_CONTENT, NOT_FOUND, OK, \
+from http.client import BAD_REQUEST, CREATED, FORBIDDEN, FOUND, METHOD_NOT_ALLOWED, NO_CONTENT, NOT_FOUND, OK, \
     PRECONDITION_FAILED, PRECONDITION_REQUIRED, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from json import dumps, loads
@@ -230,7 +230,8 @@ class _Server(ThreadingHTTPServer):
 # ################################################################################################################################
 
     def reset(self) -> 'None':
-        """ Clears the store, the recorded requests and the issued tokens.
+        """ Clears the store, the recorded requests, the issued tokens and every
+        enforcement a test configured - each test starts from a clean slate.
         """
         self.entities.clear()
         self.key_properties.clear()
@@ -241,6 +242,10 @@ class _Server(ThreadingHTTPServer):
         self.csrf_token = None
         self.required_query_params.clear()
         self.page_size = 0
+        self.expected_username = None
+        self.expected_password = None
+        self.expected_client_id = None
+        self.expected_client_secret = None
 
 # ################################################################################################################################
 
@@ -574,6 +579,11 @@ class _Server(ThreadingHTTPServer):
         if canned := config.get('respond_json'):
             status, payload = canned
             out = (status, {}, dumps(payload).encode('utf8'), 'application/json')
+            return out
+
+        # A canned redirect points the client at another path on this server.
+        if target := config.get('redirect'):
+            out = (FOUND, {'Location': target}, b'', 'text/plain')
             return out
 
         self.check_required_params(params)

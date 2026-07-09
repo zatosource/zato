@@ -1,0 +1,20 @@
+{
+    "d": [
+        {
+            "__metadata": {
+                "uri": "http://host/service/Customers('ALFKI')",
+                "type": "NorthwindModel.Customer"
+            },
+            "CustomerID": "ALFKI",
+            "CompanyName": "Alfreds Futterkiste"
+        },
+        {
+            "__metadata": {
+                "uri": "http://host/service/Customers('ANATR')",
+                "type": "NorthwindModel.Customer"
+            },
+            "CustomerID": "ANATR",
+            "CompanyName": "Ana Trujillo Emparedados y helados"
+        }
+    ]
+}

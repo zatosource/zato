@@ -1,0 +1,18 @@
+{
+    "error": {
+        "code": "SY/530",
+        "message": {
+            "lang": "en",
+            "value": "Maintain the business partner for sales organization 1710"
+        },
+        "innererror": {
+            "application": {
+                "component_id": "SD-SLS",
+                "service_namespace": "/SAP/",
+                "service_id": "API_SALES_ORDER_SRV",
+                "service_version": "0001"
+            },
+            "errordetails": []
+        }
+    }
+}

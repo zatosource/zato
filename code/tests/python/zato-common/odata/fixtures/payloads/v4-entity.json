@@ -1,0 +1,11 @@
+{
+    "@odata.context": "http://host/service/$metadata#Customers/$entity",
+    "@odata.id": "Customers('ALFKI')",
+    "@odata.etag": "W/\"MjAxMy0wNS0yN1QxMTo1OFo=\"",
+    "@odata.editLink": "Customers('ALFKI')",
+    "ID": "ALFKI",
+    "CompanyName": "Alfreds Futterkiste",
+    "ContactName": "Maria Anders",
+    "Orders@odata.navigationLink": "Customers('ALFKI')/Orders",
+    "Orders@odata.associationLink": "Customers('ALFKI')/Orders/$ref"
+}

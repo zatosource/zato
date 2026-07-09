@@ -80,6 +80,42 @@ def csdl_v3_schema():
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The namespace-qualified Schema tag of a V2 (CSDL 2.0) metadata document.
+_v2_schema_tag = '{http://schemas.microsoft.com/ado/2008/09/edm}Schema'
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def validated_server_metadata():
+    """ Validates every $metadata document the test server serves against the official
+    XSDs before any test consumes it - the V4 documents against the OASIS EDMX 4.0
+    schema, the V2 ones against the Microsoft CSDL 2.0 schema their Schema elements
+    are defined in. The simulations themselves are proven schema-valid this way.
+    """
+    edmx_v4 = load_schema('edmx.xsd')
+    csdl_v2 = load_schema('System.Data.Resources.CSDLSchema_2.xsd')
+
+    documents = {
+        's4hana.xml': '2.0',
+        'successfactors.xml': '2.0',
+        'd365fo.xml': '4.0',
+        'business_central.xml': '4.0',
+    }
+
+    for file_name, version in documents.items():
+        document = etree.parse(os.path.join(Server_Metadata_Dir, file_name))
+
+        if version == '4.0':
+            edmx_v4.assertValid(document)
+        else:
+
+            # The EDMX 1.0 wrapper is a plain envelope - what CSDL 2.0 governs
+            # is the Schema element embedded in it.
+            schema_element = document.getroot().find('.//' + _v2_schema_tag)
+            csdl_v2.assertValid(schema_element)
+
+# ################################################################################################################################
+
 def _make_server(profile:'str', tls:'bool'=False) -> 'ODataTestServer':
     server = ODataTestServer(profile, tls=tls)
     server.start()
@@ -90,7 +126,7 @@ def _make_server(profile:'str', tls:'bool'=False) -> 'ODataTestServer':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def s4hana_server():
+def s4hana_server(validated_server_metadata):
     """ A live server simulating SAP S/4HANA - OData V2, CSRF tokens, sap-client checks.
     """
     server = _make_server(Profile.S4HANA)
@@ -102,7 +138,7 @@ def s4hana_server():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def successfactors_server():
+def successfactors_server(validated_server_metadata):
     """ A live server simulating SAP SuccessFactors - OData V2, basic credentials.
     """
     server = _make_server(Profile.SUCCESSFACTORS)
@@ -114,7 +150,7 @@ def successfactors_server():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def d365fo_server():
+def d365fo_server(validated_server_metadata):
     """ A live server simulating Dynamics 365 Finance and Operations - OData V4, OAuth2.
     """
     server = _make_server(Profile.DYNAMICS_365_FO)
@@ -126,7 +162,7 @@ def d365fo_server():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def business_central_server():
+def business_central_server(validated_server_metadata):
     """ A live server simulating Business Central - OData V4, ETag concurrency.
     """
     server = _make_server(Profile.BUSINESS_CENTRAL)
@@ -138,7 +174,7 @@ def business_central_server():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def business_central_tls_server():
+def business_central_tls_server(validated_server_metadata):
     """ A live HTTPS Business Central server, for TLS verification tests.
     """
     server = _make_server(Profile.BUSINESS_CENTRAL, tls=True)

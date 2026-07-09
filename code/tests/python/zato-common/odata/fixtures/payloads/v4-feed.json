@@ -1,0 +1,37 @@
+{
+    "@odata.context": "http://host/service/$metadata#Customers",
+    "value": [
+        {
+            "@odata.id": "Customers('ALFKI')",
+            "@odata.etag": "W/\"MjAxMy0wNS0yN1QxMTo1OFo=\"",
+            "ID": "ALFKI",
+            "CompanyName": "Alfreds Futterkiste",
+            "ContactName": "Maria Anders",
+            "ContactTitle": "Sales Representative",
+            "Phone": "030-0074321",
+            "Fax": "030-0076545",
+            "Address": {
+                "Street": "Obere Str. 57",
+                "City": "Berlin",
+                "Region": null,
+                "PostalCode": "D-12209"
+            }
+        },
+        {
+            "@odata.id": "Customers('ANATR')",
+            "@odata.etag": "W/\"MjAxMy0wNS0yN1QxMTo1OVo=\"",
+            "ID": "ANATR",
+            "CompanyName": "Ana Trujillo Emparedados y helados",
+            "ContactName": "Ana Trujillo",
+            "ContactTitle": "Owner",
+            "Phone": "(5) 555-4729",
+            "Fax": "(5) 555-3745",
+            "Address": {
+                "Street": "Avda. de la Constitucion 2222",
+                "City": "Mexico D.F.",
+                "Region": null,
+                "PostalCode": "05021"
+            }
+        }
+    ]
+}

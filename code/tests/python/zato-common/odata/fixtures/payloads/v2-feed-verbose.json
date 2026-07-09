@@ -1,0 +1,38 @@
+{
+    "d": {
+        "results": [
+            {
+                "__metadata": {
+                    "uri": "http://host/service/Customers('ALFKI')",
+                    "type": "NorthwindModel.Customer",
+                    "etag": "W/\"X'00000000000007D1'\""
+                },
+                "CustomerID": "ALFKI",
+                "CompanyName": "Alfreds Futterkiste",
+                "ContactName": "Maria Anders",
+                "Orders": {
+                    "__deferred": {
+                        "uri": "http://host/service/Customers('ALFKI')/Orders"
+                    }
+                }
+            },
+            {
+                "__metadata": {
+                    "uri": "http://host/service/Customers('ANATR')",
+                    "type": "NorthwindModel.Customer",
+                    "etag": "W/\"X'00000000000007D2'\""
+                },
+                "CustomerID": "ANATR",
+                "CompanyName": "Ana Trujillo Emparedados y helados",
+                "ContactName": "Ana Trujillo",
+                "Orders": {
+                    "__deferred": {
+                        "uri": "http://host/service/Customers('ANATR')/Orders"
+                    }
+                }
+            }
+        ],
+        "__count": "91",
+        "__next": "http://host/service/Customers?$skiptoken='ANATR'"
+    }
+}
