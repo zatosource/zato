@@ -9,7 +9,7 @@
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-graphql test-as4 test-edifact test-soap test-hl7 test-ui test-ui-pubsub test-ui-mapper _test-ui test-common test-distlock \
-	test-audit-log test-audit-log-ui \
+	test-audit-log test-audit-log-ui test-logging \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -599,6 +599,12 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
 
+test-logging: ## Logging live tests - log files, env-variable log levels, PII audit log.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/logging_/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_logging -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-common: ## Common library tests.
 	$(MAKE) -C $(CURDIR)/code/zato-common test
 
@@ -606,7 +612,7 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-edifact test-hl7 test-ui test-audit-log test-audit-log-ui test-common test-distlock ## Everything.
+	test-cli test-mcp test-graphql test-edifact test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock ## Everything.
 
 test: test-all ## Alias for test-all.
 
