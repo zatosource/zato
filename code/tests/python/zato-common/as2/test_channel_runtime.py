@@ -101,6 +101,11 @@ def _partnership_config(inbound_topic='', inbound_service=''):
         'as2_from': _receiver_identifier,
         'as2_to': _sender_identifier,
 
+        'isa_qualifier': '',
+        'isa_id': '',
+        'gs_id': '',
+        'unb_id': '',
+
         'endpoint_url': 'https://zatoretail.example.com/zato/as2',
         'sign_algorithm': '',
         'encryption_algorithm': '',
@@ -129,6 +134,10 @@ def _partnership_config(inbound_topic='', inbound_service=''):
         'chunked_threshold_bytes': 0,
         'ack_overdue_after': 0,
         'resend_max_retries': 0,
+
+        'as2_partner_cert': '',
+        'as2_partner_next_cert': '',
+        'as2_partner_next_cert_from': '',
     }
 
     return out
