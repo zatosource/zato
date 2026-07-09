@@ -1,0 +1,419 @@
+/* ------------------------------------------------------------ */
+/* Mapper - schema tree                                          */
+/* ------------------------------------------------------------ */
+
+.mapper-tree,
+.mapper-tree-children {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mapper-tree-children {
+    padding-left: var(--mapper-space-4);
+}
+
+.mapper-tree-item-collapsed > .mapper-tree-children {
+    display: none;
+}
+
+.mapper-tree-row {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    min-height: 28px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border-radius: var(--mapper-radius-small);
+    cursor: default;
+    transition: background var(--mapper-motion-fast) ease;
+}
+
+.mapper-tree-row:hover {
+    background: var(--mapper-background-row-hover);
+}
+
+.mapper-tree-row:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: -2px;
+}
+
+.mapper-tree-toggle {
+    width: 14px;
+    color: var(--mapper-text-muted);
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mapper-tree-toggle:hover {
+    color: var(--mapper-text-main);
+}
+
+.mapper-tree-toggle-spacer {
+    width: 14px;
+}
+
+.mapper-tree-name {
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+}
+
+.mapper-tree-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mapper-space-1);
+    margin-left: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - tree badges                                          */
+/* ------------------------------------------------------------ */
+
+/* The badge geometry comes from the kit's dashboard-outcome-badge,
+   the mapper only adds its per-type colors. */
+.mapper-tree-type-badge,
+.mapper-tree-cardinality-badge,
+.mapper-tree-format-badge,
+.mapper-tree-optional-badge {
+    white-space: nowrap;
+}
+
+.mapper-tree-cardinality-badge {
+    color: var(--mapper-type-array);
+    background: var(--mapper-type-background-array);
+}
+
+.mapper-tree-format-badge,
+.mapper-tree-optional-badge {
+    color: var(--mapper-text-muted);
+    background: var(--mapper-type-background-unknown);
+}
+
+.mapper-tree-type-object {
+    color: var(--mapper-type-object);
+    background: var(--mapper-type-background-object);
+}
+
+.mapper-tree-type-array {
+    color: var(--mapper-type-array);
+    background: var(--mapper-type-background-array);
+}
+
+.mapper-tree-type-string {
+    color: var(--mapper-type-string);
+    background: var(--mapper-type-background-string);
+}
+
+.mapper-tree-type-number {
+    color: var(--mapper-type-number);
+    background: var(--mapper-type-background-number);
+}
+
+.mapper-tree-type-boolean {
+    color: var(--mapper-type-boolean);
+    background: var(--mapper-type-background-boolean);
+}
+
+.mapper-tree-type-unknown {
+    color: var(--mapper-type-unknown);
+    background: var(--mapper-type-background-unknown);
+}
+
+.mapper-tree-type-union {
+    color: var(--mapper-type-union);
+    background: var(--mapper-type-background-union);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - search matches and tree filters                      */
+/* ------------------------------------------------------------ */
+
+/* A field the active filter rules out disappears with its subtree. */
+.mapper-filter-hidden {
+    display: none;
+}
+
+.mapper-search-match {
+    background: var(--mapper-background-search-match);
+}
+
+.mapper-search-current {
+    background: var(--mapper-background-search-current);
+    outline: 2px solid var(--mapper-color-conditioned);
+    outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - sample count badge                                   */
+/* ------------------------------------------------------------ */
+
+.mapper-sample-count {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mapper-space-1);
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+}
+
+.mapper-sample-count-value {
+    min-width: 18px;
+    text-align: center;
+    color: var(--mapper-seablue-light2);
+    background: var(--mapper-type-background-object);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - notices                                              */
+/* ------------------------------------------------------------ */
+
+.mapper-notice {
+    margin: var(--mapper-space-2) 0 0;
+    padding: var(--mapper-space-2) var(--mapper-space-3);
+    border: 1px solid var(--mapper-color-warning);
+    border-radius: var(--mapper-radius-small);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-color-warning);
+    background: var(--mapper-background-warning);
+}
+
+.mapper-notice[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - dialogs                                              */
+/* ------------------------------------------------------------ */
+
+.mapper-dialog-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: 0;
+    background: rgba(1, 40, 69, 0.45);
+    z-index: 100;
+}
+
+.mapper-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-3);
+    width: min(640px, calc(100vw - var(--mapper-space-6)));
+    padding: var(--mapper-space-4);
+    border-radius: var(--mapper-radius-medium);
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-raised);
+}
+
+.mapper-dialog-title {
+    margin: 0;
+    font-size: var(--mapper-font-size-large);
+    font-weight: 600;
+}
+
+.mapper-dialog-textarea {
+    min-height: 240px;
+    padding: var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-inset);
+    resize: vertical;
+}
+
+.mapper-dialog-textarea:focus-visible,
+.mapper-dialog-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+.mapper-dialog-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-1);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-muted);
+}
+
+.mapper-dialog-input {
+    padding: var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+}
+
+.mapper-dialog-error {
+    min-height: 18px;
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-color-error);
+}
+
+.mapper-dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--mapper-space-2);
+}
+
+/* The kit's action button sets its gradient with !important, so the
+   confirm accent needs the same weight to shine through. */
+.mapper-button-confirm {
+    color: var(--mapper-text-inverse);
+    border-color: var(--mapper-seablue-light1);
+    background: var(--mapper-seablue-light2) !important;
+}
+
+.mapper-button-confirm:hover {
+    border-color: var(--mapper-seablue-light2);
+    background: var(--mapper-seablue-light3) !important;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - review dialog                                        */
+/* ------------------------------------------------------------ */
+
+.mapper-review-dialog {
+    max-height: min(80vh, 720px);
+}
+
+.mapper-review-intro,
+.mapper-review-empty {
+    margin: 0;
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-muted);
+    line-height: 1.5;
+}
+
+.mapper-review-toggle-all {
+    align-self: flex-start;
+}
+
+.mapper-review-list,
+.mapper-review-children {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mapper-review-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-2);
+}
+
+.mapper-review-item {
+    padding: var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-light);
+    border-radius: var(--mapper-radius-small);
+    background: var(--mapper-background-inset);
+}
+
+.mapper-review-item-header {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    cursor: pointer;
+}
+
+.mapper-review-item-label {
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+}
+
+.mapper-review-item-note {
+    color: var(--mapper-text-muted);
+    background: var(--mapper-type-background-unknown);
+    white-space: nowrap;
+}
+
+.mapper-review-item-change {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    margin-top: var(--mapper-space-1);
+    padding-left: var(--mapper-space-5);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-small);
+}
+
+.mapper-review-item-before {
+    color: var(--mapper-color-error);
+    text-decoration: line-through;
+}
+
+.mapper-review-item-arrow {
+    color: var(--mapper-text-muted);
+}
+
+.mapper-review-item-after {
+    color: var(--mapper-color-success);
+}
+
+.mapper-review-item-detail {
+    margin-top: var(--mapper-space-1);
+    padding-left: var(--mapper-space-5);
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+}
+
+.mapper-review-children {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-1);
+    margin-top: var(--mapper-space-2);
+    padding-left: var(--mapper-space-5);
+}
+
+.mapper-review-children-disabled {
+    opacity: 0.5;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - context menu                                         */
+/* ------------------------------------------------------------ */
+
+.mapper-context-menu {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    z-index: 110;
+    min-width: 160px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: var(--mapper-space-1);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-raised);
+}
+
+.mapper-context-menu-item {
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: none;
+    border-radius: var(--mapper-radius-small);
+    text-align: left;
+    font-family: var(--mapper-font-family);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+    background: none;
+    cursor: pointer;
+}
+
+.mapper-context-menu-item:hover {
+    background: var(--mapper-background-row-selected);
+}
+
+.mapper-context-menu-header {
+    padding: var(--mapper-space-2) var(--mapper-space-2) var(--mapper-space-1);
+    font-size: var(--mapper-font-size-small);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--mapper-text-muted);
+}

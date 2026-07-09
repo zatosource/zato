@@ -1,33 +1,5 @@
+@import url("shared/tokens.css");
 @import url("zato_action_button.css");
-
-:root {
-    --zato-seablue: #012845;
-    --zato-seablue-light1: #063c65;
-    --zato-seablue-light2: #14578a;
-    --zato-seablue-light3: #2f81bf;
-    --zato-tile-dark1: #080808;
-    --zato-tile-dark2: #0c0c0c;
-    --zato-tile-darkblue: #060b14;
-    --zato-hero-bg: #1a1a1a;
-    --zato-pill-radius: 3px;
-    --zato-link-hover: #006fbf;
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-    --zato-row-hover: rgba(210, 195, 120, 0.15);
-    --primary-dark: var(--zato-seablue);
-    --background-light: #f8f9fa;
-    --white: #ffffff;
-    --border-light: #e9ecef;
-    --text-muted: #6c757d;
-    --shadow-dark: var(--zato-seablue-light1);
-    --zato-badge-gold: #ffd700;
-    --zato-badge-shine: rgba(255, 255, 255, 0.15);
-    --zato-badge-border: rgba(255, 255, 255, 0.2);
-
-    --zato-page-heading-margin-inline: 1.875rem;
-    --zato-page-heading-padding-block: 10px;
-    --zato-page-heading-padding-inline-start: 0;
-    --zato-page-heading-padding-inline-end: 10px;
-}
 
 @keyframes zato-spin {
     to { transform: rotate(360deg); }

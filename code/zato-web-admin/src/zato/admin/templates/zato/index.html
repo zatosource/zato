@@ -287,6 +287,9 @@
                                 </ul>
                             </li>
                             <li class="first-level" style="padding-left: 0.3rem">
+                                <a class="menu-link" href="{% url "mapping" %}?cluster={{ cluster_id|default:"1" }}">Mappings</a>
+                            </li>
+                            <li class="first-level" style="padding-left: 0.3rem">
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>

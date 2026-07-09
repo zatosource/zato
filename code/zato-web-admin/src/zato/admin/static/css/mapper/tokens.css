@@ -1,0 +1,104 @@
+/* ------------------------------------------------------------ */
+/* Mapper - design tokens                                        */
+/* ------------------------------------------------------------ */
+
+:root {
+
+    /* Palette - the seablue family comes straight from the Dashboard
+       kit's shared tokens, loaded before this file. */
+    --mapper-seablue: var(--zato-seablue);
+    --mapper-seablue-light1: var(--zato-seablue-light1);
+    --mapper-seablue-light2: var(--zato-seablue-light2);
+    --mapper-seablue-light3: var(--zato-seablue-light3);
+
+    /* Surfaces */
+    --mapper-background-page: var(--background-light);
+    --mapper-background-panel: var(--white);
+    --mapper-background-inset: #f1f4f7;
+    --mapper-background-row-hover: rgba(47, 129, 191, 0.08);
+    --mapper-background-row-selected: rgba(47, 129, 191, 0.16);
+
+    /* Text */
+    --mapper-text-main: #1c2b36;
+    --mapper-text-muted: var(--text-muted);
+    --mapper-text-inverse: var(--white);
+
+    /* Borders */
+    --mapper-border-light: var(--border-light);
+    --mapper-border-strong: #c5ced6;
+
+    /* State colors */
+    --mapper-color-focus: var(--mapper-seablue-light3);
+    --mapper-color-success: #2e7d32;
+    --mapper-color-error: #c62828;
+    --mapper-color-warning: #b26a00;
+    --mapper-color-armed: #b8860b;
+
+    /* Conditioned mappings - their lines and badges share this color */
+    --mapper-color-conditioned: #b26a00;
+
+    /* State backgrounds */
+    --mapper-background-success: rgba(46, 125, 50, 0.10);
+    --mapper-background-error: rgba(198, 40, 40, 0.08);
+    --mapper-background-warning: rgba(178, 106, 0, 0.10);
+
+    /* Search highlights - every match and the current one */
+    --mapper-background-search-match: rgba(178, 106, 0, 0.16);
+    --mapper-background-search-current: rgba(178, 106, 0, 0.38);
+
+    /* Type badge colors */
+    --mapper-type-object: var(--mapper-seablue-light2);
+    --mapper-type-array: #6a3fb5;
+    --mapper-type-string: #2e7d32;
+    --mapper-type-number: #b26a00;
+    --mapper-type-boolean: #ad1457;
+    --mapper-type-unknown: #6c757d;
+    --mapper-type-union: #6c757d;
+
+    /* Type badge backgrounds */
+    --mapper-type-background-object: rgba(20, 87, 138, 0.10);
+    --mapper-type-background-array: rgba(106, 63, 181, 0.10);
+    --mapper-type-background-string: rgba(46, 125, 50, 0.10);
+    --mapper-type-background-number: rgba(178, 106, 0, 0.10);
+    --mapper-type-background-boolean: rgba(173, 20, 87, 0.10);
+    --mapper-type-background-unknown: rgba(108, 117, 125, 0.12);
+    --mapper-type-background-union: rgba(108, 117, 125, 0.12);
+
+    /* Vertical room taken by the Dashboard chrome above the mapper -
+       the top menu bar and the cluster color strip. */
+    --mapper-page-top-offset: 81px;
+
+    /* Spacing scale */
+    --mapper-space-1: 4px;
+    --mapper-space-2: 8px;
+    --mapper-space-3: 12px;
+    --mapper-space-4: 16px;
+    --mapper-space-5: 24px;
+    --mapper-space-6: 32px;
+
+    /* The least height the mappings list keeps when the detail
+       panel below it grows tall - about four rows. */
+    --mapper-mappings-min-height: 140px;
+
+    /* Radii - the small radius is the kit's pill radius */
+    --mapper-radius-small: var(--zato-pill-radius);
+    --mapper-radius-medium: 6px;
+    --mapper-radius-large: 10px;
+
+    /* Shadows */
+    --mapper-shadow-panel: 0 1px 3px rgba(1, 40, 69, 0.10);
+    --mapper-shadow-raised: 0 4px 14px rgba(1, 40, 69, 0.18);
+
+    /* Type scale */
+    --mapper-font-size-small: 12px;
+    --mapper-font-size-base: 13px;
+    --mapper-font-size-medium: 14px;
+    --mapper-font-size-large: 16px;
+    --mapper-font-size-title: 20px;
+    --mapper-font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --mapper-font-family-mono: 'Fira Mono', Consolas, monospace;
+
+    /* Motion */
+    --mapper-motion-fast: 120ms;
+    --mapper-motion-medium: 200ms;
+}

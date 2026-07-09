@@ -1,0 +1,672 @@
+/* ------------------------------------------------------------ */
+/* Mapper - design tab side-by-side layout                       */
+/* ------------------------------------------------------------ */
+
+/* The Design tab never scrolls as a page - the toolbar sits on
+   top and the areas below it fill the rest, scrolling internally. */
+#mapper-panel-design {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#mapper-panel-design[hidden] {
+    display: none;
+}
+
+/* The row under the toolbar - the maps on the left, the split
+   resizer strip in the middle, the side area on the right. */
+.mapper-design-areas {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* The maps area - its width carries the split, set by the resizer. */
+.mapper-design-maps {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* The trees fill the maps area's full height. */
+.mapper-design-columns {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+}
+
+/* The side area - the subtab strip on top, the active panel below. */
+.mapper-design-side {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - side tab strip                                       */
+/* ------------------------------------------------------------ */
+
+/* The subtab visuals come from the kit's dashboard-tabs classes -
+   the strip only keeps its content width inside the side column. */
+.mapper-subtabs {
+    align-self: flex-start;
+    margin-bottom: 0;
+}
+
+/* The side panels stack their sections vertically and fill the
+   area's full height - each section scrolls on its own. */
+.mapper-side-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: var(--mapper-space-4);
+    padding-top: var(--mapper-space-3);
+}
+
+.mapper-side-panel[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - mapping list                                         */
+/* ------------------------------------------------------------ */
+
+.mapper-mappings-section,
+.mapper-detail {
+    min-width: 0;
+    border: 1px solid var(--mapper-border-light);
+    border-radius: var(--mapper-radius-medium);
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-panel);
+}
+
+/* The mappings take whatever height the detail panel leaves,
+   yet never collapse below a few visible rows. */
+.mapper-mappings-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: var(--mapper-mappings-min-height);
+}
+
+.mapper-mappings-header,
+.mapper-detail-header,
+.mapper-preview-header {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    padding: var(--mapper-space-2) var(--mapper-space-3);
+    border-bottom: 1px solid var(--mapper-border-light);
+}
+
+.mapper-mappings-header .mapper-button {
+    margin-left: auto;
+}
+
+.mapper-mappings-body {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+    padding: var(--mapper-space-2);
+}
+
+.mapper-rows,
+.mapper-scope-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mapper-scope-rows {
+    padding-left: var(--mapper-space-4);
+}
+
+.mapper-row {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    min-height: 30px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    cursor: pointer;
+    transition: background var(--mapper-motion-fast) ease;
+}
+
+.mapper-row:hover {
+    background: var(--mapper-background-row-hover);
+}
+
+.mapper-row:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: -2px;
+}
+
+.mapper-row-selected {
+    background: var(--mapper-background-row-selected);
+}
+
+.mapper-row-target {
+    font-family: var(--mapper-font-family-mono);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mapper-row-expression {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--mapper-font-family-mono);
+    color: var(--mapper-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The badge geometry comes from the kit's dashboard-outcome-badge,
+   the mapper only adds its colors and the ellipsis behavior. */
+.mapper-row-value {
+    max-width: 30%;
+    overflow: hidden;
+    font-family: var(--mapper-font-family-mono);
+    color: var(--mapper-color-success);
+    background: var(--mapper-background-success);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapper-row-error {
+    max-width: 40%;
+    overflow: hidden;
+    color: var(--mapper-color-error);
+    background: var(--mapper-background-error);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapper-row-note {
+    color: var(--mapper-text-muted);
+    background: var(--mapper-type-background-unknown);
+}
+
+.mapper-row-remove {
+    padding: 0 var(--mapper-space-2);
+    border: none;
+    border-radius: var(--mapper-radius-small);
+    font-size: var(--mapper-font-size-medium);
+    color: var(--mapper-text-muted);
+    background: transparent;
+    cursor: pointer;
+    transition: color var(--mapper-motion-fast) ease, background var(--mapper-motion-fast) ease;
+}
+
+.mapper-row-remove:hover {
+    color: var(--mapper-color-error);
+    background: var(--mapper-background-error);
+}
+
+.mapper-row-remove:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - scope groups                                         */
+/* ------------------------------------------------------------ */
+
+.mapper-scope-group {
+    margin-top: var(--mapper-space-2);
+}
+
+.mapper-scope-header {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border-radius: var(--mapper-radius-small);
+    background: var(--mapper-background-inset);
+}
+
+.mapper-scope-title {
+    font-family: var(--mapper-font-family-mono);
+    font-weight: 600;
+    color: var(--mapper-type-array);
+}
+
+.mapper-scope-element-picker,
+.mapper-preview-sample-select,
+.mapper-builder-field-select,
+.mapper-builder-function-select {
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-panel);
+}
+
+.mapper-scope-element-picker:focus-visible,
+.mapper-preview-sample-select:focus-visible,
+.mapper-builder-field-select:focus-visible,
+.mapper-builder-function-select:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - detail panel                                         */
+/* ------------------------------------------------------------ */
+
+/* The detail keeps its natural height under the mappings and
+   scrolls on its own when the column runs out of room. */
+.mapper-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    gap: var(--mapper-space-3);
+    padding-bottom: var(--mapper-space-3);
+}
+
+.mapper-detail[hidden] {
+    display: none;
+}
+
+.mapper-detail-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-1);
+    margin: 0 var(--mapper-space-3);
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+}
+
+.mapper-detail-label-inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--mapper-space-2);
+}
+
+.mapper-detail-input {
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+}
+
+.mapper-detail-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+.mapper-detail-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--mapper-space-4);
+}
+
+.mapper-detail-mode {
+    display: flex;
+    gap: var(--mapper-space-2);
+    margin: 0 var(--mapper-space-3);
+}
+
+/* The kit's action button sets its gradient with !important, so the
+   active mode needs the same weight to shine through. */
+.mapper-detail-mode-active {
+    color: var(--mapper-text-inverse);
+    border-color: var(--mapper-seablue-light1);
+    background: var(--mapper-seablue-light2) !important;
+}
+
+.mapper-detail-editor {
+    margin: 0 var(--mapper-space-3);
+}
+
+.mapper-detail-value {
+    margin-left: auto;
+    overflow: hidden;
+    font-family: var(--mapper-font-family-mono);
+    color: var(--mapper-color-success);
+    background: var(--mapper-background-success);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapper-detail-value-error {
+    color: var(--mapper-color-error);
+    background: var(--mapper-background-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - overlay editor                                       */
+/* ------------------------------------------------------------ */
+
+.mapper-editor {
+    display: flex;
+    position: relative;
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    background: var(--mapper-background-inset);
+}
+
+.mapper-editor:focus-within {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+.mapper-editor-gutter {
+    flex: none;
+    overflow: hidden;
+    min-width: 26px;
+    padding: var(--mapper-space-1) 0;
+    border-right: 1px solid var(--mapper-border-light);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+    text-align: center;
+    user-select: none;
+}
+
+.mapper-editor-gutter-line-error {
+    color: var(--mapper-color-error);
+    background: var(--mapper-background-error);
+    font-weight: 700;
+}
+
+.mapper-editor-stack {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.mapper-editor-display,
+.mapper-editor-input {
+    margin: 0;
+    min-height: 60px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.mapper-editor-display {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+}
+
+.mapper-editor-input {
+    display: block;
+    position: relative;
+    overflow: auto;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--mapper-text-main);
+    resize: vertical;
+    outline: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - syntax colors                                        */
+/* ------------------------------------------------------------ */
+
+.mapper-syntax-key {
+    color: var(--mapper-seablue-light2);
+    font-weight: 600;
+}
+
+.mapper-syntax-string {
+    color: var(--mapper-type-string);
+}
+
+.mapper-syntax-number {
+    color: var(--mapper-type-number);
+}
+
+.mapper-syntax-keyword {
+    color: var(--mapper-type-boolean);
+    font-weight: 600;
+}
+
+.mapper-syntax-function {
+    color: var(--mapper-type-array);
+    font-weight: 600;
+}
+
+.mapper-syntax-operator {
+    color: var(--mapper-color-armed);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - autocomplete dropdown                                */
+/* ------------------------------------------------------------ */
+
+.mapper-editor-completions {
+    position: absolute;
+    top: 100%;
+    left: 26px;
+    z-index: 50;
+    margin: 0;
+    padding: var(--mapper-space-1);
+    min-width: 220px;
+    max-width: 420px;
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    list-style: none;
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-raised);
+}
+
+.mapper-editor-completion {
+    display: flex;
+    align-items: baseline;
+    gap: var(--mapper-space-2);
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border-radius: var(--mapper-radius-small);
+    cursor: pointer;
+}
+
+.mapper-editor-completion-selected,
+.mapper-editor-completion:hover {
+    background: var(--mapper-background-row-selected);
+}
+
+.mapper-editor-completion-label {
+    font-family: var(--mapper-font-family-mono);
+    font-weight: 600;
+}
+
+.mapper-editor-completion-doc {
+    overflow: hidden;
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Function completions group under their category header. */
+.mapper-editor-completion-group {
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    font-size: var(--mapper-font-size-small);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--mapper-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - expression builder                                   */
+/* ------------------------------------------------------------ */
+
+.mapper-builder {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mapper-space-2);
+}
+
+.mapper-builder-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--mapper-space-1);
+    min-height: 36px;
+    padding: var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    background: var(--mapper-background-inset);
+}
+
+/* The pill geometry comes from the kit's dashboard-pill, the chips
+   only add the gap for their remove buttons and their own hues. */
+.mapper-builder-chip {
+    gap: var(--mapper-space-1);
+}
+
+.mapper-builder-chip-operator {
+    color: var(--mapper-color-armed);
+    background: var(--mapper-background-warning);
+}
+
+.mapper-builder-chip-function {
+    color: var(--mapper-type-array);
+    background: var(--mapper-type-background-array);
+}
+
+.mapper-builder-chip-remove {
+    padding: 0;
+    border: none;
+    font-size: var(--mapper-font-size-base);
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+}
+
+.mapper-builder-chip-remove:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+}
+
+.mapper-builder-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--mapper-space-2);
+}
+
+.mapper-builder-operators {
+    display: inline-flex;
+    gap: var(--mapper-space-1);
+}
+
+/* A clickable kit pill with the operator hue on top. */
+.mapper-builder-operator-chip {
+    justify-content: center;
+    min-width: 28px;
+    border: none;
+    color: var(--mapper-color-armed);
+    cursor: pointer;
+    transition: background var(--mapper-motion-fast) ease;
+}
+
+.mapper-builder-operator-chip:hover {
+    background: var(--mapper-background-warning);
+}
+
+.mapper-builder-operator-chip:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+}
+
+.mapper-builder-literal-input {
+    width: 120px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+}
+
+.mapper-builder-literal-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - preview panes                                        */
+/* ------------------------------------------------------------ */
+
+/* The two preview panes stack vertically in the side column,
+   separated by the split resizer strip instead of a gap. */
+.mapper-preview {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.mapper-preview-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--mapper-border-light);
+    border-radius: var(--mapper-radius-medium);
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-panel);
+}
+
+.mapper-preview-header .mapper-button {
+    margin-left: auto;
+}
+
+.mapper-preview-body {
+    margin: 0;
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    padding: var(--mapper-space-3);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-base);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.mapper-preview-body[hidden] {
+    display: none;
+}
+
+/* The input pane is editable - it carries a caret and marks
+   itself when its text stops being valid JSON. */
+.mapper-preview-input {
+    outline: none;
+    caret-color: var(--mapper-text-main);
+}
+
+.mapper-preview-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: -2px;
+}
+
+.mapper-preview-input-invalid {
+    outline: 2px solid var(--mapper-color-error);
+    outline-offset: -2px;
+    background: var(--mapper-background-error);
+}
+
+.mapper-preview-empty {
+    font-family: var(--mapper-font-family);
+    color: var(--mapper-text-muted);
+}

@@ -1,0 +1,376 @@
+/* ------------------------------------------------------------ */
+/* Mapper - page reset and base layout                           */
+/* ------------------------------------------------------------ */
+
+/* The mapper lives inside the Dashboard page, so every rule is
+   scoped to its own container instead of html and body. */
+.mapper-page,
+.mapper-page * {
+    box-sizing: border-box;
+}
+
+.mapper-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--mapper-page-top-offset));
+    font-family: var(--mapper-font-family);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-page);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - toolbar with the mapping name and artifact actions   */
+/* ------------------------------------------------------------ */
+
+.mapper-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-4);
+    padding: var(--mapper-space-2) var(--mapper-space-4);
+    border-bottom: 1px solid var(--mapper-border-light);
+    background: var(--mapper-background-panel);
+}
+
+.mapper-toolbar-name-input {
+    width: 260px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-size: var(--mapper-font-size-medium);
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-panel);
+    transition: border-color var(--mapper-motion-fast) ease;
+}
+
+.mapper-toolbar-name-input:hover {
+    border-color: var(--mapper-seablue-light3);
+}
+
+.mapper-toolbar-name-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+.mapper-toolbar-actions {
+    display: flex;
+    gap: var(--mapper-space-2);
+    margin-left: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - buttons                                              */
+/* ------------------------------------------------------------ */
+
+/* The button visuals come from the kit's zato-action-button class,
+   carried by every mapper button - only the focus ring is added. */
+.mapper-button:focus-visible {
+    outline: 2px solid var(--mapper-color-focus) !important;
+    outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - tab strip                                            */
+/* ------------------------------------------------------------ */
+
+/* The tab visuals come from the kit's dashboard-tabs classes -
+   only the strip's placement on the page is the mapper's own. */
+.mapper-tabs {
+    align-self: flex-start;
+    margin: var(--mapper-space-2) var(--mapper-space-4) 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - tab panels                                           */
+/* ------------------------------------------------------------ */
+
+.mapper-panels {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+
+    /* The vertical scrollbar is always visible, so the layout never
+       jumps when content grows past the viewport. */
+    overflow-y: scroll;
+}
+
+.mapper-panel {
+    height: 100%;
+    padding: var(--mapper-space-4);
+}
+
+.mapper-panel[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - design tab toolbar                                   */
+/* ------------------------------------------------------------ */
+
+.mapper-design-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    margin-bottom: var(--mapper-space-4);
+}
+
+.mapper-search-input {
+    width: 240px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family);
+    font-size: var(--mapper-font-size-base);
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-panel);
+}
+
+.mapper-search-input:focus-visible {
+    outline: 2px solid var(--mapper-color-focus);
+    outline-offset: 1px;
+}
+
+.mapper-search-count {
+    min-width: 72px;
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-muted);
+}
+
+.mapper-tree-filters {
+    display: flex;
+    gap: var(--mapper-space-1);
+    margin-left: var(--mapper-space-4);
+}
+
+/* The kit's action button sets its gradient with !important, so the
+   active state needs the same weight to shine through. */
+.mapper-filter-button-active {
+    color: var(--mapper-text-inverse);
+    font-weight: 600;
+    border-color: var(--mapper-seablue-light1);
+    background: var(--mapper-seablue-light2) !important;
+}
+
+.mapper-filter-button-active:hover {
+    border-color: var(--mapper-seablue-light2);
+    background: var(--mapper-seablue-light3) !important;
+}
+
+.mapper-design-toolbar-operations {
+    display: flex;
+    gap: var(--mapper-space-2);
+    margin-left: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - design tab, two schema columns                       */
+/* ------------------------------------------------------------ */
+
+.mapper-design-columns {
+    display: flex;
+    gap: var(--mapper-space-4);
+    height: 100%;
+    min-height: 0;
+}
+
+.mapper-schema-column {
+    /* The anchor for the edge resize handles straddling the borders. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--mapper-border-light);
+    border-radius: var(--mapper-radius-medium);
+    background: var(--mapper-background-panel);
+    box-shadow: var(--mapper-shadow-panel);
+}
+
+.mapper-schema-column-header {
+    display: flex;
+
+    /* The columns share the width with the side area, so the action
+       buttons wrap instead of painting over the neighbouring panels. */
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--mapper-space-2);
+    padding: var(--mapper-space-2) var(--mapper-space-3);
+    border-bottom: 1px solid var(--mapper-border-light);
+}
+
+.mapper-schema-column-title {
+    margin: 0;
+    font-size: var(--mapper-font-size-medium);
+    font-weight: 600;
+}
+
+.mapper-schema-column-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mapper-space-2);
+    margin-left: auto;
+    min-width: 0;
+}
+
+.mapper-schema-column-body {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+    padding: var(--mapper-space-2);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - panel edge resizers                                  */
+/* ------------------------------------------------------------ */
+
+/* The facing borders of the two panels act as the resize handles -
+   an invisible strip straddles each border and lights it up on
+   hover, focus and while dragging. */
+.mapper-edge-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.mapper-edge-resizer-right {
+    right: -5px;
+}
+
+.mapper-edge-resizer-left {
+    left: -5px;
+}
+
+.mapper-edge-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+    background: transparent;
+    transition: background var(--mapper-motion-fast) ease;
+}
+
+.mapper-edge-resizer:hover::before {
+    background: var(--mapper-seablue-light3);
+}
+
+.mapper-edge-resizer:focus-visible {
+    outline: none;
+}
+
+.mapper-edge-resizer:focus-visible::before {
+    background: var(--mapper-color-focus);
+}
+
+.mapper-edge-resizer.mapper-resizer-active::before {
+    background: var(--mapper-seablue-light2);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - split resizer between the maps and the side area     */
+/* ------------------------------------------------------------ */
+
+/* Unlike the edge resizers, this strip sits in the flex flow
+   itself - an invisible gutter whose centered line lights up on
+   hover, keyboard focus and while dragging. */
+.mapper-split-resizer {
+    position: relative;
+    flex: none;
+    width: 10px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.mapper-split-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    transform: translateX(-50%);
+    background: transparent;
+    transition: background var(--mapper-motion-fast) ease;
+}
+
+.mapper-split-resizer:hover::before {
+    background: var(--mapper-seablue-light3);
+}
+
+.mapper-split-resizer:focus-visible {
+    outline: none;
+}
+
+.mapper-split-resizer:focus-visible::before {
+    background: var(--mapper-color-focus);
+}
+
+.mapper-split-resizer.mapper-resizer-active::before {
+    background: var(--mapper-seablue-light2);
+}
+
+/* The row variant separates panes stacked on top of each other. */
+.mapper-split-resizer-row {
+    width: auto;
+    height: 10px;
+    cursor: row-resize;
+}
+
+.mapper-split-resizer-row::before {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 3px;
+    transform: translateY(-50%);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - placeholder panes for later groups                   */
+/* ------------------------------------------------------------ */
+
+.mapper-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mapper-space-3);
+    height: 100%;
+    padding: var(--mapper-space-6);
+    text-align: center;
+    color: var(--mapper-text-muted);
+}
+
+.mapper-empty-state-title {
+    margin: 0;
+    font-size: var(--mapper-font-size-large);
+    font-weight: 600;
+    color: var(--mapper-text-main);
+}
+
+.mapper-empty-state-text {
+    margin: 0;
+    max-width: 460px;
+    line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - reduced motion                                       */
+/* ------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0s !important;
+        animation-duration: 0s !important;
+    }
+}

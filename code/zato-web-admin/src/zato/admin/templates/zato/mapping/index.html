@@ -1,0 +1,245 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Mappings{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/zato_action_button.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/outcome.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mapper/tokens.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mapper/layout.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mapper/components.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mapper/expressions.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mapper/canvas.css">
+{% endblock %}
+
+{% block "content" %}
+
+<div class="mapper-page">
+
+    <div class="mapper-toolbar">
+        <input id="mapper-name" class="mapper-toolbar-name-input" type="text" aria-label="Mapping name">
+        <div class="mapper-toolbar-actions">
+            <button id="mapper-undo" class="mapper-button zato-action-button" type="button">Undo</button>
+            <button id="mapper-redo" class="mapper-button zato-action-button" type="button">Redo</button>
+            <button id="mapper-export" class="mapper-button zato-action-button" type="button">Export</button>
+            <button id="mapper-import" class="mapper-button zato-action-button" type="button">Import</button>
+            <input id="mapper-import-file" type="file" accept=".json,application/json" hidden>
+        </div>
+    </div>
+
+    <nav id="mapper-tabs" class="mapper-tabs dashboard-tabs" role="tablist"></nav>
+
+    <div id="mapper-page-notice" class="mapper-notice" hidden></div>
+
+    <main class="mapper-panels">
+
+        <section id="mapper-panel-design" class="mapper-panel" role="tabpanel">
+
+            <div class="mapper-design-toolbar">
+                <input id="mapper-search-input" class="mapper-search-input" type="search"
+                    placeholder="Search fields and mappings" aria-label="Search fields and mappings">
+                <span id="mapper-search-count" class="mapper-search-count" aria-live="polite"></span>
+                <button id="mapper-search-previous" class="mapper-button zato-action-button" type="button" title="Previous match">&#9650;</button>
+                <button id="mapper-search-next" class="mapper-button zato-action-button" type="button" title="Next match">&#9660;</button>
+                <div id="mapper-tree-filters" class="mapper-tree-filters" role="group" aria-label="Tree filters"></div>
+                <div class="mapper-design-toolbar-operations">
+                    <button id="mapper-collapse-all" class="mapper-button zato-action-button" type="button">Collapse all</button>
+                    <button id="mapper-expand-mapped" class="mapper-button zato-action-button" type="button">Expand mapped</button>
+                    <button id="mapper-automap" class="mapper-button zato-action-button" type="button">Auto-map</button>
+                </div>
+            </div>
+
+            <div class="mapper-design-areas">
+
+            <div id="mapper-design-maps" class="mapper-design-maps">
+            <div class="mapper-design-columns">
+
+                <svg id="mapper-canvas-lines" class="mapper-canvas-lines" aria-hidden="true"></svg>
+
+                <div id="mapper-schema-column-source" class="mapper-schema-column">
+                    <div class="mapper-schema-column-header">
+                        <h2 class="mapper-schema-column-title">Source</h2>
+                        <span class="mapper-sample-count">samples
+                            <span id="mapper-sample-count-source" class="mapper-sample-count-value dashboard-outcome-badge">0</span>
+                        </span>
+                        <div id="mapper-schema-actions-source" class="mapper-schema-column-actions"></div>
+                    </div>
+                    <div id="mapper-schema-notice-source" class="mapper-notice" hidden></div>
+                    <div id="mapper-schema-body-source" class="mapper-schema-column-body"></div>
+                    <div id="mapper-resize-edge-source" class="mapper-edge-resizer mapper-edge-resizer-right"
+                        role="separator" aria-label="Resize panels" aria-orientation="vertical" tabindex="0"></div>
+                </div>
+
+                <div id="mapper-schema-column-target" class="mapper-schema-column">
+                    <div class="mapper-schema-column-header">
+                        <h2 class="mapper-schema-column-title">Target</h2>
+                        <span class="mapper-sample-count">samples
+                            <span id="mapper-sample-count-target" class="mapper-sample-count-value dashboard-outcome-badge">0</span>
+                        </span>
+                        <div id="mapper-schema-actions-target" class="mapper-schema-column-actions"></div>
+                    </div>
+                    <div id="mapper-schema-notice-target" class="mapper-notice" hidden></div>
+                    <div id="mapper-schema-body-target" class="mapper-schema-column-body"></div>
+                    <div id="mapper-resize-edge-target" class="mapper-edge-resizer mapper-edge-resizer-left"
+                        role="separator" aria-label="Resize panels" aria-orientation="vertical" tabindex="0"></div>
+                </div>
+
+            </div>
+            </div>
+
+            <div id="mapper-design-split" class="mapper-split-resizer"
+                role="separator" aria-label="Resize areas" aria-orientation="vertical" tabindex="0"></div>
+
+            <div id="mapper-design-side" class="mapper-design-side">
+
+                <nav class="mapper-subtabs dashboard-tabs" role="tablist">
+                    <button class="mapper-subtab dashboard-tab" data-tab="mappings" role="tab" type="button">Mappings</button>
+                    <button class="mapper-subtab dashboard-tab" data-tab="preview" role="tab" type="button">Preview</button>
+                </nav>
+
+                <div id="mapper-side-panel-mappings" class="mapper-side-panel" role="tabpanel">
+
+                <div class="mapper-mappings-section">
+                    <div class="mapper-mappings-header">
+                        <h2 class="mapper-schema-column-title">Mappings</h2>
+                        <button id="mapper-add-mapping" class="mapper-button zato-action-button" type="button">Add mapping</button>
+                        <button id="mapper-delete-all-mappings" class="mapper-button zato-action-button" type="button">Delete all</button>
+                    </div>
+                    <div id="mapper-mapping-list" class="mapper-mappings-body"></div>
+                </div>
+
+                <div id="mapper-detail" class="mapper-detail" hidden>
+                    <div class="mapper-detail-header">
+                        <h2 class="mapper-schema-column-title">Mapping detail</h2>
+                        <span id="mapper-detail-value" class="mapper-detail-value dashboard-outcome-badge"></span>
+                    </div>
+
+                    <label class="mapper-detail-label">Target
+                        <input id="mapper-detail-target" class="mapper-detail-input" type="text" list="mapper-detail-target-paths">
+                    </label>
+                    <datalist id="mapper-detail-target-paths"></datalist>
+
+                    <div class="mapper-detail-mode">
+                        <button id="mapper-detail-mode-raw" class="mapper-button zato-action-button mapper-detail-mode-active" type="button">Raw</button>
+                        <button id="mapper-detail-mode-builder" class="mapper-button zato-action-button" type="button">Builder</button>
+                    </div>
+
+                    <div id="mapper-detail-expression" class="mapper-detail-editor"></div>
+                    <div id="mapper-detail-builder" class="mapper-detail-editor" hidden></div>
+
+                    <label class="mapper-detail-label">Condition</label>
+                    <div id="mapper-detail-condition" class="mapper-detail-editor"></div>
+
+                    <div class="mapper-detail-row">
+                        <label class="mapper-detail-label">Default
+                            <input id="mapper-detail-default" class="mapper-detail-input" type="text">
+                        </label>
+                        <label class="mapper-detail-label mapper-detail-label-inline">
+                            <input id="mapper-detail-omit" type="checkbox"> Omit if empty
+                        </label>
+                    </div>
+
+                    <label class="mapper-detail-label">Comment
+                        <input id="mapper-detail-comment" class="mapper-detail-input" type="text">
+                    </label>
+                </div>
+
+                </div>
+
+                <div id="mapper-side-panel-preview" class="mapper-side-panel" role="tabpanel" hidden>
+
+                <div class="mapper-preview">
+
+                    <div class="mapper-preview-pane">
+                        <div class="mapper-preview-header">
+                            <h2 class="mapper-schema-column-title">Input</h2>
+                            <select id="mapper-preview-sample-select" class="mapper-preview-sample-select" aria-label="Active sample"></select>
+                            <button id="mapper-preview-input-toggle" class="mapper-button zato-action-button" type="button">Toggle</button>
+                        </div>
+                        <pre id="mapper-preview-input" class="mapper-preview-body mapper-preview-input"
+                            contenteditable="plaintext-only" spellcheck="false" aria-label="Input"></pre>
+                    </div>
+
+                    <div id="mapper-preview-split" class="mapper-split-resizer mapper-split-resizer-row"
+                        role="separator" aria-label="Resize panes" aria-orientation="horizontal" tabindex="0"></div>
+
+                    <div class="mapper-preview-pane">
+                        <div class="mapper-preview-header">
+                            <h2 class="mapper-schema-column-title">Output</h2>
+                            <button id="mapper-preview-output-toggle" class="mapper-button zato-action-button" type="button">Toggle</button>
+                        </div>
+                        <pre id="mapper-preview-output" class="mapper-preview-body"></pre>
+                    </div>
+
+                </div>
+
+                </div>
+
+            </div>
+
+            </div>
+        </section>
+
+        <section id="mapper-panel-code" class="mapper-panel" role="tabpanel" hidden>
+            <div class="mapper-empty-state">
+                <h3 class="mapper-empty-state-title">Code view</h3>
+                <p class="mapper-empty-state-text">The mapping document will be editable here as JSON,
+                    kept in sync with the Design tab both ways.</p>
+            </div>
+        </section>
+
+        <section id="mapper-panel-tests" class="mapper-panel" role="tabpanel" hidden>
+            <div class="mapper-empty-state">
+                <h3 class="mapper-empty-state-title">Tests</h3>
+                <p class="mapper-empty-state-text">Named test cases with expected outputs will live here,
+                    stored inside the mapping and runnable with one click.</p>
+            </div>
+        </section>
+
+        <section id="mapper-panel-import" class="mapper-panel" role="tabpanel" hidden>
+            <div class="mapper-empty-state">
+                <h3 class="mapper-empty-state-title">Import</h3>
+                <p class="mapper-empty-state-text">Importers for mappings created in other tools will live here,
+                    each with a per-construct conversion report.</p>
+            </div>
+        </section>
+
+    </main>
+
+</div>
+
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/store2/store2.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jsonata/jsonata.min.js"></script>
+
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/namespace.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/log.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/store.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/schema.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/connections.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/tree.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/tabs.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/resizer.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/dialog.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/review-dialog.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/schema-panel.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/highlight.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/overlay-editor.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/evaluator.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/builder.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/mapping-list.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/context-menu.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/canvas.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/automap.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/refactor.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/reimport.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/search.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/detail-panel.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/preview.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/page.js"></script>
+
+{% endblock %}

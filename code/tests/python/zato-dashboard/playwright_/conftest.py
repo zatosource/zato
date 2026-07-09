@@ -399,13 +399,9 @@ def playwright_browser() -> 'any_':
     """ Launches a Playwright Chromium browser for the entire test session.
     """
 
-    # Show the browser window when a display server is available ..
-    has_display = bool(os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
-    use_headless = not has_display
-
-    # .. start playwright ..
+    # The browser always runs headless so test runs never take over the screen.
     playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=use_headless)
+    browser = playwright.chromium.launch(headless=True)
 
     yield browser
 
