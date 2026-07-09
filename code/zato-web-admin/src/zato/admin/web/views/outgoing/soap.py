@@ -41,7 +41,7 @@ class Index(_Index):
         }
 
     input_required = 'cluster_id',
-    output_required = 'id', 'name', 'is_active'
+    output_required = 'id', 'name', 'is_active', 'is_internal'
     output_optional = 'host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key'

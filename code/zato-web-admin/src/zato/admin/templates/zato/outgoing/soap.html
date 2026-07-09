@@ -38,6 +38,7 @@
             'soap_action',
             'soap_version',
             '_security',
+            '_audit_log',
             '_ping',
             '_edit',
             '_delete',
@@ -99,6 +100,7 @@
                         <th><a href="#">SOAP version</a></th>
                         <th><a href="#">Security</a></th>
 
+                        <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -150,6 +152,7 @@
                             {% endif %}
                         </td>
 
+                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.soap.delete_('{{ item.id }}')">Delete</a></td>
@@ -181,7 +184,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='25'>No results</td>
+                        <td colspan='26'>No results</td>
                     </tr>
                 {% endif %}
 
