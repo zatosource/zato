@@ -1,0 +1,6 @@
+MSH|^~\&||VendorCode||accountID|20160205022300||ORU^R01^ORU_R01|msgcontrolID|P|2.5.1|||AL|AL|||||LRI_NG_RN_Profile^^2.16.840.1.113883.9.20^ISO
+PID|1||PATID1234^^^^MR~PATID1234567^^^^MR||Πέτρου^Κατερίνα^Middle|||F|
+ORC|CA|Placer1234|Filler56789|||||||||12345678923^Provider^Σοφία
+OBR|1|Placer1234|Filler56789|57021-8^Wellness Panel in Blood^LN^^^^^^Wellness Panel in Blood|||ObservationDate/Time|||||||||12345678923^Provider^Σοφία||||||ResultReportedDate/Time|||F
+OBX|1|NM|718-7^Hemoglobin [Mass/volume] in Blood^LN^^^^^^Hemoglobin||14.2|g/dL|12.0-16.0|N|||F|||20120816122332|||||||||Performing Lab|1234 AnyStreet^Any Town^CA^94102
+OBX|2|ED|PDF^PDF||^AP^^Base64^[base64 encoded document]||||||F|||20120816122332|||||||||Performing Lab|1234 AnyStreet^Any Town^CA^94102

@@ -1,0 +1,70 @@
+MSH|^~\&|EPIC|NMHPL|IMG_END_EXAM|RAD|20240924090942|NM321798|ORM^O01|73207302|P|2.3|||||||||||
+PID|1||128025211^^^MR^MR|en6Xnt2vXywYi4mH0L-V2ltnEHWqiVmptfKh6lTdiOfs3|TESTLN^TESTFN^E||19700901|F|TESTLN^TESTFN^^~TESTLN^TESTFN^E^|W|1234 NORTH CLARK ST^UNIT 4^CHICAGO^IL^60613-1996^USA^^^COOK|COOK|(999)123-9179^H^PH^^1||ENG|M||200276592826|333-44-1234|||N||||||||||
+PV1|1|O|NMHLAVGIINTR^^^NMHH^^^^^^^NMHCDEP||||1396001269^CTEST^STEVE^N.^^^^^EPIC^^^^NPI~72095^CTEST^STEVE^N.^^^^^SE001^^^^SE001~51511^CTEST^STEVE^N.^^^^^^^^^NMHMD~1841456423^NEALIS^THOMAS^B.^^^^^EPIC^^^^NPI~66257^NEALIS^THOMAS^B.^^^^^SE001^^^^SE001~04278^NEALIS^THOMAS^B.^^^^^^^^^NMHMD~800169^NEALIS^THOMAS^B.^^^^^^^^^LFHMD|1396001269^CTEST^STEVE^N.^^^^^EPIC^^^^NPI~72095^CTEST^STEVE^N.^^^^^SE001^^^^SE001~51511^CTEST^STEVE^N.^^^^^^^^^NMHMD||||||||||||||||||||||||||||||||||||20240924082217|||||||V
+ORC|SC|1918401941^EPC|N24ES33552681^EPC||F||^^^20240924084117^20240924090441^R||20240924090942|TNEALIS1^NEALIS^THOMAS^^||1396001269^CTEST^STEVE^N.^^^^^EPIC^^^^NPI~72095^CTEST^STEVE^N.^^^^^SE001^^^^SE001~51511^CTEST^STEVE^N.^^^^^^^^^NMHMD|LAVINGIIN^^^50101^^^^^NMH LAVIN WELLNESS SUITE|(312)926-3627|||||||||||||||I|
+OBR|1|1918401941^EPC|N24ES33552681^EPC|GI7^ANNUAL WELLNESS SCREENING^99MMC^^ANNUAL WELLNESS SCREENING|R|20240924082218|||||Transcribed|||||1396001269^CTEST^STEVE^N.^^^^^EPIC^^^^NPI~72095^CTEST^STEVE^N.^^^^^SE001^^^^SE001~51511^CTEST^STEVE^N.^^^^^^^^^NMHMD|(312)926-3627|NMHLAVGIINTR|NMH LAVIN WELLNESS SUITE 06|||20240924090642||ES|F||^^^20240924084117^20240924090441^R||||Z00.00^Routine wellness visit^ICD-10-CM|1841456423^NEALIS^THOMAS^B.^^^^^EPIC^^^^NPI~66257^NEALIS^THOMAS^B.^^^^^SE001^^^^SE001~04278^NEALIS^THOMAS^B.^^^^^^^^^NMHMD~800169^NEALIS^THOMAS^B.^^^^^^^^^LFHMD||NM321798^MTEST^SAMANTHA^^||20240924090000||||||||GI7^ANNUAL WELLNESS SCREENING^99MMC^^ANNUAL WELLNESS SCREENING|
+ZPF|1|46^WELLNESS PROCEDURE ORDERABLES|||||NMHLAVGIINTR^^^NMHH^^^^^^^NMHCDEP|651507^NMH LAVIN WELLNESS SUITE 06^SE001~140262^NMH LAVIN WELLNESS SUITE 06^NMHMD~1040245^NMH LAVIN WELLNESS SUITE 06^LFHMD~416024^NMH LAVIN WELLNESS SUITE 06^GENSER|4661132||||
+OBX|1|ST|&GDT|1|Table formatting from the original result was not included.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|2|ST|&GDT|1|Impression||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|3|ST|&GDT|1|All areas examined appeared healthy and normal.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|4|ST|&GDT|1|No concerns noted during examination.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|5|ST|&GDT|1|Routine sample collected for wellness records.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|6|ST|&GDT|1|All observations within normal range.\\E\\||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|7|ST|&GDT|1|Wellness check completed successfully.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|8|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|9|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|10|ST|&GDT|1|Recommendation||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|11|ST|&GDT|1|Continue current wellness routine.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|12|ST|&GDT|1|Next wellness visit in 3 years, due: 9/24/2027||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|13|ST|&GDT|1|- Results shared with patient at visit.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|14|ST|&GDT|1|Call 312-695-5620 for any questions.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|15|ST|&GDT|1|- Patient discharged home in excellent condition.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|16|ST|&GDT|1|- Continue high fiber diet.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|17|ST|&GDT|1|- Next wellness screening in 3 years based on results.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|18|ST|&GDT|1|All findings normal, return in 10 years for routine follow-up.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|19|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|20|ST|&GDT|1|- Return to primary care physician as previously scheduled.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|21|ST|&GDT|1|- Results given to patient at visit and family over phone.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|22|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|23|ST|&GDT|1|Indication||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|24|ST|&GDT|1|Routine annual wellness screening.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|25|ST|&GDT|1|First visit. No family history of concern.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|26|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|27|ST|&GDT|1|Patient in excellent overall health. PCP 12/22, referred for wellness visit.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|28|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|29|ST|&GDT|1|Staff||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|30|ST|&GDT|1|Performing Physician: TEST, THOMAS B., MD||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|31|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|32|ST|&GDT|1|Supplements||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|33|ST|&GDT|1|Vitamin D 1000 IU daily||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|34|ST|&GDT|1|Omega-3 fish oil 1000 mg daily||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|35|ST|&GDT|1|sodium chloride 0.9% infusion - hydration completed||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|36|ST|&GDT|1|(Totals for administrations occurring from 0828 to 0904 on 09/24/24)||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|37|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|38|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|39|ST|&GDT|1|Pre-visit||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|40|ST|&GDT|1|A wellness history has been reviewed. Patient in great health.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|41|ST|&GDT|1|All questions were answered and informed consent obtained.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|42|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|43|ST|&GDT|1|Details of the Visit||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|44|ST|&GDT|1|The patient was comfortable throughout the visit. Vitals were||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|45|ST|&GDT|1|monitored and all within healthy range. The patient tolerated||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|46|ST|&GDT|1|the visit well. There were no concerns noted. Attending||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|47|ST|&GDT|1|Participation: I was present during the entire visit.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|48|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|49|ST|&GDT|1|Events||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|50|ST|&GDT|1|Visit duration: 0:14||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|51|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|52|ST|&GDT|1|Findings||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|53|ST|&GDT|1|All areas examined appeared healthy and normal.||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|54|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|55|ST|&GDT|1|Specimens||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|56|ST|&GDT|1|ID Type Source Tests Collected by Time||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|57|ST|&GDT|1|1 : Routine sample Tissue WELLNESS CHECK TEST, THOMAS B., MD||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|58|ST|&GDT|1|9/24/2024 0859||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|59|ST|&GDT|1|||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|60|ST|&GDT|1|Electronically Signed By: Thomas B. Nealis on 9/24/2024 9:06 AM||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|61|NM|HT^HEIGHT|2|68|in|||||F|||20240821103800|NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|62|NM|WT^WEIGHT|2|68.04|kg|||||F|||20240821103800|NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+OBX|63|ST|&CPT|2|99395\\T\\99395\\T\\99396\\T\\99396||||||F||||NMHPOC|NM321798^MTEST^SAMANTHA^^|||||||||
+ZDS|1.2.840.114350.2.211.2.798268.2.1649714364.1^"EPIC"^"APPLICATION"^"DICOM"

@@ -1,0 +1,14 @@
+MSH|^~\&|PROSOLV|XYZHOSPITAL|SYSTEM|XYZHOSPITAL|200801311600+0215||MDM^T10^MDM_T10|PS1-20080131160038|P|2.8
+SFT|Orion|2.4.3.52854|Rhapsody|2.4.3|Testactivity|20070725111624
+EVN|T10|200801311600+0215|||C08^Woolfson^Kathleen
+PID|1|987654321|987654321||PROSOLV^SAMPLE||19721201|M||||||||||10000001|111-22-3333
+PV1|1|I|CCU^2000^1|||CCU^2003^1|1234^HIPPOCRATES^KOS|9099^KEVORKIAN^JACK|8888^HOUSE^GREGORY||||||||||10000001
+ORC|SC|00012345|1-1
+TQ1|1|54^&lbs|P&Post (after)&HL7xxx^HD^^^12^min^^PC^120^s|11:30:05~11:45:05|30^s|150^&kg|202110091600-0800|202111091600-0800|A|This is condition text|Please follow the text instructions||2^hr|5
+OBR|1|00012345|1-1|02585^TransthoracicEcho^PCV4|||20080131155500+0215|||||||||||||||200801311600+0215|||F||||||796.4^^I9M~786.09^^I9M~414.8^^I9M||||54321^Doctorovich^Ivan^
+NTE|1||No Antibodies Detected||MLEE^ATTEND^AARON^A^^^MD|202010101500+0215|
+ORC|SC|00012367|1-1
+OBR|1|00012367|1-1|02588^3D echo cardigram^PCV4||20060131164500+0215|20080131164500+0215|||||||||||||||20080131164500+0215|||F||||||796.4^^I9M~786.09^^I9M~414.8^^I9M||||54321^Doctorovich^Ivan^
+TXA|1|DI|TX|200801311555+0215||200801311600+0215|||IvanDoctorovich|||1.2.840.317.5947431.51.20080131160038|1.2.840.317.5947431.51.20080131155715|00012345|1-1||AU|||||54321^Doctorovich^Ivan^^^^^^^^^^^^200801311600
+OBX|1|TX|obs-id^obs-text^coding-system^^|1|Toilet cylinder crackers model step-mother visor opening communication||||||F||||||
+OBX|2|TX|obs-id^obs-text^coding-system^^|1|Columnist draft inn brown income ikebana circulation prince||||||F||||||

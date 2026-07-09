@@ -1,0 +1,36 @@
+MSH|^~\&|SIMHOSP|SFAC|RAPP|RFAC|20210801090642+0215||MDM^T02^MDM_T02|112|T|2.3|||AL||44|ASCII
+EVN|T02|20210801090642+0215|||C006^Woolfson^Kathleen^^^Dr^^^DRNBR^REL^^^ORGDR|
+PID|1|3196695816^^^SIMULATOR MRN^MRN|3196695816^^^SIMULATOR MRN^MRN~6597923189^^^NHSNBR^NHSNMBR||Clark^Frederick^^^Mr^^A||19300122000000+0215|M|||19 Blocker House^Restaurant Square^Ilford^^WI3 7KU^GBR^HOME||073 0075 3040^BPN^PH|||||||||A^White - British^^^||||||||
+PV1|1|O||28b|||C006^Woolfson^Kathleen^^^Dr^^^DRNBR^REL^^^ORGDR|||MED||||||||||||||||||||||||||||||||||||
+ORC|NW||986^IA PHIMS Stage^2.16.840.1.114222.4.3.3.5.1.2^ISO|PGN-04||||ORC-8.1&ORC8.1.2^ORC8.2|202009101700+0215||||||204010101700+0215||||||MISSOURI DEPARTMENT OF HEALTH LABORATORY - MISSOURI DEPARTMENT OF HEALTH LABORATORY^L|307 W MCCARTY ST^^JEFFERSON CITY^MO^65101^USA^B|^WPN^PH^^1^^5555555|St-24, Greenwood^Building2|||||O^Outpatient Facility||orc-31
+OBR|1|845439^GHH OE|986^IA PHIMS Stage^2.16.840.1.114222.4.3.3.5.1.2^ISO|625-4^Bacteria identified in Stool by Culture^XYZ^^^^2.33^^Enteric Culture|R|202010101700+0215|200202150730+0215||150^lb&lb&ANSI+|10535^van Beethoven&van^Ludwig^A^III^Dr^PHD^^&MPI.Community Health and Hospitals&L^L^3^M10^MR^& Good Health Hospital.Community Health and Hospitals&L^A|G|||200202120730+0215|SP15&1.2&L^ACDA^Collection Method^BN&223.3&L|||Placer 1|Placer 2|Filler 1|Filler 2|200203150730+0215||BLB|F||||PAI-29||444^HIPPOCRATES^HOWARD H^^^^MD|Harry&Raud&Geny&&Mr.&Dr.^^^Poc-32^Room-4^Bed3^Facility-3&1.2&ISO^^^Building-4^FL-2||Richa&&&&Mr.&Md.^^^Poc-34^Rm-4^Bed2^Facility-4&1.22&ISO^^^Building-3^FL-3|35&Samuel^20021111^20021112^Area23||||Collector's comment|||||||PSS-46^Placer service^L|FSS-47^Filler service^L|||50^11.22^AR|||APON-53^4^M11^ORU^MR^University Hospital
+TXA|1|DS||20210801090642+0215|C006^Woolfson^Kathleen^^^Dr^^^DRNBR^REL^^^ORGDR|202108030000+0215||20210801090642+0215||||2RWRVAJ627408|||||IP||||||
+OBX|1|TX|obs-id^obs-text^coding-system^^|1|Toilet cylinder crackers model step-mother visor opening communication||||||F||||||
+OBX|2|TX|obs-id^obs-text^coding-system^^|1|Columnist draft inn brown income ikebana circulation prince||||||F||||||
+OBX|3|TX|obs-id^obs-text^coding-system^^|1|Taxicab creator film therapist shelter||||||F||||||
+OBX|4|TX|obs-id^obs-text^coding-system^^|1|Naming grandmother ruth||||||F||||||
+OBX|5|TX|obs-id^obs-text^coding-system^^|1|Cesspool dress crystallography processing sphynx conspirator plate tool||||||F||||||
+OBX|6|TX|obs-id^obs-text^coding-system^^|1|Let nothing neuropathologist grass||||||F||||||
+OBX|7|TX|obs-id^obs-text^coding-system^^|1|James flavor source sweats perfume spasm||||||F||||||
+OBX|8|TX|obs-id^obs-text^coding-system^^|1|Stopsign||||||F||||||
+OBX|9|TX|obs-id^obs-text^coding-system^^|1|Neat rugby sound evening hostel curio chastity pulley wallet xylophone||||||F||||||
+OBX|10|TX|obs-id^obs-text^coding-system^^|1|Tomorrow survey raffle epee cash herb hovel frame||||||F||||||
+OBX|11|TX|obs-id^obs-text^coding-system^^|1|Wish orangutan caddy mayor knowledge guilt tight criteria||||||F||||||
+OBX|12|TX|obs-id^obs-text^coding-system^^|1|Thong||||||F||||||
+OBX|13|TX|obs-id^obs-text^coding-system^^|1|Scimitar gall-bladder economy orange trade sing town||||||F||||||
+OBX|14|TX|obs-id^obs-text^coding-system^^|1|Vinyl people junk skiing north irony sing scorn cameo||||||F||||||
+OBX|15|TX|obs-id^obs-text^coding-system^^|1|Math pimp wave leather national nurture responsibility suppression||||||F||||||
+OBX|16|TX|obs-id^obs-text^coding-system^^|1|Sash area||||||F||||||
+OBX|17|TX|obs-id^obs-text^coding-system^^|1|Search eyelids||||||F||||||
+OBX|18|TX|obs-id^obs-text^coding-system^^|1|Suffocation face convert soup cricket||||||F||||||
+OBX|19|TX|obs-id^obs-text^coding-system^^|1|Step-Grandmother||||||F||||||
+OBX|20|TX|obs-id^obs-text^coding-system^^|1|Pheasant shot disembodiment||||||F||||||
+OBX|21|TX|obs-id^obs-text^coding-system^^|1|White feature||||||F||||||
+OBX|22|TX|obs-id^obs-text^coding-system^^|1|Duster||||||F||||||
+OBX|23|TX|obs-id^obs-text^coding-system^^|1|Science cycle demand||||||F||||||
+OBX|24|TX|obs-id^obs-text^coding-system^^|1|Charm official||||||F||||||
+OBX|25|TX|obs-id^obs-text^coding-system^^|1|Airport manservant||||||F||||||
+OBX|26|TX|obs-id^obs-text^coding-system^^|1|Lanai flute unique plain feature parking pressure||||||F||||||
+OBX|27|TX|obs-id^obs-text^coding-system^^|1|Instance buggy colt route pier menorah ingrate garb||||||F||||||
+OBX|28|TX|obs-id^obs-text^coding-system^^|1|Character press mini comic||||||F||||||
+OBX|29|TX|obs-id^obs-text^coding-system^^|1|Reminder shofar congo vibration mother-in-law bondsman suspect||||||F||||||
