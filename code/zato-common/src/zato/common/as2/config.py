@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 # Zato
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.partnership import CertificateEntry, new_partnership
-from zato.common.util.xml_.keystore import load_certificates_pem, load_private_key_pem, new_keystore
+from zato.common.util.xml_.keystore import DecryptionEntry, load_certificates_pem, load_private_key_pem, new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +103,24 @@ def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
     if value := config['as2_decryption_key']:
         value = decrypt_func(value)
         out.decryption_key = load_private_key_pem(value.encode('utf8'))
+
+    # The next-decryption pair joins the rotation entries with no window - during a rotation
+    # of our own key, messages encrypted to either the old or the new certificate must decrypt.
+    if value := config['as2_next_decryption_key']:
+
+        certificate_pem = config['as2_next_decryption_cert']
+
+        if not certificate_pem:
+            raise AS2Exception('A next decryption key requires its certificate for recipient matching')
+
+        value = decrypt_func(value)
+        certificates = load_certificates_pem(certificate_pem.encode('utf8'))
+
+        entry = DecryptionEntry()
+        entry.key = load_private_key_pem(value.encode('utf8'))
+        entry.certificate = certificates[0]
+
+        out.decryption_entries.append(entry)
 
     if value := config['as2_peer_signing_cert']:
         certificates = load_certificates_pem(value.encode('utf8'))

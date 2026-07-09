@@ -76,6 +76,8 @@ class AS2Importer(GenericConnectionImporter):
         'as2_signing_key': '',
         'as2_signing_cert_chain': '',
         'as2_decryption_key': '',
+        'as2_next_decryption_key': '',
+        'as2_next_decryption_cert': '',
         'as2_peer_signing_cert': '',
         'as2_peer_encryption_cert': '',
         'as2_trust_anchors': '',

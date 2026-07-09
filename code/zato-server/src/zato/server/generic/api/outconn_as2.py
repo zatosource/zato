@@ -24,7 +24,6 @@ from zato.common.api import AS2
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.config import build_keystore, build_partnership
 from zato.common.as2.outbound import send as outbound_send, send_payload
-from zato.common.as2.partnership import select_encryption_certificate
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 
@@ -118,9 +117,13 @@ outconn_as2_config_defaults:'dict[str, object]' = {
     'as2_partner_next_cert_from': '',
 
     # Our own keystore material, pasted as PEM, with the private keys encrypted at rest.
+    # The next-decryption pair keeps messages encrypted to our old certificate readable
+    # while a rotation of our own key is under way.
     'as2_signing_key': '',
     'as2_signing_cert_chain': '',
     'as2_decryption_key': '',
+    'as2_next_decryption_key': '',
+    'as2_next_decryption_cert': '',
     'as2_peer_signing_cert': '',
     'as2_peer_encryption_cert': '',
     'as2_trust_anchors': '',
@@ -150,22 +153,14 @@ class _AS2Connection:
         self.config = config
         self.name = config['name']
 
-        # The partnership is who the two parties are and how their messages are secured ..
+        # The partnership is who the two parties are and how their messages are secured -
+        # its certificate rotation lists are consulted per message, at send time,
+        # so an activation date crossing takes effect without a pool rebuild ..
         self.partnership = build_partnership(config)
 
         # .. the keystore holds our own keys and the partner's certificates -
         # the private keys are decrypted only at this point.
         self.keystore = build_keystore(config, server.decrypt)
-
-        # The partner's rotation list decides what outgoing encryption uses right now -
-        # during a migration window the most recently activated certificate wins.
-        if certificate := select_encryption_certificate(self.partnership):
-            self.keystore.peer_encryption_certificate = certificate
-
-            # The same partner certificate also verifies the signature of returned MDNs
-            # unless one was configured for that purpose explicitly.
-            if not self.keystore.peer_signing_certificate:
-                self.keystore.peer_signing_certificate = certificate
 
         # One HTTP client is shared by all exchanges over this connection.
         self.http_client = httpx.Client(

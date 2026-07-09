@@ -261,14 +261,14 @@ class AS2:
         MDN_Channel_URL_Path = '/zato/as2/mdn'
 
     # The AS2 configuration fields shared by channels and outgoing connections.
-    Common_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_peer_signing_cert',
-        'as2_peer_encryption_cert', 'as2_trust_anchors')
+    Common_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_next_decryption_key',
+        'as2_next_decryption_cert', 'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors')
 
     # The fields that only AS2 channels use.
     Channel_Fields = ('as2_inbound_topic', 'as2_duplicate_window_days')
 
     # The fields that hold private keys - they are encrypted at rest.
-    Secret_Fields = ('as2_signing_key', 'as2_decryption_key')
+    Secret_Fields = ('as2_signing_key', 'as2_decryption_key', 'as2_next_decryption_key')
 
 # ################################################################################################################################
 # ################################################################################################################################

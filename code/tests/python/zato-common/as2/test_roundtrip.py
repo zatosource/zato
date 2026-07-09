@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from http.client import ACCEPTED, NO_CONTENT, OK
 
 # httpx
@@ -21,7 +22,8 @@ from zato.common.as2.common import AS2Error, Default, MDNMode, TransferMode
 from zato.common.as2.inbound import handle, StoredMDN
 from zato.common.as2.mdn import build_mdn, MDNRequest, new_processed_disposition, normalize_message_id, parse_mdn
 from zato.common.as2.outbound import build_message, PayloadItem, send
-from zato.common.as2.partnership import HTTPAuth, new_partnership
+from zato.common.as2.partnership import CertificateEntry, HTTPAuth, new_partnership
+from zato.common.util.xml_.keystore import DecryptionEntry, new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -857,6 +859,229 @@ class TestErrorDispositions:
         assert mdn.disposition == 'failed'
         assert mdn.modifier_kind == 'failure'
         assert mdn.modifier == 'unsupported MIC-algorithms'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _certificate_entry(certificate, valid_from=None, valid_until=None):
+    """ Builds one entry of a partner's certificate rotation list.
+    """
+    out = CertificateEntry()
+
+    out.certificate = certificate
+    out.valid_from = valid_from
+    out.valid_until = valid_until
+
+    return out
+
+# ################################################################################################################################
+
+def _rotated_sender_keystore(parties, rotated):
+    """ The sending side's keystore after it rotated its signing pair -
+    encryption and MDN verification still target the receiver's current certificate.
+    """
+    out = new_keystore()
+
+    out.signing_key = rotated.key
+    out.signing_certificate_chain = [rotated.certificate]
+    out.peer_encryption_certificate = parties.receiver.signing_certificate
+    out.peer_signing_certificate = parties.receiver.signing_certificate
+
+    return out
+
+# ################################################################################################################################
+
+def _receiver_keystore_with_entry(parties, rotated):
+    """ The receiving side's keystore during a rotation of its own decryption pair -
+    the old key stays primary while the new pair joins the rotation entries.
+    """
+    out = new_keystore()
+
+    out.signing_key = parties.receiver.signing_key
+    out.signing_certificate_chain = parties.receiver.signing_certificate_chain
+    out.decryption_key = parties.receiver.decryption_key
+    out.peer_signing_certificate = parties.receiver.peer_signing_certificate
+
+    entry = DecryptionEntry()
+    entry.key = rotated.key
+    entry.certificate = rotated.certificate
+    out.decryption_entries.append(entry)
+
+    return out
+
+# ################################################################################################################################
+
+def _receiver_keystore_signing_with(parties, rotated):
+    """ The receiving side's keystore after it rotated its signing pair - the old
+    decryption pair stays on the rotation entries so incoming messages still decrypt.
+    """
+    out = new_keystore()
+
+    out.signing_key = rotated.key
+    out.signing_certificate_chain = [rotated.certificate]
+    out.decryption_key = parties.receiver.decryption_key
+    out.peer_signing_certificate = parties.receiver.peer_signing_certificate
+
+    entry = DecryptionEntry()
+    entry.key = parties.receiver.decryption_key
+    entry.certificate = parties.receiver.signing_certificate
+    out.decryption_entries.append(entry)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCertificateRotation:
+    """ The overlap window end to end - more than two live certificates, staged activation,
+    encryption following the most recently activated certificate and rotation of our own keys.
+    """
+
+    def test_overlap_window_accepts_signatures_from_all_live_certificates(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        first_rotated = make_rotated_pair('as2-sender-rotation-first')
+        second_rotated = make_rotated_pair('as2-sender-rotation-second')
+
+        now = datetime.now(timezone.utc)
+
+        # Three of the partner's certificates are live at once - the original one
+        # plus two staged rotations whose activation dates have passed.
+        receiver_partnership = exchange.receiver_partnerships[0]
+
+        receiver_partnership.verification_certificates.append(
+            _certificate_entry(parties.sender.signing_certificate))
+        receiver_partnership.verification_certificates.append(
+            _certificate_entry(first_rotated.certificate, valid_from=now - timedelta(days=2)))
+        receiver_partnership.verification_certificates.append(
+            _certificate_entry(second_rotated.certificate, valid_from=now - timedelta(days=1)))
+
+        # A message signed with each of the three keys is accepted.
+        result = _send(exchange)
+        assert result.is_ok
+
+        exchange.sender_keystore = _rotated_sender_keystore(parties, first_rotated)
+        result = _send(exchange)
+        assert result.is_ok
+
+        exchange.sender_keystore = _rotated_sender_keystore(parties, second_rotated)
+        result = _send(exchange)
+        assert result.is_ok
+
+        for inbound in exchange.results:
+            assert not inbound.is_error
+            assert inbound.payloads[0].data == _payload
+
+    def test_a_not_yet_activated_certificate_is_rejected(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        rotated = make_rotated_pair('as2-sender-rotation-early')
+        now = datetime.now(timezone.utc)
+
+        # The staged certificate only activates a month from now.
+        receiver_partnership = exchange.receiver_partnerships[0]
+
+        receiver_partnership.verification_certificates.append(
+            _certificate_entry(parties.sender.signing_certificate))
+        receiver_partnership.verification_certificates.append(
+            _certificate_entry(rotated.certificate, valid_from=now + timedelta(days=30)))
+
+        # A message already signed with the staged key is not accepted yet.
+        exchange.sender_keystore = _rotated_sender_keystore(parties, rotated)
+        result = _send(exchange)
+
+        assert not result.is_ok
+        assert result.mdn
+        assert result.mdn.modifier == AS2Error.Authentication_Failed
+
+        inbound = exchange.results[0]
+        assert inbound.is_error
+        assert inbound.error_modifier == AS2Error.Authentication_Failed
+
+    def test_outbound_encrypts_to_the_most_recently_activated_certificate(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        rotated = make_rotated_pair('as2-receiver-rotation')
+        now = datetime.now(timezone.utc)
+
+        # The partner's rotation list holds the current certificate plus an activated next one.
+        sender_partnership = exchange.sender_partnership
+
+        sender_partnership.encryption_certificates.append(
+            _certificate_entry(parties.receiver.signing_certificate))
+        sender_partnership.encryption_certificates.append(
+            _certificate_entry(rotated.certificate, valid_from=now - timedelta(days=1)))
+
+        # The receiver still runs with its old key alone, so a message encrypted
+        # to the next certificate does not decrypt there - the wire-level proof
+        # that encryption switched over.
+        result = _send(exchange)
+
+        assert not result.is_ok
+        assert result.mdn
+        assert result.mdn.modifier == AS2Error.Decryption_Failed
+
+        # Once the next key joins the receiver's rotation entries, the same send decrypts.
+        exchange.receiver_keystore = _receiver_keystore_with_entry(parties, rotated)
+
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert exchange.results[1].payloads[0].data == _payload
+
+    def test_the_old_certificate_still_decrypts_during_our_own_rotation(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        # The receiver already carries its next pair on the rotation entries ..
+        rotated = make_rotated_pair('as2-receiver-rotation')
+        exchange.receiver_keystore = _receiver_keystore_with_entry(parties, rotated)
+
+        # .. while the sender still encrypts to the old certificate - the primary pair handles it.
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert exchange.results[0].payloads[0].data == _payload
+
+    def test_sync_mdn_signed_with_the_partners_new_certificate_reconciles(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        rotated = make_rotated_pair('as2-receiver-rotation')
+        now = datetime.now(timezone.utc)
+
+        # The receiver already signs its MDNs with the new pair ..
+        exchange.receiver_keystore = _receiver_keystore_signing_with(parties, rotated)
+
+        # .. and the sender's rotation list carries both of the partner's certificates.
+        sender_partnership = exchange.sender_partnership
+
+        sender_partnership.verification_certificates.append(
+            _certificate_entry(parties.receiver.signing_certificate))
+        sender_partnership.verification_certificates.append(
+            _certificate_entry(rotated.certificate, valid_from=now - timedelta(days=1)))
+
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert result.mdn
+        assert result.mdn.signer_certificate.serial_number == rotated.certificate.serial_number
+
+    def test_sync_mdn_from_an_unlisted_certificate_does_not_reconcile(self, parties, make_rotated_pair):
+        exchange = _new_exchange(parties)
+
+        rotated = make_rotated_pair('as2-receiver-rotation')
+
+        # The receiver signs its MDNs with a pair the sender was never told about ..
+        exchange.receiver_keystore = _receiver_keystore_signing_with(parties, rotated)
+
+        # .. and the sender's rotation list only knows the partner's current certificate.
+        exchange.sender_partnership.verification_certificates.append(
+            _certificate_entry(parties.receiver.signing_certificate))
+
+        result = _send(exchange)
+
+        # The MDN's signer is not accepted, so it counts as no MDN received.
+        assert not result.is_ok
+        assert result.mdn is None
 
 # ################################################################################################################################
 # ################################################################################################################################

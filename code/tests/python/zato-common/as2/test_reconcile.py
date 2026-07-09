@@ -12,7 +12,7 @@ from datetime import timedelta
 
 # Zato
 from zato.common.as2.common import AS2Error
-from zato.common.as2.mdn import build_mdn, MDNRequest, new_error_disposition, new_processed_disposition
+from zato.common.as2.mdn import build_mdn, MDNRequest, MDNSigningConfig, new_error_disposition, new_processed_disposition
 from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.util.api import utcnow
@@ -39,7 +39,7 @@ def _cleanup_env() -> 'None':
 
 # ################################################################################################################################
 
-def _build_mdn_bytes(message_id, disposition=None, mic=''):
+def _build_mdn_bytes(message_id, disposition=None, mic='', signing_keystore=None):
     """ Builds one real MDN answering the given Message-ID, returning its body and content type.
     """
     request = MDNRequest()
@@ -47,10 +47,22 @@ def _build_mdn_bytes(message_id, disposition=None, mic=''):
     request.as2_from = 'ZatoRetail'
     request.as2_to = 'PartnerCorp'
 
+    # A signing keystore means the MDN comes out signed, the way a partner
+    # honoring a signed receipt request would produce it.
+    if signing_keystore:
+        request.requests_signed_mdn = True
+        request.signed_receipt_protocol = 'pkcs7-signature'
+        request.mic_algorithms = ['sha-256']
+
+        signing_config = MDNSigningConfig()
+        signing_config.keystore = signing_keystore
+    else:
+        signing_config = None
+
     if disposition is None:
         disposition = new_processed_disposition()
 
-    body, headers = build_mdn(request, disposition, mic)
+    body, headers = build_mdn(request, disposition, mic, signing_config)
 
     out = body, headers['Content-Type']
     return out
@@ -240,6 +252,48 @@ class TestProcessIncomingMDN:
             reconciler = _make_reconciler(tmp_path)
 
             result = process_incoming_mdn(b'This is not an MDN', 'text/plain', reconciler)
+
+            assert not result.is_parsed
+            assert not result.is_matched
+            assert not result.is_ok
+
+        finally:
+            _cleanup_env()
+
+    def test_accepted_certificates_admit_a_rotated_signer(self, tmp_path, parties, make_rotated_pair):
+        try:
+            reconciler = _make_reconciler(tmp_path)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
+
+            # The MDN is signed by the partner's current pair while the rotation list
+            # already carries the next certificate too - the signer is on the list.
+            body, content_type = _build_mdn_bytes('<abc@zato>', signing_keystore=parties.receiver)
+
+            rotated = make_rotated_pair('as2-receiver-rotation')
+            accepted = [rotated.certificate, parties.receiver.signing_certificate]
+
+            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, accepted_certificates=accepted)
+
+            assert result.is_parsed
+            assert result.is_matched
+            assert result.is_ok
+
+        finally:
+            _cleanup_env()
+
+    def test_accepted_certificates_reject_an_unlisted_signer(self, tmp_path, parties, make_rotated_pair):
+        try:
+            reconciler = _make_reconciler(tmp_path)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
+
+            body, content_type = _build_mdn_bytes('<abc@zato>', signing_keystore=parties.receiver)
+
+            # The rotation list does not include the actual signer, so the MDN
+            # does not verify and counts as unparseable - accepted and logged.
+            rotated = make_rotated_pair('as2-receiver-rotation')
+            accepted = [rotated.certificate]
+
+            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, accepted_certificates=accepted)
 
             assert not result.is_parsed
             assert not result.is_matched

@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 _string_fields = ('isa_qualifier', 'isa_id', 'gs_id', 'unb_id', 'sign_algorithm', 'encryption_algorithm',
     'mdn_mode', 'async_mdn_url', 'subject', 'content_type', 'as2_version', 'content_transfer_encoding',
     'http_transfer_mode', 'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert',
-    'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_peer_signing_cert', 'as2_peer_encryption_cert',
-    'as2_trust_anchors')
+    'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', 'as2_peer_signing_cert',
+    'as2_peer_encryption_cert', 'as2_trust_anchors')
 
 # Integer fields exported when they are not zero - a zero means the default stays in place.
 _int_fields = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries')
@@ -59,7 +59,7 @@ _bool_field_defaults = {
 }
 
 # The private keys are encrypted at rest, so they are never exported.
-_secret_fields = ('as2_signing_key', 'as2_decryption_key')
+_secret_fields = ('as2_signing_key', 'as2_decryption_key', 'as2_next_decryption_key')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,7 +19,7 @@ import pytest
 # Zato
 from zato.common.as2.common import AS2Error, AS2ProtocolException, AS2SecurityException, EncryptionAlgorithm
 from zato.common.as2.smime import compress, decompress, decrypt, encrypt, new_part, serialize_part, sign, verify
-from zato.common.util.xml_.keystore import new_keystore
+from zato.common.util.xml_.keystore import DecryptionEntry, new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,6 +156,33 @@ class TestSignVerify:
 
         assert exception_info.value.modifier == AS2Error.Insufficient_Message_Security
 
+    def test_accepted_certificates_admit_a_listed_signer(self, parties, make_rotated_pair):
+        part = _edi_part()
+        signed = sign(part, parties.sender)
+
+        # An empty keystore would reject the signer - the rotation list alone admits it.
+        keystore = new_keystore()
+        rotated = make_rotated_pair('as2-sender-rotated')
+
+        accepted = [rotated.certificate, parties.sender.signing_certificate]
+        result = verify(signed, keystore, accepted)
+
+        assert result.signer_certificate == parties.sender.signing_certificate
+
+    def test_accepted_certificates_reject_an_unlisted_signer(self, parties, make_rotated_pair):
+        part = _edi_part()
+        signed = sign(part, parties.sender)
+
+        # The rotation list holds another certificate, so even the pinned keystore
+        # entry does not help - the list is the trust decision.
+        rotated = make_rotated_pair('as2-sender-rotated')
+        accepted = [rotated.certificate]
+
+        with pytest.raises(AS2SecurityException) as exception_info:
+            _ = verify(signed, parties.receiver, accepted)
+
+        assert exception_info.value.modifier == AS2Error.Authentication_Failed
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -222,6 +249,74 @@ class TestEncryptDecrypt:
 
         with pytest.raises(AS2SecurityException) as exception_info:
             _ = decrypt(garbage, parties.receiver)
+
+        assert exception_info.value.modifier == AS2Error.Decryption_Failed
+
+    def test_rotation_entry_key_decrypts_a_message_encrypted_to_its_certificate(self, parties, make_rotated_pair):
+        part = _edi_part()
+        rotated = make_rotated_pair('as2-receiver-rotated')
+
+        # The message is encrypted to the receiver's new certificate ..
+        encrypted = encrypt(part, rotated.certificate)
+
+        # .. whose key lives on the rotation entries, next to the primary pair.
+        keystore = new_keystore()
+        keystore.signing_key = parties.receiver.signing_key
+        keystore.signing_certificate_chain = parties.receiver.signing_certificate_chain
+        keystore.decryption_key = parties.receiver.decryption_key
+
+        entry = DecryptionEntry()
+        entry.key = rotated.key
+        entry.certificate = rotated.certificate
+        keystore.decryption_entries.append(entry)
+
+        decrypted = decrypt(encrypted, keystore)
+
+        assert decrypted.data == _edi_payload
+        assert decrypted.content_type == _edi_content_type
+
+    def test_primary_pair_still_decrypts_with_rotation_entries_present(self, parties, make_rotated_pair):
+        part = _edi_part()
+        rotated = make_rotated_pair('as2-receiver-rotated')
+
+        # The message is encrypted to the receiver's current certificate ..
+        encrypted = encrypt(part, parties.sender.peer_encryption_certificate)
+
+        # .. and the presence of a rotation entry does not get in the primary pair's way.
+        keystore = new_keystore()
+        keystore.signing_key = parties.receiver.signing_key
+        keystore.signing_certificate_chain = parties.receiver.signing_certificate_chain
+        keystore.decryption_key = parties.receiver.decryption_key
+
+        entry = DecryptionEntry()
+        entry.key = rotated.key
+        entry.certificate = rotated.certificate
+        keystore.decryption_entries.append(entry)
+
+        decrypted = decrypt(encrypted, keystore)
+
+        assert decrypted.data == _edi_payload
+
+    def test_an_expired_rotation_entry_does_not_decrypt(self, parties, make_rotated_pair):
+        part = _edi_part()
+        rotated = make_rotated_pair('as2-receiver-rotated')
+
+        encrypted = encrypt(part, rotated.certificate)
+
+        # The entry's validity window closed a day ago, so its key is not a candidate anymore.
+        keystore = new_keystore()
+        keystore.signing_key = parties.receiver.signing_key
+        keystore.signing_certificate_chain = parties.receiver.signing_certificate_chain
+        keystore.decryption_key = parties.receiver.decryption_key
+
+        entry = DecryptionEntry()
+        entry.key = rotated.key
+        entry.certificate = rotated.certificate
+        entry.valid_until = datetime.now(timezone.utc) - timedelta(days=1)
+        keystore.decryption_entries.append(entry)
+
+        with pytest.raises(AS2SecurityException) as exception_info:
+            _ = decrypt(encrypted, keystore)
 
         assert exception_info.value.modifier == AS2Error.Decryption_Failed
 

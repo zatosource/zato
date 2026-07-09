@@ -32,7 +32,8 @@ from zato.common.json_internal import dumps, loads
 if 0:
     from datetime import datetime
     from zato.common.as2.mdn import MDNInfo
-    from zato.common.util.xml_.keystore import Keystore
+    from zato.common.util.xml_.keystore import certificate_list, Keystore
+    certificate_list = certificate_list
     datetime = datetime
     Keystore = Keystore
     MDNInfo = MDNInfo
@@ -307,10 +308,12 @@ def process_incoming_mdn(
     reconciler:'MDNReconciler',
     keystore:'Keystore | None'=None,
     cid:'str'='',
+    accepted_certificates:'certificate_list | None'=None,
     ) -> 'MDNMatchResult':
     """ Parses one asynchronously delivered MDN and reconciles it against the sent messages.
     Never raises - an unparseable body, an unknown Message-ID and an already-reconciled one
     are all accepted and logged, because the answer to an incoming MDN is always a plain 200.
+    A non-empty accepted_certificates list is the trust decision for a signed MDN's signer.
     """
 
     # Our response to produce
@@ -318,7 +321,7 @@ def process_incoming_mdn(
 
     # A body that does not parse and verify as an MDN is accepted and logged, nothing more.
     try:
-        mdn = parse_mdn(body, content_type, keystore)
+        mdn = parse_mdn(body, content_type, keystore, accepted_certificates)
     except AS2Exception as e:
         logger.info('Incoming MDN did not parse, cid:`%s`, e:`%s`', cid, e)
         return out

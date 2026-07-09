@@ -15,7 +15,7 @@ from http.client import ACCEPTED, NO_CONTENT, OK
 from zato.common.as2.common import AS2Error, AS2ProtocolException, Default
 from zato.common.as2.mdn import build_mdn, disposition_from_exception, MDNSigningConfig, new_error_disposition, \
     new_processed_disposition, normalize_message_id, parse_mdn_request
-from zato.common.as2.partnership import match_partnership, unquote_as2_identifier
+from zato.common.as2.partnership import active_verification_certificates, match_partnership, unquote_as2_identifier
 from zato.common.as2.smime import compute_mic, compute_mic_over, decompress, decrypt, select_mic_algorithm, \
     serialize_part, SMIMEPart, verify
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
@@ -307,6 +307,10 @@ def _process_layers(
     decrypted_content = b''
     compressed_content = b''
 
+    # The partner's rotation list - during an overlap window it holds more than one
+    # certificate and a signature from any of them is accepted.
+    accepted_certificates = active_verification_certificates(partnership)
+
     while True:
         parameters = parse_header_parameters(part.content_type)
         media_type = parameters['']
@@ -335,7 +339,7 @@ def _process_layers(
 
         # .. a signed entity is verified and unwrapped ..
         elif media_type == 'multipart/signed':
-            verify_result = verify(part, keystore)
+            verify_result = verify(part, keystore, accepted_certificates)
 
             if not signed_content:
                 signed_content = verify_result.content
