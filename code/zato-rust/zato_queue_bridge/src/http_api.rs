@@ -43,10 +43,15 @@ struct ConnectionInfo {
     conn_type: String,
     /// Broker address.
     address: String,
-    /// Topic name.
+    /// Topic name (Kafka) or queue name (IBM MQ).
     topic: String,
     /// Whether SSL/TLS is enabled.
     ssl: bool,
+}
+
+/// Returns the Kafka topic or, when empty, the IBM MQ queue of a connection.
+fn topic_or_queue(topic: &str, queue: &str) -> String {
+    if topic.is_empty() { queue.to_string() } else { topic.to_string() }
 }
 
 /// Returns a list of all registered channel and outgoing connections.
@@ -59,7 +64,7 @@ async fn get_connections(state: web::Data<AppState>) -> HttpResponse {
                 name: config.name.clone(),
                 conn_type: "channel".into(),
                 address: config.address.clone(),
-                topic: config.topic.clone(),
+                topic: topic_or_queue(&config.topic, &config.queue),
                 ssl: config.ssl,
             });
         }
@@ -68,7 +73,7 @@ async fn get_connections(state: web::Data<AppState>) -> HttpResponse {
                 name: config.name.clone(),
                 conn_type: "outgoing".into(),
                 address: config.address.clone(),
-                topic: config.topic.clone(),
+                topic: topic_or_queue(&config.topic, &config.queue),
                 ssl: config.ssl,
             });
         }
@@ -116,7 +121,7 @@ async fn get_connection_status(state: web::Data<AppState>, params: web::Query<Co
             name: config.name.clone(),
             conn_type: "channel".into(),
             address: config.address.clone(),
-            topic: config.topic.clone(),
+            topic: topic_or_queue(&config.topic, &config.queue),
             ssl: config.ssl,
             group_id: Some(config.group_id.clone()),
             service: Some(config.service.clone()),
@@ -129,7 +134,7 @@ async fn get_connection_status(state: web::Data<AppState>, params: web::Query<Co
             name: config.name.clone(),
             conn_type: "outgoing".into(),
             address: config.address.clone(),
-            topic: config.topic.clone(),
+            topic: topic_or_queue(&config.topic, &config.queue),
             ssl: config.ssl,
             group_id: None,
             service: None,

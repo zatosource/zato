@@ -4,9 +4,16 @@
 /// Bridge state management, connection configs, and the Tokio-based bridge loop.
 pub mod bridge;
 
+/// IBM MQ consumer and producer wrappers.
+#[cfg(feature = "ibm-mq")]
+pub mod ibm_mq;
+
 /// Kafka-specific consumer and producer wrappers.
 #[cfg(feature = "kafka")]
 pub mod kafka;
+
+/// Pure-Rust parser for the IBM MQ MQRFH2 header.
+pub mod rfh2;
 
 /// Redis Streams integration for command ingestion and recv event publishing.
 pub mod redis_streams;

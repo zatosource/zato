@@ -1,0 +1,22 @@
+channel_ibm_mq:
+
+  - name: demo.ibm-mq.channel
+    is_active: true
+    address: localhost:21414
+    queue_manager: QM1
+    mq_channel_name: DEV.APP.SVRCONN
+    queue: DEV.QUEUE.1
+    service: demo.echo
+    username: app
+    password: Zato_Demo_Password_1
+
+outgoing_ibm_mq:
+
+  - name: demo.ibm-mq.publisher
+    is_active: true
+    address: localhost:21414
+    queue_manager: QM1
+    mq_channel_name: DEV.APP.SVRCONN
+    queue: DEV.QUEUE.1
+    username: app
+    password: Zato_Demo_Password_1
