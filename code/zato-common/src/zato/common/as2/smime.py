@@ -286,8 +286,7 @@ _digest_name_by_oid = {
     _oid_sha512: DigestAlgorithm.SHA512,
 }
 
-# Every micalg spelling accepted on input, mapped to the RFC 5751 spelling always used on output -
-# peers disagree about the dash and webMethods is known to hard-fail on `sha256`, which this must not.
+# Every micalg spelling accepted on input, mapped to the RFC 5751 spelling always used on output.
 _micalg_spelling = {
     'sha1':    DigestAlgorithm.SHA1,
     'sha-1':   DigestAlgorithm.SHA1,
