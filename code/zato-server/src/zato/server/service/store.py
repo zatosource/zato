@@ -588,10 +588,6 @@ class ServiceStore:
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
-
-            # Audit log
-            class_.audit_pii = service_store.server.audit_pii
-
 # ################################################################################################################################
 
     def has_io(self, service_name:'str') -> 'bool':

@@ -23,16 +23,3 @@ class DebugWriter(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-class PIIWriter(Service):
-    """ Writes an entry to the PII audit log so tests can assert it lands in audit-pii.log.
-    """
-    name = 'logging-tests.pii-writer'
-
-    def handle(self):
-        extra = {'remote_addr': '127.0.0.1', 'customer_id': 'CU-48291'}
-        self.audit_pii.info(self.cid, 'logging-tests.customer-lookup', current_user='api.user', extra=extra)
-        self.response.payload = {'result': 'ok'}
-
-# ################################################################################################################################
-# ################################################################################################################################
