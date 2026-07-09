@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx"
+    xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+    xmlns:sap="http://www.sap.com/Protocols/SAPData">
+  <edmx:DataServices m:DataServiceVersion="2.0">
+    <Schema Namespace="API_SALES_ORDER_SRV" xml:lang="en" sap:schema-version="1" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+      <EntityType Name="A_SalesOrderType" sap:label="Sales Order" sap:content-version="1">
+        <Key>
+          <PropertyRef Name="SalesOrder"/>
+        </Key>
+        <Property Name="SalesOrder" Type="Edm.String" Nullable="false" MaxLength="10" sap:label="Sales Order"/>
+        <Property Name="SalesOrderType" Type="Edm.String" MaxLength="4" sap:label="Sales Order Type"/>
+        <Property Name="SalesOrganization" Type="Edm.String" MaxLength="4" sap:label="Sales Organization"/>
+        <Property Name="DistributionChannel" Type="Edm.String" MaxLength="2" sap:label="Distribution Channel"/>
+        <Property Name="SoldToParty" Type="Edm.String" MaxLength="10" sap:label="Sold-to Party"/>
+        <Property Name="PurchaseOrderByCustomer" Type="Edm.String" MaxLength="35" sap:label="Customer Reference"/>
+        <Property Name="TotalNetAmount" Type="Edm.Decimal" Precision="16" Scale="3" sap:label="Net Value"/>
+        <Property Name="TransactionCurrency" Type="Edm.String" MaxLength="5" sap:label="Document Currency"/>
+        <Property Name="SalesOrderDate" Type="Edm.DateTime" Precision="0" sap:label="Document Date"/>
+        <Property Name="OverallDeliveryStatus" Type="Edm.String" MaxLength="1" sap:label="Delivery Status"/>
+        <NavigationProperty Name="to_Item" Relationship="API_SALES_ORDER_SRV.assoc_to_Item"
+            FromRole="FromRole_assoc_to_Item" ToRole="ToRole_assoc_to_Item"/>
+      </EntityType>
+      <EntityType Name="A_SalesOrderItemType" sap:label="Sales Order Item" sap:content-version="1">
+        <Key>
+          <PropertyRef Name="SalesOrder"/>
+          <PropertyRef Name="SalesOrderItem"/>
+        </Key>
+        <Property Name="SalesOrder" Type="Edm.String" Nullable="false" MaxLength="10" sap:label="Sales Order"/>
+        <Property Name="SalesOrderItem" Type="Edm.String" Nullable="false" MaxLength="6" sap:label="Sales Order Item"/>
+        <Property Name="Material" Type="Edm.String" MaxLength="40" sap:label="Material"/>
+        <Property Name="RequestedQuantity" Type="Edm.Decimal" Precision="15" Scale="3" sap:label="Order Quantity"/>
+        <Property Name="RequestedQuantityUnit" Type="Edm.String" MaxLength="3" sap:label="Sales Unit"/>
+        <Property Name="NetAmount" Type="Edm.Decimal" Precision="16" Scale="3" sap:label="Net Value"/>
+      </EntityType>
+      <Association Name="assoc_to_Item" sap:content-version="1">
+        <End Type="API_SALES_ORDER_SRV.A_SalesOrderType" Multiplicity="1" Role="FromRole_assoc_to_Item"/>
+        <End Type="API_SALES_ORDER_SRV.A_SalesOrderItemType" Multiplicity="*" Role="ToRole_assoc_to_Item"/>
+      </Association>
+      <EntityContainer Name="API_SALES_ORDER_SRV_Entities" m:IsDefaultEntityContainer="true" sap:supported-formats="atom json xlsx">
+        <EntitySet Name="A_SalesOrder" EntityType="API_SALES_ORDER_SRV.A_SalesOrderType" sap:content-version="1"/>
+        <EntitySet Name="A_SalesOrderItem" EntityType="API_SALES_ORDER_SRV.A_SalesOrderItemType" sap:content-version="1"/>
+        <AssociationSet Name="assoc_to_Item_AssocSet" Association="API_SALES_ORDER_SRV.assoc_to_Item" sap:content-version="1">
+          <End EntitySet="A_SalesOrder" Role="FromRole_assoc_to_Item"/>
+          <End EntitySet="A_SalesOrderItem" Role="ToRole_assoc_to_Item"/>
+        </AssociationSet>
+        <FunctionImport Name="ReleaseApprovalRequest" ReturnType="API_SALES_ORDER_SRV.A_SalesOrderType"
+            EntitySet="A_SalesOrder" m:HttpMethod="POST" sap:action-for="API_SALES_ORDER_SRV.A_SalesOrderType">
+          <Parameter Name="SalesOrder" Type="Edm.String" Mode="In" MaxLength="10"/>
+        </FunctionImport>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

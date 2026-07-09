@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx"
+    xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+    xmlns:sf="http://www.successfactors.com/edm/sf">
+  <edmx:DataServices m:DataServiceVersion="2.0">
+    <Schema Namespace="SFOData" xml:lang="en" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+      <EntityType Name="PerPerson" sf:label="Biographical Information">
+        <Key>
+          <PropertyRef Name="personIdExternal"/>
+        </Key>
+        <Property Name="personIdExternal" Type="Edm.String" Nullable="false" MaxLength="32" sf:label="Person ID External"/>
+        <Property Name="personId" Type="Edm.Int64" sf:label="Person ID"/>
+        <Property Name="dateOfBirth" Type="Edm.DateTime" sf:label="Date Of Birth"/>
+        <Property Name="countryOfBirth" Type="Edm.String" MaxLength="128" sf:label="Country Of Birth"/>
+        <Property Name="lastModifiedDateTime" Type="Edm.DateTimeOffset" sf:label="Last Modified Date"/>
+        <NavigationProperty Name="personalInfoNav" Relationship="SFOData.PerPerson_personalInfoNav"
+            FromRole="PerPerson" ToRole="PerPersonal"/>
+      </EntityType>
+      <EntityType Name="PerPersonal" sf:label="Personal Information">
+        <Key>
+          <PropertyRef Name="personIdExternal"/>
+          <PropertyRef Name="startDate"/>
+        </Key>
+        <Property Name="personIdExternal" Type="Edm.String" Nullable="false" MaxLength="32" sf:label="Person ID External"/>
+        <Property Name="startDate" Type="Edm.DateTime" Nullable="false" sf:label="Event Date"/>
+        <Property Name="firstName" Type="Edm.String" MaxLength="128" sf:label="First Name"/>
+        <Property Name="lastName" Type="Edm.String" MaxLength="128" sf:label="Last Name"/>
+        <Property Name="gender" Type="Edm.String" MaxLength="1" sf:label="Gender"/>
+        <Property Name="nationality" Type="Edm.String" MaxLength="128" sf:label="Nationality"/>
+      </EntityType>
+      <Association Name="PerPerson_personalInfoNav">
+        <End Type="SFOData.PerPerson" Multiplicity="1" Role="PerPerson"/>
+        <End Type="SFOData.PerPersonal" Multiplicity="*" Role="PerPersonal"/>
+      </Association>
+      <EntityContainer Name="EntityContainer" m:IsDefaultEntityContainer="true">
+        <EntitySet Name="PerPerson" EntityType="SFOData.PerPerson"/>
+        <EntitySet Name="PerPersonal" EntityType="SFOData.PerPersonal"/>
+        <AssociationSet Name="PerPerson_personalInfoNavSet" Association="SFOData.PerPerson_personalInfoNav">
+          <End EntitySet="PerPerson" Role="PerPerson"/>
+          <End EntitySet="PerPersonal" Role="PerPersonal"/>
+        </AssociationSet>
+        <FunctionImport Name="getUserRolesByUserId" ReturnType="Collection(Edm.String)" m:HttpMethod="GET">
+          <Parameter Name="userId" Type="Edm.String" Mode="In"/>
+        </FunctionImport>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>
