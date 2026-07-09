@@ -195,12 +195,15 @@ def get_top_level_order() -> 'strlist':
         'outgoing_rest',
         'scheduler',
         'ldap',
+        'odata',
         'sql',
         'outgoing_soap',
         'outgoing_as4',
         'microsoft_365',
         'confluence',
         'jira',
+        'channel_ibm_mq',
+        'outgoing_ibm_mq',
         'channel_kafka',
         'channel_mcp',
         'outgoing_graphql',
@@ -234,6 +237,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
+    order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_type', 'username', 'token_url', 'tenant_id', \
+        'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
     order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
     order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
@@ -247,6 +252,10 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['microsoft_365'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
+    order['channel_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', 'service', \
+        'username', 'remove_jms_headers', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
+    order['outgoing_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', \
+        'username', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
     order['channel_mcp'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',

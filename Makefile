@@ -1,5 +1,5 @@
 .PHONY: build install clean default \
-	server-build scheduler-build io-build common-core-build queue-bridge-build \
+	server-build scheduler-build io-build common-core-build queue-bridge-build mq-client \
 	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
@@ -9,7 +9,7 @@
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-graphql test-as2 test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub test-ui-mapper _test-ui test-common test-distlock \
-	test-audit-log test-audit-log-ui test-logging \
+	test-audit-log test-audit-log-ui test-logging test-ibm-mq \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -30,6 +30,11 @@ CARGO_ENV := $(HOME)/.cargo/env
 LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
+
+# IBM MQ redistributable client, needed by the queue bridge at runtime
+MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
+MQ_CLIENT_URL := https://zato.io/mqclient-linux-x64.tar.gz
+MQ_CLIENT_LIB := $(MQ_CLIENT_DIR)/lib64/libmqm_r.so
 
 SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
 
@@ -99,9 +104,19 @@ common-core-build:
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
 
-queue-bridge-build:
+mq-client:
+	@if [ ! -f $(MQ_CLIENT_LIB) ]; then \
+		echo ">>> Downloading IBM MQ client to $(MQ_CLIENT_DIR)"; \
+		mkdir -p $(MQ_CLIENT_DIR) && \
+		curl -fL $(MQ_CLIENT_URL) -o $(MQ_CLIENT_DIR)/mqclient.tar.gz && \
+		tar -xzf $(MQ_CLIENT_DIR)/mqclient.tar.gz -C $(MQ_CLIENT_DIR) && \
+		rm $(MQ_CLIENT_DIR)/mqclient.tar.gz; \
+	fi
+
+queue-bridge-build: mq-client
 	@echo ">>> Building queue-bridge"
 	$(LOAD_CARGO_ENV) && \
+	MQ_HOME=$(MQ_CLIENT_DIR) \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
 	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
 	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
@@ -126,7 +141,11 @@ health-build: ## Build the healthcare Rust extensions and copy .so files into za
 # ############################################################################
 
 queue-bridge:
-	$(CURDIR)/code/bin/_zato_queue_bridge
+	@if [ -f $(MQ_CLIENT_LIB) ]; then \
+		Zato_MQ_Client_Lib=$(MQ_CLIENT_LIB) $(CURDIR)/code/bin/_zato_queue_bridge; \
+	else \
+		$(CURDIR)/code/bin/_zato_queue_bridge; \
+	fi
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
@@ -541,6 +560,18 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against downloaded fixtures.
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/hl7_fhir/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-hl7-fhir-live: ## HL7 to FHIR live integration tests - real Zato server plus the FHIR test server.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/hl7_fhir_integration/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-ui: ## Dashboard backend and Playwright tests.
 	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
@@ -599,6 +630,13 @@ test-ui-mapper: ## Mapper Playwright tests inside the Dashboard.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/mapper/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_mapper \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/ibm_mq/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/ibm_mq/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS.

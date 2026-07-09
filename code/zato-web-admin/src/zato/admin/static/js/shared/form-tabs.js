@@ -160,6 +160,8 @@ $.fn.zato.form_tabs.reset = function(config) {
     var default_tab = config.default_tab;
     var independent_tabs = config.independent_tabs || false;
 
+    console.log('QQQ form_tabs.reset: div_id=' + div_id + ' prefix=' + panel_prefix + ' default_tab=' + default_tab);
+
     $(div_id + ' .dashboard-tab').each(function() {
         var tab_name = $(this).data('tab');
         var is_default = tab_name === default_tab;

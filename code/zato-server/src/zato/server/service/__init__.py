@@ -45,8 +45,8 @@ from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import AS4Facade, FHIRFacade, KafkaFacade, GraphQLFacade, KeysightContainer, MLLPFacade, \
-    RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.facade import AS4Facade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, KeysightContainer, \
+    MLLPFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -489,8 +489,14 @@ class Service:
         # FHIR facade for outgoing connections
         self.fhir = FHIRFacade()
 
+        # IBM MQ facade for outgoing connections
+        self.ibm_mq = IBMMQFacade()
+
         # MLLP facade for outgoing connections
         self.mllp = MLLPFacade()
+
+        # OData facade for outgoing connections
+        self.odata = ODataFacade()
 
         # SFTP facade for outgoing connections
         self.sftp = SFTPFacade()
@@ -616,6 +622,9 @@ class Service:
         # Kafka facade
         self.out.kafka.init(self._config_manager)
 
+        # IBM MQ facade
+        self.ibm_mq.init(self._config_manager)
+
         # GraphQL facade
         self.out.graphql.init(self._config_manager)
 
@@ -624,6 +633,9 @@ class Service:
 
         # MLLP facade
         self.mllp.init(self._config_manager)
+
+        # OData facade
+        self.odata.init(self._config_manager)
 
         # SFTP facade
         self.sftp.init(self.cid, self._config_manager)
@@ -1292,6 +1304,11 @@ class Service:
         # SOAP channels put the protocol context of the request here - other channels have none.
         service.request.soap = wsgi_environ.get('zato.request.soap')
 
+        # Queue bridge channels (e.g. IBM MQ) put message headers here - other channels have none.
+        headers = wsgi_environ.get('zato.request.headers')
+        if headers is not None:
+            service.request.headers = headers
+
         channel_item = wsgi_environ.get('zato.channel_item') or {}
         channel_item = cast_('strdict', channel_item)
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
@@ -1543,12 +1560,13 @@ SOAPAdapter = RESTAdapter
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BusinessCentralAdapter(Service):
-
-    model     = None
-    conn_name = cast_('str', None)
-    base_url  = cast_('str', None)
-    endpoint  = cast_('str', None)
+class AdapterBase(Service):
+    """ The machinery shared by adapters that resolve {placeholder} elements in their
+    configuration and map raw responses into models - placeholders come from the input
+    payload or from config files, and models are applied per item when the response
+    is a 'value' list.
+    """
+    model = None
 
 # ################################################################################################################################
 
@@ -1638,6 +1656,29 @@ class BusinessCentralAdapter(Service):
 
 # ################################################################################################################################
 
+    def _map_with_model(self, model:'any_', data:'any_') -> 'any_':
+
+        # Is the response a list of values ..
+        if isinstance(data, dict):
+            list_value = data.get('value', NOT_GIVEN)
+        else:
+            list_value = data
+
+        # .. try to extract all the objects if we actually have a list ..
+        if isinstance(list_value, list):
+            out = []
+            for item in list_value:
+                _model = model.from_dict(item)
+                out.append(_model)
+
+        # .. or we can map the response as is.
+        else:
+            out = model.from_dict(data)
+
+        return out
+
+# ################################################################################################################################
+
     def get_model(self) -> 'any_':
         # Don't return anything by default because models are optional
         pass
@@ -1646,6 +1687,16 @@ class BusinessCentralAdapter(Service):
 
     def get_conn_name(self) -> 'str':
         raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BusinessCentralAdapter(AdapterBase):
+
+    model     = None
+    conn_name = cast_('str', None)
+    base_url  = cast_('str', None)
+    endpoint  = cast_('str', None)
 
 # ################################################################################################################################
 
@@ -1682,25 +1733,9 @@ class BusinessCentralAdapter(Service):
                 # .. if yes, we can extract our response ..
                 data = response.json()
 
-                # .. if we have a model ..
+                # .. if we have a model, map the result through it ..
                 if model:
-
-                    # .. is the response a list of values ..
-                    list_value = data.get('value', NOT_GIVEN)
-
-                    # .. try to extract all the objects if we actually have a list ..
-                    if isinstance(list_value, list):
-                        _model_data = []
-                        for item in list_value:
-                            _model = model.from_dict(item)
-                            _model_data.append(_model)
-
-                    # .. or we can map the response as is ..
-                    else:
-                        _model_data = model.from_dict(data)
-
-                    # .. map the result to the object we're returning ..
-                    data = _model_data
+                    data = self._map_with_model(model, data)
 
                 # .. now, we can return the result to the caller.
                 return data
@@ -1718,6 +1753,96 @@ class BusinessCentralAdapter(Service):
         base_url = self._replace_placeholders(self.base_url)
 
         self.response.payload = self._invoke_business_central(endpoint, base_url)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODataAdapter(AdapterBase):
+    """ Reads entities from an OData service through a self.odata connection - the entity
+    set and key may carry {placeholder} elements filled in from the input payload or from
+    config files, query options are static class attributes or built dynamically, and an
+    optional model maps each returned item.
+    """
+    model      = None
+    conn_name  = cast_('str', None)
+    entity_set = cast_('str', None)
+
+    # An optional key - when given, a single entity is read instead of the whole set.
+    key = ''
+
+    # Optional static query options - get_query can add to or override them.
+    filter  = '' # noqa: A003
+    select  = ''
+    expand  = ''
+    orderby = ''
+    top     = 0
+    skip    = 0
+
+# ################################################################################################################################
+
+    def get_query(self) -> 'strdict':
+        # No dynamic query options by default - subclasses can build them out of self.request
+        return {}
+
+# ################################################################################################################################
+
+    def _build_query(self) -> 'strdict':
+
+        # Local aliases
+        out:'strdict' = {}
+
+        # The string options may carry placeholders, e.g. filter = "City eq '{city}'" ..
+        for name in ('filter', 'select', 'expand', 'orderby'):
+            value = getattr(self, name)
+            if value:
+                out[name] = self._replace_placeholders(value)
+
+        # .. the numeric ones are used as they are ..
+        for name in ('top', 'skip'):
+            value = getattr(self, name)
+            if value:
+                out[name] = value
+
+        # .. and dynamically built options come last so they can override the static ones.
+        dynamic = self.get_query()
+        out.update(dynamic)
+
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_odata(self) -> 'any_':
+
+        # Get our configuration
+        model = self.model or self.get_model()
+        conn_name = self.conn_name or self.get_conn_name()
+
+        # Resolve the placeholders the path elements may carry ..
+        entity_set = self._replace_placeholders(self.entity_set)
+
+        # .. get the connection ..
+        conn = self.odata[conn_name]
+
+        # .. a key means a single entity is being addressed ..
+        if self.key:
+            key = self._replace_placeholders(self.key)
+            data = conn.get(entity_set, key, cid=self.cid, **self._build_query())
+
+        # .. otherwise, the whole set is read with whatever query options there are ..
+        else:
+            data = conn.read(entity_set, cid=self.cid, **self._build_query())
+
+        # .. if we have a model, map the result through it ..
+        if model:
+            data = self._map_with_model(model, data)
+
+        # .. now, we can return the result to the caller.
+        return data
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.response.payload = self._invoke_odata()
 
 # ################################################################################################################################
 # ################################################################################################################################

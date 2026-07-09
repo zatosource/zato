@@ -33,10 +33,12 @@ from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
 from zato.cli.enmasse.importers.outgoing_hl7_mllp import OutgoingHL7MLLPImporter
 from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
+from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
+from zato.cli.enmasse.importers.odata import ODataImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.cli.enmasse.importers.outgoing_as4 import OutgoingAS4Importer
@@ -77,8 +79,10 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.channel_hl7_mllp',
                         'zato.cli.enmasse.importers.outgoing_hl7_mllp',
                         'zato.cli.enmasse.importers.graphql',
+                        'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
+                        'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
                         'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
@@ -113,11 +117,14 @@ class EnmasseYAMLImporter:
         self.jira_defs = {}
         self.channel_hl7_mllp_defs = {}
         self.outgoing_hl7_mllp_defs = {}
+        self.channel_ibm_mq_defs = {}
         self.channel_kafka_defs = {}
         self.channel_mcp_defs = {}
         self.outgoing_graphql_defs = {}
+        self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
+        self.odata_defs = {}
         self.sftp_defs = {}
         self.smb_defs = {}
         self.microsoft_365_defs = {}
@@ -151,11 +158,14 @@ class EnmasseYAMLImporter:
         self.jira_importer = JiraImporter(self)
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
         self.outgoing_hl7_mllp_importer = OutgoingHL7MLLPImporter(self)
+        self.channel_ibm_mq_importer = ChannelIBMMQImporter(self)
         self.channel_kafka_importer = ChannelKafkaImporter(self)
         self.channel_mcp_importer = ChannelMCPImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
+        self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
+        self.odata_importer = ODataImporter(self)
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
         self.microsoft_365_importer = Microsoft365Importer(self)
@@ -601,6 +611,30 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_odata(self, odata_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes OData connection definitions from a YAML configuration with the database.
+        """
+        if not odata_list:
+            return [], []
+
+        count = len(odata_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} OData connection {noun}')
+
+        # Examine each OData connection item
+        for idx, item in enumerate(odata_list):
+            logger.info('OData connection item %d: %s', idx, item)
+
+        odata_created, odata_updated = self.odata_importer.sync_definitions(odata_list, session)
+
+        # Get OData definitions from the OData importer
+        self.odata_defs = self.odata_importer.connection_defs
+        logger.info('Processed OData connection definitions: created=%d updated=%d', len(odata_created), len(odata_updated))
+
+        return odata_created, odata_updated
+
+# ################################################################################################################################
+
     def sync_sftp(self, sftp_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes SFTP connection definitions from a YAML configuration with the database.
         """
@@ -688,6 +722,44 @@ class EnmasseYAMLImporter:
         created_count = len(created)
         updated_count = len(updated)
         logger.info('Processed outgoing HL7 MLLP definitions: created=%d updated=%d', created_count, updated_count)
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_channel_ibm_mq(self, channel_ibm_mq_list:'list', session:'SASession') -> 'tuple':
+        if not channel_ibm_mq_list:
+            return [], []
+
+        count = len(channel_ibm_mq_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} IBM MQ channel {noun}')
+
+        for idx, item in enumerate(channel_ibm_mq_list):
+            logger.info('IBM MQ channel item %d: %s', idx, item)
+
+        created, updated = self.channel_ibm_mq_importer.sync_definitions(channel_ibm_mq_list, session)
+        self.channel_ibm_mq_defs = self.channel_ibm_mq_importer.connection_defs
+        logger.info('Processed IBM MQ channel definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_ibm_mq(self, outgoing_ibm_mq_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_ibm_mq_list:
+            return [], []
+
+        count = len(outgoing_ibm_mq_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} IBM MQ outgoing {noun}')
+
+        for idx, item in enumerate(outgoing_ibm_mq_list):
+            logger.info('IBM MQ outgoing item %d: %s', idx, item)
+
+        created, updated = self.outgoing_ibm_mq_importer.sync_definitions(outgoing_ibm_mq_list, session)
+        self.outgoing_ibm_mq_defs = self.outgoing_ibm_mq_importer.connection_defs
+        logger.info('Processed IBM MQ outgoing definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 
@@ -1065,6 +1137,14 @@ class EnmasseYAMLImporter:
         if ldap_updated:
             self.updated_objects['ldap'] = ldap_updated
 
+        # Process OData connection definitions
+        odata_list = yaml_config.get('odata') or yaml_config.get('outgoing_odata', [])
+        odata_created, odata_updated = self.sync_odata(odata_list, session)
+        if odata_created:
+            self.created_objects['odata'] = odata_created
+        if odata_updated:
+            self.updated_objects['odata'] = odata_updated
+
         # Process SFTP connection definitions
         sftp_list = yaml_config.get('sftp') or yaml_config.get('outgoing_sftp', [])
         sftp_created, sftp_updated = self.sync_sftp(sftp_list, session)
@@ -1080,6 +1160,22 @@ class EnmasseYAMLImporter:
             self.created_objects['smb'] = smb_created
         if smb_updated:
             self.updated_objects['smb'] = smb_updated
+
+        # Process IBM MQ channel definitions
+        channel_ibm_mq_list = yaml_config.get('channel_ibm_mq', [])
+        channel_ibm_mq_created, channel_ibm_mq_updated = self.sync_channel_ibm_mq(channel_ibm_mq_list, session)
+        if channel_ibm_mq_created:
+            self.created_objects['channel_ibm_mq'] = channel_ibm_mq_created
+        if channel_ibm_mq_updated:
+            self.updated_objects['channel_ibm_mq'] = channel_ibm_mq_updated
+
+        # Process IBM MQ outgoing definitions
+        outgoing_ibm_mq_list = yaml_config.get('outgoing_ibm_mq', [])
+        outgoing_ibm_mq_created, outgoing_ibm_mq_updated = self.sync_outgoing_ibm_mq(outgoing_ibm_mq_list, session)
+        if outgoing_ibm_mq_created:
+            self.created_objects['outgoing_ibm_mq'] = outgoing_ibm_mq_created
+        if outgoing_ibm_mq_updated:
+            self.updated_objects['outgoing_ibm_mq'] = outgoing_ibm_mq_updated
 
         # Process Kafka channel definitions
         channel_kafka_list = yaml_config.get('channel_kafka', [])
