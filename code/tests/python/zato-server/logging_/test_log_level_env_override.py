@@ -76,7 +76,7 @@ def _wait_for_channel(url:'str', timeout:'int'=_channel_wait_timeout) -> 'None':
 # ################################################################################################################################
 
 class TestLogLevelEnvOverride:
-    """ The server runs with Zato_Log_Level=DEBUG and Zato_Log_Level_Rest=WARN,
+    """ The server runs with Zato_Log_Level=DEBUG and Zato_Log_Level_REST=WARN,
     so DEBUG lines from services must land in server.log while INFO lines
     from the zato_rest logger must not.
     """
@@ -126,7 +126,7 @@ class TestLogLevelEnvOverride:
         _ = conftest.wait_for_log_content(zato_server['server_dir'], 'access.log', _channel_url_path)
 
         # .. yet server.log must carry no INFO line from zato_rest for this channel
-        # .. because Zato_Log_Level_Rest=WARN silenced them, winning over the global DEBUG.
+        # .. because Zato_Log_Level_REST=WARN silenced them, winning over the global DEBUG.
         contents = conftest.read_log_file(zato_server['server_dir'], 'server.log')
 
         for line in contents.splitlines():
