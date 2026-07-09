@@ -32,7 +32,7 @@ class TestLogFiles:
 
         logs_dir = os.path.join(zato_server['server_dir'], 'logs')
 
-        for file_name in ('server.log', 'access.log', 'rest.log', 'audit-pii.log'):
+        for file_name in ('server.log', 'access.log', 'rest.log'):
             log_path = os.path.join(logs_dir, file_name)
             assert os.path.isfile(log_path), f'Expected log file not found: {log_path}'
 

@@ -81,11 +81,6 @@ loggers:
         handlers: [admin]
         qualname: zato_admin
         propagate: false
-    zato_audit_pii:
-        level: INFO
-        handlers: [stdout, audit_pii]
-        qualname: zato_audit_pii
-        propagate: false
     zato_connector:
         level: INFO
         handlers: [connector]
@@ -125,14 +120,6 @@ handlers:
         maxBytes: 20000000
         backupCount: 10
         encoding: 'utf8'
-    audit_pii:
-        formatter: default
-        class: logging.handlers.RotatingFileHandler
-        filename: './logs/audit-pii.log'
-        mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
-        encoding: 'utf8'
     connector:
         formatter: default
         class: {log_handler_class}
@@ -151,8 +138,6 @@ handlers:
         encoding: 'utf8'
 
 formatters:
-    audit_pii:
-        format: '%(message)s'
     default:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s -%(zato_ctx)s %(name)s:%(lineno)d - %(message)s'
     http_access_log:

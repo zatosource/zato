@@ -90,7 +90,6 @@ UUID = UUID # type: ignore
 if 0:
     from logging import Logger
     from zato.common.config_dispatcher import ConfigDispatcher
-    from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.rules.api import RulesManager
@@ -110,7 +109,6 @@ if 0:
     dictnone = dictnone
     modelnone = modelnone
     strdictnone = strdictnone
-    AuditPII = AuditPII
     ConfigDispatcher = ConfigDispatcher
     callable_ = callable_
     ConfigDict = ConfigDict
@@ -401,9 +399,6 @@ class Service:
 
     # Crypto operations
     crypto:'ServerCryptoManager'
-
-    # Audit log
-    audit_pii:'AuditPII'
 
     # Vendors - Keysight
     keysight: 'KeysightContainer'

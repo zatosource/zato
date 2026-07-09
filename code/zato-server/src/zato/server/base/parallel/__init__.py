@@ -27,7 +27,6 @@ from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatch
 from zato.common.ext.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
@@ -204,7 +203,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.pid = -1
         self.sync_internal = False
         self.shmem_size = -1.0
-        self.audit_pii = audit_pii
         self.has_fg = False
         self.env_file = ''
         self.env_variables_from_files:'strlist' = []
