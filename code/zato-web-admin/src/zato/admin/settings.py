@@ -49,24 +49,21 @@ from zato.admin.zato_settings import *  # type: ignore # noqa: F403
 
 logging.addLevelName('TRACE1', TRACE1) # type: ignore
 
+from zato.common.util.logging_ import apply_logging_env_overrides, attach_service_context_filter
+
 if log_config:
     with open_r(log_config) as f:
         try:
-            logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
+            logging_config = yaml.load(f, yaml.FullLoader)
+            logging_config = apply_logging_env_overrides(logging_config)
+            logging.config.dictConfig(logging_config)
         except ValueError:
             # This will be raised by 'zato quickstart' but we can ignore it
             pass
 else:
     logging.basicConfig(level=logging.DEBUG)
 
-from zato.common.util.logging_ import ServiceContextFilter
-_ctx_filter = ServiceContextFilter()
-for handler in logging.root.handlers:
-    handler.addFilter(_ctx_filter)
-for logger_obj in logging.Logger.manager.loggerDict.values():
-    if hasattr(logger_obj, 'handlers'):
-        for handler in logger_obj.handlers:
-            handler.addFilter(_ctx_filter)
+attach_service_context_filter()
 
 # ################################################################################################################################
 # ################################################################################################################################
