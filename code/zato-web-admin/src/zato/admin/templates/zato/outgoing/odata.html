@@ -1,0 +1,411 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}OData outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} OData {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/odata.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+            'address',
+            'odata_version',
+            'auth_type',
+
+            '_change_password',
+            '_edit',
+            '_delete',
+            '_ping',
+
+            'id',
+            'is_active',
+
+            {% comment %} 1 {% endcomment %}
+            'username',
+            'token_url',
+            'tenant_id',
+            'client_id',
+
+            {% comment %} 2 {% endcomment %}
+            'scopes',
+            'needs_csrf_token',
+            'page_size',
+
+            {% comment %} 3 {% endcomment %}
+            'timeout',
+            'pool_size'
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">Outgoing OData connections</h2>
+
+{% with has_generic="1" generic_type="outconn-odata" %}
+    {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.odata.create()">Create a new outgoing OData connection</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Version</a></th>
+                        <th><a href="#">Auth type</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.odata_version }}</td>
+                        <td>{{ item.auth_type }}</td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change secret</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.odata.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.odata.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.username }}</td>
+                        <td class='ignore'>{{ item.token_url }}</td>
+                        <td class='ignore'>{{ item.tenant_id }}</td>
+                        <td class='ignore'>{{ item.client_id }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td class='ignore'>{{ item.scopes }}</td>
+                        <td class='ignore'>{{ item.needs_csrf_token }}</td>
+                        <td class='ignore'>{{ item.page_size }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='22'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-odata-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                Version
+                                {{ create_form.odata_version }}
+                                </label>
+                                |
+                                <label>
+                                Pool size
+                                {{ create_form.pool_size }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>{{ create_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Auth type
+                                {{ create_form.auth_type }}
+                                </label>
+                                |
+                                <label>
+                                CSRF token
+                                {{ create_form.needs_csrf_token }}
+                                </label>
+                                |
+                                <label>
+                                Timeout
+                                {{ create_form.timeout }}
+                                </label>
+                                |
+                                <label>
+                                Page size
+                                {{ create_form.page_size }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ create_form.username }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            OAuth2
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Token URL</td>
+                            <td>{{ create_form.token_url }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Tenant ID</td>
+                            <td>{{ create_form.tenant_id }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Client ID</td>
+                            <td>{{ create_form.client_id }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Scopes</td>
+                            <td>{{ create_form.scopes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-odata-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                Version
+                                {{ edit_form.odata_version }}
+                                </label>
+                                |
+                                <label>
+                                Pool size
+                                {{ edit_form.pool_size }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>{{ edit_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Auth type
+                                {{ edit_form.auth_type }}
+                                </label>
+                                |
+                                <label>
+                                CSRF token
+                                {{ edit_form.needs_csrf_token }}
+                                </label>
+                                |
+                                <label>
+                                Timeout
+                                {{ edit_form.timeout }}
+                                </label>
+                                |
+                                <label>
+                                Page size
+                                {{ edit_form.page_size }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ edit_form.username }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            OAuth2
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Token URL</td>
+                            <td>{{ edit_form.token_url }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Tenant ID</td>
+                            <td>{{ edit_form.tenant_id }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Client ID</td>
+                            <td>{{ edit_form.client_id }}</td>
+                        </tr>
+                        <tr class="oauth2-block hidden">
+                            <td style="vertical-align:middle">Scopes</td>
+                            <td>{{ edit_form.scopes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-odata-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:13%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Secret</td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
