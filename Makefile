@@ -566,12 +566,6 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-hl7-fhir-live: ## HL7 to FHIR live integration tests - real Zato server plus the FHIR test server.
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/hl7_fhir_integration/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir_live -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
-
 test-ui: ## Dashboard backend and Playwright tests.
 	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
