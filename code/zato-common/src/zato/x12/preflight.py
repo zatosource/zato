@@ -23,7 +23,6 @@ from zato.x12.validation import validate_snip_3
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
     from zato.x12.control import ControlNumberStore
     from zato.x12.envelope import X12Interchange
     ControlNumberStore = ControlNumberStore
@@ -33,7 +32,6 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-any_             = 'Any'
 strlist          = list[str]
 raw_segment_list = list[RawSegment]
 store_none       = 'ControlNumberStore | None'

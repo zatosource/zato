@@ -13,8 +13,8 @@ from __future__ import annotations
 
 # Zato
 from zato.x12.base import EDIGroup, EDIGroupAttr, EDIRepeatableList, EDISegmentAttr, X12Message
-from zato.x12.retail.segments import ACK, BAK, BEG, BIG, BSN, CTT, CUR, DTM, FOB, ISS, IT1, ITD, MSG, N1, N2, N3, N4, N9, \
-     PER, PID, PKG, PO1, REF, SAC, TDS, TXI
+from zato.x12.retail.segments import ACK, BAK, BEG, BIG, BSN, CTT, CUR, DTM, FOB, HL, ISS, IT1, ITD, LIN, MAN, MSG, N1, N2, \
+     N3, N4, N9, PER, PID, PKG, PO1, PO4, PRF, REF, SAC, SN1, TD1, TD3, TD5, TDS, TXI
 from zato.x12.service import SE, ST
 
 # ################################################################################################################################
@@ -104,6 +104,7 @@ class PurchaseOrderAcknowledgment855(X12Message):
     st         = EDISegmentAttr[ST](ST)
     bak        = EDISegmentAttr[BAK](BAK)
     references = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
+    dates      = EDISegmentAttr[EDIRepeatableList](DTM, optional=True, repeatable=True)
     parties    = EDIGroupAttr[EDIRepeatableList](Party, optional=True)
     lines      = EDIGroupAttr[EDIRepeatableList](AcknowledgedLine)
     ctt        = EDISegmentAttr[CTT](CTT, optional=True)
@@ -115,15 +116,28 @@ class PurchaseOrderAcknowledgment855(X12Message):
 class ShipNotice856(X12Message):
     """ 856 ship notice, version 004010 - the advance ship notice whose HL hierarchy
     (shipment, order, pack, item) is reachable through the hierarchy property.
+    The HL-carried body segments are declared so strict validation knows them -
+    navigation happens through the hierarchy, not through these attributes.
     """
     _message_type = '856'
     _message_version = '004010'
 
-    st    = EDISegmentAttr[ST](ST)
-    bsn   = EDISegmentAttr[BSN](BSN)
-    dates = EDISegmentAttr[EDIRepeatableList](DTM, optional=True, repeatable=True)
-    ctt   = EDISegmentAttr[CTT](CTT, optional=True)
-    se    = EDISegmentAttr[SE](SE)
+    st        = EDISegmentAttr[ST](ST)
+    bsn       = EDISegmentAttr[BSN](BSN)
+    dates     = EDISegmentAttr[EDIRepeatableList](DTM, optional=True, repeatable=True)
+    levels    = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
+    quantities = EDISegmentAttr[EDIRepeatableList](TD1, optional=True, repeatable=True)
+    routings  = EDISegmentAttr[EDIRepeatableList](TD5, optional=True, repeatable=True)
+    equipment = EDISegmentAttr[EDIRepeatableList](TD3, optional=True, repeatable=True)
+    orders    = EDISegmentAttr[EDIRepeatableList](PRF, optional=True, repeatable=True)
+    marks     = EDISegmentAttr[EDIRepeatableList](MAN, optional=True, repeatable=True)
+    items     = EDISegmentAttr[EDIRepeatableList](LIN, optional=True, repeatable=True)
+    shipped   = EDISegmentAttr[EDIRepeatableList](SN1, optional=True, repeatable=True)
+    packaging = EDISegmentAttr[EDIRepeatableList](PO4, optional=True, repeatable=True)
+    references = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
+    parties   = EDIGroupAttr[EDIRepeatableList](Party, optional=True)
+    ctt       = EDISegmentAttr[CTT](CTT, optional=True)
+    se        = EDISegmentAttr[SE](SE)
 
 # ################################################################################################################################
 # ################################################################################################################################

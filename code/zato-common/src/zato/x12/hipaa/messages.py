@@ -13,8 +13,8 @@ from __future__ import annotations
 
 # Zato
 from zato.x12.base import EDIGroup, EDIGroupAttr, EDIRepeatableList, EDISegmentAttr, X12Message
-from zato.x12.hipaa.segments import AAA, BHT, BPR, CAS, CLM, CLP, DMG, DTM, DTP, EB, EQ, HI, LX, N1, N3, N4, NM1, PER, PLB, \
-     REF, SV1, SV2, SVC, TRN
+from zato.x12.hipaa.segments import AAA, BHT, BPR, CAS, CLM, CLP, DMG, DTM, DTP, EB, EQ, HI, HL, LX, N1, N3, N4, NM1, PER, \
+     PLB, REF, SBR, SV1, SV2, SVC, TRN
 from zato.x12.service import SE, ST
 
 # ################################################################################################################################
@@ -49,17 +49,24 @@ class ProfessionalClaim(EDIGroup):
 class Claim837P(X12Message):
     """ 837P professional claim, implementation 005010X222A1 - the claim a physician practice
     or clearinghouse submits. The 2000A/2000B HL loops are reachable through the
-    hierarchy property.
+    hierarchy property - the HL-carried segments are declared so strict validation
+    knows them.
     """
     _message_type = '837'
     _message_version = '005010X222A1'
 
-    st       = EDISegmentAttr[ST](ST)
-    bht      = EDISegmentAttr[BHT](BHT)
-    names    = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
-    contacts = EDISegmentAttr[EDIRepeatableList](PER, optional=True, repeatable=True)
-    claims   = EDIGroupAttr[EDIRepeatableList](ProfessionalClaim)
-    se       = EDISegmentAttr[SE](SE)
+    st           = EDISegmentAttr[ST](ST)
+    bht          = EDISegmentAttr[BHT](BHT)
+    names        = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
+    contacts     = EDISegmentAttr[EDIRepeatableList](PER, optional=True, repeatable=True)
+    levels       = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
+    subscribers  = EDISegmentAttr[EDIRepeatableList](SBR, optional=True, repeatable=True)
+    demographics = EDISegmentAttr[EDIRepeatableList](DMG, optional=True, repeatable=True)
+    addresses    = EDISegmentAttr[EDIRepeatableList](N3, optional=True, repeatable=True)
+    locations    = EDISegmentAttr[EDIRepeatableList](N4, optional=True, repeatable=True)
+    references   = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
+    claims       = EDIGroupAttr[EDIRepeatableList](ProfessionalClaim)
+    se           = EDISegmentAttr[SE](SE)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,17 +99,24 @@ class InstitutionalClaim(EDIGroup):
 
 class Claim837I(X12Message):
     """ 837I institutional claim, implementation 005010X223A2 - the claim a hospital submits.
-    The 2000A/2000B HL loops are reachable through the hierarchy property.
+    The 2000A/2000B HL loops are reachable through the hierarchy property - the HL-carried
+    segments are declared so strict validation knows them.
     """
     _message_type = '837'
     _message_version = '005010X223A2'
 
-    st       = EDISegmentAttr[ST](ST)
-    bht      = EDISegmentAttr[BHT](BHT)
-    names    = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
-    contacts = EDISegmentAttr[EDIRepeatableList](PER, optional=True, repeatable=True)
-    claims   = EDIGroupAttr[EDIRepeatableList](InstitutionalClaim)
-    se       = EDISegmentAttr[SE](SE)
+    st           = EDISegmentAttr[ST](ST)
+    bht          = EDISegmentAttr[BHT](BHT)
+    names        = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
+    contacts     = EDISegmentAttr[EDIRepeatableList](PER, optional=True, repeatable=True)
+    levels       = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
+    subscribers  = EDISegmentAttr[EDIRepeatableList](SBR, optional=True, repeatable=True)
+    demographics = EDISegmentAttr[EDIRepeatableList](DMG, optional=True, repeatable=True)
+    addresses    = EDISegmentAttr[EDIRepeatableList](N3, optional=True, repeatable=True)
+    locations    = EDISegmentAttr[EDIRepeatableList](N4, optional=True, repeatable=True)
+    references   = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
+    claims       = EDIGroupAttr[EDIRepeatableList](InstitutionalClaim)
+    se           = EDISegmentAttr[SE](SE)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +168,7 @@ class Remittance835(X12Message):
     bpr         = EDISegmentAttr[BPR](BPR)
     trace       = EDISegmentAttr[TRN](TRN)
     parties     = EDIGroupAttr[EDIRepeatableList](RemittanceParty, optional=True)
+    lines       = EDISegmentAttr[EDIRepeatableList](LX, optional=True, repeatable=True)
     payments    = EDIGroupAttr[EDIRepeatableList](ClaimPayment)
     adjustments = EDISegmentAttr[EDIRepeatableList](PLB, optional=True, repeatable=True)
     se          = EDISegmentAttr[SE](SE)
@@ -170,6 +185,7 @@ class EligibilityInquiry270(X12Message):
 
     st        = EDISegmentAttr[ST](ST)
     bht       = EDISegmentAttr[BHT](BHT)
+    levels    = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
     names     = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
     birth     = EDISegmentAttr[DMG](DMG, optional=True)
     dates     = EDISegmentAttr[EDIRepeatableList](DTP, optional=True, repeatable=True)
@@ -188,6 +204,7 @@ class EligibilityResponse271(X12Message):
 
     st         = EDISegmentAttr[ST](ST)
     bht        = EDISegmentAttr[BHT](BHT)
+    levels     = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
     names      = EDISegmentAttr[EDIRepeatableList](NM1, optional=True, repeatable=True)
     references = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
     benefits   = EDISegmentAttr[EDIRepeatableList](EB, optional=True, repeatable=True)
