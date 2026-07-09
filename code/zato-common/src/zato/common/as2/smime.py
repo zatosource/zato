@@ -336,6 +336,9 @@ class SMIMEPart:
     # The Content-Transfer-Encoding header value.
     content_transfer_encoding: str = 'binary'
 
+    # The optional Content-Disposition header value, carrying the filename when one travels along.
+    content_disposition: str = ''
+
     # The content bytes, already in the transfer encoding declared above.
     data: bytes = b''
 
@@ -413,7 +416,13 @@ def serialize_part(part:'SMIMEPart', prevent_canonicalization:'bool'=False) -> '
     """
     content = _canonicalize_content(part, prevent_canonicalization)
 
-    headers = f'Content-Type: {part.content_type}\r\nContent-Transfer-Encoding: {part.content_transfer_encoding}\r\n\r\n'
+    headers = f'Content-Type: {part.content_type}\r\nContent-Transfer-Encoding: {part.content_transfer_encoding}\r\n'
+
+    # The disposition header rides along only when a filename actually travels with the entity.
+    if part.content_disposition:
+        headers += f'Content-Disposition: {part.content_disposition}\r\n'
+
+    headers += '\r\n'
 
     out = headers.encode('ascii') + content
     return out
@@ -437,6 +446,9 @@ def parse_part(raw:'bytes') -> 'SMIMEPart':
         out.content_transfer_encoding = transfer_encoding
     else:
         out.content_transfer_encoding = _default_transfer_encoding
+
+    if content_disposition := headers.get('content-disposition'):
+        out.content_disposition = content_disposition
 
     return out
 
@@ -476,6 +488,24 @@ def select_mic_algorithm(requested:'strlist') -> 'str':
 
 # ################################################################################################################################
 
+def compute_mic_over(covered:'bytes', algorithm:'str'=Default.Digest_Algorithm) -> 'str':
+    """ Digests the exact bytes given and returns the MIC in its wire form -
+    the base64 digest with the RFC 5751 algorithm name appended after a comma.
+    """
+    normalized = normalize_micalg(algorithm)
+    hash_class = _digest_by_name[normalized]
+
+    digest = Hash(hash_class())
+    digest.update(covered)
+    digest_bytes = digest.finalize()
+
+    encoded = b64encode(digest_bytes).decode('ascii')
+
+    out = f'{encoded}, {normalized}'
+    return out
+
+# ################################################################################################################################
+
 def compute_mic(
     part:'SMIMEPart',
     algorithm:'str'=Default.Digest_Algorithm,
@@ -489,9 +519,6 @@ def compute_mic(
     messages the decrypted canonicalized MIME headers plus content, and for unsigned unencrypted
     messages the content alone, without any headers.
     """
-    normalized = normalize_micalg(algorithm)
-    hash_class = _digest_by_name[normalized]
-
     # Signed and encrypted messages digest the complete MIME entity ..
     include_headers = is_signed
     if is_encrypted:
@@ -504,13 +531,7 @@ def compute_mic(
     else:
         covered = _canonicalize_content(part, prevent_canonicalization)
 
-    digest = Hash(hash_class())
-    digest.update(covered)
-    digest_bytes = digest.finalize()
-
-    encoded = b64encode(digest_bytes).decode('ascii')
-
-    out = f'{encoded}, {normalized}'
+    out = compute_mic_over(covered, algorithm)
     return out
 
 # ################################################################################################################################
@@ -526,7 +547,7 @@ def _new_boundary() -> 'str':
 
 # ################################################################################################################################
 
-def _encode_base64_lines(data:'bytes') -> 'bytes':
+def encode_base64_lines(data:'bytes') -> 'bytes':
     """ base64-encodes data into CRLF-separated lines of the RFC 2045 maximum length.
     """
     encoded = b64encode(data)
@@ -676,7 +697,7 @@ def sign(
 
         signature = builder.sign(Encoding.DER, [PKCS7Options.DetachedSignature, PKCS7Options.Binary])
 
-    encoded_signature = _encode_base64_lines(signature)
+    encoded_signature = encode_base64_lines(signature)
 
     # The inner entity goes into the first part exactly as signed,
     # the signature into the second, base64-encoded.
@@ -1036,7 +1057,7 @@ def encrypt(
     out.content_type = 'application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'
 
     if force_base64:
-        out.data = _encode_base64_lines(envelope)
+        out.data = encode_base64_lines(envelope)
         out.content_transfer_encoding = 'base64'
     else:
         out.data = envelope
