@@ -39,7 +39,6 @@
         }
 
         var apply = function() {
-            console.log('QQQ tabs.apply: selector=' + tab_selector + ' prefix=' + panel_prefix + ' current_tab=' + current_tab);
             $(tab_selector).each(function() {
                 var is_active = $(this).data('tab') === current_tab;
                 $(this).toggleClass(active_cls, is_active);
@@ -51,9 +50,6 @@
                 var $panel = $('#' + panel_prefix + tab_name);
                 if ($panel.length) {
                     $panel.prop('hidden', tab_name !== current_tab);
-                    console.log('QQQ tabs.apply: panel=' + panel_prefix + tab_name + ' hidden=' + (tab_name !== current_tab));
-                } else {
-                    console.log('QQQ tabs.apply: panel NOT FOUND: ' + panel_prefix + tab_name);
                 }
             });
         };
@@ -68,7 +64,6 @@
         $(document).on('click', tab_selector, function(event) {
             event.preventDefault();
             var tab = $(this).data('tab');
-            console.log('QQQ tabs.click: selector=' + tab_selector + ' clicked_tab=' + tab + ' prev_tab=' + current_tab);
             current_tab = tab;
             user_chose = true;
             if (config.storage_key) { ns.storage_set(config.storage_key, tab); }

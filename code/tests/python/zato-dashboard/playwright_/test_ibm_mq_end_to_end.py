@@ -209,10 +209,13 @@ class TestIBMMQEndToEnd:
         _wait_for_invoker_service(page, base_url)
         _ = invoke_service_in_ide(page, {'mode': 'clear-received'})
 
-        name = _Test_Name_Prefix + 'e2e'
+        # The channel and the outgoing connection need distinct names because
+        # the dashboard's uniqueness check spans all generic connections.
+        channel_name = _Test_Name_Prefix + 'channel'
+        outconn_name = _Test_Name_Prefix + 'outconn'
 
         # The channel - it consumes from the request queue and routes to the receiver service ..
-        channel_id = create_ibm_mq_channel(page, base_url, name, {
+        channel_id = create_ibm_mq_channel(page, base_url, channel_name, {
             'address': ibm_mq_server.address,
             'queue_manager': ContainerCtx.Queue_Manager,
             'mq_channel_name': ContainerCtx.MQ_Channel_Name,
@@ -224,7 +227,7 @@ class TestIBMMQEndToEnd:
         change_ibm_mq_channel_password(page, channel_id, ContainerCtx.Password)
 
         # .. and the outgoing connection pointed at the same queue.
-        outconn_id = create_ibm_mq_outconn(page, base_url, name, {
+        outconn_id = create_ibm_mq_outconn(page, base_url, outconn_name, {
             'address': ibm_mq_server.address,
             'queue_manager': ContainerCtx.Queue_Manager,
             'mq_channel_name': ContainerCtx.MQ_Channel_Name,
@@ -236,7 +239,7 @@ class TestIBMMQEndToEnd:
         # One send now goes service -> outgoing connection -> queue -> channel -> receiver service.
         marker = CryptoManager.generate_hex_string()
         payload = json.dumps({'marker': marker, 'source': 'dashboard-e2e'})
-        _send_with_retry(page, base_url, name, payload)
+        _send_with_retry(page, base_url, outconn_name, payload)
 
         # The receiver recorded the message together with its MQMD headers.
         message = _wait_for_received(page, base_url, marker)

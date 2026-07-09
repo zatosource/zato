@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from urllib.parse import urlparse
 
 # Zato
-from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form, submit_edit_form
+from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, set_select_value, submit_create_form, \
+    submit_edit_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +31,7 @@ IBM_MQ_Channel_Page_Url = '/zato/channel/ibm-mq/?cluster=1&type_=channel-ibm-mq'
 _Text_Fields = ('name', 'address', 'queue_manager', 'mq_channel_name', 'queue',
     'username', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file')
 
-# Select fields in the create and edit forms, keyed by option name
+# Select fields set by raw value via JS since Chosen.js hides the underlying elements
 _Select_Fields = ('service',)
 
 # Checkbox fields toggled by boolean options
@@ -115,16 +116,7 @@ def _activate_tab(page:'Page', prefix:'str', tab_name:'str') -> 'None':
     """ Clicks a tab header in the create or edit dialog so the tab's fields become visible.
     """
     container = '#edit-div' if prefix else '#create-div'
-    print(f'QQQ _activate_tab: clicking {container} .dashboard-tab[data-tab="{tab_name}"]')
     page.click(f'{container} .dashboard-tab[data-tab="{tab_name}"]')
-    state = page.evaluate(f'''() => {{
-        var out = [];
-        document.querySelectorAll('{container} .dashboard-tab-panel').forEach(function(el) {{
-            out.push(el.id + ' hidden=' + el.hidden);
-        }});
-        return out.join(', ');
-    }}''')
-    print(f'QQQ _activate_tab: after click panels: {state}')
 
 # ################################################################################################################################
 
@@ -148,7 +140,8 @@ def fill_ibm_mq_channel_form(page:'Page', options:'anydict', prefix:'str'='') ->
 
             page.fill(f'#id_{prefix}{field_name}', options[field_name])
 
-    # .. selects, also switching to their tab first ..
+    # .. selects, also switching to their tab first, set via JS because Chosen.js
+    # hides the underlying select elements ..
     for field_name in _Select_Fields:
         if field_name in options:
 
@@ -157,21 +150,7 @@ def fill_ibm_mq_channel_form(page:'Page', options:'anydict', prefix:'str'='') ->
                 _activate_tab(page, prefix, field_tab)
                 current_tab = field_tab
 
-            selector = f'#id_{prefix}{field_name}'
-            info = page.evaluate(f'''() => {{
-                var el = document.querySelector('{selector}');
-                if (!el) return 'element not found';
-                var panel = el.closest('.dashboard-tab-panel');
-                var rect = el.getBoundingClientRect();
-                return 'panel=' + (panel ? panel.id + ' hidden=' + panel.hidden : 'none')
-                    + ' rect=' + rect.width + 'x' + rect.height
-                    + ' options=' + el.options.length
-                    + ' display=' + getComputedStyle(el).display
-                    + ' visibility=' + getComputedStyle(el).visibility;
-            }}''')
-            print(f'QQQ select field {selector}: {info}')
-
-            page.select_option(selector, label=options[field_name])
+            set_select_value(page, f'#id_{prefix}{field_name}', options[field_name])
 
     # .. checkboxes, checked via JS because toggle-switch styling covers the inputs ..
     for field_name in _Checkbox_Fields:
