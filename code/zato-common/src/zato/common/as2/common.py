@@ -65,11 +65,65 @@ class EncryptionAlgorithm:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MDNMode:
+    """ How the receiver is to deliver its MDN - not at all, on the HTTP response,
+    or asynchronously to a separate URL.
+    """
+    None_ = 'none'
+    Sync  = 'sync'
+    Async = 'async'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TransferMode:
+    """ How the HTTP request body is framed - with a Content-Length header, with chunked
+    transfer encoding, or with chunking only above a configurable size threshold.
+    """
+    Content_Length = 'content-length'
+    Chunked        = 'chunked'
+    Threshold      = 'threshold'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeliveryKind:
+    """ The reliability taxonomy of repeated delivery attempts - a retry reuses the same attempt
+    after a transport error, a resend carries the same content and the same Message-ID because
+    no MDN arrived, and a resubmit is an operator action with a new Message-ID.
+    """
+    Retry    = 'retry'
+    Resend   = 'resend'
+    Resubmit = 'resubmit'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Default:
-    """ Default algorithm choices for outgoing messages.
+    """ Default algorithm and configuration choices for outgoing messages.
     """
     Digest_Algorithm     = DigestAlgorithm.SHA256
     Encryption_Algorithm = EncryptionAlgorithm.AES_256_CBC
+
+    # The AS2-Version header value of outgoing messages - pinnable per partner for legacy peers,
+    # while inbound never rejects on version and an absent version means 1.0.
+    AS2_Version = '1.2'
+
+    # The Content-Type of outgoing payloads unless the partnership names another one.
+    Content_Type = 'application/edi-x12'
+
+    # The Subject header of outgoing messages.
+    Subject = 'AS2 message'
+
+    # How long outbound HTTP requests may take, in seconds.
+    HTTP_Timeout_Seconds = 60
+
+    # Above this many bytes the threshold transfer mode switches to chunked framing.
+    Chunked_Threshold_Bytes = 10 * 1024 * 1024
+
+    # What every outgoing message advertises in its EDIINT-Features header - real capabilities
+    # only, informational per its RFC, and inbound values never drive behavior.
+    EDIINT_Features = 'multiple-attachments, AS2-Reliability'
 
 # ################################################################################################################################
 # ################################################################################################################################

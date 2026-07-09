@@ -190,11 +190,27 @@ class MDNInfo:
 # ################################################################################################################################
 
 def new_message_id() -> 'str':
-    """ Returns a fresh Message-ID for an outgoing MDN.
+    """ Returns a fresh Message-ID for an outgoing message or MDN.
     """
     suffix = CryptoManager.generate_hex_string()
 
     out = f'<{suffix}@zato>'
+    return out
+
+# ################################################################################################################################
+
+def normalize_message_id(value:'str') -> 'str':
+    """ Strips the angle brackets off a Message-ID - the comparison stays case-sensitive
+    on the full addr-spec underneath, so nothing else is touched.
+    """
+    out = value.strip()
+
+    if out.startswith('<'):
+        out = out[1:]
+
+    if out.endswith('>'):
+        out = out[:-1]
+
     return out
 
 # ################################################################################################################################
