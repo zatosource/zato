@@ -12,8 +12,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 # Zato
-from zato.edi.base import EDIElement, EDIGroupAttr, EDISegmentAttr, EDIValidationError, Usage, _composite_classes, \
-     _declared_attr_descriptors
+from zato.edi.base import EDIComponent, EDIElement, EDIGroupAttr, EDISegmentAttr, EDIValidationError, Usage, \
+     _composite_classes, _declared_attr_descriptors, _sort_by_position
 from zato.x12.base import X12GenericMessage, X12Message, _element_value
 from zato.x12.syntax import RawSegment
 
@@ -187,7 +187,7 @@ def _element_descriptors_of(segment_class:'type') -> 'descriptor_list':
         if isinstance(attribute, EDIElement):
             descriptors.append(attribute)
 
-    descriptors.sort(key=lambda descriptor: descriptor.position)
+    descriptors.sort(key=_sort_by_position)
 
     out = descriptors
     return out
@@ -364,8 +364,6 @@ def _validate_segment_elements(
 def _element_descriptors_of_composite(composite_class:'type') -> 'anylist':
     """ Returns the component descriptors of a composite class, sorted by position.
     """
-    from zato.edi.base import EDIComponent
-
     descriptors:'anylist' = []
 
     for name in dir(composite_class):
@@ -373,7 +371,7 @@ def _element_descriptors_of_composite(composite_class:'type') -> 'anylist':
         if isinstance(attribute, EDIComponent):
             descriptors.append(attribute)
 
-    descriptors.sort(key=lambda descriptor: descriptor.position)
+    descriptors.sort(key=_sort_by_position)
 
     out = descriptors
     return out
