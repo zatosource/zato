@@ -41,8 +41,7 @@ _atom_characters = frozenset(
 
 @dataclass(init=False)
 class HTTPAuth:
-    """ Optional HTTP basic authentication for outgoing requests - a Drummond profile,
-    meaningful only over TLS.
+    """ Optional HTTP basic authentication for outgoing requests, meaningful only over TLS.
     """
     username: str = ''
     password: str = ''
