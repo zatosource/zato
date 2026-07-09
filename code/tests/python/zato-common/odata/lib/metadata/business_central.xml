@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Microsoft.NAV" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="company">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="systemVersion" Type="Edm.String"/>
+        <Property Name="name" Type="Edm.String" MaxLength="30"/>
+        <Property Name="displayName" Type="Edm.String" MaxLength="250"/>
+        <Property Name="businessProfileId" Type="Edm.String"/>
+        <NavigationProperty Name="customers" Type="Collection(Microsoft.NAV.customer)" ContainsTarget="true"/>
+        <NavigationProperty Name="salesInvoices" Type="Collection(Microsoft.NAV.salesInvoice)" ContainsTarget="true"/>
+      </EntityType>
+      <EntityType Name="customer">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="number" Type="Edm.String" MaxLength="20"/>
+        <Property Name="displayName" Type="Edm.String" MaxLength="100"/>
+        <Property Name="type" Type="Edm.String"/>
+        <Property Name="addressLine1" Type="Edm.String" MaxLength="100"/>
+        <Property Name="city" Type="Edm.String" MaxLength="30"/>
+        <Property Name="country" Type="Edm.String" MaxLength="10"/>
+        <Property Name="phoneNumber" Type="Edm.String" MaxLength="30"/>
+        <Property Name="email" Type="Edm.String" MaxLength="80"/>
+        <Property Name="balanceDue" Type="Edm.Decimal" Scale="variable"/>
+        <Property Name="creditLimit" Type="Edm.Decimal" Scale="variable"/>
+        <Property Name="blocked" Type="Edm.String"/>
+        <Property Name="lastModifiedDateTime" Type="Edm.DateTimeOffset"/>
+      </EntityType>
+      <EntityType Name="salesInvoice">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.Guid" Nullable="false"/>
+        <Property Name="number" Type="Edm.String" MaxLength="20"/>
+        <Property Name="invoiceDate" Type="Edm.Date"/>
+        <Property Name="customerId" Type="Edm.Guid"/>
+        <Property Name="customerNumber" Type="Edm.String" MaxLength="20"/>
+        <Property Name="customerName" Type="Edm.String" MaxLength="100"/>
+        <Property Name="currencyCode" Type="Edm.String" MaxLength="10"/>
+        <Property Name="totalAmountExcludingTax" Type="Edm.Decimal" Scale="variable"/>
+        <Property Name="totalAmountIncludingTax" Type="Edm.Decimal" Scale="variable"/>
+        <Property Name="status" Type="Edm.String"/>
+        <Property Name="lastModifiedDateTime" Type="Edm.DateTimeOffset"/>
+      </EntityType>
+      <Action Name="post" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Microsoft.NAV.salesInvoice"/>
+      </Action>
+      <EntityContainer Name="NAV">
+        <EntitySet Name="companies" EntityType="Microsoft.NAV.company">
+          <NavigationPropertyBinding Path="customers" Target="customers"/>
+          <NavigationPropertyBinding Path="salesInvoices" Target="salesInvoices"/>
+        </EntitySet>
+        <EntitySet Name="customers" EntityType="Microsoft.NAV.customer"/>
+        <EntitySet Name="salesInvoices" EntityType="Microsoft.NAV.salesInvoice"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

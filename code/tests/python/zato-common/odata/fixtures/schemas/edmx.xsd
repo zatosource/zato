@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+  Technical Committee:
+  OASIS Open Data Protocol (OData) TC
+  https://www.oasis-open.org/committees/odata
+
+  Chairs:
+  - Ralf Handl (ralf.handl@sap.com), SAP SE
+  - Michael Pizzo (mikep@microsoft.com), Microsoft
+
+  Editors:
+  - Ralf Handl (ralf.handl@sap.com), SAP SE
+  - Michael Pizzo (mikep@microsoft.com), Microsoft
+
+  Additional artifacts:
+  This XML schema is one component of a Work Product which consists of:
+  - OData Common Schema Definition Language (CSDL) XML Representation Version 4.01
+  - OData EDMX XML Schema Version 4.01 (this document)
+  - OData EDM XML Schema Version 4.01
+
+  Related work:
+  This specification replaces or supersedes:
+  - OData EDMX XML Schema Version 4.0
+  This work product is related to
+  - OData Version 4.01
+  - OData JSON Format Version 4.01
+
+  Declared XML namespaces:
+  - http://docs.oasis-open.org/odata/ns/edmx
+  - http://docs.oasis-open.org/odata/ns/edm
+
+  Abstract:
+  The Open Data Protocol (OData) enables the creation of REST-based data
+  services, which allow resources, identified using Uniform Resource
+  Identifiers (URLs) and defined in a data model, to be published and
+  edited by Web clients using simple HTTP messages. This document defines
+  the URL syntax for requests and the serialization format for primitive
+  literals in request and response payloads.
+
+  Overview:
+  This document describes the Entity Data Model part of CSDL.
+  It is imported by the OData EDMX XML Schema, see additional artifacts.
+
+  Together these two XML schemas define the shape of a well-formed CSDL XML document,
+  but are not descriptive enough to define what a correct CSDL document MUST be
+  in every imaginable use case. The prose specification document
+
+  OData Common Schema Definition Language (CSDL) XML Representation Version 4.01
+  http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.docx
+
+  defines additional rules that correct CSDL XML documents MUST fulfill.
+  In case of doubt on what makes a CSDL XML document correct the rules defined in the
+  prose specification document take precedence.
+
+-->
+<xs:schema elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" xmlns:edm="http://docs.oasis-open.org/odata/ns/edm" targetNamespace="http://docs.oasis-open.org/odata/ns/edmx"
+>
+  <xs:annotation>
+    <xs:documentation xml:lang="en">
+      Entity Data Model Wrapper part of the Common Schema Definition Language
+    </xs:documentation>
+  </xs:annotation>
+
+  <xs:import namespace="http://docs.oasis-open.org/odata/ns/edm" schemaLocation="edm.xsd" />
+
+  <xs:element name="Edmx" type="edmx:TEdmx" />
+  <xs:complexType name="TEdmx">
+    <xs:sequence>
+      <xs:element name="Reference" type="edmx:TReference" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="DataServices" type="edmx:TDataServices" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="Version" type="edmx:TVersion" use="required" />
+  </xs:complexType>
+  <xs:complexType name="TReference">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:choice minOccurs="1" maxOccurs="unbounded">
+        <xs:sequence>
+          <xs:element name="Include" type="edmx:TInclude" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="IncludeAnnotations" type="edmx:TIncludeAnnotations" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="Uri" type="xs:anyURI" use="required" />
+  </xs:complexType>
+  <xs:complexType name="TInclude">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Namespace" type="edm:TNamespaceName" use="required" />
+    <xs:attribute name="Alias" type="edm:TSimpleIdentifier" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TIncludeAnnotations">
+    <xs:attribute name="TermNamespace" type="edm:TNamespaceName" use="required" />
+    <xs:attribute name="Qualifier" type="edm:TSimpleIdentifier" use="optional" />
+    <xs:attribute name="TargetNamespace" type="edm:TNamespaceName" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TDataServices">
+    <xs:sequence>
+      <xs:element ref="edm:Schema" minOccurs="1" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="TVersion">
+    <xs:restriction base="xs:decimal">
+      <xs:enumeration value="4.0" />
+      <xs:enumeration value="4.01" />
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

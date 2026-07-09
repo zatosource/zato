@@ -1,0 +1,957 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+  Technical Committee:
+  OASIS Open Data Protocol (OData) TC
+  https://www.oasis-open.org/committees/odata
+
+  Chairs:
+  - Ralf Handl (ralf.handl@sap.com), SAP SE
+  - Michael Pizzo (mikep@microsoft.com), Microsoft
+
+  Editors:
+  - Ralf Handl (ralf.handl@sap.com), SAP SE
+  - Michael Pizzo (mikep@microsoft.com), Microsoft
+
+  Additional artifacts:
+  This XML schema is one component of a Work Product which consists of:
+  - OData Common Schema Definition Language (CSDL) XML Representation Version 4.01
+  - OData EDMX XML Schema Version 4.01
+  - OData EDM XML Schema Version 4.01 (this document)
+
+  Related work:
+  This specification replaces or supersedes:
+  - OData EDM XML Schema Version 4.0
+  This work product is related to
+  - OData Version 4.01
+  - OData JSON Format Version 4.01
+
+  Declared XML namespaces:
+  - http://docs.oasis-open.org/odata/ns/edmx
+  - http://docs.oasis-open.org/odata/ns/edm
+
+  Abstract:
+  The Open Data Protocol (OData) enables the creation of REST-based data
+  services, which allow resources, identified using Uniform Resource
+  Identifiers (URLs) and defined in a data model, to be published and
+  edited by Web clients using simple HTTP messages. This document defines
+  the URL syntax for requests and the serialization format for primitive
+  literals in request and response payloads.
+
+  Overview:
+  This document describes the Entity Data Model part of CSDL.
+  It is imported by the OData EDMX XML Schema, see additional artifacts.
+
+  Together these two XML schemas define the shape of a well-formed CSDL XML document,
+  but are not descriptive enough to define what a correct CSDL document MUST be
+  in every imaginable use case. The prose specification document
+
+  OData Common Schema Definition Language (CSDL) XML Representation Version 4.01
+  http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.docx
+
+  defines additional rules that correct CSDL XML documents MUST fulfill.
+  In case of doubt on what makes a CSDL XML document correct the rules defined in the
+  prose specification document take precedence.
+
+-->
+<xs:schema elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:edm="http://docs.oasis-open.org/odata/ns/edm" targetNamespace="http://docs.oasis-open.org/odata/ns/edm">
+  <xs:annotation>
+    <xs:documentation xml:lang="en">
+      Entity Data Model part of the Common Schema Definition Language
+    </xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="Schema">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="ComplexType" type="edm:TComplexType" />
+        <xs:element name="EntityType" type="edm:TEntityType" />
+        <xs:element name="TypeDefinition" type="edm:TTypeDefinition" />
+        <xs:element name="EnumType" type="edm:TEnumType" />
+        <xs:element name="Action" type="edm:TAction" />
+        <xs:element name="Function" type="edm:TFunction" />
+        <xs:element name="Term" type="edm:TTerm" />
+        <xs:element name="Annotations" type="edm:TAnnotations" />
+        <xs:element name="EntityContainer" type="edm:TEntityContainer" />
+        <xs:element ref="edm:Annotation" />
+      </xs:choice>
+      <xs:attribute name="Namespace" type="edm:TNamespaceName" use="required" />
+      <xs:attribute name="Alias" type="edm:TSimpleIdentifier" use="optional" />
+    </xs:complexType>
+  </xs:element>
+  <!--
+    types of the top level elements
+  -->
+  <xs:group name="GStructuredType">
+    <xs:choice>
+      <xs:element name="Property" type="edm:TProperty" />
+      <xs:element name="NavigationProperty" type="edm:TNavigationProperty" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="TEntityType">
+    <xs:sequence>
+      <xs:group ref="edm:GStructuredType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:sequence minOccurs="0">
+        <xs:element name="Key" type="edm:TEntityKeyElement" />
+        <xs:group ref="edm:GStructuredType" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TDerivableTypeAttributes" />
+    <xs:attribute name="OpenType" type="xs:boolean" use="optional" default="false" />
+    <xs:attribute name="HasStream" type="xs:boolean" use="optional" default="false" />
+  </xs:complexType>
+  <xs:complexType name="TEntityKeyElement">
+    <xs:sequence>
+      <xs:element name="PropertyRef" type="edm:TPropertyRef" minOccurs="1" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TPropertyRef">
+    <xs:attribute name="Name" type="edm:TPath" use="required" />
+    <xs:attribute name="Alias" type="edm:TSimpleIdentifier" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TComplexType">
+    <xs:group ref="edm:GStructuredType" minOccurs="0" maxOccurs="unbounded" />
+    <xs:attributeGroup ref="edm:TDerivableTypeAttributes" />
+    <xs:attribute name="OpenType" type="xs:boolean" use="optional" default="false" />
+  </xs:complexType>
+  <xs:complexType name="TProperty">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TCommonPropertyAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TTypeDefinition">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="UnderlyingType" type="edm:TPrimitiveType" use="required" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:complexType>
+  <xs:group name="GNavigationProperty">
+    <xs:choice>
+      <xs:element name="ReferentialConstraint" type="edm:TReferentialConstraint" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="TNavigationProperty">
+    <xs:sequence>
+      <xs:group ref="edm:GNavigationProperty" minOccurs="0" maxOccurs="unbounded" />
+      <xs:sequence minOccurs="0">
+        <xs:element name="OnDelete" type="edm:TOnDelete" />
+        <xs:group ref="edm:GNavigationProperty" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Type" type="edm:TNavigationPropertyType" use="required" />
+    <xs:attribute name="Nullable" type="xs:boolean" use="optional" />
+    <xs:attribute name="Partner" type="edm:TPath" use="optional" />
+    <xs:attribute name="ContainsTarget" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TReferentialConstraint">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Property" type="edm:TPath" use="required" />
+    <xs:attribute name="ReferencedProperty" type="edm:TPath" use="required" />
+  </xs:complexType>
+  <xs:complexType name="TOnDelete">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Action" type="edm:TOnDeleteAction" use="required" />
+  </xs:complexType>
+  <xs:complexType name="TEnumType">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:sequence maxOccurs="unbounded">
+        <xs:element name="Member" type="edm:TEnumTypeMember" />
+        <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TTypeAttributes" />
+    <xs:attribute name="IsFlags" type="xs:boolean" use="optional" />
+    <xs:attribute name="UnderlyingType" type="edm:TPrimitiveEnumType" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TEnumTypeMember">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Value" type="xs:long" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TActionFunctionReturnType">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Type" type="edm:TTypeName" use="required" />
+    <xs:attribute name="Nullable" type="xs:boolean" use="optional" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:complexType>
+  <xs:group name="GActionFunctionParameter">
+    <xs:choice>
+      <xs:element name="Parameter" type="edm:TActionFunctionParameter" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+  </xs:group>
+  <xs:complexType name="TAction">
+    <xs:sequence>
+      <xs:group ref="edm:GActionFunctionParameter" minOccurs="0" maxOccurs="unbounded" />
+      <xs:sequence minOccurs="0">
+        <xs:element name="ReturnType" type="edm:TActionFunctionReturnType" />
+        <xs:group ref="edm:GActionFunctionParameter" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TActionAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TFunction">
+    <xs:sequence>
+      <xs:group ref="edm:GActionFunctionParameter" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="ReturnType" type="edm:TActionFunctionReturnType" />
+      <xs:group ref="edm:GActionFunctionParameter" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TFunctionAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TActionFunctionParameter">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attributeGroup ref="edm:TActionFunctionParameterAttributes" />
+  </xs:complexType>
+  <!--
+    vocabulary annotations
+  -->
+  <xs:complexType name="TTerm">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Type" type="edm:TTypeName" use="required" />
+    <xs:attribute name="BaseTerm" type="edm:TQualifiedName" use="optional" />
+    <xs:attribute name="Nullable" type="xs:boolean" use="optional" />
+    <xs:attribute name="DefaultValue" type="xs:string" use="optional" />
+    <xs:attribute name="AppliesTo" type="edm:TAppliesTo" use="optional" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TAnnotations">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="1" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Target" type="edm:TTarget" use="required" />
+    <xs:attribute name="Qualifier" type="edm:TSimpleIdentifier" use="optional" />
+  </xs:complexType>
+  <xs:element name="Annotation">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="Term" type="edm:TQualifiedName" use="required" />
+      <xs:attribute name="Qualifier" type="edm:TSimpleIdentifier" use="optional" />
+      <xs:attributeGroup ref="edm:GInlineExpressions" />
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="GExpression">
+    <xs:choice>
+      <!-- Constant Expressions -->
+      <xs:element name="Binary" type="edm:TBinaryConstantExpression" />
+      <xs:element name="Bool" type="edm:TBoolConstantExpression" />
+      <xs:element name="Date" type="edm:TDateConstantExpression" />
+      <xs:element name="DateTimeOffset" type="edm:TDateTimeOffsetConstantExpression" />
+      <xs:element name="Decimal" type="edm:TDecimalConstantExpression" />
+      <xs:element name="Duration" type="edm:TDurationConstantExpression" />
+      <xs:element name="EnumMember" type="edm:TEnumMemberList" />
+      <xs:element name="Float" type="edm:TFloatConstantExpression" />
+      <xs:element name="Guid" type="edm:TGuidConstantExpression" />
+      <xs:element name="Int" type="edm:TIntConstantExpression" />
+      <xs:element name="String" type="edm:TStringConstantExpression" />
+      <xs:element name="TimeOfDay" type="edm:TTimeOfDayConstantExpression" />
+      <!-- Dynamic Expressions -->
+      <xs:element name="AnnotationPath" type="edm:TModelPath" />
+      <xs:element name="Apply" type="edm:TApplyExpression" />
+      <xs:element name="Cast" type="edm:TCastOrIsOfExpression" />
+      <xs:element name="Collection" type="edm:TCollectionExpression" />
+      <xs:element name="If" type="edm:TIfExpression" />
+      <xs:element name="Eq" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Ne" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Ge" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Gt" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Le" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Lt" type="edm:TTwoChildrenExpression" />
+      <xs:element name="And" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Or" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Not" type="edm:TOneChildExpression" />
+      <xs:element name="Has" type="edm:TTwoChildrenExpression" />
+      <xs:element name="In" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Add" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Sub" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Neg" type="edm:TOneChildExpression" />
+      <xs:element name="Mul" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Div" type="edm:TTwoChildrenExpression" />
+      <xs:element name="DivBy" type="edm:TTwoChildrenExpression" />
+      <xs:element name="Mod" type="edm:TTwoChildrenExpression" />
+      <xs:element name="IsOf" type="edm:TCastOrIsOfExpression" />
+      <xs:element name="LabeledElement" type="edm:TLabeledElementExpression" />
+      <xs:element name="LabeledElementReference" type="edm:TLabeledElementReferenceExpression" />
+      <xs:element name="Null" type="edm:TNullExpression" />
+      <xs:element name="ModelElementPath" type="edm:TModelPath" />
+      <xs:element name="NavigationPropertyPath" type="edm:TModelPath" />
+      <xs:element name="Path" type="edm:TInstancePath" />
+      <xs:element name="PropertyPath" type="edm:TModelPath" />
+      <xs:element name="Record" type="edm:TRecordExpression" />
+      <xs:element name="UrlRef" type="edm:TOneChildExpression" />
+    </xs:choice>
+  </xs:group>
+  <xs:group name="GExpressionFollowedByAnnotations">
+    <xs:sequence>
+      <xs:group ref="edm:GExpression" />
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:group>
+  <xs:attributeGroup name="GInlineExpressions">
+    <!-- Constant Expressions -->
+    <xs:attribute name="Binary" type="edm:binary" use="optional" />
+    <xs:attribute name="Bool" type="edm:boolean" use="optional" />
+    <xs:attribute name="Date" type="edm:date" use="optional" />
+    <xs:attribute name="DateTimeOffset" type="edm:dateTimeStamp" use="optional" />
+    <xs:attribute name="Decimal" type="edm:TDecimalLiteral" use="optional" />
+    <xs:attribute name="Duration" type="edm:dayTimeDuration" use="optional" />
+    <xs:attribute name="EnumMember" type="edm:TEnumMemberList" use="optional" />
+    <xs:attribute name="Float" type="xs:double" use="optional" />
+    <xs:attribute name="Guid" type="edm:TGuidLiteral" use="optional" />
+    <xs:attribute name="Int" type="xs:integer" use="optional" />
+    <xs:attribute name="String" type="xs:string" use="optional" />
+    <xs:attribute name="TimeOfDay" type="edm:time" use="optional" />
+    <!-- Dynamic Expressions -->
+    <xs:attribute name="AnnotationPath" type="edm:TModelPath" use="optional" />
+    <xs:attribute name="ModelElementPath" type="edm:TModelPath" use="optional" />
+    <xs:attribute name="NavigationPropertyPath" type="edm:TModelPath" use="optional" />
+    <xs:attribute name="Path" type="edm:TInstancePath" use="optional" />
+    <xs:attribute name="PropertyPath" type="edm:TModelPath" use="optional" />
+    <xs:attribute name="UrlRef" type="xs:anyURI" use="optional" />
+  </xs:attributeGroup>
+  <!--
+    Constant Expressions
+  -->
+  <xs:complexType name="TBinaryConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:binary" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TBoolConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:boolean" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TDateConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:date" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TDateTimeOffsetConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:dateTimeStamp" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TDecimalConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:TDecimalLiteral" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TDurationConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:dayTimeDuration" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TFloatConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="xs:double" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TGuidConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:TGuidLiteral" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="TDecimalLiteral">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(\+|-)?[0-9]+(\.[0-9]+)?([Ee](\+|-)?[0-9]+)?|-?INF|NaN" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TGuidLiteral">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="TIntConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="xs:integer" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TStringConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="xs:string" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TTimeOfDayConstantExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:time" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <!--
+    Dynamic Expressions
+  -->
+  <xs:complexType name="TApplyExpression">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="edm:Annotation" />
+      <xs:group ref="edm:GExpression" />
+    </xs:choice>
+    <xs:attribute name="Function" type="edm:TClientFunction" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TCastOrIsOfExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="Type" type="edm:TTypeName" use="optional" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TCollectionExpression">
+    <xs:sequence>
+      <xs:group ref="edm:GExpression" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TIfExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <!-- Condition, Then, optional Else -->
+      <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="2" maxOccurs="3" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TOneChildExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TTwoChildrenExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="2" maxOccurs="2" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TLabeledElementExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:group ref="edm:GExpressionFollowedByAnnotations" minOccurs="0" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attributeGroup ref="edm:GInlineExpressions" />
+  </xs:complexType>
+  <xs:complexType name="TLabeledElementReferenceExpression">
+    <xs:simpleContent>
+      <xs:extension base="edm:TQualifiedName" />
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TNullExpression">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TRecordExpression">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="PropertyValue" type="edm:TPropertyValue" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+    <xs:attribute name="Type" type="edm:TQualifiedName" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TPropertyValue">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="edm:Annotation" />
+      <xs:group ref="edm:GExpression" />
+    </xs:choice>
+    <xs:attribute name="Property" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attributeGroup ref="edm:GInlineExpressions" />
+  </xs:complexType>
+  <!--
+    attributes
+  -->
+  <xs:attributeGroup name="TFacetAttributes">
+    <xs:attribute name="MaxLength" type="edm:TMaxLengthFacet" use="optional" />
+    <xs:attribute name="Precision" type="edm:TPrecisionFacet" use="optional" />
+    <xs:attribute name="Scale" type="edm:TScaleFacet" use="optional" />
+    <xs:attribute name="SRID" type="edm:TSridFacet" use="optional" />
+    <xs:attribute name="Unicode" type="edm:TUnicodeFacet" use="optional" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TCommonPropertyAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Type" type="edm:TTypeName" use="required" />
+    <xs:attribute name="Nullable" type="xs:boolean" default="true" use="optional" />
+    <xs:attribute name="DefaultValue" type="xs:string" use="optional" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TActionFunctionParameterAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Type" type="edm:TTypeName" use="required" />
+    <xs:attribute name="Nullable" type="xs:boolean" use="optional" />
+    <xs:attributeGroup ref="edm:TFacetAttributes" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TActionAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="EntitySetPath" type="edm:TPath" use="optional" />
+    <xs:attribute name="IsBound" type="xs:boolean" use="optional" default="false" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TFunctionAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="EntitySetPath" type="edm:TPath" use="optional" />
+    <xs:attribute name="IsBound" type="xs:boolean" use="optional" default="false" />
+    <xs:attribute name="IsComposable" type="xs:boolean" use="optional" default="false" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TTypeAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="TDerivableTypeAttributes">
+    <xs:attributeGroup ref="edm:TTypeAttributes" />
+    <xs:attribute name="BaseType" type="edm:TQualifiedName" use="optional" />
+    <xs:attribute name="Abstract" type="xs:boolean" use="optional" default="false" />
+  </xs:attributeGroup>
+  <!--
+    container constructs
+  -->
+  <xs:complexType name="TEntityContainer">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+      <xs:choice minOccurs="1" maxOccurs="unbounded">
+        <xs:sequence>
+          <xs:element name="EntitySet" type="edm:TEntitySet" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="ActionImport" type="edm:TActionImport" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="FunctionImport" type="edm:TFunctionImport" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="Singleton" type="edm:TSingleton" />
+          <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Extends" type="edm:TQualifiedName" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TEntitySet">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="NavigationPropertyBinding" type="edm:TNavigationPropertyBinding" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+    <xs:attributeGroup ref="edm:TEntitySetAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TNavigationPropertyBinding">
+    <xs:attribute name="Path" type="edm:TPath" use="required" />
+    <xs:attribute name="Target" type="edm:TPath" use="required" />
+  </xs:complexType>
+  <xs:attributeGroup name="TEntitySetAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="EntityType" type="edm:TNonEdmQualifiedName" use="required" />
+    <xs:attribute name="IncludeInServiceDocument" type="xs:boolean" use="optional" default="true" />
+  </xs:attributeGroup>
+  <xs:complexType name="TSingleton">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="NavigationPropertyBinding" type="edm:TNavigationPropertyBinding" />
+      <xs:element ref="edm:Annotation" />
+    </xs:choice>
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="Type" type="edm:TNonEdmQualifiedName" use="required" />
+    <xs:attribute name="Nullable" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TActionImport">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Action" type="edm:TQualifiedName" use="required" />
+    <xs:attributeGroup ref="edm:TActionFunctionImportAttributes" />
+  </xs:complexType>
+  <xs:complexType name="TFunctionImport">
+    <xs:sequence>
+      <xs:element ref="edm:Annotation" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Function" type="edm:TQualifiedName" use="required" />
+    <xs:attribute name="IncludeInServiceDocument" type="xs:boolean" use="optional" default="false" />
+    <xs:attributeGroup ref="edm:TActionFunctionImportAttributes" />
+  </xs:complexType>
+  <xs:attributeGroup name="TActionFunctionImportAttributes">
+    <xs:attribute name="Name" type="edm:TSimpleIdentifier" use="required" />
+    <xs:attribute name="EntitySet" type="edm:TPath" use="optional" />
+  </xs:attributeGroup>
+  <!--
+    general purpose simple types
+  -->
+  <xs:simpleType name="TSimpleIdentifier">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1" />
+      <xs:maxLength value="128" />
+      <!-- ECMAScript identifiers not starting with a '$' -->
+      <xs:pattern value="[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TNamespaceName">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1" />
+      <xs:maxLength value="511" />
+      <!-- one or more SimpleIdentifiers separated by dots -->
+      <xs:pattern value="[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}(\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){0,}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TQualifiedName">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1" />
+      <!-- a NamespaceName followed by a dot and a SimpleIdentifier -->
+      <xs:pattern value="[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}(\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){1,}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TNonEdmQualifiedName">
+    <xs:restriction base="edm:TQualifiedName">
+      <xs:pattern value="[^E].*" />
+      <xs:pattern value="E[^d].*" />
+      <xs:pattern value="Ed[^m].*" />
+      <xs:pattern value="Edm[^.].*" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TEnumMemberList">
+    <xs:list itemType="edm:TPath" />
+  </xs:simpleType>
+  <xs:simpleType name="TTypeName">
+    <xs:union memberTypes="edm:TPrimitiveType edm:TAbstractType edm:TQualifiedName edm:TCollQualifiedName" />
+  </xs:simpleType>
+  <xs:simpleType name="TCollQualifiedName">
+    <xs:restriction base="xs:string">
+      <!-- The below pattern represents the allowed identifiers in the ECMAScript specification plus the '.' for namespace qualification
+        and the Collection() wrapper -->
+      <xs:pattern value="Collection\([\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}(\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){1,}\)" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TNavigationPropertyType">
+    <xs:union memberTypes="edm:TNonEdmQualifiedName">
+      <xs:simpleType>
+        <xs:restriction base="edm:TQualifiedName">
+          <xs:pattern value="Edm\.EntityType" />
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType>
+        <xs:restriction base="edm:TCollQualifiedName">
+          <xs:pattern value="Collection\([^E].*" />
+          <xs:pattern value="Collection\(E[^d].*" />
+          <xs:pattern value="Collection\(Ed[^m].*" />
+          <xs:pattern value="Collection\(Edm[^.].*" />
+          <xs:pattern value="Collection\(Edm\.EntityType\)" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+  <xs:simpleType name="TPath">
+    <xs:restriction base="xs:string">
+      <!-- The below pattern represents the allowed identifiers in the ECMAScript specification plus the '.' for namespace qualification
+        and the '/' for path segment separation -->
+      <xs:pattern value="[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}([\./][\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){0,}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TInstancePath">
+    <!-- Note: this type is overly generous, for the strict definition see http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_PathSyntax -->
+    <xs:restriction base="xs:string" />
+  </xs:simpleType>
+  <xs:simpleType name="TModelPath">
+    <!-- Note: this type is overly generous, for the strict definition see http://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#sec_PathSyntax -->
+    <xs:restriction base="xs:string">
+      <!-- The below pattern represents the allowed identifiers in the ECMAScript specification plus the '/' for path segment separation
+        and
+        the '.' for namespace qualification inside the segments. -->
+      <xs:pattern value="(/?@?[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}(([\./#@]|/@)[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){0,}(/$count)?)?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TTarget">
+    <xs:restriction base="xs:string">
+      <!-- The below pattern represents the allowed identifiers in the ECMAScript specification plus the '.' for namespace qualification,
+        the '/' for path segment separation, and parentheses and comma for overload targeting -->
+      <xs:pattern value="[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}(([.,#(]|/@?|\(?\){1,}((,|/@?))?)[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}){0,}\(?\){0,}(/$ReturnType)?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TClientFunction">
+    <xs:union memberTypes="edm:TQualifiedName">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="odata.concat" />
+          <xs:enumeration value="odata.contains" />
+          <xs:enumeration value="odata.endswith" />
+          <xs:enumeration value="odata.indexof" />
+          <xs:enumeration value="odata.length" />
+          <xs:enumeration value="odata.startswith" />
+          <xs:enumeration value="odata.substring" />
+          <xs:enumeration value="odata.hassubset" />
+          <xs:enumeration value="odata.hassubsequence" />
+          <xs:enumeration value="odata.tolower" />
+          <xs:enumeration value="odata.toupper" />
+          <xs:enumeration value="odata.trim" />
+          <xs:enumeration value="odata.date" />
+          <xs:enumeration value="odata.day" />
+          <xs:enumeration value="odata.fractionalseconds" />
+          <xs:enumeration value="odata.hour" />
+          <xs:enumeration value="odata.maxdatetime" />
+          <xs:enumeration value="odata.mindatetime" />
+          <xs:enumeration value="odata.minute" />
+          <xs:enumeration value="odata.month" />
+          <xs:enumeration value="odata.now" />
+          <xs:enumeration value="odata.second" />
+          <xs:enumeration value="odata.time" />
+          <xs:enumeration value="odata.totaloffsetminutes" />
+          <xs:enumeration value="odata.totalseconds" />
+          <xs:enumeration value="odata.year" />
+          <xs:enumeration value="odata.ceiling" />
+          <xs:enumeration value="odata.floor" />
+          <xs:enumeration value="odata.round" />
+          <xs:enumeration value="odata.cast" />
+          <xs:enumeration value="odata.isof" />
+          <xs:enumeration value="odata.geo.distance" />
+          <xs:enumeration value="odata.geo.intersects" />
+          <xs:enumeration value="odata.geo.length" />
+          <xs:enumeration value="odata.fillUriTemplate" />
+          <xs:enumeration value="odata.uriEncode" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+  <xs:simpleType name="TPrimitiveEnumType">
+    <xs:union>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Edm.Byte" />
+          <xs:enumeration value="Edm.Int16" />
+          <xs:enumeration value="Edm.Int32" />
+          <xs:enumeration value="Edm.Int64" />
+          <xs:enumeration value="Edm.SByte" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+  <xs:simpleType name="TPrimitiveType">
+    <xs:union>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Edm.Binary" />
+          <xs:enumeration value="Edm.Boolean" />
+          <xs:enumeration value="Edm.Byte" />
+          <xs:enumeration value="Edm.Date" />
+          <xs:enumeration value="Edm.DateTimeOffset" />
+          <xs:enumeration value="Edm.Duration" />
+          <xs:enumeration value="Edm.TimeOfDay" />
+          <xs:enumeration value="Edm.Decimal" />
+          <xs:enumeration value="Edm.Double" />
+          <xs:enumeration value="Edm.Single" />
+          <xs:enumeration value="Edm.GeographyPoint" />
+          <xs:enumeration value="Edm.GeographyLineString" />
+          <xs:enumeration value="Edm.GeographyPolygon" />
+          <xs:enumeration value="Edm.GeographyMultiPoint" />
+          <xs:enumeration value="Edm.GeographyMultiLineString" />
+          <xs:enumeration value="Edm.GeographyMultiPolygon" />
+          <xs:enumeration value="Edm.GeographyCollection" />
+          <xs:enumeration value="Edm.GeometryPoint" />
+          <xs:enumeration value="Edm.GeometryLineString" />
+          <xs:enumeration value="Edm.GeometryPolygon" />
+          <xs:enumeration value="Edm.GeometryMultiPoint" />
+          <xs:enumeration value="Edm.GeometryMultiLineString" />
+          <xs:enumeration value="Edm.GeometryMultiPolygon" />
+          <xs:enumeration value="Edm.GeometryCollection" />
+          <xs:enumeration value="Edm.Guid" />
+          <xs:enumeration value="Edm.Int16" />
+          <xs:enumeration value="Edm.Int32" />
+          <xs:enumeration value="Edm.Int64" />
+          <xs:enumeration value="Edm.String" />
+          <xs:enumeration value="Edm.SByte" />
+          <xs:enumeration value="Collection(Edm.Binary)" />
+          <xs:enumeration value="Collection(Edm.Boolean)" />
+          <xs:enumeration value="Collection(Edm.Byte)" />
+          <xs:enumeration value="Collection(Edm.Date)" />
+          <xs:enumeration value="Collection(Edm.DateTimeOffset)" />
+          <xs:enumeration value="Collection(Edm.Duration)" />
+          <xs:enumeration value="Collection(Edm.TimeOfDay)" />
+          <xs:enumeration value="Collection(Edm.Decimal)" />
+          <xs:enumeration value="Collection(Edm.Double)" />
+          <xs:enumeration value="Collection(Edm.Single)" />
+          <xs:enumeration value="Collection(Edm.GeographyPoint)" />
+          <xs:enumeration value="Collection(Edm.GeographyLineString)" />
+          <xs:enumeration value="Collection(Edm.GeographyPolygon)" />
+          <xs:enumeration value="Collection(Edm.GeographyMultiPoint)" />
+          <xs:enumeration value="Collection(Edm.GeographyMultiLineString)" />
+          <xs:enumeration value="Collection(Edm.GeographyMultiPolygon)" />
+          <xs:enumeration value="Collection(Edm.GeographyCollection)" />
+          <xs:enumeration value="Collection(Edm.GeometryPoint)" />
+          <xs:enumeration value="Collection(Edm.GeometryLineString)" />
+          <xs:enumeration value="Collection(Edm.GeometryPolygon)" />
+          <xs:enumeration value="Collection(Edm.GeometryMultiPoint)" />
+          <xs:enumeration value="Collection(Edm.GeometryMultiLineString)" />
+          <xs:enumeration value="Collection(Edm.GeometryMultiPolygon)" />
+          <xs:enumeration value="Collection(Edm.GeometryCollection)" />
+          <xs:enumeration value="Collection(Edm.Guid)" />
+          <xs:enumeration value="Collection(Edm.Int16)" />
+          <xs:enumeration value="Collection(Edm.Int32)" />
+          <xs:enumeration value="Collection(Edm.Int64)" />
+          <xs:enumeration value="Collection(Edm.String)" />
+          <xs:enumeration value="Collection(Edm.SByte)" />
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:pattern value="Edm\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}|Collection\(Edm\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}]{0,}\)" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+  <xs:simpleType name="TAbstractType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Edm.ComplexType" />
+      <xs:enumeration value="Edm.EntityType" />
+      <xs:enumeration value="Edm.PrimitiveType" />
+      <xs:enumeration value="Edm.Untyped" />
+      <xs:enumeration value="Edm.Geography" />
+      <xs:enumeration value="Edm.Geometry" />
+      <xs:enumeration value="Edm.AnnotationPath" />
+      <xs:enumeration value="Edm.AnyPropertyPath" />
+      <xs:enumeration value="Edm.ModelElementPath" />
+      <xs:enumeration value="Edm.NavigationPropertyPath" />
+      <xs:enumeration value="Edm.PropertyPath" />
+      <xs:enumeration value="Collection(Edm.ComplexType)" />
+      <xs:enumeration value="Collection(Edm.EntityType)" />
+      <xs:enumeration value="Collection(Edm.PrimitiveType)" />
+      <xs:enumeration value="Collection(Edm.Untyped)" />
+      <xs:enumeration value="Collection(Edm.Geography)" />
+      <xs:enumeration value="Collection(Edm.Geometry)" />
+      <xs:enumeration value="Collection(Edm.AnnotationPath)" />
+      <xs:enumeration value="Collection(Edm.AnyPropertyPath)" />
+      <xs:enumeration value="Collection(Edm.ModelElementPath)" />
+      <xs:enumeration value="Collection(Edm.NavigationPropertyPath)" />
+      <xs:enumeration value="Collection(Edm.PropertyPath)" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TAppliesTo">
+    <xs:union memberTypes="edm:TAppliesToElements edm:TSimpleIdentifier" />
+  </xs:simpleType>
+  <xs:simpleType name="TAppliesToElements">
+    <xs:list>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Action" />
+          <xs:enumeration value="ActionImport" />
+          <xs:enumeration value="Annotation" />
+          <xs:enumeration value="Apply" />
+          <xs:enumeration value="Cast" />
+          <xs:enumeration value="Collection" />
+          <xs:enumeration value="ComplexType" />
+          <xs:enumeration value="EntityContainer" />
+          <xs:enumeration value="EntitySet" />
+          <xs:enumeration value="EntityType" />
+          <xs:enumeration value="EnumType" />
+          <xs:enumeration value="Function" />
+          <xs:enumeration value="FunctionImport" />
+          <xs:enumeration value="If" />
+          <xs:enumeration value="Include" />
+          <xs:enumeration value="IsOf" />
+          <xs:enumeration value="LabeledElement" />
+          <xs:enumeration value="Member" />
+          <xs:enumeration value="NavigationProperty" />
+          <xs:enumeration value="Null" />
+          <xs:enumeration value="OnDelete" />
+          <xs:enumeration value="Parameter" />
+          <xs:enumeration value="Property" />
+          <xs:enumeration value="PropertyValue" />
+          <xs:enumeration value="Record" />
+          <xs:enumeration value="Reference" />
+          <xs:enumeration value="ReferentialConstraint" />
+          <xs:enumeration value="ReturnType" />
+          <xs:enumeration value="Schema" />
+          <xs:enumeration value="Singleton" />
+          <xs:enumeration value="Term" />
+          <xs:enumeration value="TypeDefinition" />
+          <xs:enumeration value="UrlRef" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
+  <xs:simpleType name="TFloating">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="floating" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TMax">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="max" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TVariable">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="variable" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!-- Facets for Primitive types -->
+  <xs:simpleType name="TMaxLengthFacet">
+    <xs:union memberTypes="edm:TMax xs:nonNegativeInteger" />
+  </xs:simpleType>
+  <xs:simpleType name="TPrecisionFacet">
+    <xs:restriction base="xs:nonNegativeInteger" />
+  </xs:simpleType>
+  <xs:simpleType name="TScaleFacet">
+    <xs:union memberTypes="edm:TFloating edm:TVariable xs:nonNegativeInteger" />
+  </xs:simpleType>
+  <xs:simpleType name="TSridFacet">
+    <xs:union memberTypes="edm:TVariable xs:nonNegativeInteger" />
+  </xs:simpleType>
+  <xs:simpleType name="TUnicodeFacet">
+    <xs:restriction base="xs:boolean" />
+  </xs:simpleType>
+  <xs:simpleType name="TOnDeleteAction">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Cascade" />
+      <xs:enumeration value="None" />
+      <xs:enumeration value="SetDefault" />
+      <xs:enumeration value="SetNull" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!-- binary data in base64url encoding -->
+  <xs:simpleType name="binary">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([A-Za-z0-9_\-]{4})*([A-Za-z0-9_\-]{3}[A-Za-z0-9_\-]|[A-Za-z0-9_\-]{2}[AEIMQUYcgkosw048]=?|[A-Za-z0-9_\-][AQgw](==)?)?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!--boolean without 0 and 1 -->
+  <xs:simpleType name="boolean">
+    <xs:restriction base="xs:boolean">
+      <xs:pattern value="true|false" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!-- date and time without offset -->
+  <xs:simpleType name="date">
+    <xs:restriction base="xs:date">
+      <xs:pattern value="[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="time">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\.[0-9]{1,12})?)?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!-- Copy of xs:dateTimeStamp from XML Schema 1.1, see http://www.w3.org/TR/xmlschema11-2/#dateTimeStamp -->
+  <xs:simpleType name="dateTimeStamp">
+    <xs:restriction base="xs:dateTime">
+      <xs:pattern value=".*([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]{1,12})?(Z|(\+|-)[0-9][0-9]:[0-9][0-9])" />
+    </xs:restriction>
+  </xs:simpleType>
+  <!-- Copy of xs:dayTimeDuration from XML Schema 1.1, see http://www.w3.org/TR/xmlschema11-2/#dayTimeDuration -->
+  <xs:simpleType name="dayTimeDuration">
+    <xs:restriction base="xs:duration">
+      <xs:pattern value="[^YM]*[DT].*" />
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

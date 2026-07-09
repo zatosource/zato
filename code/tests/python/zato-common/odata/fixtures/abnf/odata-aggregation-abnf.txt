@@ -1,0 +1,262 @@
+;------------------------------------------------------------------------------
+; OData Aggregation ABNF Construction Rules Version 4.0
+;------------------------------------------------------------------------------
+; 19 September 2023
+;------------------------------------------------------------------------------
+;
+; Technical Committee:
+;   OASIS Open Data Protocol (OData) TC
+;   https://www.oasis-open.org/committees/odata
+;
+; Chairs:
+;   - Ralf Handl (ralf.handl@sap.com), SAP SE
+;   - Michael Pizzo (mikep@microsoft.com), Microsoft
+;
+; Editors:
+;   - Ralf Handl (ralf.handl@sap.com), SAP SE
+;   - Hubert Heijkers (hubert.heijkers@nl.ibm.com), IBM
+;   - Gerald Krause (gerald.krause@sap.com), SAP SE
+;   - Michael Pizzo (mikep@microsoft.com), Microsoft
+;   - Martin Zurmuehl (martin.zurmuehl@sap.com), SAP SE
+;   - Heiko Theissen (heiko.theissen@sap.com), SAP SE
+;
+; Additional artifacts:
+;   This grammar is one component of a Work Product which consists of:
+;   - OData Extension for Data Aggregation Version 4.0
+;   - OData Aggregation Vocabulary
+;   - OData Aggregation ABNF Construction Rules Version 4.0 (this document)
+;   - OData Aggregation ABNF Test Cases Version 4.0
+;
+; Related work:
+;   This specification is related to:
+;   - OData Version 4.01 Part 1: Protocol
+;   - OData Version 4.01 Part 2: URL Conventions
+;   - OData ABNF Construction Rules Version 4.01
+;   - OData ABNF Test Cases Version 4.01
+;   - OData Common Schema Definition Language (CSDL) JSON Representation Version 4.01
+;   - OData Common Schema Definition Language (CSDL) XML Representation Version 4.01
+;   - OData JSON Format Version 4.01
+;   This specification replaces or supersedes:
+;   - None
+;
+; Declared XML namespaces:
+;   - None
+;
+; Abstract:
+;   This specification adds basic grouping and aggregation functionality (such as
+;   sum, min, and max) to the Open Data Protocol (OData) without changing any
+;   of the base principles of OData.
+;
+; Overview:
+;   This grammar uses the ABNF defined in RFC5234 and RFC7405.
+;
+;   It extends the OData ABNF Construction Rules Version 4.01
+;
+; Contents:
+;   1. New alternatives for OData ABNF Construction Rules
+;   2. System Query Option $apply
+;   3. Extensions to $filter
+;
+;------------------------------------------------------------------------------
+
+;------------------------------------------------------------------------------
+; 1. New alternatives for OData ABNF Construction Rules
+;------------------------------------------------------------------------------
+
+systemQueryOption =/ apply
+
+expandOption =/ apply
+
+boolMethodCallExpr =/ isdefinedExpr
+
+primitiveProperty =/ customAggregate
+
+firstMemberExpr =/ currCollectionExpr
+
+collectionPathExpr =/ %s"/aggregate" OPEN BWS aggregateFunctionExpr BWS CLOSE
+
+;------------------------------------------------------------------------------
+; 2. System Query Option $apply
+;------------------------------------------------------------------------------
+
+apply      = ( "$apply" / "apply" ) EQ applyExpr
+applyExpr  = applyTrafo *( "/" applyTrafo )
+applyTrafo = aggregateTrafo
+           / computeTrafo
+           / concatTrafo
+           / groupbyTrafo
+           / joinTrafo
+           / nestTrafo
+           / outerjoinTrafo
+           / preservingTrafo
+preservingTrafo = bottomcountTrafo
+                / bottompercentTrafo
+                / bottomsumTrafo
+                / filterTrafo
+                / identityTrafo
+                / orderbyTrafo
+                / searchTrafo
+                / skipTrafo
+                / topTrafo
+                / topcountTrafo
+                / toppercentTrafo
+                / topsumTrafo
+                / ancestorsTrafo
+                / descendantsTrafo
+                / traverseTrafo
+                / customFunction ; custom functions could be preserving, hence are allowed in preservingTrafos
+preservingTrafos = preservingTrafo *( "/" preservingTrafo )
+
+aggregateTrafo   = %s"aggregate" OPEN BWS aggregateExpr *( BWS COMMA BWS aggregateExpr ) BWS CLOSE
+aggregateExpr    = ( aggrPathPrefix / aggrCastPath ) nonprimAggWith [ aggregateFrom ] asAlias
+                 / aggregatableExpW [ aggregateFrom ] asAlias
+                 / aggregateCount [ aggregateFrom ] asAlias
+                 / aggregateCustom [ [ customFrom ] asAlias ]
+aggregatableExpr = commonExpr ; resulting in an aggregatable value
+aggregatableExpW = aggregatableExpr aggregateWith
+                 / [ aggrCastPath "/" ] aggrPrimPath aggregateWith
+aggrPathPrefix   = [ aggrCastPath "/" ] aggrPropPath
+aggregateWith    = RWS %s"with" RWS aggregateMethod
+nonprimAggWith   = RWS %s"with" RWS nonprimAggMethod
+aggregateFrom    = RWS %s"from" RWS groupingProperties aggregateWith [ aggregateFrom ]
+customFrom       = RWS %s"from" RWS groupingProperties [ aggregateWith ] [ customFrom ]
+aggregateMethod  = %s"sum"
+                 / %s"min"
+                 / %s"max"
+                 / %s"average"
+                 / nonprimAggMethod
+nonprimAggMethod = %s"countdistinct"
+                 / namespace "." odataIdentifier ; custom aggregation methods may work on non-primitive values
+aggregateCount   = %s"$count"
+                 / [ aggrCastPath "/" ] aggrPrimPath count
+                 / ( aggrPathPrefix / aggrCastPath ) count
+
+aggregateCustom = [ ( aggrPathPrefix / aggrCastPath ) "/" ] customAggregate
+
+asAlias         = RWS %s"as" RWS expressionAlias
+expressionAlias = odataIdentifier
+
+customAggregate = odataIdentifier
+
+; Three flavors of data aggregation paths are defined now:
+; - one for use in aggregate, whose segments can be single- or collection-valued (rules with prefix aggr)
+; - one for use in groupby, whose segments must be single-valued (rules with prefix sngl)
+; - one for use in addnested, without entity-valued segments (rule with prefix nest)
+; Term casts are not allowed in data aggregation paths.
+aggrPropStep = ( complexProperty / complexColProperty / entityNavigationProperty / entityColNavigationProperty )
+               [ "/" aggrCastPath ]
+aggrPropPath = aggrPropStep [ "/" aggrPropPath ]
+aggrPrimPath = aggrPropStep "/" aggrPrimPath
+             / primitiveProperty / primitiveColProperty / streamProperty
+aggrCastPath = optionallyQualifiedComplexTypeName / optionallyQualifiedEntityTypeName
+
+nestPropPath = ( complexProperty / complexColProperty ) [ [ "/" optionallyQualifiedComplexTypeName ] "/" nestPropPath ]
+
+snglPropPath = ( complexProperty / entityNavigationProperty ) [ [ "/" aggrCastPath ] "/" snglPropPath ]
+snglPrimPath = ( complexProperty / entityNavigationProperty )   [ "/" aggrCastPath ] "/" snglPrimPath
+             / primitiveProperty / streamProperty
+
+groupingProperty   = [ aggrCastPath "/" ] ( snglPrimPath / snglPropPath )
+groupingProperties = groupingProperty *( BWS COMMA BWS groupingProperty )
+
+; Expressions evaluable on a collection
+collectionExpr     = commonExpr ; but where every firstMemberExpr must be a currCollectionExpr
+currCollectionExpr = %s"$these" collectionPathExpr
+
+computeTrafo    = %s"compute" OPEN BWS computeExpr *( BWS COMMA BWS computeExpr ) BWS CLOSE
+computeExpr     = commonExpr asAlias
+
+bottomcountTrafo   = %s"bottomcount"   OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+bottompercentTrafo = %s"bottompercent" OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+bottomsumTrafo     = %s"bottomsum"     OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+
+concatTrafo     = %s"concat" OPEN BWS applyExpr 1*( BWS COMMA BWS applyExpr ) BWS CLOSE
+
+nestTrafo       = %s"nest" OPEN BWS nestApplyExpr BWS CLOSE
+                / %s"addnested" OPEN BWS nestPath BWS COMMA BWS nestApplyExpr BWS CLOSE
+nestPath        = [ aggrCastPath "/" ]
+                  ( [ nestPropPath "/" ] navigationProperty [ "/" optionallyQualifiedEntityTypeName ]
+                  / nestPropPath
+                  )
+nestApplyExpr   = applyExpr asAlias *( BWS COMMA BWS applyExpr asAlias )
+
+joinTrafo       = %s"join" OPEN BWS joinProperty asAlias [ BWS COMMA BWS applyExpr ] BWS CLOSE
+outerjoinTrafo  = %s"outerjoin" OPEN BWS joinProperty asAlias [ BWS COMMA BWS applyExpr ] BWS CLOSE
+joinProperty    = ( complexColProperty
+                  / complexAnnotationInQuery ; must be collection-valued
+                  / entityColNavigationProperty [ "/" optionallyQualifiedEntityTypeName ]
+                  / entityAnnotationInQuery  ; must be collection-valued
+                  )
+
+ancestorsTrafo  = %s"ancestors" OPEN BWS
+                  recHierReference BWS
+                  COMMA BWS preservingTrafos BWS
+                  [ COMMA BWS 1*DIGIT BWS ]
+                  [ COMMA BWS %s"keep start" BWS ]
+                  CLOSE
+
+descendantsTrafo = %s"descendants" OPEN BWS
+                  recHierReference BWS
+                  COMMA BWS preservingTrafos BWS
+                  [ COMMA BWS 1*DIGIT BWS ]
+                  [ COMMA BWS %s"keep start" BWS ]
+                  CLOSE
+
+traverseTrafo   = %s"traverse" OPEN BWS
+                  recHierReference BWS
+                  COMMA BWS ( %s"preorder" / %s"postorder" ) BWS
+                  [ COMMA BWS preservingTrafos BWS ]
+                  [ COMMA BWS orderbyItem *( BWS COMMA BWS orderbyItem ) BWS ]
+                  CLOSE
+
+recHierReference = rootExpr ; must have type Collection(Edm.EntityType)
+                   BWS COMMA BWS recHierQualifier
+                   BWS COMMA BWS recHierPropertyPath
+recHierQualifier = odataIdentifier
+recHierPropertyPath = [ aggrCastPath "/" ] aggrPrimPath
+
+filterTrafo     = %s"filter" OPEN BWS boolCommonExpr BWS CLOSE
+
+searchTrafo     = %s"search" OPEN BWS ( searchExpr / searchExpr-incomplete ) BWS CLOSE
+
+groupbyTrafo    = %s"groupby" OPEN BWS groupbyList [ BWS COMMA BWS applyExpr ] BWS CLOSE
+groupbyList     = OPEN BWS groupbyElement *( BWS COMMA BWS groupbyElement ) BWS CLOSE
+groupbyElement  = groupingProperty / rollupLevels / rollupRecursive
+
+rollupLevels      = %s"rollup" OPEN BWS ( rollupUnnamedHier / rollupNamedHier ) BWS CLOSE
+rollupRecursive   = %s"rolluprecursive" OPEN BWS
+                    recHierReference BWS
+                    [ COMMA BWS preservingTrafos BWS ]
+                    CLOSE
+
+rollupUnnamedHier = groupingProperty 1*( BWS COMMA BWS groupingProperty )
+rollupNamedHier   = odataIdentifier ; qualifier of Aggregation.LeveledHierarchy annotation
+
+identityTrafo   = %s"identity"
+
+topcountTrafo   = %s"topcount"   OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+toppercentTrafo = %s"toppercent" OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+topsumTrafo     = %s"topsum"     OPEN BWS collectionExpr BWS COMMA BWS commonExpr BWS CLOSE
+
+topTrafo        = %s"top" OPEN BWS 1*DIGIT BWS CLOSE
+skipTrafo       = %s"skip" OPEN BWS 1*DIGIT BWS CLOSE
+
+orderbyTrafo    = %s"orderby" OPEN orderbyItem *( BWS COMMA BWS orderbyItem ) CLOSE
+
+customFunction  = namespace "." ( entityColFunction / complexColFunction / primitiveColFunction ) functionExprParameters
+
+
+;------------------------------------------------------------------------------
+; 3. New functions
+;------------------------------------------------------------------------------
+
+isdefinedExpr = %s"isdefined" OPEN BWS ( firstMemberExpr ) BWS CLOSE
+
+aggregateFunctionExpr = aggregatableExpW [ aggregateFrom ]
+                      / aggrPathPrefix nonprimAggWith [ aggregateFrom ]
+                      / aggregateCount [ aggregateFrom ]
+                      / aggregateCustom [ customFrom ]
+
+;------------------------------------------------------------------------------
+; End of odata-aggregation-abnf
+;------------------------------------------------------------------------------

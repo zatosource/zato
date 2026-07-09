@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Microsoft.Dynamics.DataEntities" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="Customer">
+        <Key>
+          <PropertyRef Name="dataAreaId"/>
+          <PropertyRef Name="CustomerAccount"/>
+        </Key>
+        <Property Name="dataAreaId" Type="Edm.String" Nullable="false"/>
+        <Property Name="CustomerAccount" Type="Edm.String" Nullable="false"/>
+        <Property Name="OrganizationName" Type="Edm.String"/>
+        <Property Name="CustomerGroupId" Type="Edm.String"/>
+        <Property Name="SalesCurrencyCode" Type="Edm.String"/>
+        <Property Name="CreditLimit" Type="Edm.Decimal" Precision="32" Scale="6"/>
+        <Property Name="OnHoldStatus" Type="Edm.String"/>
+      </EntityType>
+      <EntityType Name="Vendor">
+        <Key>
+          <PropertyRef Name="dataAreaId"/>
+          <PropertyRef Name="VendorAccountNumber"/>
+        </Key>
+        <Property Name="dataAreaId" Type="Edm.String" Nullable="false"/>
+        <Property Name="VendorAccountNumber" Type="Edm.String" Nullable="false"/>
+        <Property Name="VendorOrganizationName" Type="Edm.String"/>
+        <Property Name="VendorGroupId" Type="Edm.String"/>
+        <Property Name="CurrencyCode" Type="Edm.String"/>
+      </EntityType>
+      <Function Name="GetKeys" IsBound="true">
+        <Parameter Name="entity" Type="Collection(Microsoft.Dynamics.DataEntities.Customer)"/>
+        <ReturnType Type="Edm.String" Unicode="false"/>
+      </Function>
+      <Action Name="calculateBalance" IsBound="true">
+        <Parameter Name="entity" Type="Microsoft.Dynamics.DataEntities.Customer"/>
+        <Parameter Name="asOfDate" Type="Edm.Date"/>
+        <ReturnType Type="Edm.Decimal" Precision="32" Scale="6"/>
+      </Action>
+      <EntityContainer Name="DataEntities">
+        <EntitySet Name="CustomersV3" EntityType="Microsoft.Dynamics.DataEntities.Customer"/>
+        <EntitySet Name="VendorsV2" EntityType="Microsoft.Dynamics.DataEntities.Vendor"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>
