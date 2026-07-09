@@ -6,9 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from datetime import datetime, timezone
+
 # Zato
 from zato.common.as2.common import AS2Exception
-from zato.common.as2.partnership import new_partnership
+from zato.common.as2.partnership import CertificateEntry, new_partnership
 from zato.common.util.xml_.keystore import load_certificates_pem, load_private_key_pem, new_keystore
 
 # ################################################################################################################################
@@ -16,10 +19,11 @@ from zato.common.util.xml_.keystore import load_certificates_pem, load_private_k
 
 if 0:
     from zato.common.as2.partnership import Partnership, partnership_list
-    from zato.common.typing_ import callable_, dictlist, stranydict
+    from zato.common.typing_ import callable_, dictlist, dtnone, stranydict
     from zato.common.util.xml_.keystore import Keystore
     callable_ = callable_
     dictlist = dictlist
+    dtnone = dtnone
     partnership_list = partnership_list
     stranydict = stranydict
 
@@ -28,14 +32,48 @@ if 0:
 
 # Partnership fields settable directly from configuration, grouped by type -
 # the names are the same as the fields of the Partnership dataclass.
-partnership_string_fields = ('as2_from', 'as2_to', 'endpoint_url', 'sign_algorithm', 'encryption_algorithm',
-    'mdn_mode', 'async_mdn_url', 'subject', 'content_type', 'as2_version', 'content_transfer_encoding',
-    'http_transfer_mode', 'inbound_topic', 'inbound_service')
+partnership_string_fields = ('as2_from', 'as2_to', 'isa_qualifier', 'isa_id', 'gs_id', 'unb_id', 'endpoint_url',
+    'sign_algorithm', 'encryption_algorithm', 'mdn_mode', 'async_mdn_url', 'subject', 'content_type', 'as2_version',
+    'content_transfer_encoding', 'http_transfer_mode', 'inbound_topic', 'inbound_service')
 
 partnership_bool_fields = ('sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed',
     'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename')
 
 partnership_int_fields = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries')
+
+# The certificate rotation fields of one partner - the current certificate, pasted as PEM,
+# plus the optional next-certificate with its activation date for overlap-window rotation.
+partnership_certificate_fields = ('as2_partner_cert', 'as2_partner_next_cert', 'as2_partner_next_cert_from')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _parse_activation_date(value:'str') -> 'datetime':
+    """ Parses an ISO 8601 activation date, taking a date without a timezone to be UTC.
+    """
+    out = datetime.fromisoformat(value)
+
+    if out.tzinfo is None:
+        out = out.replace(tzinfo=timezone.utc)
+
+    return out
+
+# ################################################################################################################################
+
+def _add_certificate_entries(partnership:'Partnership', pem:'str', valid_from:'dtnone') -> 'None':
+    """ Adds each certificate of a PEM string to the partner's rotation lists. The same partner
+    certificate serves both signature verification and encryption, so each entry joins both lists.
+    """
+    certificates = load_certificates_pem(pem.encode('utf8'))
+
+    for certificate in certificates:
+
+        entry = CertificateEntry()
+        entry.certificate = certificate
+        entry.valid_from = valid_from
+
+        partnership.verification_certificates.append(entry)
+        partnership.encryption_certificates.append(entry)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,10 +136,25 @@ def build_partnership(config:'stranydict') -> 'Partnership':
     for name in partnership_bool_fields:
         setattr(out, name, config[name])
 
-    # .. and a zero means the numeric default stays in place.
+    # .. a zero means the numeric default stays in place ..
     for name in partnership_int_fields:
         if value := config[name]:
             setattr(out, name, value)
+
+    # .. the partner's current certificate has always been active ..
+    if value := config['as2_partner_cert']:
+        _add_certificate_entries(out, value, None)
+
+    # .. and the optional next-certificate joins the rotation lists,
+    # accepted from its activation date on, or immediately when there is none.
+    if value := config['as2_partner_next_cert']:
+
+        if activation := config['as2_partner_next_cert_from']:
+            valid_from = _parse_activation_date(activation)
+        else:
+            valid_from = None
+
+        _add_certificate_entries(out, value, valid_from)
 
     return out
 
