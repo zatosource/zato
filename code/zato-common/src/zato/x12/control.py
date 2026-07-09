@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS x12_inbound_control_number (
 )
 """
 
+_create_seen_value_table = """
+CREATE TABLE IF NOT EXISTS x12_seen_value (
+    pair  TEXT NOT NULL,
+    kind  TEXT NOT NULL,
+    value TEXT NOT NULL,
+    PRIMARY KEY (pair, kind, value)
+)
+"""
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -65,10 +74,11 @@ class ControlNumberStore:
         self.path = path
         self._connection = sqlite3.connect(path)
 
-        # Both tables are created idempotently on every open.
+        # All the tables are created idempotently on every open.
         with self._connection:
             _ = self._connection.execute(_create_sequence_table)
             _ = self._connection.execute(_create_inbound_table)
+            _ = self._connection.execute(_create_seen_value_table)
 
 # ################################################################################################################################
 
@@ -124,6 +134,33 @@ class ControlNumberStore:
             _ = self._connection.execute(
                 'INSERT INTO x12_inbound_control_number (pair, kind, control_number) VALUES (?, ?, ?)',
                 (pair, kind, control_number))
+
+        return False
+
+# ################################################################################################################################
+
+    def observe_value(self, sender:'str', receiver:'str', kind:'str', value:'str') -> 'bool':
+        """ Records a business value of the given kind - an SSCC-18 or an invoice number -
+        and reports whether it was already seen for the sender-receiver pair,
+        True meaning the value is a duplicate.
+        """
+        pair = _pair_key(sender, receiver)
+
+        # The check and the recording are one transaction ..
+        with self._connection:
+            cursor = self._connection.execute(
+                'SELECT 1 FROM x12_seen_value WHERE pair = ? AND kind = ? AND value = ?',
+                (pair, kind, value))
+            row = cursor.fetchone()
+
+            # .. a value seen before is a duplicate ..
+            if row is not None:
+                return True
+
+            # .. and a new one is recorded for the checks that follow.
+            _ = self._connection.execute(
+                'INSERT INTO x12_seen_value (pair, kind, value) VALUES (?, ?, ?)',
+                (pair, kind, value))
 
         return False
 

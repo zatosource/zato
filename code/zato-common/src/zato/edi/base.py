@@ -637,6 +637,31 @@ class EDIGroup:
 
 # ################################################################################################################################
 
+    def serialize(self, separators:'any_'=None) -> 'str':
+        """ Serializes a built group by walking its declared attributes in declaration order,
+        one segment per line. Groups parsed from wire data are serialized by their enclosing
+        message, which keeps the original raw segments byte-exact.
+        """
+        lines:'strlist' = []
+
+        for descriptor in _declared_attr_descriptors(type(self)):
+            value = self.__dict__.get(descriptor.attr_name)
+            if value is None:
+                continue
+
+            if isinstance(value, list):
+                for item in value:
+                    line = item.serialize(separators)
+                    lines.append(line)
+            else:
+                line = value.serialize(separators)
+                lines.append(line)
+
+        out = '\n'.join(lines)
+        return out
+
+# ################################################################################################################################
+
     def to_dict(self, include_empty:'bool'=True) -> 'stranydict':
         """ Converts this group to a dictionary representation.
         """

@@ -448,11 +448,16 @@ def _validate_envelope(interchange:'X12Interchange') -> 'None':
 
 # ################################################################################################################################
 
-def parse_x12(raw:'str') -> 'X12Interchange':
+def parse_x12(raw:'str', strict:'bool'=False) -> 'X12Interchange':
     """ Parses wire text into an X12Interchange - the single public entry point.
     The separators come from the fixed-width ISA, each ST/SE slice resolves to its
     registered transaction set class by ST01 plus the GS08 version of its group,
     and the envelope control numbers and counts are validated on the way.
+
+    The default lenient mode keeps unknown segments and unmapped elements reachable
+    positionally - nothing is ever unparseable. Strict mode additionally applies
+    the implementation guide syntax checks (SNIP type 2) to every typed transaction
+    set and raises X12ValidationError with all the issues collected per set.
     """
 
     # Our response to produce
@@ -545,6 +550,21 @@ def parse_x12(raw:'str') -> 'X12Interchange':
 
     # The envelope is structurally complete - now its numbers must agree.
     _validate_envelope(out)
+
+    # Strict mode applies the dictionary-level checks on top of the envelope ones.
+    if strict:
+
+        # Imported here because zato.x12.validation itself imports this module
+        from zato.x12.validation import X12ValidationError, validate_interchange
+
+        results = validate_interchange(out)
+
+        issue_count = 0
+        for result in results:
+            issue_count += len(result.issues)
+
+        if issue_count:
+            raise X12ValidationError(f'Found {issue_count} validation issue(s)', results)
 
     return out
 
