@@ -119,6 +119,7 @@ class AuditSource:
     REST_Outgoing = 'rest-outgoing'
     SOAP_Outgoing = 'soap-outgoing'
     Email_IMAP    = 'email-imap'
+    X12           = 'x12'
 
 # ################################################################################################################################
 
@@ -135,6 +136,10 @@ class AuditEvent:
     Message_Received  = 'message-received'
     Message_Marked_Seen = 'message-marked-seen'
     Message_Deleted     = 'message-deleted'
+    Interchange_Sent     = 'interchange-sent'
+    Interchange_Received = 'interchange-received'
+    Ack_Sent             = 'ack-sent'
+    Ack_Received         = 'ack-received'
 
 # ################################################################################################################################
 
