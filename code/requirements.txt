@@ -94,6 +94,7 @@ simple-parsing==0.0.17
 smbprotocol==1.17.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.54
+sqlalchemy2-stubs==0.0.2a38
 stroll==1.1.0
 stevedore==3.5.0
 sumy==0.12.0

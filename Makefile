@@ -9,6 +9,7 @@
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-graphql test-as4 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
+	test-audit-log test-audit-log-ui \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -576,6 +577,16 @@ _test-ui:
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/audit_log/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
+	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
+
 test-common: ## Common library tests.
 	$(MAKE) -C $(CURDIR)/code/zato-common test
 
@@ -583,7 +594,7 @@ test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-graphql test-hl7 test-ui test-common test-distlock ## Everything.
+	test-cli test-mcp test-graphql test-hl7 test-ui test-audit-log test-audit-log-ui test-common test-distlock ## Everything.
 
 test: test-all ## Alias for test-all.
 
