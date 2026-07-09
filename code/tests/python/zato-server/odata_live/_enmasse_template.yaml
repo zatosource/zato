@@ -1,0 +1,16 @@
+odata:
+
+  - name: test.odata.bc
+    address: {{bc_address}}
+    odata_version: '4.0'
+    auth_type: basic
+    username: test.odata.user
+    secret: "{{odata_password}}"
+
+  - name: test.odata.s4
+    address: {{s4_address}}
+    odata_version: '2.0'
+    auth_type: basic
+    username: test.odata.user
+    secret: "{{odata_password}}"
+    needs_csrf_token: true
