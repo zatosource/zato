@@ -151,8 +151,8 @@
                 '_rate_limiting',
             {% endif %}
 
-            // Audit log link (REST channels and REST outgoing connections only)
-            {% if transport == 'plain_http' %}
+            // Audit log link (REST channels, SOAP channels and REST outgoing connections)
+            {% if transport == 'plain_http' or connection == 'channel' %}
                 '_audit_log',
             {% endif %}
 
@@ -296,7 +296,7 @@
                         <th>&nbsp;</th> {% comment %} _rate_limiting {% endcomment %}
                         {% endif %}
 
-                        {% if transport == 'plain_http' %}
+                        {% if transport == 'plain_http' or connection == 'channel' %}
                         <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         {% endif %}
 
@@ -430,6 +430,10 @@
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
                         <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        {% endif %}
+
+                        {% if connection == 'channel' and transport == 'soap' %}
+                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         {% endif %}
 
                         {% if connection == 'outgoing' and transport == 'plain_http' %}

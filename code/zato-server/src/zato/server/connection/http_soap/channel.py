@@ -723,11 +723,11 @@ class RequestDispatcher:
         if _has_log_info:
             self._log_incoming_request(cid, meta, channel_item, channel_name, payload, user_agent, remote_addr)
 
-        # .. only user-defined REST channels go to the audit log, internal ones would flood it ..
+        # .. only user-defined REST and SOAP channels go to the audit log, internal ones would flood it ..
         needs_audit = False
 
         if channel_item:
-            if channel_item['transport'] == _transport_plain_http:
+            if channel_item['transport'] in (_transport_plain_http, _transport_soap):
                 if not channel_item['is_internal']:
                     needs_audit = True
 
@@ -793,7 +793,7 @@ class RequestDispatcher:
         outcome:'str',
         data:'any_',
     ) -> 'None':
-        """ Writes one audit event describing a request to or a response from a REST channel.
+        """ Writes one audit event describing a request to or a response from a REST or SOAP channel.
         """
 
         # Payloads arrive from the wire as bytes and responses may be bytes too,
@@ -805,9 +805,15 @@ class RequestDispatcher:
         if not isinstance(data, str):
             data = str(data)
 
+        # .. the source depends on the channel's transport ..
+        if channel_item['transport'] == _transport_plain_http:
+            source = AuditSource.REST_Channel
+        else:
+            source = AuditSource.SOAP_Channel
+
         # .. now, write out the event.
         self.audit_log.insert(
-            AuditSource.Rest_Channel,
+            source,
             event_type,
             channel_item['name'],
             cid=cid,

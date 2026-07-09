@@ -39,7 +39,8 @@ audit_db_file_name = 'audit.db'
 
 class AuditSource:
     PubSub = 'pubsub'
-    Rest_Channel = 'rest-channel'
+    REST_Channel = 'rest-channel'
+    SOAP_Channel = 'soap-channel'
     Rest_Outgoing = 'rest-outgoing'
     Email_IMAP = 'email-imap'
 
