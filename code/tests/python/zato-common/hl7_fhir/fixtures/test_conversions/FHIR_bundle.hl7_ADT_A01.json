@@ -1,0 +1,1334 @@
+{
+	"entry": [
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"system": "ISO",
+						"value": "1.2.3.4.5"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": "EventFac",
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "si",
+							"display": "Site"
+						}
+					],
+					"text": "Site"
+				},
+				"id": "1.2.3.4.5",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/1.2.3.4.5"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Practitioner"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "23432"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"given": [
+							"Gordon",
+							"Denny"
+						],
+						"use": "9",
+						"prefix": [
+							"MD"
+						],
+						"suffix": [
+							"Jr"
+						]
+					}
+				],
+				"id": "16e29424-c251-47fa-91fe-b4e07ece07fa",
+				"resourceType": "Practitioner"
+			},
+			"fullUrl": "Practitioner/16e29424-c251-47fa-91fe-b4e07ece07fa"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Practitioner"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"family": "Smith"
+					}
+				],
+				"id": "0fb48fd0-e607-4fcc-86b8-c2691652ab5d",
+				"resourceType": "Practitioner"
+			},
+			"fullUrl": "Practitioner/0fb48fd0-e607-4fcc-86b8-c2691652ab5d"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Practitioner"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"family": "Smith"
+					}
+				],
+				"id": "a2338616-2e4d-40d2-993a-3cb0991bfe87",
+				"resourceType": "Practitioner"
+			},
+			"fullUrl": "Practitioner/a2338616-2e4d-40d2-993a-3cb0991bfe87"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "101"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "ro",
+							"display": "Room"
+						}
+					],
+					"text": "Room"
+				},
+				"id": "0e664152-688d-4c00-9b2c-a6f06ed9a402",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/0e664152-688d-4c00-9b2c-a6f06ed9a402"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "01"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "bd",
+							"display": "Bed"
+						}
+					],
+					"text": "Bed"
+				},
+				"id": "0dc47c62-41c0-4023-b629-88174c3619b2",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/0dc47c62-41c0-4023-b629-88174c3619b2"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "EMERG"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "poc",
+							"display": "Point of Care"
+						}
+					],
+					"text": "Point of Care"
+				},
+				"id": "25e2cf6c-12ad-4062-a99a-693590d4012c",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/25e2cf6c-12ad-4062-a99a-693590d4012c"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "103"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "ro",
+							"display": "Room"
+						}
+					],
+					"text": "Room"
+				},
+				"id": "96c677c1-6b84-4cc8-8886-1808e4c7b29b",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/96c677c1-6b84-4cc8-8886-1808e4c7b29b"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Location"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"value": "02"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"physicalType": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+							"code": "bd",
+							"display": "Bed"
+						}
+					],
+					"text": "Bed"
+				},
+				"id": "dfd86633-a3e0-40d4-bd59-321be61166dd",
+				"resourceType": "Location",
+				"status": "active"
+			},
+			"fullUrl": "Location/dfd86633-a3e0-40d4-bd59-321be61166dd"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Practitioner"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"family": "Doctor"
+					}
+				],
+				"id": "c0e95ae5-becd-4147-9ae3-1086960ba665",
+				"resourceType": "Practitioner"
+			},
+			"fullUrl": "Practitioner/c0e95ae5-becd-4147-9ae3-1086960ba665"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Practitioner"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"family": "Doctor"
+					}
+				],
+				"id": "ed07377c-a83d-4ce3-8c52-460fc1309a18",
+				"resourceType": "Practitioner"
+			},
+			"fullUrl": "Practitioner/ed07377c-a83d-4ce3-8c52-460fc1309a18"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "MessageHeader"
+			},
+			"resource": {
+				"sender": {
+					"display": "/ISO::1.2.3.4.5"
+				},
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"response": {
+					"identifier": "ISO::1.2.3.4.5"
+				},
+				"responsible": {
+					"display": "/67890"
+				},
+				"destination": [
+					{
+						"endpoint": "urn:oid:ISO",
+						"receiver": {
+							"display": "/ISO::1.2.3.4.5"
+						},
+						"name": "RcvApp"
+					}
+				],
+				"id": "7d445c63-602d-4eb1-9405-b94e45a038c7",
+				"source": {
+					"endpoint": "urn:oid:ISO",
+					"name": "SndApp"
+				},
+				"eventCoding": {
+					"system": "http://terminology.hl7.org/CodeSystem/v2-0003",
+					"code": "ADT",
+					"display": "ADT^A01^ADT_A01"
+				},
+				"resourceType": "MessageHeader"
+			},
+			"fullUrl": "MessageHeader/7d445c63-602d-4eb1-9405-b94e45a038c7"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Patient"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"period": {
+							"start": "2019-01-01",
+							"end": "2029-01-01"
+						},
+						"assigner": {
+							"display": "V2FHIR"
+						},
+						"type": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+									"code": "MR",
+									"display": "Medical record number"
+								}
+							],
+							"text": "Medical record number"
+						},
+						"value": "1032702"
+					},
+					{
+						"period": {
+							"start": "2018-06-01",
+							"end": "2028-05-31"
+						},
+						"assigner": {
+							"display": "WADMV"
+						},
+						"type": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+									"code": "DL",
+									"display": "Driver's license number"
+								}
+							],
+							"text": "Driver's license number"
+						},
+						"value": "N09204074"
+					},
+					{
+						"system": "http://hl7.org/fhir/sid/us-ssn",
+						"type": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+									"code": "SS",
+									"display": "Social Security Number"
+								}
+							],
+							"text": "Social Security Number"
+						},
+						"value": "000-00-0000"
+					},
+					{
+						"value": "125189"
+					}
+				],
+				"extension": [
+					{
+						"valueDateTime": "1970-06-01T09:12:00.000+Coordinated Universal Time",
+						"url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime"
+					},
+					{
+						"valueCodeableConcept": {
+							"coding": [
+								{
+									"system": "HL70006",
+									"code": "C",
+									"display": "Catholic"
+								}
+							]
+						},
+						"url": "http://hl7.org/fhir/StructureDefinition/patient-religion"
+					},
+					{
+						"extension": [
+							{
+								"valueCoding": {
+									"system": "HL70005",
+									"code": "1002-5",
+									"display": "American Indian or Alaska Native"
+								},
+								"url": "ombCategory"
+							},
+							{
+								"valueString": "American Indian or Alaska Native",
+								"url": "text"
+							},
+							{
+								"valueCoding": {
+									"system": "HL70005",
+									"code": "1002-5",
+									"display": "American Indian or Alaska Native"
+								},
+								"url": "detailed"
+							},
+							{
+								"valueCoding": {
+									"system": "HL70005",
+									"code": "2106-3",
+									"display": "White"
+								},
+								"url": "ombCategory"
+							},
+							{
+								"valueCoding": {
+									"system": "HL70005",
+									"code": "2106-3",
+									"display": "White"
+								},
+								"url": "detailed"
+							}
+						],
+						"url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"
+					},
+					{
+						"extension": [
+							{
+								"valueCoding": {
+									"code": "N",
+									"display": "Not Hispanic or Latino"
+								},
+								"url": "ombCategory"
+							},
+							{
+								"valueString": "Not Hispanic or Latino",
+								"url": "text"
+							},
+							{
+								"valueCoding": {
+									"code": "N",
+									"display": "Not Hispanic or Latino"
+								},
+								"url": "detailed"
+							}
+						],
+						"url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"
+					}
+				],
+				"address": [
+					{
+						"country": "USA",
+						"city": "Ann Arbor ",
+						"use": "home",
+						"line": [
+							"1000 House Lane",
+							"Appt 123"
+						],
+						"postalCode": "99999",
+						"state": "MI"
+					},
+					{
+						"country": "USA",
+						"period": {
+							"start": "2021-09-01",
+							"end": "2021-11-15"
+						},
+						"city": "Miami",
+						"line": [
+							"212 Resort Drive"
+						],
+						"postalCode": "99999",
+						"state": "FL"
+					}
+				],
+				"gender": "female",
+				"birthDate": "1970-06-01T09:12",
+				"deceasedBoolean": false,
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"multipleBirthInteger": 2,
+				"contact": [
+					{
+						"name": {
+							"given": [
+								"Elliot",
+								"BRO"
+							],
+							"prefix": [
+								"HL70396"
+							],
+							"family": "Everyone",
+							"suffix": [
+								"Brother"
+							]
+						},
+						"relationship": [
+							{
+								"coding": [
+									{
+										"system": "Mountainville",
+										"code": "123 High Street"
+									}
+								]
+							}
+						]
+					}
+				],
+				"name": [
+					{
+						"given": [
+							"Eve",
+							"L"
+						],
+						"period": {
+							"start": "2000-09-09",
+							"end": "2030-12-31"
+						},
+						"use": "official",
+						"prefix": [
+							"Dr"
+						],
+						"family": "Everywoman",
+						"suffix": [
+							"Jr",
+							"PhD"
+						]
+					},
+					{
+						"given": [
+							"Eve",
+							"L"
+						],
+						"use": "maiden",
+						"family": "Original",
+						"suffix": [
+							"Jr"
+						]
+					}
+				],
+				"telecom": [
+					{
+						"system": "email",
+						"value": "eve@test.test"
+					},
+					{
+						"system": "phone",
+						"use": "work"
+					}
+				],
+				"id": "6eda7ba8-443f-4930-bc37-614277f7de36",
+				"communication": [
+					{
+						"language": {
+							"coding": [
+								{
+									"system": "HL70296",
+									"code": "en",
+									"display": "English"
+								}
+							],
+							"text": "English"
+						},
+						"preferred": true
+					}
+				],
+				"maritalStatus": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+							"code": "M",
+							"display": "Married"
+						}
+					],
+					"text": "Married"
+				},
+				"resourceType": "Patient"
+			},
+			"fullUrl": "Patient/6eda7ba8-443f-4930-bc37-614277f7de36"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Organization"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"system": "ISO",
+						"value": "1.2.3.4.5"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": "RcvApp",
+				"id": "255d4e20-b020-4820-8c03-636dbe2fa5e6",
+				"resourceType": "Organization"
+			},
+			"fullUrl": "Organization/255d4e20-b020-4820-8c03-636dbe2fa5e6"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Provenance"
+			},
+			"resource": {
+				"reason": [
+					{
+						"coding": [
+							{
+								"display": "ADT_EVENT"
+							}
+						]
+					},
+					{
+						"coding": [
+							{
+								"display": "ADT_EVENT"
+							}
+						]
+					}
+				],
+				"agent": [
+					{
+						"who": {
+							"display": "Practitioner/23432"
+						}
+					},
+					{
+						"who": {
+							"display": "Practitioner/23432"
+						}
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"location": {
+					"display": "Location/ISO::1.2.3.4.5"
+				},
+				"id": "d6361987-6b11-4550-9919-eec787f9ecd5",
+				"recorded": "2015-06-01T13:58:23",
+				"occurredDateTime": "2015-06-01T13:58:22+01:00",
+				"resourceType": "Provenance"
+			},
+			"fullUrl": "Provenance/d6361987-6b11-4550-9919-eec787f9ecd5"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Organization"
+			},
+			"resource": {
+				"identifier": [
+					{
+						"type": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+									"code": "XX",
+									"display": "Organization identifier"
+								}
+							],
+							"text": "Organization identifier"
+						},
+						"value": "4324B"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": "East Hospital",
+				"id": "284d0949-5615-4945-b1a9-591cedede921",
+				"resourceType": "Organization"
+			},
+			"fullUrl": "Organization/284d0949-5615-4945-b1a9-591cedede921"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "RelatedPerson"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"given": [
+							"Elliot",
+							"BRO"
+						],
+						"prefix": [
+							"HL70396"
+						],
+						"family": "Everyone",
+						"suffix": [
+							"Brother"
+						]
+					}
+				],
+				"id": "b46f0879-79a9-4447-aef6-7aed62a8dad7",
+				"relationship": [
+					{
+						"coding": [
+							{
+								"system": "Mountainville",
+								"code": "123 High Street"
+							}
+						]
+					}
+				],
+				"resourceType": "RelatedPerson"
+			},
+			"fullUrl": "RelatedPerson/b46f0879-79a9-4447-aef6-7aed62a8dad7"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Encounter"
+			},
+			"resource": {
+				"serviceType": {
+					"coding": [
+						{
+							"system": "HL70069",
+							"code": "EMR",
+							"display": "Emergency"
+						}
+					],
+					"text": "Emergency"
+				},
+				"identifier": [
+					{
+						"assigner": {
+							"display": " AssignAuth"
+						},
+						"type": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+									"code": "VN",
+									"display": "visit number"
+								}
+							],
+							"text": "visit number"
+						},
+						"value": "81456267"
+					}
+				],
+				"period": {
+					"start": "2015-06-01"
+				},
+				"hospitalization": {
+					"specialCourtesy": [
+						{
+							"coding": [
+								{
+									"system": "HL70099",
+									"code": "VIP",
+									"display": "very important person"
+								}
+							],
+							"text": "very important person"
+						}
+					]
+				},
+				"type": [
+					{
+						"coding": [
+							{
+								"system": "http://terminology.hl7.org/CodeSystem/v2-0007",
+								"code": "E",
+								"display": "Emergency"
+							}
+						],
+						"text": "Emergency"
+					}
+				],
+				"priority": {
+					"coding": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ActPriority",
+							"code": "UR",
+							"display": "urgent"
+						}
+					],
+					"text": "Urgent"
+				},
+				"participant": [
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "REF",
+										"display": "referrer"
+									}
+								],
+								"text": "referrer"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "CON",
+										"display": "consultant"
+									}
+								],
+								"text": "consultant"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "ATND",
+										"display": "attender"
+									}
+								],
+								"text": "attender"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "ADM",
+										"display": "admitter"
+									}
+								],
+								"text": "admitter"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "ADM",
+										"display": "admitter"
+									}
+								],
+								"text": "admitter"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "REF",
+										"display": "referrer"
+									}
+								],
+								"text": "referrer"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "REF",
+										"display": "referrer"
+									}
+								],
+								"text": "referrer"
+							}
+						]
+					},
+					{
+						"type": [
+							{
+								"coding": [
+									{
+										"system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+										"code": "REF",
+										"display": "referrer"
+									}
+								],
+								"text": "referrer"
+							}
+						]
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"serviceProvider": {
+					"display": "Organization/ISO::1.2.3.4.5"
+				},
+				"location": [
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "ro",
+									"display": "Room"
+								}
+							],
+							"text": "Room"
+						},
+						"location": {
+							"display": "101"
+						}
+					},
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "bd",
+									"display": "Bed"
+								}
+							],
+							"text": "Bed"
+						},
+						"location": {
+							"display": "01"
+						}
+					},
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "poc",
+									"display": "Point of Care"
+								}
+							],
+							"text": "Point of Care"
+						},
+						"location": {
+							"display": "EMERG"
+						}
+					},
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "ro",
+									"display": "Room"
+								}
+							],
+							"text": "Room"
+						},
+						"location": {
+							"display": "103"
+						},
+						"status": "completed"
+					},
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "bd",
+									"display": "Bed"
+								}
+							],
+							"text": "Bed"
+						},
+						"location": {
+							"display": "02"
+						},
+						"status": "completed"
+					},
+					{
+						"physicalType": {
+							"coding": [
+								{
+									"system": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+									"code": "poc",
+									"display": "Point of Care"
+								}
+							],
+							"text": "Point of Care"
+						},
+						"location": {
+							"display": "EMERG"
+						},
+						"status": "completed"
+					}
+				],
+				"id": "17d0f7cb-6e68-4d13-8791-06e06e9ce278",
+				"reasonCode": [
+					{
+						"coding": [
+							{
+								"system": "SNM",
+								"code": "165002",
+								"display": "Accident-prone"
+							}
+						],
+						"text": "Accident-prone"
+					}
+				],
+				"class": {
+					"system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+					"code": "EMER",
+					"display": "emergency"
+				},
+				"account": [
+					{
+						"display": "/12345"
+					}
+				],
+				"resourceType": "Encounter",
+				"status": "in-progress"
+			},
+			"fullUrl": "Encounter/17d0f7cb-6e68-4d13-8791-06e06e9ce278"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Observation"
+			},
+			"resource": {
+				"code": {
+					"coding": [
+						{
+							"system": "LN",
+							"code": "8302-2",
+							"display": "Body Height"
+						}
+					],
+					"text": "Body Height"
+				},
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"id": "dc629f4b-6cb0-4a58-ac2a-bcc18a87fe00",
+				"resourceType": "Observation",
+				"status": "final",
+				"valueQuantity": {
+					"value": 190
+				}
+			},
+			"fullUrl": "Observation/dc629f4b-6cb0-4a58-ac2a-bcc18a87fe00"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "AllergyIntolerance"
+			},
+			"resource": {
+				"code": {
+					"coding": [
+						{
+							"display": "Timothy Grass"
+						}
+					],
+					"text": "Timothy Grass"
+				},
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"id": "bba46fef-0e04-4607-af8e-648db668a173",
+				"type": "LA",
+				"category": [
+					"LA"
+				],
+				"resourceType": "AllergyIntolerance"
+			},
+			"fullUrl": "AllergyIntolerance/bba46fef-0e04-4607-af8e-648db668a173"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "Coverage"
+			},
+			"resource": {
+				"period": {
+					"start": "2015-01-01"
+				},
+				"payor": [
+					{
+						"display": "MyInsurancePlan"
+					}
+				],
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"id": "b24ea885-edfe-4178-84e5-581fea14dae8",
+				"type": {
+					"coding": [
+						{
+							"display": "org.mdmi.core.engine.XDataStruct@608f983"
+						}
+					]
+				},
+				"resourceType": "Coverage"
+			},
+			"fullUrl": "Coverage/b24ea885-edfe-4178-84e5-581fea14dae8"
+		},
+		{
+			"request": {
+				"method": "POST",
+				"url": "RelatedPerson"
+			},
+			"resource": {
+				"meta": {
+					"tag": [
+						{
+							"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+							"code": "SUBSETTED",
+							"display": "Resource encoded in summary mode"
+						}
+					]
+				},
+				"name": [
+					{
+						"given": [
+							"Elliot",
+							"BRO"
+						],
+						"prefix": [
+							"HL70396"
+						],
+						"family": "Everyone",
+						"suffix": [
+							"Brother"
+						]
+					}
+				],
+				"id": "7bd60f8a-a03f-4040-a7a4-637aef88478f",
+				"relationship": [
+					{
+						"coding": [
+							{
+								"system": "Mountainville",
+								"code": "123 High Street"
+							}
+						]
+					}
+				],
+				"resourceType": "RelatedPerson"
+			},
+			"fullUrl": "RelatedPerson/7bd60f8a-a03f-4040-a7a4-637aef88478f"
+		}
+	],
+	"meta": {
+		"tag": [
+			{
+				"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+				"code": "SUBSETTED",
+				"display": "Resource encoded in summary mode"
+			}
+		]
+	},
+	"type": "transaction",
+	"resourceType": "Bundle"
+}

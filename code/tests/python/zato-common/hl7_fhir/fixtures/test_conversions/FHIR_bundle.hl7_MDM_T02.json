@@ -1,0 +1,538 @@
+<Bundle xmlns="http://hl7.org/fhir">
+    <id value="92b7966f-a581-a592-0340-710cc3185232" />
+    <identifier>
+        <value value="10819306" />
+    </identifier>
+    <type value="batch" />
+    <timestamp value="2023-08-14T02:24:00Z" />
+    <entry>
+        <fullUrl value="urn:uuid:5a9b229d-e51d-5974-cfbe-3df4bedcfc36" />
+        <resource>
+            <MessageHeader>
+                <id value="5a9b229d-e51d-5974-cfbe-3df4bedcfc36" />
+                <meta>
+                    <tag>
+                        <system value="http://terminology.hl7.org/CodeSystem/v2-0103" />
+                        <code value="P" />
+                    </tag>
+                </meta>
+                <eventCoding>
+                    <system value="http://terminology.hl7.org/CodeSystem/v2-0003" />
+                    <code value="T02" />
+                    <display value="MDM^T02^MDM_T02" />
+                </eventCoding>
+                <sender>
+                    <reference value="Organization/1dcb5809-4a80-e653-fc41-a02b16ae44a8" />
+                </sender>
+                <source>
+                    <name value="HIE" />
+                    <endpoint>
+                        <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
+                            <valueCode value="unknown" />
+                        </extension>
+                    </endpoint>
+                </source>
+            </MessageHeader>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="MessageHeader/5a9b229d-e51d-5974-cfbe-3df4bedcfc36" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:7ff0accf-b505-c9cd-2918-e76a2933b4ed" />
+        <resource>
+            <Provenance>
+                <id value="7ff0accf-b505-c9cd-2918-e76a2933b4ed" />
+                <text>
+                    <status value="generated" />
+                    <div xmlns="http://www.w3.org/1999/xhtml">
+                        <p>
+                            <span>Resource bundle generated on 2024-08-16T14:05:06.306Z using Microsoft FHIR Converter.</span>
+                            <span>Template Version: TEMPLATE_VERSION_PLACEHOLDER.</span>
+                            <span>Template URL: https://github.com/microsoft/FHIR-Converter/releases/download/vTEMPLATE_VERSION_PLACEHOLDER/Hl7v2DefaultTemplates.tar.gz.</span>
+                            <span>Root template: ADT_A01.</span>
+                        </p>
+                    </div>
+                </text>
+                <target>
+                    <reference value="Bundle/92b7966f-a581-a592-0340-710cc3185232" />
+                </target>
+                <occurredDateTime value="2023-08-14T02:24:00Z" />
+                <recorded value="2023-08-14T02:24:00Z" />
+                <activity>
+                    <coding>
+                        <display value="MDM^T02^MDM_T02" />
+                    </coding>
+                </activity>
+                <agent>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/provenance-participant-type" />
+                            <code value="author" />
+                        </coding>
+                    </type>
+                    <who>
+                        <reference value="Organization/1dcb5809-4a80-e653-fc41-a02b16ae44a8" />
+                    </who>
+                </agent>
+            </Provenance>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Provenance/7ff0accf-b505-c9cd-2918-e76a2933b4ed" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:1dcb5809-4a80-e653-fc41-a02b16ae44a8" />
+        <resource>
+            <Organization>
+                <id value="1dcb5809-4a80-e653-fc41-a02b16ae44a8" />
+                <identifier>
+                    <system value="http://example.com/v2-to-fhir-converter/Identifier/REDDING-HOSPITAL" />
+                    <value value="REDDING HOSPITAL" />
+                </identifier>
+            </Organization>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Organization/1dcb5809-4a80-e653-fc41-a02b16ae44a8" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:bac9bfef-600e-7a27-9a9e-90ac97200254" />
+        <resource>
+            <Patient>
+                <id value="bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                <identifier>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+                            <code value="MR" />
+                            <display value="Medical record number" />
+                        </coding>
+                    </type>
+                    <system value="urn:uuid:1.1.1.1" />
+                    <value value="000322330" />
+                    <assigner>
+                        <reference value="Organization/577aa977-c537-50f8-c6cd-eb94fde21c65" />
+                    </assigner>
+                </identifier>
+                <name>
+                    <use value="usual" />
+                    <family value="JOHN" />
+                    <given value="DOE" />
+                    <given value="TEST" />
+                    <suffix value="JR." />
+                </name>
+                <telecom>
+                    <system value="H" />
+                    <use value="P" />
+                </telecom>
+                <gender value="male" />
+                <birthDate value="1994-12-01" />
+                <address>
+                    <line value="3003 TESTING RD LOT 92" />
+                    <city value="BOULDER" />
+                    <state value="CO" />
+                    <postalCode value="12345-2144" />
+                    <country value="US" />
+                </address>
+            </Patient>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:28616fe7-9b43-5072-866c-8305cef48550" />
+        <resource>
+            <Account>
+                <id value="28616fe7-9b43-5072-866c-8305cef48550" />
+                <identifier>
+                    <type>
+                        <coding>
+                            <code value="HAR" />
+                            <display value="HAR" />
+                        </coding>
+                    </type>
+                    <value value="1055989633" />
+                </identifier>
+                <status value="active" />
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+            </Account>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Account/28616fe7-9b43-5072-866c-8305cef48550" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:577aa977-c537-50f8-c6cd-eb94fde21c65" />
+        <resource>
+            <Organization>
+                <id value="577aa977-c537-50f8-c6cd-eb94fde21c65" />
+                <identifier>
+                    <system value="http://example.com/v2-to-fhir-converter/Identifier/REDDING-HOSPITAL" />
+                    <value value="REDDING HOSPITAL" />
+                </identifier>
+                <identifier>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0301" />
+                            <code value="GUID" />
+                            <display value="The DCE Universal Unique Identifier, in accordance with RFC 4122. Recommended format is 32 hexadecimal digits separated by hyphens, in the digit grouping 8-4-4-4-12" />
+                        </coding>
+                    </type>
+                    <system value="urn:ietf:rfc:3986" />
+                    <value value="urn:uuid:1.1.1.1" />
+                </identifier>
+            </Organization>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Organization/577aa977-c537-50f8-c6cd-eb94fde21c65" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:db8218c0-3cb6-0ac4-a19a-09aa01a6aedf" />
+        <resource>
+            <Practitioner>
+                <id value="db8218c0-3cb6-0ac4-a19a-09aa01a6aedf" />
+                <identifier>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+                            <code value="NPI" />
+                            <display value="National provider identifier" />
+                        </coding>
+                    </type>
+                    <system value="http://example.com/v2-to-fhir-converter/Identifier/NPI" />
+                    <value value="1123456771" />
+                </identifier>
+                <name>
+                    <family value="MITCHELL" />
+                    <given value="HILA" />
+                    <given value="K" />
+                </name>
+            </Practitioner>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Practitioner/db8218c0-3cb6-0ac4-a19a-09aa01a6aedf" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:f42c0b10-59e5-9ae0-e8ab-c9708a44e654" />
+        <resource>
+            <Location>
+                <id value="f42c0b10-59e5-9ae0-e8ab-c9708a44e654" />
+                <name value="F1N" />
+                <description value="F1N--F151--F151-01--FTH--HILLS 1 North Oncolog" />
+                <mode value="instance" />
+                <physicalType>
+                    <coding>
+                        <system value="http://terminology.hl7.org/CodeSystem/location-physical-type" />
+                        <code value="wa" />
+                    </coding>
+                </physicalType>
+            </Location>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Location/f42c0b10-59e5-9ae0-e8ab-c9708a44e654" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:e373c2ad-20a6-e16a-bcfa-40d552cfde55" />
+        <resource>
+            <Location>
+                <id value="e373c2ad-20a6-e16a-bcfa-40d552cfde55" />
+                <name value="F151" />
+                <description value="F1N--F151--F151-01--FTH--HILLS 1 North Oncolog" />
+                <mode value="instance" />
+                <physicalType>
+                    <coding>
+                        <system value="http://terminology.hl7.org/CodeSystem/location-physical-type" />
+                        <code value="ro" />
+                    </coding>
+                </physicalType>
+                <partOf>
+                    <reference value="Location/f42c0b10-59e5-9ae0-e8ab-c9708a44e654" />
+                </partOf>
+            </Location>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Location/e373c2ad-20a6-e16a-bcfa-40d552cfde55" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:b8684002-607f-c238-18e8-af5a4acc4b81" />
+        <resource>
+            <Location>
+                <id value="b8684002-607f-c238-18e8-af5a4acc4b81" />
+                <name value="F151-01" />
+                <description value="F1N--F151--F151-01--FTH--HILLS 1 North Oncolog" />
+                <mode value="instance" />
+                <physicalType>
+                    <coding>
+                        <system value="http://terminology.hl7.org/CodeSystem/location-physical-type" />
+                        <code value="bd" />
+                    </coding>
+                </physicalType>
+                <partOf>
+                    <reference value="Location/e373c2ad-20a6-e16a-bcfa-40d552cfde55" />
+                </partOf>
+            </Location>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Location/b8684002-607f-c238-18e8-af5a4acc4b81" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:89de0d52-d91c-52cd-4407-f06822a41016" />
+        <resource>
+            <Location>
+                <id value="89de0d52-d91c-52cd-4407-f06822a41016" />
+                <name value="FTH" />
+                <description value="F1N--F151--F151-01--FTH--HILLS 1 North Oncolog" />
+                <mode value="instance" />
+                <physicalType>
+                    <coding>
+                        <system value="http://terminology.hl7.org/CodeSystem/location-physical-type" />
+                        <code value="si" />
+                    </coding>
+                </physicalType>
+            </Location>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Location/89de0d52-d91c-52cd-4407-f06822a41016" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:67068668-11de-647d-9fdf-90a516307760" />
+        <resource>
+            <Encounter>
+                <id value="67068668-11de-647d-9fdf-90a516307760" />
+                <text>
+                    <status value="generated" />
+                    <div xmlns="http://www.w3.org/1999/xhtml">
+                        <p>
+                            <span>Visit Description: </span>
+                        </p>
+                    </div>
+                </text>
+                <identifier>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+                            <code value="VN" />
+                        </coding>
+                        <text value="visit number" />
+                    </type>
+                    <value value="1234567891" />
+                </identifier>
+                <status value="in-progress" />
+                <class>
+                    <system value="http://terminology.hl7.org/CodeSystem/v2-0004" />
+                    <code value="I" />
+                    <display value="Inpatient" />
+                </class>
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+                <participant>
+                    <type>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v3-ParticipationType" />
+                            <code value="ATND" />
+                            <display value="attender" />
+                        </coding>
+                    </type>
+                    <individual>
+                        <reference value="Practitioner/db8218c0-3cb6-0ac4-a19a-09aa01a6aedf" />
+                    </individual>
+                </participant>
+                <period>
+                    <start value="2023-07-29T08:13:00Z" />
+                </period>
+                <account>
+                    <reference value="Account/28616fe7-9b43-5072-866c-8305cef48550" />
+                </account>
+                <location>
+                    <location>
+                        <reference value="Location/f42c0b10-59e5-9ae0-e8ab-c9708a44e654" />
+                    </location>
+                    <status value="active" />
+                </location>
+            </Encounter>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Encounter/67068668-11de-647d-9fdf-90a516307760" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:c59158f2-9c31-3d37-23bd-02e160d8413d" />
+        <resource>
+            <Provenance>
+                <id value="c59158f2-9c31-3d37-23bd-02e160d8413d" />
+                <target>
+                    <reference value="Bundle/92b7966f-a581-a592-0340-710cc3185232" />
+                </target>
+                <recorded value="2023-08-14T02:24:00Z" />
+                <activity>
+                    <text value="MDM^T02^MDM_T02" />
+                </activity>
+            </Provenance>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Provenance/c59158f2-9c31-3d37-23bd-02e160d8413d" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:abd083c6-2d0f-be9f-0289-30c1b68916ad" />
+        <resource>
+            <Observation>
+                <id value="abd083c6-2d0f-be9f-0289-30c1b68916ad" />
+                <extension url="http://example.com/v2-to-fhir-converter/Observation_Status">
+                    <valueCodeableConcept>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0085" />
+                            <code value="F" />
+                            <display value="Final" />
+                        </coding>
+                        <text value="Final" />
+                    </valueCodeableConcept>
+                </extension>
+                <status value="final" />
+                <code>
+                    <coding>
+                        <code value="85202" />
+                        <display value="Transcription Authentication Interface Message Text" />
+                    </coding>
+                </code>
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+                <valueString value="Transcription Authentication Interface Message Text" />
+            </Observation>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Observation/abd083c6-2d0f-be9f-0289-30c1b68916ad" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:68146443-b67e-5e8c-a7cb-792847612791" />
+        <resource>
+            <Observation>
+                <id value="68146443-b67e-5e8c-a7cb-792847612791" />
+                <extension url="http://example.com/v2-to-fhir-converter/Observation_Status">
+                    <valueCodeableConcept>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0085" />
+                            <code value="F" />
+                            <display value="Final" />
+                        </coding>
+                        <text value="Final" />
+                    </valueCodeableConcept>
+                </extension>
+                <status value="final" />
+                <code>
+                    <coding>
+                        <code value="1055860039" />
+                        <display value="Critical Values - Text" />
+                    </coding>
+                </code>
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+                <effectiveDateTime value="2023-08-22T02:11:11Z" />
+                <valueString value="Critical Values Entered On:  08/22/2023 2:11 EDT \n Performed On:  08/22/2023 2:11 EDT by BOYLE, KRISTEN C \n \n \n \n \nCalled Critical Value Reported \nCritical Value Reported Lab :   Yes \nBOYLE, KRISTEN C - 08/22/2023 2:11 EDT \nCritical Lab Values \nRed List Hematology Grid \n  Heparin Test (AntiXa)        \nLab Values :    1.27            \n  BOYLE, KRISTEN C - 08/22/2023 2:11 EDT     \n\nResult Received :   08/22/2023 02:11 EDT \nReceived From :   K Gresco (Lab) \nRed List Result Read Back :   K Boyle (ED) \nProvider Notified :   No \nReason not notified :   Protocol utilized \nBOYLE, KRISTEN C - 08/22/2023 2:11 EDT" />
+            </Observation>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Observation/68146443-b67e-5e8c-a7cb-792847612791" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:2de8743e-760c-27ee-190a-df1b2d8de6f8" />
+        <resource>
+            <Observation>
+                <id value="2de8743e-760c-27ee-190a-df1b2d8de6f8" />
+                <extension url="http://example.com/v2-to-fhir-converter/Observation_Status">
+                    <valueCodeableConcept>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0085" />
+                            <code value="F" />
+                            <display value="Final" />
+                        </coding>
+                        <text value="Final" />
+                    </valueCodeableConcept>
+                </extension>
+                <status value="final" />
+                <code>
+                    <coding>
+                        <code value="&amp;GDT" />
+                        <display value="Critical Values-String" />
+                    </coding>
+                </code>
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+                <valueString value="Table formatting from the original result was not included." />
+            </Observation>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Observation/2de8743e-760c-27ee-190a-df1b2d8de6f8" />
+        </request>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:2dad747c-a55c-c45f-9945-6befd8aaf8eb" />
+        <resource>
+            <Observation>
+                <id value="2dad747c-a55c-c45f-9945-6befd8aaf8eb" />
+                <extension url="http://example.com/v2-to-fhir-converter/Observation_Status">
+                    <valueCodeableConcept>
+                        <coding>
+                            <system value="http://terminology.hl7.org/CodeSystem/v2-0085" />
+                            <code value="F" />
+                            <display value="Final" />
+                        </coding>
+                        <text value="Final" />
+                    </valueCodeableConcept>
+                </extension>
+                <status value="final" />
+                <code>
+                    <coding>
+                        <system value="http://terminology.hl7.org/CodeSystem/v2-0396" />
+                        <code value="1111.2" />
+                        <display value="PHQ-9 Depression Screen PDF" />
+                    </coding>
+                    <coding>
+                        <system value="http://loinc.org" />
+                        <code value="44249-1" />
+                        <display value="PHQ-9 quick depression assessment panel [Reported.PHQ]" />
+                    </coding>
+                </code>
+                <subject>
+                    <reference value="Patient/bac9bfef-600e-7a27-9a9e-90ac97200254" />
+                </subject>
+            </Observation>
+        </resource>
+        <request>
+            <method value="PUT" />
+            <url value="Observation/2dad747c-a55c-c45f-9945-6befd8aaf8eb" />
+        </request>
+    </entry>
+</Bundle>

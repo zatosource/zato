@@ -1,0 +1,4 @@
+MSH|^~\&|Ntierprise|Ntierprise Clinic|Healthmatics EHR|Healthmatics Clinic|20190423150137+0215||ADT^A40^ADT_A40|8919-40|P|2.8|||NE|NE
+EVN|A40|20190423150137+0215||01|13^Berry
+PID|1||12345^^^BCBS^MR||Test^Test^A||20180205|F|||123 Any Street^^Raleigh^NC^27615||(111)111-1111^^PH^^^111^1111111|||||5027440^^^^AN
+MRG|56789^^^BCBS^MR

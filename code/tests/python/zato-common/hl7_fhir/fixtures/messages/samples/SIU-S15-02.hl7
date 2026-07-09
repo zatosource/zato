@@ -1,0 +1,28 @@
+MSH|^~\&|SCHApp|GHHSFacility^2.16.840.1.122848.1.30^ISO|EHRApp^1.Aux^ISO|GHHRFacility^2.16.840.1.1122848.1.32^ISO|202108181030+0215|SECURITY|SIU^S15^SIU_S15|MSG00015|P|2.8|||||USA||en-US|||22 GHH Inc.|23 GHH Inc.|24GHH^2.16.840.1.114884.10.20^ISO|25GHH^2.16.840.1.114884.10.23^ISO
+SCH|12345|36996||||Add|CHECKUP|Normal|70|Min|2^^2 hours^202010011126+0215^202010091126+0215^R|9941339109^Smith&Mr.&Smith^Adam^Mellie^Jr^Dr^MD^^NPIID&2.16.840.1.113883.4.6&ISO^L^^^NPI^^^^^^20100115^20200115^GP|(608)271-9000^^PH|115 MAINSTREET^^GOODTOWN^KY^42010^USA^L|^^^FACILITY2^^^BUILDING2^FLOOR2^^^|9941339109^Smith&Mr.&Smith^Adam^Mellie^Jr^Dr^MD^^NPIID&2.16.840.1.113883.4.6&ISO^L^^^NPI^^^^^^20100115^20200115^GP|(608)271-9000^^PH|115 MAINSTREET^^GOODTOWN^KY^42010^USA^L|^^^FACILITY2^^^BUILDING2^FLOOR2^^^|9^DENT^COREY^|(610)271-9000^^PH|^^^FACILITY3&1.23&ISO^^^BUILDING2^FLOOR1^^^|||Cancelled
+TQ1|||||||202108181130+0215|202108181230+0215|A
+NTE|1||Appointment for annual checkup cancelled as GP is not available on Aug 18.
+PID|1|1234567^4^M11^test^MR^University Hospital^19241011^19241012|PATID1234^5^M11^test1&2.16.1&HCD^MR^GOOD HEALTH HOSPITAL~123456789^^^USSSA^SS|PATID567^^^test2|EVERYMAN&&&&Aniston^ADAM^A^III^Dr.^MD^D^^^19241012^^^^PF^Addsm~Josh&&&&Bing^^stanley^^^^L^^^^^19241010^19241015|SMITH^Angela^L|198808181126+0215|M|elbert^Son|2106-3^White^HL70005~2028-9^Asian^HL70005|1000&Hospital Lane^Ste. 123^Ann Arbor ^MI^99999^USA^M^^&W^^^20000110&20000120^^^^^^^Near Highway|GL|78788788^^CP^5555^^^1111^^^^^2222^20010110^20020110^^^^18~12121212^^CP|7777^^CP~1111^^TDD|ara^^HL70296^eng^English-us^HL70296^v2^v2.1^TextInEnglish|M^Married|AME|4000776^^^AccMgr&1.3.6.1.4.1.44750.1.2.2&ISO^VN^1^19241011^19241012|PSSN123121234|DLN-123^US^20010123|1212121^^^NTH&rt23&HCD^AND^^19241011^19241012|N^NOT HISPANIC OR LATINO^HL70189|St. Francis Community Hospital of Lower South Side|N|2|US^United States of America^ISO3166_1|||20080825111630+0115|Y|||20050110015014+0315||||||CA^Canada^ISO3166_1|89898989^WPN^Internet
+RGS|1||
+AIS|1||58410-2^CBC Panel-Blood by Automated Count^LN||||||||
+NTE|1||Fasting for Blood sugar before appointment
+AIG|1||123^ABC Cell Counter^L|011^Lab Equipment^L||||||||
+NTE|1||Equipment booked for lab test
+AIL|1||LabUnit101^Lab Room 01^^GHH Hospital|||||||||
+NTE|1||Location available for lab test
+AIP|1||400^PB^Tim^G^|019^Phlebotomist^L||||||
+NTE|1||Phlebotomist available for lab test
+RGS|2||
+AIS|1||42272-5^XR Chest PA and Lateral^LN||||||||
+NTE|1||Patient Instructions - wear loose comfortable clothes,keep metallic objects away and leave jewellery at home
+AIG|1||1001^XYZ X-Ray Machine^L|015^Imaging Equipment^L||||||||
+NTE|1||Equipment booked for imaging
+AIL|1||DiagnosticUnit201^Imaging Room 01^^GHH Hospital|||||
+NTE|1||Location available for imaging
+AIP|1||500^RT^Robert^C|021^Radiology Technician^L||||||
+NTE|1||Radiology Technician available for imaging
+RGS|3||
+AIL|1||OPD12^Room 55^^GHH Hospital||||||
+NTE|1||Location available for checkup
+AIP|1||600^GP^Linda^R|011^General Practitioner^L||||||
+NTE|1||GP available for checkup
