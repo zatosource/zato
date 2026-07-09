@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from json import dumps, loads
+
+# Zato
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Everything IBM MQ channels routed to the receiver service since the last clear request -
+# a module-level list because the end-to-end tests read it back through the invoker below.
+_received = []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IBMMQReceiver(Service):
+    """ The routing target of IBM MQ channels under test - records every message
+    the channel hands over together with its MQMD headers, and replies to it,
+    which sends the reply back automatically when the message names a reply-to queue.
+    """
+
+    name = 'test.ibm-mq.receiver'
+
+    def handle(self):
+
+        data = self.request.raw_request
+        if isinstance(data, bytes):
+            data = data.decode('utf-8')
+
+        _received.append({
+            'data': data,
+            'headers': self.request.headers,
+        })
+
+        self.response.payload = {'received': data}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class IBMMQInvoker(Service):
+    """ Drives outgoing IBM MQ connections from inside the server, which is the same
+    code path production services use. Tests invoke it through the IDE in the browser.
+    """
+
+    name = 'test.ibm-mq.invoke'
+
+    def handle(self):
+
+        # The IDE invoker delivers the payload as a raw JSON string.
+        request = self.request.payload
+        if isinstance(request, str):
+            request = loads(request)
+
+        mode = request['mode']
+
+        # The readiness probe - tests keep invoking it until the module deploys.
+        if mode == 'ping':
+            out = {'is_ready': True}
+
+        # Send one message over the named connection.
+        # Errors go back as a reply field - the caller retries while the connection
+        # configured a moment ago in the browser propagates to the server.
+        elif mode == 'send':
+            connection_name = request['connection']
+            payload = request['payload']
+
+            try:
+                self.ibm_mq[connection_name].send(payload)
+            except Exception as send_error:
+                out = {'error': repr(send_error)}
+            else:
+                out = {'is_ok': True}
+
+        # Return everything the receiver service recorded so far.
+        elif mode == 'get-received':
+            out = {'received': _received}
+
+        # Start a new exchange from a clean slate.
+        elif mode == 'clear-received':
+            _received.clear()
+            out = {'is_cleared': True}
+
+        else:
+            out = {'error': f'Unknown mode `{mode}`'}
+
+        self.response.payload = dumps(out)
+        self.response.content_type = 'application/json'
+
+# ################################################################################################################################
+# ################################################################################################################################

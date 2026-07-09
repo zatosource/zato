@@ -119,12 +119,12 @@ pub async fn consume_loop(
                                 Some(bytes) => bytes.to_vec(),
                                 None => continue,
                             };
-                            let event = RecvEvent {
-                                channel_name: config.name.clone(),
-                                topic: borrowed_message.topic().to_string(),
-                                service: config.service.clone(),
+                            let event = RecvEvent::without_headers(
+                                config.name.clone(),
+                                borrowed_message.topic().to_string(),
+                                config.service.clone(),
                                 payload,
-                            };
+                            );
                             if message_sender.send(event).is_err() {
                                 return;
                             }

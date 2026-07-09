@@ -18,11 +18,16 @@ name = "_zato_queue_bridge"
 path = "src/bin/queue_bridge.rs"
 
 [features]
-default = ["kafka"]
+default = ["kafka", "ibm-mq"]
 kafka = ["rdkafka", "rdkafka/ssl"]
+ibm-mq = ["mqi", "libmqm-sys", "openssl"]
 
 [dependencies]
 actix-web = "4.13.0"
+libmqm-sys = { version = "0.10", default-features = false, features = ["dlopen2", "mqc_9_3_0_0"], optional = true }
+# The mqai feature is needed because mqi 0.3.0 does not compile without it
+mqi = { version = "0.3", default-features = false, features = ["dlopen2", "mqai", "mqc_9_3_0_0"], optional = true }
+openssl = { version = "0.10", optional = true }
 parking_lot = "0.12"
 rdkafka = { version = "0.38", features = ["tokio"], optional = true }
 redis = "1.2.0"
@@ -34,7 +39,9 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [lints.rust]
-unsafe_code = "forbid"
+# The IBM MQ client library is loaded at runtime with dlopen2, which is inherently
+# an unsafe call - it is the only place in the crate where unsafe code is expected.
+unsafe_code = "deny"
 
 [profile.release]
 overflow-checks = true

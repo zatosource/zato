@@ -1,0 +1,371 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}IBM MQ channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+
+    {% comment %} IBM MQ {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/ibm-mq.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'address',
+            'queue_manager',
+            'queue',
+            'service',
+            '_change_password',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'mq_channel_name',
+            'username',
+            'ssl',
+            'cipher_spec',
+            'ssl_ca_file',
+            'ssl_cert_file',
+            'ssl_key_file',
+            'remove_jms_headers'
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">IBM MQ channels</h2>
+
+{% with has_generic="1" generic_type="channel-ibm-mq" %}
+    {% include "zato/search-form.html" with page_prompt="Show channels" %}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.ibm_mq.create()">Create a new IBM MQ channel</a> |
+            <a href="javascript:$.fn.zato.channel.ibm_mq.import_demo_config()" class="common">Import demo config</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Queue manager</a></th>
+                        <th><a href="#">Queue</a></th>
+                        <th><a href="#">Service</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.queue_manager }}</td>
+                        <td>{{ item.queue }}</td>
+                        <td>{{ item.service }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.ibm_mq.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.ibm_mq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.mq_channel_name }}</td>
+                        <td class='ignore'>{{ item.username|default:"" }}</td>
+                        <td class='ignore'>{{ item.ssl }}</td>
+                        <td class='ignore'>{{ item.cipher_spec|default:"" }}</td>
+                        <td class='ignore'>{{ item.ssl_ca_file|default:"" }}</td>
+                        <td class='ignore'>{{ item.ssl_cert_file|default:"" }}</td>
+                        <td class='ignore'>{{ item.ssl_key_file|default:"" }}</td>
+                        <td class='ignore'>{{ item.remove_jms_headers }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='21'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "channel-ibm-mq-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="basic" role="tab" aria-selected="true">Basic</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More options</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-create-tab-panel-basic" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_is_active">Active</label></td>
+                                <td>{{ create_form.is_active }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_address">Address</label></td>
+                                <td>{{ create_form.address }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_queue_manager">Queue manager</label></td>
+                                <td>{{ create_form.queue_manager }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_mq_channel_name">MQ channel</label></td>
+                                <td>{{ create_form.mq_channel_name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_queue">Queue</label></td>
+                                <td>{{ create_form.queue }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_service">Service</label></td>
+                                <td>{{ create_form.service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-create-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_username">Username</label></td>
+                                <td>{{ create_form.username }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_ssl">Use TLS</label></td>
+                                <td>{{ create_form.ssl }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_cipher_spec">Cipher spec</label></td>
+                                <td>{{ create_form.cipher_spec }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_ssl_ca_file">CA file</label></td>
+                                <td>{{ create_form.ssl_ca_file }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_ssl_cert_file">Cert file</label></td>
+                                <td>{{ create_form.ssl_cert_file }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_ssl_key_file">Key file</label></td>
+                                <td>{{ create_form.ssl_key_file }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-create-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_remove_jms_headers">Remove JMS headers</label></td>
+                                <td>{{ create_form.remove_jms_headers }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "channel-ibm-mq-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="basic" role="tab" aria-selected="true">Basic</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More options</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-edit-tab-panel-basic" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-is_active">Active</label></td>
+                                <td>{{ edit_form.is_active }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-address">Address</label></td>
+                                <td>{{ edit_form.address }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-queue_manager">Queue manager</label></td>
+                                <td>{{ edit_form.queue_manager }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-mq_channel_name">MQ channel</label></td>
+                                <td>{{ edit_form.mq_channel_name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-queue">Queue</label></td>
+                                <td>{{ edit_form.queue }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-service">Service</label></td>
+                                <td>{{ edit_form.service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-edit-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_edit-username">Username</label></td>
+                                <td>{{ edit_form.username }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-ssl">Use TLS</label></td>
+                                <td>{{ edit_form.ssl }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-cipher_spec">Cipher spec</label></td>
+                                <td>{{ edit_form.cipher_spec }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-ssl_ca_file">CA file</label></td>
+                                <td>{{ edit_form.ssl_ca_file }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-ssl_cert_file">Cert file</label></td>
+                                <td>{{ edit_form.ssl_cert_file }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-ssl_key_file">Key file</label></td>
+                                <td>{{ edit_form.ssl_key_file }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="channel-ibm-mq-edit-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:19%"><label for="id_edit-remove_jms_headers">Remove JMS headers</label></td>
+                                <td>{{ edit_form.remove_jms_headers }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "channel-ibm-mq-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:19%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id }}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

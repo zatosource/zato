@@ -209,6 +209,27 @@ class QueueBridgeClient:
 
 # ################################################################################################################################
 
+    def send_reply(
+        self,
+        channel_name:'str',
+        reply_to_queue:'str',
+        reply_to_queue_manager:'str',
+        message_id:'str',
+        data:'bytes',
+    ) -> 'anydict':
+        """ Sends a reply to the reply-to queue of a message received through a channel, returns reply dict. """
+        data_b64 = b64encode(data).decode('ascii')
+        payload = {
+            'channel_name': channel_name,
+            'reply_to_queue': reply_to_queue,
+            'reply_to_queue_manager': reply_to_queue_manager,
+            'message_id': message_id,
+            'data': data_b64,
+        }
+        return self.invoke('send_reply', payload, needs_reply=True) # type: ignore
+
+# ################################################################################################################################
+
     def get_connections(self) -> 'anylist':
         return self._http_get('/api/get_connections')
 
