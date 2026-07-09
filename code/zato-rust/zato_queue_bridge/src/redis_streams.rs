@@ -105,6 +105,14 @@ pub fn publish_recv_event(conn: &mut redis::Connection, event: &RecvEvent) {
         .arg(&event.service)
         .arg("payload")
         .arg(&payload_b64)
+        .arg("headers")
+        .arg(&event.headers)
+        .arg("reply_to_queue")
+        .arg(&event.reply_to_queue)
+        .arg("reply_to_queue_manager")
+        .arg(&event.reply_to_queue_manager)
+        .arg("message_id")
+        .arg(&event.message_id)
         .query(conn);
 
     if let Err(err) = result {
@@ -225,6 +233,7 @@ fn process_command(conn: &mut redis::Connection, shared: &BridgeShared, command:
         "edit_outgoing" => handle_edit_outgoing(shared, payload),
         "ping" => handle_ping(conn, shared, correlation_id, payload),
         "send_message" => handle_send_message(conn, shared, correlation_id, payload),
+        "send_reply" => handle_send_reply(conn, shared, correlation_id, payload),
         "stop" => {
             tracing::info!("Received stop command");
             shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -262,6 +271,22 @@ struct ConnPayload {
 struct DeletePayload {
     /// Connection name to remove.
     name: String,
+}
+
+/// Payload for the send_reply command.
+#[derive(Deserialize)]
+struct SendReplyPayload {
+    /// Channel that received the original message.
+    channel_name: String,
+    /// Reply-to queue from the original message descriptor.
+    reply_to_queue: String,
+    /// Reply-to queue manager from the original message descriptor.
+    #[serde(default)]
+    reply_to_queue_manager: String,
+    /// Hex-encoded message ID of the original message, used as the reply's correlation ID.
+    message_id: String,
+    /// Base64-encoded reply payload.
+    data: String,
 }
 
 fn handle_reload(shared: &BridgeShared, payload: &str) {
@@ -403,6 +428,30 @@ fn handle_send_message(conn: &mut redis::Connection, shared: &BridgeShared, corr
     };
     let data = base64_decode(&parsed.data);
     match crate::bridge::publish_sync(shared, &parsed.conn_name, &data) {
+        Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
+        Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
+    }
+}
+
+fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
+    let parsed: SendReplyPayload = match serde_json::from_str(payload) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            tracing::error!("Failed to parse send_reply payload: {err}");
+            publish_reply_with_data(conn, correlation_id, "error", &format!("bad payload: {err}"));
+            return;
+        }
+    };
+    let data = base64_decode(&parsed.data);
+    let result = crate::bridge::send_reply_sync(
+        shared,
+        &parsed.channel_name,
+        &parsed.reply_to_queue,
+        &parsed.reply_to_queue_manager,
+        &parsed.message_id,
+        &data,
+    );
+    match result {
         Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
         Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
     }

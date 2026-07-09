@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 # Zato
@@ -142,8 +142,9 @@ class MDNRequest:
     requests_signed_mdn: bool = False
     signed_receipt_protocol: str = ''
 
-    # The signed-receipt-micalg preference list, in the sender's order.
-    mic_algorithms: 'strlist' = dc_field(default_factory=list)
+    # The signed-receipt-micalg preference list, in the sender's order -
+    # assigned by parse_mdn_request.
+    mic_algorithms: 'strlist'
 
     # The Receipt-Delivery-Option URL for an asynchronous MDN - empty means a synchronous one.
     async_mdn_url: str = ''
@@ -373,6 +374,7 @@ def parse_mdn_request(headers:'strstrdict') -> 'MDNRequest':
 
     # Our response to produce
     out = MDNRequest()
+    out.mic_algorithms = []
 
     if message_id := headers.get('message-id'):
         out.message_id = message_id
