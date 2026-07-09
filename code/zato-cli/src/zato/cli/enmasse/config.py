@@ -16,6 +16,7 @@ class _object_type:
     Channel_AS4 = 'channel_as4'                   #
     Channel_REST = 'channel_rest'                 #
     Channel_SOAP = 'channel_soap'                 #
+    Outgoing_AS2 = 'outgoing_as2'                 #
     Outgoing_AS4 = 'outgoing_as4'                 #
     Outgoing_REST = 'outgoing_rest'               #
     Outgoing_SOAP = 'outgoing_soap'               #

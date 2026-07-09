@@ -474,6 +474,7 @@ class Service:
             self._config_store.out_sap,
             self._config_manager.outconn_ldap,
             self._config_manager.outconn_mongodb,
+            as2=self._config_manager.outconn_as2,
             as4=self._config_manager.config_store.out_as4,
         ) # type: Outgoing
 

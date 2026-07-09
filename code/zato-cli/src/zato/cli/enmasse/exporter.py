@@ -35,6 +35,7 @@ from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import ChannelMCPExporter
+from zato.cli.enmasse.exporters.as2 import AS2Exporter
 from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
 from zato.cli.enmasse.exporters.outgoing_soap import OutgoingSOAPExporter
@@ -96,6 +97,7 @@ class EnmasseYAMLExporter:
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
+        self.as2_exporter = AS2Exporter(self)
         self.outgoing_as4_exporter = OutgoingAS4Exporter(self)
         self.pubsub_topic_exporter = PubSubTopicExporter(self)
         self.pubsub_permission_exporter = PubSubPermissionExporter(self)
@@ -282,6 +284,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded
         outgoing_soap_list = self.outgoing_soap_exporter.export(session, self.cluster_id)
         return outgoing_soap_list
+
+# ################################################################################################################################
+
+    def export_outgoing_as2(self, session:'SASession') -> 'list':
+        """ Exports outgoing AS2 connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        outgoing_as2_list = self.as2_exporter.export(session, self.cluster_id)
+        return outgoing_as2_list
 
 # ################################################################################################################################
 
@@ -518,6 +529,11 @@ class EnmasseYAMLExporter:
         outgoing_soap_defs = self.export_outgoing_soap(session)
         if outgoing_soap_defs:
             output_dict['outgoing_soap'] = outgoing_soap_defs
+
+        # Export outgoing AS2 connection definitions
+        outgoing_as2_defs = self.export_outgoing_as2(session)
+        if outgoing_as2_defs:
+            output_dict['outgoing_as2'] = outgoing_as2_defs
 
         # Export outgoing AS4 connection definitions
         outgoing_as4_defs = self.export_outgoing_as4(session)

@@ -408,6 +408,33 @@ outgoing_soap:
       - name: password
         position: 2
 
+outgoing_as2:
+
+  - name: enmasse.outgoing.as2.1
+    as2_from: EnmasseRetail
+    as2_to: PartnerCorp
+    endpoint_url: https://as2.partnercorp.example.com/as2
+    isa_qualifier: ZZ
+    isa_id: PARTNERCORP
+    gs_id: PARTNERCORP
+    sign_algorithm: sha-256
+    encryption_algorithm: aes-128-cbc
+    compress: true
+    mdn_mode: sync
+    subject: Enmasse AS2 message
+    http_timeout_seconds: 30
+
+  - name: enmasse.outgoing.as2.2
+    as2_from: EnmasseRetail
+    as2_to: LegacyPartner
+    endpoint_url: http://legacy.example.com:8080/as2
+    sign: false
+    encrypt: false
+    mdn_mode: none
+    verify_tls: false
+    content_type: application/edifact
+    unb_id: LEGACYPARTNER
+
 outgoing_as4:
 
   - name: enmasse.outgoing.as4.1

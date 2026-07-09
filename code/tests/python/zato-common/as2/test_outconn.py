@@ -14,7 +14,10 @@ from datetime import datetime, timedelta, timezone
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
+from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from cryptography.x509 import BasicConstraints, CertificateBuilder, Name, NameAttribute, random_serial_number
+from cryptography.x509.oid import NameOID
 
 # httpx
 import httpx
@@ -25,6 +28,7 @@ import pytest
 # Zato
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.inbound import handle
+from zato.common.as2.mdn import normalize_message_id
 from zato.common.as2.partnership import new_partnership
 from zato.common.ext.bunch import Bunch
 from zato.server.generic.api.outconn_as2 import _AS2Connection, OutconnAS2Wrapper
@@ -56,6 +60,27 @@ def _key_to_pem(key):
 
 def _certificate_to_pem(certificate):
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
+    return out
+
+# ################################################################################################################################
+
+def _make_next_certificate():
+    """ Issues a self-signed certificate to stand in for a partner's next one, valid around the current moment.
+    """
+    key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
+    name = Name([NameAttribute(NameOID.COMMON_NAME, 'as2-receiver-next')])
+    now = datetime.now(timezone.utc)
+
+    builder = CertificateBuilder()
+    builder = builder.subject_name(name)
+    builder = builder.issuer_name(name)
+    builder = builder.public_key(key.public_key())
+    builder = builder.serial_number(random_serial_number())
+    builder = builder.not_valid_before(now - timedelta(days=1))
+    builder = builder.not_valid_after(now + timedelta(days=365))
+    builder = builder.add_extension(BasicConstraints(ca=False, path_length=None), critical=True)
+
+    out = builder.sign(key, SHA256())
     return out
 
 # ################################################################################################################################
@@ -191,6 +216,9 @@ def _make_connection(parties, **overrides):
 
     requests = []
     results = []
+
+    # The mock wire replaces the connection's own HTTP client.
+    connection.http_client.close()
     connection.http_client = _new_mock_client(parties, requests, results)
 
     out = connection, server, requests, results
@@ -214,7 +242,7 @@ class TestConnection:
 
         # .. the MDN answers the message that was sent ..
         assert result.mdn
-        assert result.message_id.strip('<>') in result.mdn.original_message_id
+        assert normalize_message_id(result.mdn.original_message_id) == normalize_message_id(result.message_id)
 
         # .. and the receiver's real pipeline accepted the payload.
         assert len(requests) == 1
@@ -276,13 +304,7 @@ class TestConfigBridging:
     def test_an_activated_next_certificate_supersedes_the_current_one(self, parties):
 
         # A fresh partner certificate whose activation date has already passed.
-        next_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-
-        from conftest import make_certificate, _make_name # type: ignore
-
-        ca_name = _make_name('as2-test-ca')
-        next_certificate = make_certificate('as2-receiver-next', next_key.public_key(), ca_name, next_key)
-
+        next_certificate = _make_next_certificate()
         activated = datetime.now(timezone.utc) - timedelta(days=1)
 
         connection, _, _, _ = _make_connection(
@@ -295,13 +317,8 @@ class TestConfigBridging:
 
     def test_a_future_next_certificate_leaves_the_current_one_in_place(self, parties):
 
-        next_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-
-        from conftest import make_certificate, _make_name # type: ignore
-
-        ca_name = _make_name('as2-test-ca')
-        next_certificate = make_certificate('as2-receiver-next', next_key.public_key(), ca_name, next_key)
-
+        # A fresh partner certificate that only activates a month from now.
+        next_certificate = _make_next_certificate()
         activation = datetime.now(timezone.utc) + timedelta(days=30)
 
         connection, _, _, _ = _make_connection(
