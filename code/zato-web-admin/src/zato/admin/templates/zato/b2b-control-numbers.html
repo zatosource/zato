@@ -1,0 +1,70 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Control numbers{% endblock %}
+
+{% block "extra_css" %}
+<style nonce="{{ CSP_NONCE }}">
+
+.control-number-input {
+    width:8rem;
+}
+
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/b2b_control_numbers.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.b2b.control_numbers.init({
+        set_next_url: '{% url "b2b-control-numbers-set-next" %}'
+    });
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <h2 class="zato">X12 control numbers</h2>
+
+    {% if rows %}
+    <table class="zato-table" id="data-table">
+        <thead>
+            <tr>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Level</th>
+                <th style="text-align:right">Next number</th>
+                <th style="text-align:right">Last used</th>
+                <th>Last used time (UTC)</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr id="control-number-row-{{ forloop.counter }}"
+                data-sender="{{ row.sender }}"
+                data-receiver="{{ row.receiver }}"
+                data-kind="{{ row.kind }}"
+                class="{% cycle 'odd' 'even' %}">
+                <td>{{ row.sender }}</td>
+                <td>{{ row.receiver }}</td>
+                <td>{{ row.kind_label }}</td>
+                <td style="text-align:right" class="control-number-next">{{ row.next_number }}</td>
+                <td style="text-align:right">{% if row.last_used %}{{ row.last_used }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                <td>{% if row.last_used_time %}{{ row.last_used_time }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                <td><a href="#" class="control-number-edit">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="form_hint">No control number sequences exist yet - they appear here once the first outbound X12 document is sent.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}
