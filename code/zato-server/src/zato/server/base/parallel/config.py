@@ -256,6 +256,12 @@ class ConfigLoader:
                 hs_item[key] = getattr(item, key)
 
             hs_item['name'] = resolve_name(hs_item['name'])
+
+            # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
+            # so the outer-joined column comes back as NULL - the runtime spells that as an empty string.
+            if hs_item['service_name'] is None:
+                hs_item['service_name'] = ''
+
             hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 

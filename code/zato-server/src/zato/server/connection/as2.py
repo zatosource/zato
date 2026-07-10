@@ -18,7 +18,7 @@ from gevent import spawn
 import httpx
 
 # Zato
-from zato.common.api import AS2, GENERIC
+from zato.common.api import AS2
 from zato.common.as2.config import build_keystore, build_partnerships
 from zato.common.as2.duplicates import DuplicateStore
 from zato.common.as2.inbound import handle as inbound_handle
@@ -103,20 +103,16 @@ class AS2ChannelRuntime:
 
     def _get_partnerships(self) -> 'partnership_list':
         """ Returns the partnerships of all the AS2 connections defined in this cluster.
-        They are rebuilt on each request from the current configuration, which is how
-        a Dashboard edit takes effect without a channel restart.
+        They are rebuilt on each request from the live configuration - the per-type dict
+        that create, edit and delete events keep current - which is how a Dashboard
+        change takes effect without a channel restart.
         """
 
         # The flat configuration dicts of all the AS2 connections
         configs:'dictlist' = []
 
-        for config_dict in self.server.config_manager.config_store.generic_connection.values():
-
-            if config_dict:
-                config = config_dict.get('config')
-                if config:
-                    if config['type_'] == GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
-                        configs.append(config)
+        for config in self.server.config_manager.outconn_as2.values():
+            configs.append(config)
 
         out = build_partnerships(configs)
         return out

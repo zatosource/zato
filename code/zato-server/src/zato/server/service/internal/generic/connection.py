@@ -110,6 +110,19 @@ skip_simple_type = {
     'api_version',
     'group_id',
     'odata_version',
+
+    # AS2 fields that must stay strings even when their values look numeric -
+    # the version travels as the AS2-Version HTTP header and the identifiers
+    # and EDI addressing fields are frequently all-digit strings.
+    'as2_version',
+    'as2_from',
+    'as2_to',
+    'subject',
+    'isa_qualifier',
+    'isa_id',
+    'gs_id',
+    'unb_id',
+    'as2_partner_next_cert_from',
 }
 
 # ################################################################################################################################

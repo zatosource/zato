@@ -535,6 +535,11 @@ class URLData(PyURLData):
 
             channel_item[name] = msg.get(name)
 
+        # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
+        # so the message carries None - the runtime spells that as an empty string.
+        if channel_item['service_name'] is None:
+            channel_item['service_name'] = ''
+
         # AS4 channels carry their own configuration fields
         if channel_item['transport'] == URL_TYPE.AS4:
             for name in AS4.Common_Fields + AS4.Channel_Fields:
