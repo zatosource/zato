@@ -60,12 +60,14 @@ class AS2Importer(GenericConnectionImporter):
         'force_base64': False,
         'prevent_canonicalization': False,
         'warn_on_duplicate_filename': False,
+        'alerting_opt_out': False,
 
         # A zero means the partnership's own numeric default stays in place.
         'http_timeout_seconds': 0,
         'chunked_threshold_bytes': 0,
         'ack_overdue_after': 0,
         'resend_max_retries': 0,
+        'ship_notice_window_hours': 0,
 
         # The partner's certificate rotation fields, pasted as PEM.
         'as2_partner_cert': '',

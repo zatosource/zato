@@ -42,7 +42,8 @@ _string_fields = ('isa_qualifier', 'isa_id', 'gs_id', 'unb_id', 'sign_algorithm'
     'as2_peer_encryption_cert', 'as2_trust_anchors')
 
 # Integer fields exported when they are not zero - a zero means the default stays in place.
-_int_fields = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries')
+_int_fields = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries',
+    'ship_notice_window_hours')
 
 # Boolean fields exported when they differ from the partnership's own defaults.
 _bool_field_defaults = {
@@ -56,6 +57,7 @@ _bool_field_defaults = {
     'force_base64': False,
     'prevent_canonicalization': False,
     'warn_on_duplicate_filename': False,
+    'alerting_opt_out': False,
 }
 
 # The private keys are encrypted at rest, so they are never exported.

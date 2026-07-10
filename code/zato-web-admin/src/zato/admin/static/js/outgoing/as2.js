@@ -120,6 +120,8 @@ $.fn.zato.outgoing.as2.field_descriptions = {
     'id_preserve_filename': 'Whether outgoing payloads carry their<br>filename in a Content-Disposition header.',
     'id_ack_overdue_after': 'After how many seconds a missing receipt<br>or acknowledgment counts as overdue.<br>Zero keeps the default.',
     'id_resend_max_retries': 'How many times an overdue receipt triggers<br>a resend of the original message.<br>Zero keeps the default.',
+    'id_ship_notice_window_hours': 'Within how many hours of an incoming order<br>a ship notice must go back to this partner.<br>Zero turns the check off.',
+    'id_alerting_opt_out': 'Whether the alerting job skips this partner -<br>no overdue, certificate or ship notice<br>findings are raised for it.',
 
     // More tab
     'id_as2_version': 'The AS2-Version header of outgoing messages.<br>Pin it to 1.1 only for partners<br>that require the older value.',
@@ -225,6 +227,8 @@ $.fn.zato.outgoing.as2.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.preserve_filename));
     row += String.format("<td class='ignore'>{0}</td>", item.ack_overdue_after ? item.ack_overdue_after : '0');
     row += String.format("<td class='ignore'>{0}</td>", item.resend_max_retries ? item.resend_max_retries : '0');
+    row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.alerting_opt_out));
+    row += String.format("<td class='ignore'>{0}</td>", item.ship_notice_window_hours ? item.ship_notice_window_hours : '0');
 
     row += String.format("<td class='ignore'>{0}</td>", item.as2_version ? item.as2_version : '');
     row += String.format("<td class='ignore'>{0}</td>", item.content_transfer_encoding ? item.content_transfer_encoding : '');

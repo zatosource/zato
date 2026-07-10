@@ -19,9 +19,11 @@ import httpx
 
 # Zato
 from zato.common.api import AS2
+from zato.common.as2.audit import record_inbound_result
 from zato.common.as2.config import build_keystore, build_partnerships
 from zato.common.as2.duplicates import DuplicateStore
 from zato.common.as2.inbound import handle as inbound_handle
+from zato.common.audit_log.api import AuditLog
 from zato.edi.envelope import read_envelope
 
 # ################################################################################################################################
@@ -63,6 +65,10 @@ class AS2ChannelRuntime:
         self._lock = RLock()
         self._keystore:'Keystore | None' = None
 
+        # The audit log is built lazily too - opening the shared database can wait
+        # until the first message actually arrives.
+        self._audit_log:'AuditLog | None' = None
+
         # For how many days an already-processed message and its stored MDN are remembered.
         # The opaque column genuinely stores a null when the channel was saved without one.
         window_days = config['as2_duplicate_window_days']
@@ -96,6 +102,19 @@ class AS2ChannelRuntime:
                 self._keystore = build_keystore(self.config, self.server.decrypt)
 
             out = self._keystore
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_audit_log(self) -> 'AuditLog':
+        """ Returns this channel's audit log, building it on first use.
+        """
+        with self._lock:
+            if self._audit_log is None:
+                self._audit_log = AuditLog(self.server.name)
+
+            out = self._audit_log
 
         return out
 
@@ -201,6 +220,11 @@ class AS2ChannelRuntime:
             self._get_keystore(),
             is_duplicate=self.duplicates.get,
         )
+
+        # The arrival and the MDN that went back are recorded as non-repudiation evidence -
+        # a replay records nothing new because its first delivery already did.
+        audit_log = self._get_audit_log()
+        record_inbound_result(audit_log, out, body, cid)
 
         # A replay gets the stored MDN back, byte for byte - nothing is routed.
         if out.is_duplicate:
