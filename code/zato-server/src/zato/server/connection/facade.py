@@ -39,6 +39,7 @@ from zato.server.connection.smb import SMBConnection
 
 if 0:
     from requests import Response
+    from zato.common.as2.outbound import SendResult as AS2SendResult
     from zato.common.as4.outbound import PullResult, SendResult
     from zato.common.pubsub.redis_backend import PublishResult
     from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
@@ -47,6 +48,7 @@ if 0:
     from zato.server.config import ConfigDict
     from zato.server.connection.as4 import AS4Wrapper
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+    from zato.server.generic.api.outconn_as2 import as2_payload, OutconnAS2Wrapper
     from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
     from zato.server.queue_bridge.client import QueueBridgeClient
     from zato.server.service import Service
@@ -520,6 +522,65 @@ class AS4Facade:
         item = self._out_as4[name]
 
         return AS4Invoker(item.conn, self.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS2Invoker:
+    """ Wraps a single AS2 outgoing connection for use from services.
+    """
+    conn: 'OutconnAS2Wrapper'
+    cid: 'str'
+
+    def __init__(self, conn:'OutconnAS2Wrapper', cid:'str') -> 'None':
+        self.conn = conn
+        self.cid = cid
+
+    def __repr__(self) -> 'str':
+        return f'AS2Invoker({self.conn.config["name"]} at {hex(id(self))})'
+
+# ################################################################################################################################
+
+    def send(self, payload:'as2_payload', filename:'strnone'=None) -> 'AS2SendResult':
+        """ Sends one AS2 message to the connection's configured endpoint,
+        reconciling the synchronous MDN when one was requested.
+        """
+        out = self.conn.send(self.cid, payload, filename)
+        return out
+
+# ################################################################################################################################
+
+    def ping(self) -> 'None':
+        """ Validates the endpoint without posting anything - a TCP connection
+        plus, over HTTPS, the TLS handshake against the endpoint's certificate.
+        """
+        self.conn.ping()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AS2Facade:
+    """ Provides dict-like access to AS2 outgoing connections from services via self.as2.
+    """
+    cid: 'str'
+    _outconn_as2: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_as2 = config_manager.outconn_as2
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'AS2Invoker':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._outconn_as2[name]
+
+        # The wrapper holds a queue with the underlying AS2 connections
+        wrapper = item['conn']
+
+        out = AS2Invoker(wrapper, self.cid)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
