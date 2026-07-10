@@ -16,9 +16,16 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.common.typing_ import any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
-class Microsoft365Importer(GenericConnectionImporter):
+class MicrosoftCloudImporter(GenericConnectionImporter):
 
     # Connection-specific constants
     connection_type = GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365
@@ -32,6 +39,7 @@ class Microsoft365Importer(GenericConnectionImporter):
         'is_outgoing': True,
         'pool_size': 20,
         'timeout': 250,
+        'address': None,
     }
 
     connection_extra_field_defaults = {
@@ -47,7 +55,7 @@ class Microsoft365Importer(GenericConnectionImporter):
 
 # ################################################################################################################################
 
-    def _process_scopes(self, connection_def):
+    def _process_scopes(self, connection_def:'stranydict') -> 'stranydict':
 
         scopes = connection_def.get('scopes')
 
@@ -59,7 +67,7 @@ class Microsoft365Importer(GenericConnectionImporter):
 
 # ################################################################################################################################
 
-    def _process_secret(self, connection_def):
+    def _process_secret(self, connection_def:'stranydict') -> 'stranydict':
 
         for key in ['secret', 'password']:
             if value := connection_def.get(key):
@@ -70,14 +78,14 @@ class Microsoft365Importer(GenericConnectionImporter):
 
 # ################################################################################################################################
 
-    def create_definition(self, connection_def, session):
+    def create_definition(self, connection_def:'stranydict', session:'SASession') -> 'any_':
         connection_def = self._process_scopes(connection_def)
         connection_def = self._process_secret(connection_def)
         return super().create_definition(connection_def, session)
 
 # ################################################################################################################################
 
-    def update_definition(self, connection_def, session):
+    def update_definition(self, connection_def:'stranydict', session:'SASession') -> 'any_':
         connection_def = self._process_scopes(connection_def)
         connection_def = self._process_secret(connection_def)
         return super().update_definition(connection_def, session)
