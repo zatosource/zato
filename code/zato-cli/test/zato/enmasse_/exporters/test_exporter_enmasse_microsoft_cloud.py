@@ -15,7 +15,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
+from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseMicrosoft365Export(TestCase):
+class TestEnmasseMicrosoftCloudExport(TestCase):
     """ Tests exporting Microsoft 365 definitions to YAML format using enmasse.
     """
 
@@ -50,7 +50,7 @@ class TestEnmasseMicrosoft365Export(TestCase):
         self.exporter = EnmasseYAMLExporter()
 
         # Initialize Microsoft 365 importer
-        self.microsoft_365_importer = Microsoft365Importer(self.importer)
+        self.microsoft_cloud_importer = MicrosoftCloudImporter(self.importer)
 
         # Parse the YAML file
         self.yaml_config = cast_('stranydict', None)
@@ -77,25 +77,25 @@ class TestEnmasseMicrosoft365Export(TestCase):
 
 # ################################################################################################################################
 
-    def test_microsoft_365_export(self):
+    def test_microsoft_cloud_export(self):
         """ Test exporting Microsoft 365 definitions to YAML format.
         """
         self._setup_test_environment()
 
         # Get Microsoft 365 definitions from YAML
-        microsoft_365_defs = self.yaml_config['microsoft_365']
+        microsoft_cloud_defs = self.yaml_config['microsoft_cloud']
 
         # Import the Microsoft 365 definition first
-        created, _ = self.microsoft_365_importer.sync_definitions(microsoft_365_defs, self.session)
+        created, _ = self.microsoft_cloud_importer.sync_definitions(microsoft_cloud_defs, self.session)
         self.assertEqual(len(created), 1)
 
         # Export Microsoft 365 definitions
-        exported_microsoft_365 = self.exporter.export_microsoft_365(self.session)
-        self.assertIsNotNone(exported_microsoft_365)
-        self.assertEqual(len(exported_microsoft_365), 1)
+        exported_microsoft_cloud = self.exporter.export_microsoft_cloud(self.session)
+        self.assertIsNotNone(exported_microsoft_cloud)
+        self.assertEqual(len(exported_microsoft_cloud), 1)
 
         # Verify exported data
-        exported_item = exported_microsoft_365[0]
+        exported_item = exported_microsoft_cloud[0]
         self.assertEqual(exported_item['name'], 'enmasse.cloud.microsoft365.1')
         self.assertEqual(exported_item['client_id'], '12345678-1234-1234-1234-123456789abc')
         self.assertEqual(exported_item['tenant_id'], '87654321-4321-4321-4321-cba987654321')
@@ -106,27 +106,27 @@ class TestEnmasseMicrosoft365Export(TestCase):
 
 # ################################################################################################################################
 
-    def test_microsoft_365_full_export(self):
+    def test_microsoft_cloud_full_export(self):
         """ Test that Microsoft 365 definitions are included in the full export.
         """
         self._setup_test_environment()
 
         # Get Microsoft 365 definitions from YAML
-        microsoft_365_defs = self.yaml_config['microsoft_365']
+        microsoft_cloud_defs = self.yaml_config['microsoft_cloud']
 
         # Import the Microsoft 365 definition first
-        _ = self.microsoft_365_importer.sync_definitions(microsoft_365_defs, self.session)
+        _ = self.microsoft_cloud_importer.sync_definitions(microsoft_cloud_defs, self.session)
 
         # Export all definitions to dict
         exported_dict = self.exporter.export_to_dict(self.session)
 
         # Verify Microsoft 365 definitions are included
-        self.assertIn('microsoft_365', exported_dict)
-        self.assertEqual(len(exported_dict['microsoft_365']), 1)
+        self.assertIn('microsoft_cloud', exported_dict)
+        self.assertEqual(len(exported_dict['microsoft_cloud']), 1)
 
         # Verify the data structure matches what was imported
-        imported_def = microsoft_365_defs[0]
-        exported_def = exported_dict['microsoft_365'][0]
+        imported_def = microsoft_cloud_defs[0]
+        exported_def = exported_dict['microsoft_cloud'][0]
 
         self.assertEqual(exported_def['name'], imported_def['name'])
         self.assertEqual(exported_def['client_id'], imported_def['client_id'])

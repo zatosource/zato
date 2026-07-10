@@ -1,0 +1,25 @@
+microsoft_cloud:
+
+  - name: test.microsoft.cloud.main
+    address: https://127.0.0.1:{{microsoft_365_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    secret_value: "{{client_secret}}"
+    auth_server_url: https://127.0.0.1:{{microsoft_365_port}}
+    verify_tls: false
+
+  - name: test.microsoft.cloud.bad-credentials
+    address: https://127.0.0.1:{{microsoft_365_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    secret_value: "{{invalid_client_secret}}"
+    auth_server_url: https://127.0.0.1:{{microsoft_365_port}}
+    verify_tls: false
+
+  - name: test.microsoft.cloud.short-token
+    address: https://127.0.0.1:{{microsoft_365_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{short_lived_client_id}}"
+    secret_value: "{{client_secret}}"
+    auth_server_url: https://127.0.0.1:{{microsoft_365_port}}
+    verify_tls: false

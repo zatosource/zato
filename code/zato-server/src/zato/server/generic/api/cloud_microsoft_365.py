@@ -38,6 +38,11 @@ class CloudMicrosoft365Wrapper(Wrapper):
         config['auth_url'] = config['address']
         super(CloudMicrosoft365Wrapper, self).__init__(config, 'Microsoft 365', server)
 
+        # A single client shared by all the services that access this connection directly,
+        # e.g. through self.microsoft.cloud. This is safe because the client builds
+        # its underlying account lazily, on first use, and refreshes its own tokens.
+        self.shared_client = Microsoft365Client(config)
+
 # ################################################################################################################################
 
     def add_client(self):

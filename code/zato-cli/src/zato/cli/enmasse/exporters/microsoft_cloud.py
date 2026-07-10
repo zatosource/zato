@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,15 +15,12 @@ from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
 
-# Create logger for this module
-logger = logging.getLogger(__name__)
-
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
 
-    microsoft_365_def_list = list_[anydict]
+    microsoft_cloud_def_list = list_[anydict]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,29 +40,29 @@ OPAQUE_FIELDS = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Microsoft365Exporter:
+class MicrosoftCloudExporter:
 
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_365_def_list':
+    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_cloud_def_list':
         """ Exports Microsoft 365 connection definitions.
         """
         logger.info('Exporting Microsoft 365 connection definitions')
 
         # Get Microsoft 365 connections from database using the generic connection query
-        db_microsoft_365 = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365)
+        db_microsoft_cloud = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365)
 
-        if not db_microsoft_365:
+        if not db_microsoft_cloud:
             logger.info('No Microsoft 365 connection definitions found in DB')
             return []
 
-        microsoft_365_connections = to_json(db_microsoft_365, return_as_dict=True)
-        logger.debug('Processing %d Microsoft 365 connection definitions', len(microsoft_365_connections))
+        microsoft_cloud_connections = to_json(db_microsoft_cloud, return_as_dict=True)
+        logger.debug('Processing %d Microsoft 365 connection definitions', len(microsoft_cloud_connections))
 
-        exported_microsoft_365 = []
+        exported_microsoft_cloud = []
 
-        for row in microsoft_365_connections:
+        for row in microsoft_cloud_connections:
 
             if GENERIC.ATTR_NAME in row:
                 opaque = parse_instance_opaque_attr(row)
@@ -102,10 +99,10 @@ class Microsoft365Exporter:
             if recv_timeout := row.get('recv_timeout'):
                 item['recv_timeout'] = recv_timeout
 
-            exported_microsoft_365.append(item)
+            exported_microsoft_cloud.append(item)
 
-        logger.info('Successfully prepared %d Microsoft 365 connection definitions for export', len(exported_microsoft_365))
-        return exported_microsoft_365
+        logger.info('Successfully prepared %d Microsoft 365 connection definitions for export', len(exported_microsoft_cloud))
+        return exported_microsoft_cloud
 
 # ################################################################################################################################
 # ################################################################################################################################
