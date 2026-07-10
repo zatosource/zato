@@ -34,6 +34,7 @@ class Deliver(Service):
         # A participant id means the publisher wanted dynamic discovery ..
         if msg['participant_id']:
             _ = wrapper.send_to(
+                self.cid,
                 msg['participant_id'],
                 msg['document_type'],
                 msg['data'],
@@ -43,7 +44,7 @@ class Deliver(Service):
 
         # .. no participant id means a direct send to the configured endpoint.
         else:
-            _ = wrapper.send(msg['data'], msg['mime_type'], msg['conversation_id'])
+            _ = wrapper.send(self.cid, msg['data'], msg['mime_type'], msg['conversation_id'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +83,7 @@ class Pull(Service):
         # which is a regular, successful outcome.
         connection = self.out.as4[connection_name]
         wrapper = connection.conn
-        result = wrapper.pull(mpc)
+        result = wrapper.pull(self.cid, mpc)
 
         if not result.has_message:
             self.logger.info('AS4 pull over `%s` - nothing to pull; mpc:%s', connection_name, mpc)
