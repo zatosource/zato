@@ -79,7 +79,7 @@ def _build_name(common_name:'str') -> 'x509.Name':
     """ Builds an X.509 subject out of a common name.
     """
     out = x509.Name([
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Zato Audit Log Tests'),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Zato Live SQL Tests'),
         x509.NameAttribute(NameOID.COMMON_NAME, common_name),
     ])
 
@@ -96,7 +96,7 @@ def generate_certificates(directory:'str') -> 'CertificatePaths':
 
     # The CA that both the server and the client certificates chain up to ..
     ca_key = rsa.generate_private_key(public_exponent=65537, key_size=_key_size)
-    ca_name = _build_name('Zato Audit Log Test CA')
+    ca_name = _build_name('Zato Live SQL Test CA')
 
     ca_cert = x509.CertificateBuilder(). \
         subject_name(ca_name). \
@@ -130,7 +130,7 @@ def generate_certificates(directory:'str') -> 'CertificatePaths':
     client_key = rsa.generate_private_key(public_exponent=65537, key_size=_key_size)
 
     client_cert = x509.CertificateBuilder(). \
-        subject_name(_build_name('zato-audit-log-test-client')). \
+        subject_name(_build_name('zato-live-sql-test-client')). \
         issuer_name(ca_name). \
         public_key(client_key.public_key()). \
         serial_number(x509.random_serial_number()). \

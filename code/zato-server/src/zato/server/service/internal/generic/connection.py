@@ -17,6 +17,8 @@ from uuid import uuid4
 from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
      ZATO_NONE
 from zato.common.broker_message import GENERIC
+from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
+     to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
@@ -243,12 +245,20 @@ class _CreateEdit(_BaseService):
 
         self.logger.info('GenericConn _CreateEdit step 3: conn.type_=%s, conn.name=%s', conn.type_, conn.name)
 
-        with closing(self.server.odb.session()) as session:
+        # AS2 outgoing connections are stored in the external database when one is configured,
+        # under their local ids, without the offset they are known under everywhere else.
+        is_ext = needs_ext_db(data.type_)
+
+        with closing(self.server.get_config_session(object_type=data.type_)) as session:
 
             # If this is the edit action, we need to find our instance in the database
             # and we need to make sure that we publish its encrypted secret for other layers ..
             if self.is_edit:
-                model = self._get_instance_by_id(session, ModelGenericConn, data.id)
+                if is_ext:
+                    local_id = to_local_id(int(data.id))
+                else:
+                    local_id = data.id
+                model = self._get_instance_by_id(session, ModelGenericConn, local_id)
 
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
@@ -266,7 +276,11 @@ class _CreateEdit(_BaseService):
             # .. and ensure that its secret is stored - either the one given on input,
             # .. so that later edits without a secret can keep using it, or an auto-generated one.
             else:
-                model = self._new_zato_instance_with_cluster(ModelGenericConn)
+                # The external database has its own cluster row that all its objects point to
+                if is_ext:
+                    model = ModelGenericConn()
+                else:
+                    model = self._new_zato_instance_with_cluster(ModelGenericConn)
                 if has_input_secret:
                     secret = input_secret
                 else:
@@ -295,6 +309,11 @@ class _CreateEdit(_BaseService):
 
                 setattr(model, key, value)
 
+            # The cluster id may be missing on input when the instance goes to the external database
+            if is_ext:
+                if not model.cluster_id:
+                    model.cluster_id = self.server.cluster_id
+
             self.logger.info('GenericConn _CreateEdit step 5: about to session.add + commit, model.type_=%s, model.name=%s',
                 getattr(model, 'type_', None), getattr(model, 'name', None))
 
@@ -310,12 +329,18 @@ class _CreateEdit(_BaseService):
             self.logger.info('GenericConn _CreateEdit step 6: committed, instance.id=%s, instance.name=%s, instance.type_=%s',
                 instance.id, instance.name, instance.type_)
 
-            self.response.payload.id = instance.id
+            # Everyone else knows objects from the external database under their offset ids
+            if is_ext:
+                public_id = to_public_id(instance.id)
+            else:
+                public_id = instance.id
+
+            self.response.payload.id = public_id
             self.response.payload.name = instance.name
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
-        data['id'] = instance.id
+        data['id'] = public_id
 
         self.logger.info('GenericConn _CreateEdit step 7: publishing config event, action=%s, id=%s, type_=%s',
             data['action'], data['id'], data.get('type_'))
@@ -421,22 +446,42 @@ class GetList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+    def _append_conn_dicts(self, session:'any_', out:'anylist', needs_id_offset:'bool') -> 'None':
+
+        search_result = self.get_data(session)
+
+        for item in search_result:
+            conn = GenericConnection.from_model(item)
+            conn_dict = cast_('anydict', conn.to_dict())
+
+            # Everyone else knows objects from the external database under their offset ids
+            if needs_id_offset:
+                conn_dict['id'] = to_public_id(conn_dict['id'])
+
+            self._enrich_conn_dict(conn_dict)
+            out.append(conn_dict)
+
+# ################################################################################################################################
+
     def handle(self) -> 'None':
         out:'anylist' = []
+        type_ = self.request.input.type_
 
-        self.logger.info('GenericConn GetList.handle: type_=%s', self.request.input.type_)
+        self.logger.info('GenericConn GetList.handle: type_=%s', type_)
 
-        with closing(self.odb.session()) as session:
+        # AS2 outgoing connections come from the external database when one is configured ..
+        is_ext = needs_ext_db(type_)
 
-            search_result = self.get_data(session)
+        with closing(self.server.get_config_session(object_type=type_)) as session:
+            self._append_conn_dicts(session, out, is_ext)
 
-            for item in search_result:
-                conn = GenericConnection.from_model(item)
-                conn_dict = conn.to_dict()
-                self._enrich_conn_dict(conn_dict)
-                out.append(conn_dict)
+        # .. lists without a type filter combine both databases.
+        if is_ext_db_configured():
+            if not type_:
+                with closing(get_ext_db_session()) as session:
+                    self._append_conn_dicts(session, out, True)
 
-        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', len(out), self.request.input.type_)
+        self.logger.info('GenericConn GetList.handle: returning %s items for type_=%s', len(out), type_)
 
         self.response.payload = dumps(out)
 
@@ -509,17 +554,27 @@ class ChangePassword(ChangePasswordBase):
                 instance.secret = self.server.encrypt(secret)
 
         if self.request.input.id:
-            instance_id = self.request.input.id
+            instance_id = int(self.request.input.id)
         else:
-            with closing(self.odb.session()) as session:
+            with closing(self.server.get_config_session(object_type=self.request.input.type_)) as session:
                 instance_id = session.query(ModelGenericConn).\
                     filter(ModelGenericConn.name==self.request.input.name).\
                     filter(ModelGenericConn.type_==self.request.input.type_).\
                     one().id
 
-        with closing(self.odb.session()) as session:
+            # Everyone else knows objects from the external database under their offset ids
+            if needs_ext_db(self.request.input.type_):
+                instance_id = to_public_id(instance_id)
+
+        # Objects from the external AS2/AS4 database are stored under their local ids there
+        if is_ext_object_id(instance_id):
+            local_id = to_local_id(instance_id)
+        else:
+            local_id = instance_id
+
+        with closing(self.server.get_config_session(object_id=instance_id)) as session:
             query = session.query(ModelGenericConn)
-            query = query.filter(ModelGenericConn.id==instance_id)
+            query = query.filter(ModelGenericConn.id==local_id)
             instance = query.one()
 
             # This steps runs optional post-handle tasks that some types of connections may require.
@@ -539,10 +594,19 @@ class Ping(_BaseService):
     output = 'info', '-is_success'
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
+
+        # Objects from the external AS2/AS4 database are stored under their local ids there
+        input_id = self.request.input.id
+
+        if is_ext_object_id(input_id):
+            local_id = to_local_id(input_id)
+        else:
+            local_id = input_id
+
+        with closing(self.server.get_config_session(object_id=input_id)) as session:
 
             # To ensure that the input ID is correct
-            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            instance = self._get_instance_by_id(session, ModelGenericConn, local_id)
 
             # Different code paths will be taken depending on what kind of a generic connection this is
             custom_ping_func_dict = {}

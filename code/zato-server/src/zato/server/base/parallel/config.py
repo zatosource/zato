@@ -11,9 +11,15 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
+from zato.common.api import GENERIC
 from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS
+from zato.common.ext_db.api import get_ext_db_session, get_ext_http_soap_list, is_ext_db_configured, \
+    merge_ext_channel_items, merge_ext_config_entries
 from zato.common.json_internal import loads
+from zato.common.odb.query import http_soap_list
+from zato.common.odb.query.generic import connection_list
+from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -175,6 +181,13 @@ class ConfigLoader:
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'as4', True)
         self.config.out_as4 = ConfigDict.from_query('out_as4', query, decrypt_func=self.decrypt)
 
+        # AS4 - outgoing connections kept in the external AS2/AS4 database, if one is configured
+        if is_ext_db_configured():
+            with closing(get_ext_db_session()) as ext_session:
+                ext_query = http_soap_list(ext_session, server.cluster_id, 'outgoing', 'as4', True, None, True)
+                ext_out_as4 = ConfigDict.from_query('out_as4', ext_query, decrypt_func=self.decrypt)
+            merge_ext_config_entries(self.config.out_as4._impl, ext_out_as4._impl)
+
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
@@ -199,6 +212,15 @@ class ConfigLoader:
         query = self.odb.get_generic_connection_list(server.cluster.id, True)
         self.config.generic_connection = ConfigDict.from_query('generic_connection', query, decrypt_func=self.decrypt)
 
+        # Connections kept in the external AS2/AS4 database, if one is configured
+        if is_ext_db_configured():
+            ext_cluster_id = cast_('int', server.cluster_id)
+            with closing(get_ext_db_session()) as ext_session:
+                ext_query = connection_list(
+                    ext_session, ext_cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_AS2, True)
+                ext_generic = ConfigDict.from_query('generic_connection', ext_query, decrypt_func=self.decrypt)
+            merge_ext_config_entries(self.config.generic_connection._impl, ext_generic._impl)
+
         #
         # Generic - end
         #
@@ -219,8 +241,15 @@ class ConfigLoader:
 
         # All the HTTP/SOAP channels.
         http_soap = []
+        channel_items = elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel'))
 
-        for item in elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel')):
+        # Channels kept in the external AS2/AS4 database override same-name ones from the main ODB
+        if is_ext_db_configured():
+            ext_cluster_id = cast_('int', server.cluster_id)
+            ext_channel_items = get_ext_http_soap_list(ext_cluster_id, 'channel')
+            merge_ext_channel_items(channel_items, ext_channel_items)
+
+        for item in channel_items:
 
             hs_item = {}
             for key in item.keys():

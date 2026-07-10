@@ -18,10 +18,13 @@ from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFA
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.const import SECRETS
 from zato.common.exception import ServiceMissingException
+from zato.common.ext_db.api import ensure_security_copy, ensure_service_copy, get_ext_db_session, is_ext_db_configured, \
+     is_ext_object_id, merge_ext_channel_items, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import http_soap, http_soap_list
+from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
@@ -33,7 +36,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strdict, strintdict
+    from zato.common.typing_ import any_, anydict, anylist, strdict, strintdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,12 +143,32 @@ class Get(_BaseGet):
     input = '-cluster_id', '-id', '-name'
 
     def handle(self):
+        self.request.input.require_any('id', 'name')
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        with closing(self.odb.session()) as session:
-            self.request.input.require_any('id', 'name')
-            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
-            out = get_dict_with_opaque(item)
-            self.response.payload = out
+
+        # Ids arrive as strings and the external database check needs an integer
+        if input_id := self.request.input.id:
+            input_id = int(input_id)
+        else:
+            input_id = 0
+
+        # Objects from the external AS2/AS4 database are looked up under their local ids there
+        is_ext = is_ext_object_id(input_id)
+
+        if is_ext:
+            local_id = to_local_id(input_id)
+        else:
+            local_id = input_id
+
+        with closing(self.server.get_config_session(object_id=input_id)) as session:
+            item = http_soap(session, cluster_id, local_id, self.request.input.name)
+            out = cast_('anydict', get_dict_with_opaque(item))
+
+        # The object is known everywhere else under its offset id
+        if is_ext:
+            out['id'] = to_public_id(out['id'])
+
+        self.response.payload = out
 
 # ################################################################################################################################
 
@@ -229,9 +252,33 @@ class GetList(_BaseGet):
         return out
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            data = self.get_data(session)
-            self.response.payload[:] = data
+        transport = self.request.input.transport
+
+        # AS2/AS4 objects come from the external database when one is configured ..
+        if needs_ext_db(transport):
+            with closing(get_ext_db_session()) as session:
+                data = self.get_data(session)
+
+            for item in data:
+                item['id'] = to_public_id(item['id'])
+
+        else:
+            with closing(self.odb.session()) as session:
+                data = self.get_data(session)
+
+            # .. lists without a transport filter combine both databases,
+            # .. with the external one winning on name conflicts.
+            if is_ext_db_configured():
+                if not transport:
+                    with closing(get_ext_db_session()) as session:
+                        ext_data = self.get_data(session)
+
+                    for item in ext_data:
+                        item['id'] = to_public_id(item['id'])
+
+                    merge_ext_channel_items(data, ext_data)
+
+        self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -371,6 +418,45 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                     input[name] = self.server.encrypt(value)
 
 # ################################################################################################################################
+
+    def _get_channel_service(self, session:'any_', input:'any_', is_ext:'bool') -> 'any_':
+        """ Returns the service a channel routes to. For external-database objects, the service is validated
+        against the main ODB and then mirrored in the external database so the foreign key holds.
+        """
+        if not is_ext:
+            out = self._get_channel_service_from_input(session, input)
+            return out
+
+        with closing(self.odb.session()) as odb_session:
+            service = self._get_channel_service_from_input(odb_session, input)
+
+        if not service:
+            return None
+
+        out = ensure_service_copy(session, service.name, service.impl_name, input.cluster_id)
+        return out
+
+# ################################################################################################################################
+
+    def _get_security_info(self, session:'any_', input:'any_', is_ext:'bool') -> 'any_':
+        """ Returns security-related information for the input object. Security definitions always live
+        in the main ODB - for external-database objects they are validated there and mirrored
+        in the external database so AS2/AS4 rows can reference them by id.
+        """
+        if not is_ext:
+            out = self._handle_security_info(session, input.security_id, input.connection, input.transport)
+            return out
+
+        with closing(self.odb.session()) as odb_session:
+            out = self._handle_security_info(odb_session, input.security_id, input.connection, input.transport)
+
+            if input.security_id:
+                sec_def = odb_session.query(SecurityBase).filter(SecurityBase.id == input.security_id).one()
+                ensure_security_copy(session, sec_def, input.cluster_id)
+
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -438,7 +524,10 @@ class Create(_CreateEdit):
         if input_content_type:
             input.content_type = input_content_type.strip()
 
-        with closing(self.odb.session()) as session:
+        # AS2/AS4 objects are stored in the external database when one is configured
+        is_ext = needs_ext_db(input.transport)
+
+        with closing(self.server.get_config_session(object_type=input.transport)) as session:
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
                 filter(HTTPSOAP.name==input.name).\
@@ -450,14 +539,13 @@ class Create(_CreateEdit):
                 raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_channel_service_from_input(session, input)
+                service = self._get_channel_service(session, input, is_ext)
             else:
                 service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(session, input.security_id,
-                input.connection, input.transport)
+            sec_info = self._get_security_info(session, input, is_ext)
 
             # Make sure this combination of channel parameters does not exist already
             if input.connection == CONNECTION.CHANNEL:
@@ -466,7 +554,12 @@ class Create(_CreateEdit):
 
             try:
 
-                item = self._new_zato_instance_with_cluster(HTTPSOAP)
+                # The external database has its own cluster row that all its objects point to
+                if is_ext:
+                    item = HTTPSOAP()
+                    item.cluster_id = input.cluster_id
+                else:
+                    item = self._new_zato_instance_with_cluster(HTTPSOAP)
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal
@@ -501,7 +594,11 @@ class Create(_CreateEdit):
                     skip_opaque.append('password')
 
                 if input.security_id:
-                    item.security = get_security_by_id(session, input.security_id)
+                    # The external database holds a mirror of the definition under the same id
+                    if is_ext:
+                        item.security_id = input.security_id
+                    else:
+                        item.security = get_security_by_id(session, input.security_id)
                 else:
                     input.security_id = None # To ensure that SQLite does not reject ''
 
@@ -517,7 +614,15 @@ class Create(_CreateEdit):
                         input.service_id = service.id
                         input.service_name = service.name
 
-                input.id = item.id
+                # Everyone else knows objects from the external database under their offset ids
+                item_id = cast_('int', item.id)
+
+                if is_ext:
+                    public_id = to_public_id(item_id)
+                else:
+                    public_id = item_id
+
+                input.id = public_id
                 input.update(sec_info)
 
                 if input.connection == CONNECTION.CHANNEL:
@@ -526,7 +631,7 @@ class Create(_CreateEdit):
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
                 self.notify_server(input, action)
 
-                self.response.payload.id = item.id
+                self.response.payload.id = public_id
                 self.response.payload.name = item.name
                 self.response.payload.url_path = item.url_path
 
@@ -603,14 +708,23 @@ class Edit(_CreateEdit):
         if input_content_type:
             input.content_type = input_content_type.strip()
 
-        with closing(self.odb.session()) as session:
+        # AS2/AS4 objects are stored in the external database when one is configured,
+        # under their local ids, without the offset they are known under everywhere else.
+        is_ext = needs_ext_db(input.transport)
+
+        if is_ext:
+            local_id = to_local_id(int(input.id))
+        else:
+            local_id = input.id
+
+        with closing(self.server.get_config_session(object_type=input.transport)) as session:
 
             existing_one = session.query(
                 HTTPSOAP.id,
                 HTTPSOAP.url_path,
                 ).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
-                filter(HTTPSOAP.id!=input.id).\
+                filter(HTTPSOAP.id!=local_id).\
                 filter(HTTPSOAP.name==input.name).\
                 filter(HTTPSOAP.connection==input.connection).\
                 filter(HTTPSOAP.transport==input.transport).\
@@ -625,16 +739,16 @@ class Edit(_CreateEdit):
                 raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
             if input.connection == CONNECTION.CHANNEL:
-                service = self._get_channel_service_from_input(session, input)
+                service = self._get_channel_service(session, input, is_ext)
             else:
                 service = None
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
+            sec_info = self._get_security_info(session, input, is_ext)
 
             try:
-                item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+                item = session.query(HTTPSOAP).filter_by(id=local_id).one()
 
                 opaque = parse_instance_opaque_attr(item)
 
@@ -712,7 +826,13 @@ class Edit(_CreateEdit):
 
                 self.notify_server(input, action)
 
-                self.response.payload.id = item.id
+                # Everyone else knows objects from the external database under their offset ids
+                item_id = cast_('int', item.id)
+
+                if is_ext:
+                    self.response.payload.id = to_public_id(item_id)
+                else:
+                    self.response.payload.id = item_id
                 self.response.payload.name = item.name
 
             except Exception:
@@ -741,13 +861,27 @@ class Delete(AdminService, _HTTPSOAPService):
         if not has_expected_input:
             raise Exception('Either ID or name/connection are required on input')
 
-        with closing(self.odb.session()) as session:
+        # Ids arrive as strings and the external database check needs an integer
+        if input_id:
+            input_id = int(input_id)
+        else:
+            input_id = 0
+
+        # Objects from the external AS2/AS4 database are stored under their local ids there
+        is_ext = is_ext_object_id(input_id)
+
+        if is_ext:
+            local_id = to_local_id(input_id)
+        else:
+            local_id = input_id
+
+        with closing(self.server.get_config_session(object_id=input_id)) as session:
             try:
                 query = session.query(HTTPSOAP)
 
                 if input_id:
                     query = query.\
-                        filter(HTTPSOAP.id==input_id)
+                        filter(HTTPSOAP.id==local_id)
 
                 else:
                     query = query.\
@@ -773,8 +907,10 @@ class Delete(AdminService, _HTTPSOAPService):
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
-                # .. clean up all pub/sub state before the CASCADE delete ..
-                self.server.config_manager.cleanup_rest_endpoint_pubsub(session, item.id)
+                # .. clean up all pub/sub state before the CASCADE delete -
+                # .. the state lives in the main ODB only, so external-database objects have none ..
+                if not is_ext:
+                    self.server.config_manager.cleanup_rest_endpoint_pubsub(session, item.id)
 
                 session.delete(item)
                 session.commit()
@@ -811,8 +947,17 @@ class Ping(AdminService):
     output = 'id', 'is_success', '-info'
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
+
+        # Objects from the external AS2/AS4 database are stored under their local ids there
+        input_id = int(self.request.input.id)
+
+        if is_ext_object_id(input_id):
+            local_id = to_local_id(input_id)
+        else:
+            local_id = input_id
+
+        with closing(self.server.get_config_session(object_id=input_id)) as session:
+            item = session.query(HTTPSOAP).filter_by(id=local_id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.id = self.request.input.id
 

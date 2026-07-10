@@ -38,22 +38,23 @@ if 0:
 
 class ModuleCtx:
 
-    # Host ports the containers listen on
-    MySQL_Port          = 23306
-    MySQL_SSL_Port      = 23307
-    PostgreSQL_Port     = 25432
-    PostgreSQL_SSL_Port = 25433
+    # Host ports the containers listen on - distinct from the audit log ones
+    # so both suites can run alongside each other.
+    MySQL_Port          = 23308
+    MySQL_SSL_Port      = 23309
+    PostgreSQL_Port     = 25434
+    PostgreSQL_SSL_Port = 25435
 
     # Names of the containers so stale ones can be removed
-    MySQL_Container          = 'zato-audit-log-test-mysql'
-    MySQL_SSL_Container      = 'zato-audit-log-test-mysql-ssl'
-    PostgreSQL_Container     = 'zato-audit-log-test-postgresql'
-    PostgreSQL_SSL_Container = 'zato-audit-log-test-postgresql-ssl'
+    MySQL_Container          = 'zato-ext-db-test-mysql'
+    MySQL_SSL_Container      = 'zato-ext-db-test-mysql-ssl'
+    PostgreSQL_Container     = 'zato-ext-db-test-postgresql'
+    PostgreSQL_SSL_Container = 'zato-ext-db-test-postgresql-ssl'
 
     # Database credentials shared by all the containers
-    Username = 'zato_audit_log'
-    Password = 'test-audit-log-password'
-    DB_Name  = 'zato_audit_log'
+    Username = 'zato_ext_db'
+    Password = 'test-ext-db-password'
+    DB_Name  = 'zato_ext_db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +71,7 @@ def certificate_paths() -> 'certificatesgen':
     The directory lives directly under the system temporary directory because the certificates
     are mounted into containers whose database users cannot traverse pytest's own 0700 directories.
     """
-    directory = mkdtemp(prefix='zato-audit-log-certificates-')
+    directory = mkdtemp(prefix='zato-ext-db-certificates-')
     os.chmod(directory, _certificate_dir_mode)
 
     out = generate_certificates(directory)
