@@ -5,6 +5,9 @@ MAKEFLAGS += --silent
 
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-server
+
+Zato_Test_Python := $(Zato_Python_Dir)/py
+include $(CURDIR)/../tests/check.mk
 Zato_Core_Dir=$(CURDIR)/../zato-rust/zato_server_core
 Zato_Fuzz_Timeout=$(or $(timeout),$(Zato_Fuzz_Test_Timeout),120)
 

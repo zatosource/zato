@@ -38,6 +38,7 @@ $(document).ready(function() {
 
 $.fn.zato.cloud.microsoft_fabric.field_descriptions = {
     'id_name': 'A unique name for this Microsoft Fabric connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
     'id_address': 'Address of the Fabric REST API,<br>e.g. https://api.fabric.microsoft.com/v1.<br>Change it only when using a non-default cloud.',
     'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the connection signs in to. Found on the overview page<br>of the app registration in the Azure portal.',
     'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as. The app needs<br>permissions to call the Fabric API.',

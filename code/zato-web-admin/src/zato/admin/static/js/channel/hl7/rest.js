@@ -36,6 +36,9 @@ $.fn.zato.channel.hl7.rest.field_descriptions = {
     'id_url_path': 'URL path clients send their HL7 messages to<br>over REST, e.g. /hl7/v2/adt.',
     'id_service': 'Service invoked for each incoming message.<br>The HL7 data is in self.request.payload<br>and, with parsing enabled, it is already<br>a parsed HL7 object with segment access.',
     'id_security_id': 'Security definition clients must satisfy<br>to invoke this channel. Without one,<br>anyone who can reach the URL path<br>can send messages.',
+    'id_is_active': 'Whether this channel accepts messages.<br>An inactive channel rejects all requests<br>without invoking the service.',
+    'id_hl7_version': 'Version of the HL7 standard the messages use.<br>HL7 v2.x is the pipe-delimited format<br>with segments such as MSH and PID.',
+    'id_should_return_errors': 'When on, details of processing errors<br>are sent back to the caller in the response.<br>Leave it off if callers should not see<br>internal error information.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

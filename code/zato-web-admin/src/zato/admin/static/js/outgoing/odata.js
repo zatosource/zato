@@ -32,7 +32,14 @@ $(document).ready(function() {
 
 $.fn.zato.outgoing.odata.field_descriptions = {
     'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to invoke the OData API.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_odata_version': 'OData protocol version the remote API speaks,<br>4.0 or 2.0. SAP systems commonly use 2.0.',
+    'id_pool_size': 'How many client connections the pool keeps<br>for concurrent requests to this API.<br>Default is 1.',
     'id_address': 'Service root URL of the OData API,<br>e.g. https://host/sap/opu/odata/sap/API_BUSINESS_PARTNER.<br>All entity sets are addressed relative to it.',
+    'id_auth_type': 'How requests authenticate - Basic with username<br>and secret, Bearer with a static token,<br>OAuth2 with tokens obtained dynamically,<br>or no authentication at all.',
+    'id_needs_csrf_token': 'When on, a CSRF token is fetched first<br>and sent with each modifying request.<br>Required by SAP OData services.',
+    'id_timeout': 'How many seconds to wait for a response<br>to each request. Default is 60.',
+    'id_page_size': 'How many entities to request per page<br>when reading results. 0 means the server\'s<br>own default page size is used.',
     'id_username': 'Username for Basic authentication.<br>Leave empty with OAuth2 - the secret is set<br>separately with the Change secret link.',
     'id_token_url': 'OAuth2 token endpoint the connection obtains<br>access tokens from, e.g.<br>https://login.microsoftonline.com/tenant/oauth2/v2.0/token.',
     'id_tenant_id': 'Directory or tenant the OAuth2 client belongs to,<br>e.g. an Entra ID tenant with Microsoft APIs.',

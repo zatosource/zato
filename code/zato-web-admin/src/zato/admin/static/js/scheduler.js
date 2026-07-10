@@ -337,6 +337,14 @@ $.fn.zato.scheduler.field_descriptions = {
 
     'interval_based': {
         'name': 'A unique name for this job.<br>Used in logs and on the scheduler dashboard.',
+        'is_active': 'Whether the scheduler runs this job.<br>An inactive job keeps its definition<br>but never fires.',
+        'repeats': 'How many times the job runs in total.<br>Leave empty for the job to keep repeating<br>indefinitely, at each interval.',
+        'weeks': 'How many weeks between consecutive runs.<br>All the interval fields add up<br>into one combined interval.',
+        'days': 'How many days between consecutive runs.<br>Added to the other interval fields,<br>e.g. 1 week and 2 days.',
+        'hours': 'How many hours between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
+        'minutes': 'How many minutes between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
+        'seconds': 'How many seconds between consecutive runs.<br>Added to the other interval fields<br>to form the full interval.',
+        'max_execution_time_ms': 'The longest a single run may take,<br>in milliseconds. Runs exceeding it<br>count as timed out on the dashboard.<br>Leave empty for no limit.',
         'start_date': 'When the first execution takes place.<br>Later runs follow at each interval,<br>counted from this moment.',
         'service': 'The service invoked each time the job fires.<br>Data from the extra field is available to it<br>as self.request.raw_request.',
         'extra': 'Optional data passed to the service on each run,<br>available as self.request.raw_request.<br>Use it to parameterize the service.',

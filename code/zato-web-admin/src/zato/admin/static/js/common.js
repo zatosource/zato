@@ -53,6 +53,7 @@ $.namespace('zato.as2_keystore');
 $.namespace('zato.audit_log');
 $.namespace('zato.b2b');
 $.namespace('zato.b2b.control_numbers');
+$.namespace('zato.b2b.reports');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.as4');

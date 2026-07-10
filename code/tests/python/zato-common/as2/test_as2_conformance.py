@@ -487,7 +487,7 @@ class TestOpenSSLOracle:
         payload_path = tmp_path / 'payload.bin'
         key_path = tmp_path / 'sender-key.pem'
         certificate_path = tmp_path / 'sender-cert.pem'
-        signed_path = tmp_path / 'signed.smime'
+        signature_path = tmp_path / 'signature.der'
 
         key_pem = parties.sender.signing_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
         certificate_pem = parties.sender.signing_certificate.public_bytes(Encoding.PEM)
@@ -502,15 +502,29 @@ class TestOpenSSLOracle:
             '-in', str(payload_path),
             '-signer', str(certificate_path),
             '-inkey', str(key_path),
-            '-outform', 'SMIME',
-            '-out', str(signed_path),
+            '-outform', 'DER',
+            '-out', str(signature_path),
         ]
         _ = subprocess_run(command, check=True, capture_output=True)
 
-        # .. and verify it with ours - the recovered content is the entity we signed.
-        content_type, body = _read_smime_entity(signed_path.read_bytes())
-        signed = new_part(body, content_type)
+        # .. frame the detached signature in the multipart/signed layout of RFC 1847,
+        # with the CRLF boundary framing of RFC 2046 ..
+        signature_base64 = b64encode(signature_path.read_bytes())
 
+        boundary = b'openssl-oracle-boundary'
+        body = b'--' + boundary + b'\r\n' + \
+            _edi_entity + b'\r\n' + \
+            b'--' + boundary + b'\r\n' + \
+            b'Content-Type: application/pkcs7-signature\r\n' + \
+            b'Content-Transfer-Encoding: base64\r\n\r\n' + \
+            signature_base64 + b'\r\n' + \
+            b'--' + boundary + b'--\r\n'
+
+        content_type = 'multipart/signed; protocol="application/pkcs7-signature"; ' + \
+            f'micalg=sha-256; boundary="{boundary.decode("ascii")}"'
+
+        # .. and verify it with ours - the recovered content is the entity openssl signed.
+        signed = new_part(body, content_type)
         result = verify(signed, parties.receiver)
 
         assert result.part.data == _edi_payload

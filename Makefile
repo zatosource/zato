@@ -41,6 +41,9 @@ SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(s
 ZATO_PY := $(CURDIR)/code/bin/python
 TS := ts '%Y-%m-%d %H:%M:%S'
 
+Zato_Test_Python := $(ZATO_PY)
+include $(CURDIR)/code/tests/check.mk
+
 # ----------------------------------------------------------------------------
 # Zato_Projects_Root - needed by health, test, and lint targets only.
 # Existing build/install/clean/restart targets work without it.

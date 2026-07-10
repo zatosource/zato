@@ -152,7 +152,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ create_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -161,7 +161,7 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
@@ -169,7 +169,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="{{ create_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -179,7 +179,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_tenant_id">
+                                <label for="{{ create_form.tenant_id.id_for_label }}">
                                 Tenant ID
                                 </label>
                             </td>
@@ -189,7 +189,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_client_id">
+                                <label for="{{ create_form.client_id.id_for_label }}">
                                 Client ID
                                 </label>
                             </td>
@@ -199,7 +199,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_client_secret">
+                                <label for="{{ create_form.client_secret.id_for_label }}">
                                 Client secret
                                 </label>
                             </td>
@@ -209,7 +209,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_environment_id">
+                                <label for="{{ create_form.environment_id.id_for_label }}">
                                 Environment ID
                                 </label>
                             </td>
@@ -238,7 +238,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ edit_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -247,7 +247,7 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
@@ -255,7 +255,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_edit-address">
+                                <label for="{{ edit_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -265,7 +265,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_edit-tenant_id">
+                                <label for="{{ edit_form.tenant_id.id_for_label }}">
                                 Tenant ID
                                 </label>
                             </td>
@@ -275,7 +275,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_edit-client_id">
+                                <label for="{{ edit_form.client_id.id_for_label }}">
                                 Client ID
                                 </label>
                             </td>
@@ -285,7 +285,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_edit-client_secret">
+                                <label for="{{ edit_form.client_secret.id_for_label }}">
                                 Client secret
                                 </label>
                             </td>
@@ -295,7 +295,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_edit-environment_id">
+                                <label for="{{ edit_form.environment_id.id_for_label }}">
                                 Environment ID
                                 </label>
                             </td>

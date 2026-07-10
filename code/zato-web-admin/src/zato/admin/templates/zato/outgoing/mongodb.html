@@ -201,7 +201,7 @@
                             <td style="vertical-align:middle">Options</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
@@ -211,7 +211,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_server_list">Servers</label>
+                                <label for="{{ create_form.server_list.id_for_label }}">Servers</label>
                             </td>
                             <td>
                                 {{ create_form.server_list }}
@@ -222,7 +222,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_username">Username</label>
+                                <label for="{{ create_form.username.id_for_label }}">Username</label>
                             </td>
                             <td>
                                 {{ create_form.username }}
@@ -231,7 +231,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_secret">Password</label>
+                                <label for="{{ create_form.secret.id_for_label }}">Password</label>
                             </td>
                             <td>
                                 {{ create_form.secret }}
@@ -240,14 +240,14 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_auth_source">Auth source</label>
+                                <label for="{{ create_form.auth_source.id_for_label }}">Auth source</label>
                             </td>
                             <td>
                                 {{ create_form.auth_source }}
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.app_name.id_for_label }}">
                                 App name
                                 {{ create_form.app_name }}
                                 </label>
@@ -257,7 +257,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_replica_set">Replica set</label>
+                                <label for="{{ create_form.replica_set.id_for_label }}">Replica set</label>
                             </td>
                             <td>
                                 {{ create_form.replica_set }}
@@ -266,19 +266,19 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_pool_size_max">Pool size</label>
+                                <label for="{{ create_form.pool_size_max.id_for_label }}">Pool size</label>
                             </td>
                             <td>
                                 {{ create_form.pool_size_max }}
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.connect_timeout.id_for_label }}">
                                 Timeout (s.) connect
                                 {{ create_form.connect_timeout }}
                                 </label>
 
-                                <label>
+                                <label for="{{ create_form.server_select_timeout.id_for_label }}">
                                 server select
                                 {{ create_form.server_select_timeout }}
                                 </label>
@@ -290,14 +290,14 @@
                             <td style="vertical-align:middle">TLS</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.is_tls_enabled.id_for_label }}">
                                 Enabled
                                 {{ create_form.is_tls_enabled }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.is_tls_validation_enabled.id_for_label }}">
                                 Validate certificates
                                 {{ create_form.is_tls_validation_enabled }}
                                 </label>
@@ -307,7 +307,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_tls_ca_certs_file">TLS CA certs file</label>
+                                <label for="{{ create_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
                             </td>
                             <td>
                                 {{ create_form.tls_ca_certs_file }}
@@ -316,7 +316,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_tls_cert_key_file">TLS cert/key file</label>
+                                <label for="{{ create_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
                             </td>
                             <td>
                                 {{ create_form.tls_cert_key_file }}
@@ -353,7 +353,7 @@
                             <td style="vertical-align:middle">Options</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
@@ -363,7 +363,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-server_list">Servers</label>
+                                <label for="{{ edit_form.server_list.id_for_label }}">Servers</label>
                             </td>
                             <td>
                                 {{ edit_form.server_list }}
@@ -374,7 +374,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-username">Username</label>
+                                <label for="{{ edit_form.username.id_for_label }}">Username</label>
                             </td>
                             <td>
                                 {{ edit_form.username }}
@@ -383,7 +383,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-secret">Password</label>
+                                <label for="{{ edit_form.secret.id_for_label }}">Password</label>
                             </td>
                             <td>
                                 {{ edit_form.secret }}
@@ -392,14 +392,14 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-auth_source">Auth source</label>
+                                <label for="{{ edit_form.auth_source.id_for_label }}">Auth source</label>
                             </td>
                             <td>
                                 {{ edit_form.auth_source }}
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.app_name.id_for_label }}">
                                 App name
                                 {{ edit_form.app_name }}
                                 </label>
@@ -409,7 +409,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-replica_set">Replica set</label>
+                                <label for="{{ edit_form.replica_set.id_for_label }}">Replica set</label>
                             </td>
                             <td>
                                 {{ edit_form.replica_set }}
@@ -418,19 +418,19 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-pool_size_max">Pool size</label>
+                                <label for="{{ edit_form.pool_size_max.id_for_label }}">Pool size</label>
                             </td>
                             <td>
                                 {{ edit_form.pool_size_max }}
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.connect_timeout.id_for_label }}">
                                 Timeout (s.) connect
                                 {{ edit_form.connect_timeout }}
                                 </label>
 
-                                <label>
+                                <label for="{{ edit_form.server_select_timeout.id_for_label }}">
                                 server select
                                 {{ edit_form.server_select_timeout }}
                                 </label>
@@ -442,14 +442,14 @@
                             <td style="vertical-align:middle">TLS</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.is_tls_enabled.id_for_label }}">
                                 Enabled
                                 {{ edit_form.is_tls_enabled }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.is_tls_validation_enabled.id_for_label }}">
                                 Validate certificates
                                 {{ edit_form.is_tls_validation_enabled }}
                                 </label>
@@ -459,7 +459,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-tls_ca_certs_file">TLS CA certs file</label>
+                                <label for="{{ edit_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
                             </td>
                             <td>
                                 {{ edit_form.tls_ca_certs_file }}
@@ -468,7 +468,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-tls_cert_key_file">TLS cert/key file</label>
+                                <label for="{{ edit_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
                             </td>
                             <td>
                                 {{ edit_form.tls_cert_key_file }}

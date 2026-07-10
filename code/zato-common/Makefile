@@ -5,6 +5,9 @@ CRATE_DIR = $(CURDIR)/../zato-rust/zato_input_output
 PY = $(CURDIR)/../bin/python
 export VIRTUAL_ENV = $(CURDIR)/..
 
+Zato_Test_Python := $(PY)
+include $(CURDIR)/../tests/check.mk
+
 default: build
 
 build:

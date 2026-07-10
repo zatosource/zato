@@ -157,7 +157,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ create_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -166,21 +166,21 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.is_cloud.id_for_label }}">
                                 Cloud edition
                                 {{ create_form.is_cloud }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.api_version.id_for_label }}">
                                 API version
                                 {{ create_form.api_version }}
                                 </label>
@@ -188,7 +188,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="{{ create_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -198,7 +198,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_username">
+                                <label for="{{ create_form.username.id_for_label }}">
                                 Username
                                 </label>
                             </td>
@@ -227,7 +227,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ edit_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -236,21 +236,21 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.is_cloud.id_for_label }}">
                                 Cloud edition
                                 {{ edit_form.is_cloud }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.api_version.id_for_label }}">
                                 API version
                                 {{ edit_form.api_version }}
                                 </label>
@@ -258,7 +258,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="{{ edit_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -268,7 +268,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_username">
+                                <label for="{{ edit_form.username.id_for_label }}">
                                 Username
                                 </label>
                             </td>

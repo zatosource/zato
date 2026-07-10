@@ -37,6 +37,9 @@ $(document).ready(function() {
 
 $.fn.zato.cloud.confluence.field_descriptions = {
     'id_name': 'A unique name for this Confluence connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_is_cloud': 'Whether this is a Confluence Cloud instance<br>rather than a self-hosted Server or Data Center one.<br>Cloud uses email plus API token authentication.',
+    'id_api_version': 'Version of the Confluence REST API to invoke.<br>The default of 3 is correct for Cloud instances,<br>self-hosted ones typically use version 1.',
     'id_address': 'Base address of the Confluence instance,<br>e.g. https://example.atlassian.net.<br>All API calls the connection makes go to this host.',
     'id_username': 'Email address or username the connection<br>authenticates as. Content is read and written<br>with this user\'s permissions.<br>The API token is set separately<br>with the Change API token link.',
 };

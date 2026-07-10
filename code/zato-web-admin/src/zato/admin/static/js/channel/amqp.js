@@ -38,6 +38,9 @@ $.fn.zato.channel.amqp.field_descriptions = {
     'id_queue': 'Queue to consume messages from.<br>Each message taken off this queue<br>invokes the service below.',
     'id_service': 'Service invoked for each message from the queue.<br>The message body is in self.request.payload.',
     'id_consumer_tag_prefix': 'Prefix of the consumer tag this channel uses<br>to identify itself to the broker.<br>Makes the channel easy to spot<br>in the broker\'s management tools.',
+    'id_pool_size': 'How many connections to the broker<br>this channel keeps open. More connections<br>let messages be processed in parallel.<br>The default is 10.',
+    'id_data_format': 'Format of incoming message bodies, e.g. JSON.<br>With a format selected, the payload is parsed<br>before the service runs, otherwise the service<br>receives the raw message as-is.',
+    'id_ack_mode': 'What to tell the broker about each message.<br>Ack confirms it so the broker deletes it,<br>Reject refuses it and the broker decides<br>whether to redeliver or discard it.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
