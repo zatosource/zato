@@ -428,7 +428,7 @@ class AS4Invoker:
         """ Sends one AS4 message to the connection's configured endpoint,
         verifying the synchronous receipt.
         """
-        out = self.conn.send(data, mime_type, conversation_id)
+        out = self.conn.send(self.cid, data, mime_type, conversation_id)
         return out
 
 # ################################################################################################################################
@@ -444,7 +444,7 @@ class AS4Invoker:
         """ The access-point one-liner - discovers the receiver's endpoint through SML and SMP,
         wraps the business document in an SBDH and delivers it there, verifying the receipt.
         """
-        out = self.conn.send_to(participant_id, document_type, data, from_participant, conversation_id)
+        out = self.conn.send_to(self.cid, participant_id, document_type, data, from_participant, conversation_id)
         return out
 
 # ################################################################################################################################
@@ -453,7 +453,7 @@ class AS4Invoker:
         """ Sends one pull request to the connection's configured endpoint -
         the generic One-Way/Pull exchange - and returns whatever came back.
         """
-        out = self.conn.pull(mpc)
+        out = self.conn.pull(self.cid, mpc)
         return out
 
 # ################################################################################################################################
