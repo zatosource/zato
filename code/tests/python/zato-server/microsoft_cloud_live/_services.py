@@ -130,6 +130,36 @@ class MicrosoftCloudTestGetOrganization(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MicrosoftCloudTestMS365Shim(Service):
+    """ Exercises the self.cloud.ms365 API which is a thin shim over self.microsoft.cloud.
+    """
+    name = 'test.microsoft.cloud.ms365-shim'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+
+        # Get the connection through the shim ..
+        conn = self.cloud.ms365.get(conn_name).conn
+
+        # .. obtain a client from it ..
+        with conn.client() as client:
+
+            # .. the explicit token refresh is a no-op because tokens renew automatically ..
+            client.refresh()
+
+            # .. and read the directory through the client's .impl attribute.
+            directory = client.impl.directory()
+
+            users = []
+            for user in directory.get_users():
+                users.append({'mail': user.mail})
+
+        self.response.payload = json.dumps({'users': users})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MicrosoftCloudTestPing(Service):
     """ Pings a named Microsoft 365 connection.
     """

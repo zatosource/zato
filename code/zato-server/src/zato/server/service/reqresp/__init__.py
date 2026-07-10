@@ -295,11 +295,65 @@ class Outgoing:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'confluence', 'jira', 'salesforce'
+    __slots__ = 'confluence', 'jira', 'ms365', 'salesforce'
 
     confluence: 'stranydict'
     jira: 'stranydict'
+    ms365: 'MS365Shim'
     salesforce: 'stranydict'
+
+    def __init__(self) -> 'None':
+        self.ms365 = MS365Shim()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MS365ConnShim:
+    """ A thin shim that lets the old Microsoft 365 API run on top of Microsoft365Client - it covers
+    item.conn, conn.client(), the with statement and client.refresh(), all of which map to the same client.
+    """
+    __slots__ = ('impl',)
+
+    impl: 'Microsoft365Client'
+
+    def __init__(self, impl:'Microsoft365Client') -> 'None':
+        self.impl = impl
+
+    @property
+    def conn(self) -> 'MS365ConnShim':
+        # The old API read .conn on the item returned by .get() - it all maps to the same object now.
+        return self
+
+    def client(self) -> 'MS365ConnShim':
+        # The old API obtained a new client from the connection - it all maps to the same object now.
+        return self
+
+    def __enter__(self) -> 'MS365ConnShim':
+        return self
+
+    def __exit__(self, *ignored_args:'any_') -> 'None':
+        pass
+
+    def refresh(self) -> 'None':
+        # Tokens are renewed automatically by Microsoft365Client so there is nothing to do here.
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MS365Shim:
+    """ A thin shim that translates the old self.cloud.ms365[name] access into self.microsoft.cloud[name].
+    """
+    __slots__ = ('microsoft_cloud',)
+
+    microsoft_cloud: 'MicrosoftCloudFacade'
+
+    def get(self, name:'str') -> 'MS365ConnShim':
+        client = self.microsoft_cloud[name]
+        return MS365ConnShim(client)
+
+    def __getitem__(self, name:'str') -> 'MS365ConnShim':
+        return self.get(name)
 
 # ################################################################################################################################
 # ################################################################################################################################
