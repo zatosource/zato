@@ -17,7 +17,7 @@ else:
 # stdlib
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from json import dumps
 from logging import getLogger
 from time import sleep
@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import SCHEDULER
+from zato.common.api import AS2, SCHEDULER
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
@@ -41,6 +41,59 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato_scheduler')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The Python path of the service the AS2 rotation job invokes - the job may be created
+# before the service is deployed for the first time, in which case the service's ODB row
+# is created upfront and the deployment sync finds it already in place.
+_as2_rotation_service_impl_name = 'zato.server.service.internal.generic.connection.CompleteAS2Rotation'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as2_rotation_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that completes AS2 certificate rotations exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+
+    existing = session.query(Job).\
+        filter(Job.name==AS2.Default.Rotation_Job_Name).\
+        filter(Job.cluster_id==cluster_id).\
+        first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).\
+        filter(Cluster.id==cluster_id).\
+        one()
+
+    service = session.query(Service).\
+        filter(Service.name==AS2.Default.Rotation_Service).\
+        filter(Service.cluster_id==cluster_id).\
+        first()
+
+    # On a first-ever start the service is not in ODB yet, so its row is created here
+    # and the deployment sync will find it already in place.
+    if not service:
+        service = Service(None, AS2.Default.Rotation_Service, True, _as2_rotation_service_impl_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # The start date is only the anchor the hourly interval counts from.
+    start_date = datetime.now(timezone.utc)
+    start_date = start_date.replace(tzinfo=None)
+
+    job = Job(None, AS2.Default.Rotation_Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
+        cluster=cluster, service=service)
+    interval = IntervalBasedJob(None, job, hours=AS2.Default.Rotation_Job_Interval_Hours)
+
+    session.add(job)
+    session.add(interval)
+
+    return True
 
 # ################################################################################################################################
 # ################################################################################################################################
