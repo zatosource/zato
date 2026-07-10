@@ -33,6 +33,10 @@
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/scheduler.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     {% endif %}
 {% endblock %}
 
@@ -54,6 +58,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     {% if transport == 'soap' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    {% endif %}
+    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
@@ -479,6 +488,16 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "http-soap-create" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
+
+                    {% if connection == 'outgoing' and transport == 'plain_http' %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:19%"><label for="id_name">Name</label></td>
@@ -673,6 +692,7 @@
                         </tr>
                         {% endif %}
 
+                        {% if connection != 'outgoing' or transport != 'plain_http' %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -687,7 +707,26 @@
                             </td>
 
                         </tr>
+                        {% endif %}
                     </table>
+
+                    {% if connection == 'outgoing' and transport == 'plain_http' %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-scheduler" role="tabpanel" hidden>
+                        {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
+
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
@@ -706,6 +745,16 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "http-soap-edit" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="edit-form">
+
+                    {% if connection == 'outgoing' and transport == 'plain_http' %}
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
+                        <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
+                    {% endif %}
+
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%"><label for="id_edit-name">Name</label></td>
@@ -898,6 +947,7 @@
 
                         {% endif %}
 
+                        {% if connection != 'outgoing' or transport != 'plain_http' %}
                         <tr>
                             {% if transport == 'soap' %}
                             <td style="text-align:left;vertical-align:middle">
@@ -911,7 +961,26 @@
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
+                        {% endif %}
                     </table>
+
+                    {% if connection == 'outgoing' and transport == 'plain_http' %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-scheduler" role="tabpanel" hidden>
+                        {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
+
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
@@ -927,6 +996,14 @@
                 </form>
             </div>
         </div>
+
+        {% if connection == 'outgoing' and transport == 'plain_http' %}
+        <form>
+            <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+            <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+            <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+        </form>
+        {% endif %}
 
     {% endif %}
 

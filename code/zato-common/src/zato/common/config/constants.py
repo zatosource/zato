@@ -33,6 +33,7 @@ LDAP                = 'ldap'
 Confluence          = 'confluence'
 Jira                = 'jira'
 Microsoft_Cloud     = 'microsoft_cloud'
+Microsoft_Fabric    = 'microsoft_fabric'
 Microsoft_Power_Automate = 'microsoft_power_automate'
 PubSub_Topic        = 'pubsub_topic'
 PubSub_Permission   = 'pubsub_permission'
@@ -65,6 +66,7 @@ All_Sections = frozenset([
     Confluence,
     Jira,
     Microsoft_Cloud,
+    Microsoft_Fabric,
     Microsoft_Power_Automate,
     PubSub_Topic,
     PubSub_Permission,

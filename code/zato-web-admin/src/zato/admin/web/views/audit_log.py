@@ -22,6 +22,7 @@ from zato.admin.web.views import method_allowed
 from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.defaults import default_cluster_id
+from zato.x12.render import render_document
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -314,7 +315,9 @@ def poll(req:'any_') -> 'HttpResponse':
 
 @method_allowed('POST')
 def details(req:'any_') -> 'HttpResponse':
-    """ Returns the complete payload of one audit event, without any truncation.
+    """ Returns the complete payload of one audit event, without any truncation,
+    along with the human-readable rendering of the EDI document the payload carries,
+    if it carries one at all.
     """
     body = json.loads(req.body)
     event_id = body['id']
@@ -331,7 +334,10 @@ def details(req:'any_') -> 'HttpResponse':
         if row:
             data = row[0]
 
-    response_json = json.dumps({'data': data})
+    # A payload that embeds an EDI document additionally renders as its parsed view.
+    parsed = render_document(data)
+
+    response_json = json.dumps({'data': data, 'parsed': parsed})
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')

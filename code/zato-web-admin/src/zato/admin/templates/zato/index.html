@@ -396,6 +396,7 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Microsoft Fabric</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Microsoft Power Automate</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
@@ -438,6 +439,9 @@
                                                         <a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a>
                                                     </li>
                                                 </ul>
+                                            </li>
+                                            <li class="child">
+                                                <a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a>
                                             </li>
                                             <li class="child">
                                                 <a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP (AD)</a>

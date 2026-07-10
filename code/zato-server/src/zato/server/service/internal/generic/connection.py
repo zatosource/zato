@@ -95,7 +95,7 @@ extra_secret_keys = (
     'consumer_key',
     'consumer_secret',
 
-    # OData and Microsoft Power Automate
+    # OData, Microsoft Fabric and Microsoft Power Automate
     'client_secret',
 
 )

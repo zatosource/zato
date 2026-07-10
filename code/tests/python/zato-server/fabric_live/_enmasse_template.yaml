@@ -1,0 +1,17 @@
+microsoft_fabric:
+
+  - name: test.fabric.main
+    address: http://127.0.0.1:{{fabric_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    client_secret: "{{client_secret}}"
+    token_url: http://127.0.0.1:{{fabric_port}}/{{tenant_id}}/oauth2/v2.0/token
+    onelake_address: http://127.0.0.1:{{fabric_port}}/onelake
+
+  - name: test.fabric.bad-credentials
+    address: http://127.0.0.1:{{fabric_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    client_secret: "{{invalid_client_secret}}"
+    token_url: http://127.0.0.1:{{fabric_port}}/{{tenant_id}}/oauth2/v2.0/token
+    onelake_address: http://127.0.0.1:{{fabric_port}}/onelake

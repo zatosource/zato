@@ -25,6 +25,7 @@ from zato.admin.web.views.cloud import aws as cloud_aws
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
+from zato.admin.web.views.cloud import microsoft_fabric as cloud_microsoft_fabric
 from zato.admin.web.views.cloud import microsoft_power_automate as cloud_microsoft_power_automate
 from zato.admin.web.views.cloud import salesforce as cloud_salesforce
 from zato.admin.web.views.email import imap as email_imap
@@ -1051,6 +1052,22 @@ urlpatterns += [
         login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
     url(r'^zato/cloud/jira/reset-oauth2-scopes/$',
         login_required(cloud_microsoft_365.reset_oauth2_scopes), name='cloud-microsoft-365-reset-oauth2-scopes'),
+    ]
+
+urlpatterns += [
+
+    # .. Microsoft Fabric
+
+    url(r'^zato/cloud/microsoft-fabric/$',
+        login_required(cloud_microsoft_fabric.Index()), name=cloud_microsoft_fabric.Index.url_name),
+    url(r'^zato/cloud/microsoft-fabric/create/$',
+        login_required(cloud_microsoft_fabric.Create()), name=cloud_microsoft_fabric.Create.url_name),
+    url(r'^zato/cloud/microsoft-fabric/edit/$',
+        login_required(cloud_microsoft_fabric.Edit()), name=cloud_microsoft_fabric.Edit.url_name),
+    url(r'^zato/cloud/microsoft-fabric/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_fabric.Delete()), name=cloud_microsoft_fabric.Delete.url_name),
+    url(r'^zato/cloud/microsoft-fabric/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_fabric.ping), name='cloud-microsoft-fabric-ping'),
     ]
 
 urlpatterns += [

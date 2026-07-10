@@ -38,6 +38,7 @@ class _object_type:
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
     Microsoft_Cloud = 'microsoft_cloud'           #
+    Microsoft_Fabric = 'cloud_microsoft_fabric'   #
     Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
     Search_ElasticSearch = 'elastic_search'       #
 

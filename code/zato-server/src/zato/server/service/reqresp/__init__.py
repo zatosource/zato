@@ -47,6 +47,7 @@ if 0:
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
+    from zato.server.connection.cloud.microsoft_fabric import MicrosoftFabricClient
     from zato.server.connection.cloud.microsoft_power_automate import MicrosoftPowerAutomateClient
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
@@ -398,16 +399,38 @@ class MicrosoftPowerPlatformFacade:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MicrosoftFabricFacade:
+    """ The API through which Microsoft Fabric connections are accessed by their names,
+    e.g. self.microsoft.fabric['My Connection'].
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'MicrosoftFabricClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Microsoft:
     """ A container for Microsoft connections a service can establish.
     """
-    __slots__ = 'cloud', 'power_platform'
+    __slots__ = 'cloud', 'fabric', 'power_platform'
 
     cloud: 'MicrosoftCloudFacade'
+    fabric: 'MicrosoftFabricFacade'
     power_platform: 'MicrosoftPowerPlatformFacade'
 
     def __init__(self) -> 'None':
         self.cloud = MicrosoftCloudFacade()
+        self.fabric = MicrosoftFabricFacade()
         self.power_platform = MicrosoftPowerPlatformFacade()
 
 # ################################################################################################################################

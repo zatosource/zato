@@ -39,6 +39,7 @@ from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
+from zato.cli.enmasse.importers.microsoft_fabric import MicrosoftFabricImporter
 from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
@@ -86,6 +87,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.as2',
                         'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_cloud',
+                        'zato.cli.enmasse.importers.microsoft_fabric',
                         'zato.cli.enmasse.importers.microsoft_power_automate',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
@@ -135,6 +137,7 @@ class EnmasseYAMLImporter:
         self.sftp_defs = {}
         self.smb_defs = {}
         self.microsoft_cloud_defs = {}
+        self.microsoft_fabric_defs = {}
         self.microsoft_power_automate_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
@@ -179,6 +182,7 @@ class EnmasseYAMLImporter:
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
         self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
+        self.microsoft_fabric_importer = MicrosoftFabricImporter(self)
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
@@ -928,6 +932,31 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_microsoft_fabric(self, microsoft_fabric_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Microsoft Fabric connection definitions from a YAML configuration with the database.
+        """
+        if not microsoft_fabric_list:
+            return [], []
+
+        count = len(microsoft_fabric_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Microsoft Fabric connection {noun}')
+
+        # Examine each Microsoft Fabric connection item
+        for idx, item in enumerate(microsoft_fabric_list):
+            logger.info('Microsoft Fabric connection item %d: %s', idx, item)
+
+        created, updated = self.microsoft_fabric_importer.sync_definitions(microsoft_fabric_list, session)
+
+        # Get Microsoft Fabric definitions from the Microsoft Fabric importer
+        self.microsoft_fabric_defs = self.microsoft_fabric_importer.connection_defs
+        logger.info('Processed Microsoft Fabric connection definitions: created=%d updated=%d',
+            len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_microsoft_power_automate(self, microsoft_power_automate_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft Power Automate connection definitions from a YAML configuration with the database.
         """
@@ -1334,6 +1363,20 @@ class EnmasseYAMLImporter:
             self.created_objects['microsoft_cloud'] = microsoft_cloud_created
         if microsoft_cloud_updated:
             self.updated_objects['microsoft_cloud'] = microsoft_cloud_updated
+
+        # Process Microsoft Fabric connection definitions
+        fabric_list = yaml_config.get('microsoft_fabric', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-microsoft-fabric':
+                    fabric_list.append(item)
+        fabric_created, fabric_updated = self.sync_microsoft_fabric(fabric_list, session)
+        if fabric_created:
+            self.created_objects['microsoft_fabric'] = fabric_created
+        if fabric_updated:
+            self.updated_objects['microsoft_fabric'] = fabric_updated
 
         # Process Microsoft Power Automate connection definitions
         power_automate_list = yaml_config.get('microsoft_power_automate', [])

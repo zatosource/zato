@@ -540,6 +540,15 @@ microsoft_cloud:
     scopes: Mail.Read Mail.Send
     tenant_id: 87654321-4321-4321-4321-cba987654321
 
+microsoft_fabric:
+
+  - name: enmasse.cloud.microsoft-fabric.1
+    is_active: true
+    address: https://api.fabric.microsoft.com/v1
+    client_id: 34567890-3456-3456-3456-34567890abcd
+    client_secret: Zato_Enmasse_Env.MicrosoftFabricClientSecret
+    tenant_id: 87654321-6543-6543-6543-edcba9876543
+
 microsoft_power_automate:
 
   - name: enmasse.cloud.microsoft-power-automate.1

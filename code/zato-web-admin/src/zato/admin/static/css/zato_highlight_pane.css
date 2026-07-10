@@ -119,6 +119,35 @@
     color: #fff;
 }
 
+.zato-highlight-pane-overlay-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.zato-highlight-pane-overlay-tab {
+    padding: 4px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    font-size: 13px;
+    color: #bbb;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zato-highlight-pane-overlay-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.zato-highlight-pane-overlay-tab-active,
+.zato-highlight-pane-overlay-tab-active:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
 .zato-highlight-pane-overlay-body {
     padding: 16px 24px;
     flex: 1;

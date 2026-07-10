@@ -1,0 +1,125 @@
+{% comment %}
+Scheduler tab for outgoing REST connections.
+
+Expects in the context:
+* form         - the create or edit form
+* action       - "create" or "edit"
+* field_prefix - "" for create, "edit-" for edit
+{% endcomment %}
+
+<table class="form-data">
+
+    <tr>
+        <td colspan="2" class="scheduler-form-section">Schedule</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}scheduler_run_every">Run every</label></td>
+        <td>
+            {{ form.scheduler_run_every }}
+            {{ form.scheduler_run_unit }}
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_start_date">Start time</label></td>
+        <td>{{ form.scheduler_start_date }}</td>
+    </tr>
+
+    <tr>
+        <td colspan="2" class="scheduler-form-section">Request</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_method">Method</label></td>
+        <td>
+            {{ form.scheduler_method }}
+            <span class="form_hint">Empty means the connection's own method</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_query_string">Query string</label></td>
+        <td>
+            {{ form.scheduler_query_string }}
+            <br/>
+            <span class="form_hint">key=value, one per line, values wrapped in double curly braces are JSONata</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_path_params">Path params</label></td>
+        <td>
+            {{ form.scheduler_path_params }}
+            <br/>
+            <span class="form_hint">key=value, one per line, filling in the URL path's placeholders</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_headers">Headers</label></td>
+        <td>
+            {{ form.scheduler_headers }}
+            <br/>
+            <span class="form_hint">key=value, one per line</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_data">Body</label></td>
+        <td>
+            {{ form.scheduler_data }}
+            <br/>
+            <span class="form_hint">Request body, values wrapped in double curly braces are JSONata</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_security">Security</label></td>
+        <td>
+            {{ form.scheduler_security }}
+            <br/>
+            <span class="form_hint">Empty means the connection's own security definition</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="2" class="scheduler-form-section">Response</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_response_map">Response map</label></td>
+        <td>
+            {{ form.scheduler_response_map }}
+            <br/>
+            <span class="form_hint">JSONata applied to the response before it reaches the callback, empty means the response is passed through as-is</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="2" class="scheduler-form-section">Callback</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_callback_type">Deliver to</label></td>
+        <td>{{ form.scheduler_callback_type }}</td>
+    </tr>
+
+    <tr id="scheduler-callback-service-row-{{ action }}">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_service">Service</label></td>
+        <td>{{ form.scheduler_service }}</td>
+    </tr>
+
+    <tr id="scheduler-callback-topic-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_callback_topic">Topic</label></td>
+        <td>{{ form.scheduler_callback_topic }}</td>
+    </tr>
+
+    <tr id="scheduler-callback-rest-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_callback_rest">Connection</label></td>
+        <td>{{ form.scheduler_callback_rest }}</td>
+    </tr>
+
+</table>
+
+{{ form.scheduler_job_id }}
