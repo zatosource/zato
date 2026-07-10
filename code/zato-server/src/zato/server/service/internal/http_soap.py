@@ -381,10 +381,10 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 # ################################################################################################################################
 
     def _get_channel_service_from_input(self, session, input):
-        """ Returns the service a channel routes to - AS4 channels may have none
+        """ Returns the service a channel routes to - AS2 and AS4 channels may have none
         because their messages can go to a pub/sub topic instead.
         """
-        if input.transport == URL_TYPE.AS4:
+        if input.transport in (URL_TYPE.AS2, URL_TYPE.AS4):
             if not (input.service or input.service_id):
                 return None
 

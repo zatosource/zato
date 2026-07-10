@@ -27,6 +27,8 @@ from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys
     outconn_odata_int_config_keys
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys
+from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
+    outconn_mongodb_int_config_keys
 from zato.server.generic.api.outconn_smb import outconn_smb_config_defaults, outconn_smb_int_config_keys
 from zato.server.generic.connection import GenericConnection
 
@@ -471,6 +473,30 @@ class Generic(ConfigManagerImpl):
 
         # .. and make sure boolean fields are booleans.
         for key in outconn_sftp_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_mongodb(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric and boolean fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in outconn_mongodb_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. make sure numeric fields are integers ..
+        for key in outconn_mongodb_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. and make sure boolean fields are booleans.
+        for key in outconn_mongodb_bool_config_keys:
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)

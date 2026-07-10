@@ -74,6 +74,7 @@ pycparser==2.21
 pycryptodome==3.19.1
 pydantic==2.12.5
 pygments==2.20.0
+PyJWT==2.12.1
 pymongo==4.13.0
 PyMySQL==1.1.1
 pyOpenSSL==26.0.0
