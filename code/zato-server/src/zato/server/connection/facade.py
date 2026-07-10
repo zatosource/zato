@@ -542,11 +542,11 @@ class AS2Invoker:
 
 # ################################################################################################################################
 
-    def send(self, payload:'as2_payload', filename:'strnone'=None) -> 'AS2SendResult':
+    def send(self, payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'AS2SendResult':
         """ Sends one AS2 message to the connection's configured endpoint,
         reconciling the synchronous MDN when one was requested.
         """
-        out = self.conn.send(self.cid, payload, filename)
+        out = self.conn.send(self.cid, payload, filename, needs_audit=needs_audit)
         return out
 
 # ################################################################################################################################

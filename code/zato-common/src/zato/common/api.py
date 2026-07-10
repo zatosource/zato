@@ -266,6 +266,29 @@ class AS2:
         Rotation_Job_Interval_Hours = 1
         Rotation_Service            = 'zato.generic.connection.complete-as2-rotation'
 
+    class Alerting:
+        """ The B2B alerting job - overdue acknowledgments, pending MDNs, expiring certificates
+        and missing ship notices raise one email digest per run.
+        """
+        # The interval job every server ensures exists, the service it invokes
+        # and how often it runs.
+        Job_Name           = 'zato.b2b.alerting'
+        Job_Interval_Hours = 1
+        Service            = 'zato.b2b.alerting.run'
+
+        # A certificate expiring within this many days raises a finding.
+        Cert_Warning_Days = 30
+
+        # The overdue window for partners that do not set ack_overdue_after, in seconds.
+        Default_Ack_Overdue_Seconds = 4 * 3600
+
+        # The keys the scheduler job's extra data may carry - which SMTP connection
+        # sends the digest, its addressing and the Dashboard address the links point to.
+        Extra_SMTP_Conn     = 'smtp_conn'
+        Extra_From          = 'from'
+        Extra_To            = 'to'
+        Extra_Dashboard_URL = 'dashboard_url'
+
     # The AS2 configuration fields shared by channels and outgoing connections.
     Common_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_next_decryption_key',
         'as2_next_decryption_cert', 'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors')

@@ -55,7 +55,7 @@
         <table class="form-data" border=""  style="table-layout: fixed; width:100%; padding-top:20px !important">
             <tr>
                 <td style="width:100px !important">
-                    Username
+                    <label for="{{ form.username.id_for_label }}">Username</label>
                 </td>
                 <td>
                     {{ form.username }}
@@ -63,7 +63,7 @@
             </tr>
             <tr>
                 <td>
-                    Password
+                    <label for="{{ form.password.id_for_label }}">Password</label>
                 </td>
                 <td>
                     {{ form.password }}

@@ -35,14 +35,32 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.cloud.confluence.field_descriptions = {
+    'id_name': 'A unique name for this Confluence connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_address': 'Base address of the Confluence instance,<br>e.g. https://example.atlassian.net.<br>All API calls the connection makes go to this host.',
+    'id_username': 'Email address or username the connection<br>authenticates as. Content is read and written<br>with this user\'s permissions.<br>The API token is set separately<br>with the Change API token link.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cloud.confluence.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Confluence connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.cloud.confluence.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.confluence.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Confluence connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.cloud.confluence.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

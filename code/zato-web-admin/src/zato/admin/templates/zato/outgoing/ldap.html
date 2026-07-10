@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -22,6 +23,7 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} LDAP {% endcomment %}
@@ -256,7 +258,7 @@
                 <form novalidate action="{% url "out-ldap-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td style="vertical-align:middle;width:8%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -264,12 +266,12 @@
                             <td style="vertical-align:middle"></td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ create_form.pool_size }}
                                 </label>
@@ -277,7 +279,7 @@
                         </tr>
                         <tr>
                             <td>
-                                Username
+                                <label for="{{ create_form.username.id_for_label }}">Username</label>
                             </td>
                             <td>
                                 <label>
@@ -287,7 +289,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                                Servers
+                                <label for="{{ create_form.server_list.id_for_label }}">Servers</label>
                         </td>
                             <td>
                                 {{ create_form.server_list }}
@@ -305,12 +307,12 @@
                         <tr class="pool-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.pool_name.id_for_label }}">
                                 Name
                                 {{ create_form.pool_name }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.pool_max_cycles.id_for_label }}">
                                 Max. cycles
                                 {{ create_form.pool_max_cycles }}
                                 </label>
@@ -319,17 +321,17 @@
                         <tr class="pool-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.pool_ha_strategy.id_for_label }}">
                                 HA
                                 {{ create_form.pool_ha_strategy }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.get_info.id_for_label }}">
                                 Info
                                 {{ create_form.get_info }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.auto_bind.id_for_label }}">
                                 Auto-bnd
                                 {{ create_form.auto_bind }}
                                 </label>
@@ -347,17 +349,17 @@
                         <tr class="timeout-block hidden">
                             <td>Timeout</td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.connect_timeout.id_for_label }}">
                                 Connection
                                 {{ create_form.connect_timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.pool_exhaust_timeout.id_for_label }}">
                                 Exhaust
                                 {{ create_form.pool_exhaust_timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.pool_keep_alive.id_for_label }}">
                                 Keep-alive
                                 {{ create_form.pool_keep_alive }}
                                 </label>
@@ -442,12 +444,12 @@
                         <tr class="auth-block hidden">
                             <td>Auth</td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.auth_type.id_for_label }}">
                                 Type
                                 {{ create_form.auth_type }}
-                                <label>
+                                </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.sasl_mechanism.id_for_label }}">
                                 SASL
                                 {{ create_form.sasl_mechanism }}
                                 </label>
@@ -464,7 +466,7 @@
                         <tr class="misc-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.is_read_only.id_for_label }}">
                                     R/O
                                     {{ create_form.is_read_only }}
                                     </label>
@@ -474,17 +476,17 @@
                                     {{ create_form.is_stats_enabled }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ create_form.use_auto_range.id_for_label }}">
                                     Auto-rng
                                     {{ create_form.use_auto_range }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ create_form.should_check_names.id_for_label }}">
                                     Chk. names
                                     {{ create_form.should_check_names }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ create_form.should_return_empty_attrs.id_for_label }}">
                                     Emp. attrs
                                     {{ create_form.should_return_empty_attrs }}
                                     </label>
@@ -492,7 +494,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -509,7 +514,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td style="vertical-align:middle;width:8%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -517,12 +522,12 @@
                             <td style="vertical-align:middle"></td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ edit_form.pool_size }}
                                 </label>
@@ -530,7 +535,7 @@
                         </tr>
                         <tr>
                             <td>
-                                Username
+                                <label for="{{ edit_form.username.id_for_label }}">Username</label>
                             </td>
                             <td>
                                 <label>
@@ -540,7 +545,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                                Servers
+                                <label for="{{ edit_form.server_list.id_for_label }}">Servers</label>
                         </td>
                             <td>
                                 {{ edit_form.server_list }}
@@ -558,12 +563,12 @@
                         <tr class="pool-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.pool_name.id_for_label }}">
                                 Name
                                 {{ edit_form.pool_name }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.pool_max_cycles.id_for_label }}">
                                 Max. cycles
                                 {{ edit_form.pool_max_cycles }}
                                 </label>
@@ -572,17 +577,17 @@
                         <tr class="pool-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.pool_ha_strategy.id_for_label }}">
                                 HA
                                 {{ edit_form.pool_ha_strategy }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.get_info.id_for_label }}">
                                 Info
                                 {{ edit_form.get_info }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.auto_bind.id_for_label }}">
                                 Auto-bnd
                                 {{ edit_form.auto_bind }}
                                 </label>
@@ -600,17 +605,17 @@
                         <tr class="timeout-block hidden">
                             <td>Timeout</td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.connect_timeout.id_for_label }}">
                                 Connection
                                 {{ edit_form.connect_timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.pool_exhaust_timeout.id_for_label }}">
                                 Exhaust
                                 {{ edit_form.pool_exhaust_timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.pool_keep_alive.id_for_label }}">
                                 Keep-alive
                                 {{ edit_form.pool_keep_alive }}
                                 </label>
@@ -677,7 +682,7 @@
                         <tr class="tls-block hidden">
                             <td style="vertical-align:middle"></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.tls_ca_certs_file.id_for_label }}">
                                 CA certificates file
                                 <br/>
                                 {{ edit_form.tls_ca_certs_file }}
@@ -695,12 +700,12 @@
                         <tr class="auth-block hidden">
                             <td>Auth</td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.auth_type.id_for_label }}">
                                 Type
                                 {{ edit_form.auth_type }}
-                                <label>
+                                </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.sasl_mechanism.id_for_label }}">
                                 SASL
                                 {{ edit_form.sasl_mechanism }}
                                 </label>
@@ -717,27 +722,27 @@
                         <tr class="misc-block hidden">
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.is_read_only.id_for_label }}">
                                     R/O
                                     {{ edit_form.is_read_only }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ edit_form.is_stats_enabled.id_for_label }}">
                                     Stats
                                     {{ edit_form.is_stats_enabled }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ edit_form.use_auto_range.id_for_label }}">
                                     Auto-rng
                                     {{ edit_form.use_auto_range }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ edit_form.should_check_names.id_for_label }}">
                                     Chk. names
                                     {{ edit_form.should_check_names }}
                                     </label>
                                     |
-                                    <label>
+                                    <label for="{{ edit_form.should_return_empty_attrs.id_for_label }}">
                                     Emp. attrs
                                     {{ edit_form.should_return_empty_attrs }}
                                     </label>
@@ -745,7 +750,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -766,7 +774,7 @@
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Password</label></td>
                             <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />

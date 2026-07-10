@@ -36,14 +36,34 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.cloud.microsoft_fabric.field_descriptions = {
+    'id_name': 'A unique name for this Microsoft Fabric connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_address': 'Address of the Fabric REST API,<br>e.g. https://api.fabric.microsoft.com/v1.<br>Change it only when using a non-default cloud.',
+    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the connection signs in to. Found on the overview page<br>of the app registration in the Azure portal.',
+    'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as. The app needs<br>permissions to call the Fabric API.',
+    'id_client_secret': 'Value of a client secret created for the app registration.<br>Note that secrets expire in Azure<br>and need to be rotated periodically.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cloud.microsoft_fabric.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Microsoft Fabric connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.cloud.microsoft_fabric.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.microsoft_fabric.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Microsoft Fabric connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.cloud.microsoft_fabric.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

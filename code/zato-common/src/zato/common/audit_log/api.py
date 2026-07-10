@@ -144,6 +144,7 @@ class AuditEvent:
     Message_Sent         = 'message-sent'
     MDN_Sent             = 'mdn-sent'
     MDN_Received         = 'mdn-received'
+    Alert_Raised         = 'alert-raised'
 
 # ################################################################################################################################
 

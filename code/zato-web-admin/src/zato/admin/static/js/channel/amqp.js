@@ -28,12 +28,36 @@ $(document).ready(function() {
     $.fn.zato.data_table.maybe_open_create_form($.fn.zato.channel.amqp.create);
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.amqp.field_descriptions = {
+    'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
+    'id_address': 'Address of the AMQP broker as host:port,<br>e.g. localhost:5672.',
+    'id_username': 'Username the channel authenticates with<br>when connecting to the broker.',
+    'id_password': 'Password for the username above.<br>Sent to the broker during connection setup.',
+    'id_queue': 'Queue to consume messages from.<br>Each message taken off this queue<br>invokes the service below.',
+    'id_service': 'Service invoked for each message from the queue.<br>The message body is in self.request.payload.',
+    'id_consumer_tag_prefix': 'Prefix of the consumer tag this channel uses<br>to identify itself to the broker.<br>Makes the channel easy to spot<br>in the broker\'s management tools.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.amqp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new AMQP channel', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.channel.amqp.field_descriptions
+    });
 }
 
 $.fn.zato.channel.amqp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the AMQP channel', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.channel.amqp.field_descriptions
+    });
 }
 
 $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {

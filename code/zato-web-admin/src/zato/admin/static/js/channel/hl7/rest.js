@@ -30,14 +30,34 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.rest.field_descriptions = {
+    'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
+    'id_json_path': 'When requests arrive as JSON documents,<br>the path to the element with the HL7 payload,<br>e.g. data.hl7. The channel extracts the message<br>from that location before processing it.',
+    'id_url_path': 'URL path clients send their HL7 messages to<br>over REST, e.g. /hl7/v2/adt.',
+    'id_service': 'Service invoked for each incoming message.<br>The HL7 data is in self.request.payload<br>and, with parsing enabled, it is already<br>a parsed HL7 object with segment access.',
+    'id_security_id': 'Security definition clients must satisfy<br>to invoke this channel. Without one,<br>anyone who can reach the URL path<br>can send messages.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.rest.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 REST channel', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.channel.hl7.rest.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.hl7.rest.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 REST channel', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.channel.hl7.rest.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

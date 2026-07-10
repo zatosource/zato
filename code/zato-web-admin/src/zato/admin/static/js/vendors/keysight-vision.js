@@ -36,14 +36,34 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.vendors.keysight.vision.field_descriptions = {
+
+    'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
+    'id_host': 'Address of the Vision node\'s management interface,<br>including the scheme, e.g. https://vision.example.com.',
+    'id_username': 'Username the connection authenticates with<br>against the Vision node\'s web API.',
+    'id_password': 'Password for the username above.<br>After the connection is created, change it<br>with the Change password link.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.vendors.keysight.vision.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Keysight Vision Series connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.vendors.keysight.vision.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.vendors.keysight.vision.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Keysight Vision Series connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.vendors.keysight.vision.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

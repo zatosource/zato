@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -22,6 +23,7 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} OData {% endcomment %}
@@ -178,7 +180,7 @@
                 <form novalidate action="{% url "out-odata-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:12%">Name</td>
+                            <td style="vertical-align:middle;width:12%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -203,7 +205,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.address.id_for_label }}">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
 
@@ -233,7 +235,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.username.id_for_label }}">Username</label></td>
                             <td>{{ create_form.username }}</td>
                         </tr>
 
@@ -246,24 +248,27 @@
                             </td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Token URL</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.token_url.id_for_label }}">Token URL</label></td>
                             <td>{{ create_form.token_url }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Tenant ID</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.tenant_id.id_for_label }}">Tenant ID</label></td>
                             <td>{{ create_form.tenant_id }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Client ID</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.client_id.id_for_label }}">Client ID</label></td>
                             <td>{{ create_form.client_id }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Scopes</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.scopes.id_for_label }}">Scopes</label></td>
                             <td>{{ create_form.scopes }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -280,7 +285,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:12%">Name</td>
+                            <td style="vertical-align:middle;width:12%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -305,7 +310,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.address.id_for_label }}">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
 
@@ -335,7 +340,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.username.id_for_label }}">Username</label></td>
                             <td>{{ edit_form.username }}</td>
                         </tr>
 
@@ -348,24 +353,27 @@
                             </td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Token URL</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.token_url.id_for_label }}">Token URL</label></td>
                             <td>{{ edit_form.token_url }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Tenant ID</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.tenant_id.id_for_label }}">Tenant ID</label></td>
                             <td>{{ edit_form.tenant_id }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Client ID</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.client_id.id_for_label }}">Client ID</label></td>
                             <td>{{ edit_form.client_id }}</td>
                         </tr>
                         <tr class="oauth2-block hidden">
-                            <td style="vertical-align:middle">Scopes</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.scopes.id_for_label }}">Scopes</label></td>
                             <td>{{ edit_form.scopes }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -386,7 +394,7 @@
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Secret</td>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Secret</label></td>
                             <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />

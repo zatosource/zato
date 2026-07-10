@@ -27,12 +27,38 @@ $(document).ready(function() {
    });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.sap.field_descriptions = {
+   'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.out.sap.',
+   'id_is_active': 'Whether this connection can be used.<br>Services cannot invoke SAP<br>through an inactive connection.',
+   'id_host': 'Host name or IP address of the SAP<br>application server the RFC calls go to.',
+   'id_sysnr': 'Two-digit instance number of the SAP system,<br>e.g. 00. Together with the host it decides<br>the gateway port the connection uses.',
+   'id_sysid': 'Three-character system ID of the SAP system,<br>e.g. PRD or DEV.',
+   'id_user': 'SAP user the RFC calls run as. It needs<br>authorizations for the function modules invoked.<br>The password is set with the Change password link.',
+   'id_client': 'Three-digit SAP client (mandant) to log on to,<br>e.g. 100. It selects the business data set<br>within the system.',
+   'id_router': 'SAPRouter route string when the system sits<br>behind a SAProuter, e.g. /H/saprouter.example.com/S/3299.<br>Leave empty for direct connections.',
+   'id_pool_size': 'How many RFC connections are kept open in the pool.<br>More lets concurrent services call SAP in parallel<br>at the cost of more open sessions.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.sap.create = function() {
    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SAP RFC connection', null);
+   $.fn.zato.how_it_works.init({
+       badgeId: 'create-how-it-works',
+       divId: '#create-div',
+       descriptions: $.fn.zato.outgoing.sap.field_descriptions
+   });
 }
 
 $.fn.zato.outgoing.sap.edit = function(id) {
    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SAP RFC connection', id);
+   $.fn.zato.how_it_works.init({
+       badgeId: 'edit-how-it-works',
+       divId: '#edit-div',
+       descriptions: $.fn.zato.outgoing.sap.field_descriptions
+   });
 }
 
 $.fn.zato.outgoing.sap.data_table.new_row = function(item, data, include_tr) {

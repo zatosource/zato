@@ -46,9 +46,61 @@ $.fn.zato.how_it_works.init = function(config) {
         }
     });
 
+    // .. mark labels that have descriptions so they get the help cursor ..
+    $.fn.zato.how_it_works._markLabels(config);
+
+    // .. clicking a marked label shows that field's tooltip,
+    // .. activating help mode first if it is not active yet ..
+    var container = document.getElementById(config.divId.replace('#', ''));
+    $(container).off('click.how_it_works_label').on('click.how_it_works_label', 'label.how-it-works-label', function(event) {
+        event.stopPropagation();
+
+        var fieldId = $(this).attr('for');
+        var howItWorks = $.fn.zato.how_it_works;
+
+        // .. if help mode is active for another dialog, leave it first ..
+        if (howItWorks._state && howItWorks._state.container !== container) {
+            howItWorks._deactivate();
+        }
+
+        // .. activate help mode on this badge if nothing is active yet ..
+        if (!howItWorks._state) {
+            howItWorks._activate(badge);
+        }
+
+        // .. jump to the clicked field ..
+        var state = howItWorks._state;
+        if (state) {
+            var fieldIndex = howItWorks._findFieldIndex(state, fieldId);
+            if (fieldIndex >= 0) {
+                howItWorks._showFieldTooltip(state, fieldIndex);
+            }
+        }
+    });
+
     // .. set up inline per-row badges if configured ..
     if (config.inlineBadge) {
         $.fn.zato.how_it_works._setupInlineBadges(config, badge);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._markLabels = function(config) {
+
+    var container = document.getElementById(config.divId.replace('#', ''));
+    var descriptions = config.descriptions;
+    var labels = container.querySelectorAll('label[for]');
+
+    for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
+        var label = labels[labelIndex];
+        var fieldId = label.getAttribute('for');
+        var lookupId = fieldId.replace('id_edit-', 'id_');
+
+        // .. only labels with a description get the help cursor ..
+        if (descriptions[lookupId]) {
+            label.classList.add('how-it-works-label');
+        }
     }
 };
 
@@ -221,15 +273,7 @@ $.fn.zato.how_it_works._activate = function(badge) {
     state._keydownTarget = isJqueryDialog ? dialog : document;
     state._keydownTarget.addEventListener('keydown', state._keydownHandler, true);
 
-    // .. bind click on labels to switch field ..
-    $(container).on('click.how_it_works_label', 'label[for]', function(event) {
-        event.stopPropagation();
-        var fieldId = $(this).attr('for');
-        var fieldIndex = $.fn.zato.how_it_works._findFieldIndex(state, fieldId);
-        if (fieldIndex >= 0) {
-            $.fn.zato.how_it_works._showFieldTooltip(state, fieldIndex);
-        }
-    });
+    // .. label clicks are handled by the persistent handler bound in init ..
 
     // .. bind click on selects to switch field ..
     $(container).on('mousedown.how_it_works_select', 'select', function(event) {
@@ -249,7 +293,15 @@ $.fn.zato.how_it_works._activate = function(badge) {
         if (!row) {
             return;
         }
-        var label = row.querySelector('label[for]');
+        // .. prefer the focused field's own label so multi-field rows
+        // .. switch to the right field, not always the row's first one ..
+        var label = null;
+        if (event.target.id) {
+            label = row.querySelector('label[for="' + event.target.id + '"]');
+        }
+        if (!label) {
+            label = row.querySelector('label[for]');
+        }
         if (!label) {
             return;
         }
@@ -394,8 +446,8 @@ $.fn.zato.how_it_works._deactivate = function() {
     // .. unbind ..
     state._keydownTarget.removeEventListener('keydown', state._keydownHandler, true);
     state.container.removeEventListener('focusin', state._focusinHandler, true);
+    // .. the label click handler stays bound, it is persistent from init ..
     $(document).off('mousedown.how_it_works_outside');
-    $(state.container).off('click.how_it_works_label');
     $(state.container).off('mousedown.how_it_works_select');
 
     $.fn.zato.how_it_works._state = null;
@@ -561,32 +613,35 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
             continue;
         }
 
-        var label = rows[rowIndex].querySelector('label[for]');
-        if (!label) {
-            continue;
-        }
+        // .. collect every labeled field in the row so rows holding several fields,
+        // .. e.g. "Active | Pool size", each become separate tooltip stops ..
+        var labels = rows[rowIndex].querySelectorAll('label[for]');
 
-        var fieldId = label.getAttribute('for');
-        var lookupId = fieldId.replace('id_edit-', 'id_');
-        var description = descriptions[lookupId];
-        if (!description) {
-            continue;
-        }
+        for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
 
-        // .. use a custom target element if configured, otherwise the label ..
-        var targetElement = label;
-        if (config.targetSelector) {
-            var customTarget = rows[rowIndex].querySelector(config.targetSelector);
-            if (customTarget) {
-                targetElement = customTarget;
+            var label = labels[labelIndex];
+            var fieldId = label.getAttribute('for');
+            var lookupId = fieldId.replace('id_edit-', 'id_');
+            var description = descriptions[lookupId];
+            if (!description) {
+                continue;
             }
-        }
 
-        fields.push({
-            element: targetElement,
-            fieldId: fieldId,
-            description: description,
-        });
+            // .. use a custom target element if configured, otherwise the label ..
+            var targetElement = label;
+            if (config.targetSelector) {
+                var customTarget = rows[rowIndex].querySelector(config.targetSelector);
+                if (customTarget) {
+                    targetElement = customTarget;
+                }
+            }
+
+            fields.push({
+                element: targetElement,
+                fieldId: fieldId,
+                description: description,
+            });
+        }
     }
 
     return fields;

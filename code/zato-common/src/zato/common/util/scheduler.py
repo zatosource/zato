@@ -50,6 +50,9 @@ logger = getLogger('zato_scheduler')
 # is created upfront and the deployment sync finds it already in place.
 _as2_rotation_service_impl_name = 'zato.server.service.internal.generic.connection.CompleteAS2Rotation'
 
+# The Python path of the service the B2B alerting job invokes, created upfront the same way.
+_b2b_alerting_service_impl_name = 'zato.server.service.internal.b2b.B2BAlerting'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -89,6 +92,51 @@ def ensure_as2_rotation_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     job = Job(None, AS2.Default.Rotation_Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
         cluster=cluster, service=service)
     interval = IntervalBasedJob(None, job, hours=AS2.Default.Rotation_Job_Interval_Hours)
+
+    session.add(job)
+    session.add(interval)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_b2b_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that runs the B2B alerting sweep exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+
+    existing = session.query(Job).\
+        filter(Job.name==AS2.Alerting.Job_Name).\
+        filter(Job.cluster_id==cluster_id).\
+        first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).\
+        filter(Cluster.id==cluster_id).\
+        one()
+
+    service = session.query(Service).\
+        filter(Service.name==AS2.Alerting.Service).\
+        filter(Service.cluster_id==cluster_id).\
+        first()
+
+    # On a first-ever start the service is not in ODB yet, so its row is created here
+    # and the deployment sync will find it already in place.
+    if not service:
+        service = Service(None, AS2.Alerting.Service, True, _b2b_alerting_service_impl_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # The start date is only the anchor the hourly interval counts from.
+    start_date = datetime.now(timezone.utc)
+    start_date = start_date.replace(tzinfo=None)
+
+    job = Job(None, AS2.Alerting.Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
+        cluster=cluster, service=service)
+    interval = IntervalBasedJob(None, job, hours=AS2.Alerting.Job_Interval_Hours)
 
     session.add(job)
     session.add(interval)

@@ -30,13 +30,32 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.ntlm.field_descriptions = {
+    'id_name': 'A unique name for this definition.<br>Used to identify it in outgoing connections,<br>logs and the dashboard.',
+    'id_username': 'The Windows account to log in as,<br>in the DOMAIN\\username format.<br>Outgoing connections use it to authenticate<br>with Windows and Active Directory-protected APIs.',
+    'id_password': 'The password of the Windows account.<br>A random one is assigned at creation,<br>change it before the definition is used.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.ntlm.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create an NTLM definition', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.security.ntlm.field_descriptions
+    });
 }
 
 $.fn.zato.security.ntlm.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit NTLM definition', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.security.ntlm.field_descriptions
+    });
 }
 
 $.fn.zato.security.ntlm.data_table.new_row = function(item, data, include_tr) {

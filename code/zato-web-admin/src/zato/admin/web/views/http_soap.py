@@ -55,6 +55,9 @@ TRANSPORT = {
     'soap': 'SOAP',
     }
 
+# Channels whose service is this one are API gateways and get a badge in the channel list
+Gateway_Trigger_Service = 'helpers.service-gateway'
+
 _rest_security_type_supported = {
     SEC_DEF_TYPE.APIKEY,
     SEC_DEF_TYPE.BASIC_AUTH,
@@ -333,6 +336,7 @@ def index(req): # type: ignore
         'req':req,
         'openapi_sample_data': openapi_sample_data,
         'internal_services': internal_services,
+        'gateway_trigger_service': Gateway_Trigger_Service,
         'zato_template_name': 'zato/http_soap/index.html',
         }
 

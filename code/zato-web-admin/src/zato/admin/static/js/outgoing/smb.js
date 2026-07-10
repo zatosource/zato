@@ -30,14 +30,33 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.smb.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to transfer files over SMB.',
+    'id_host': 'Host name or IP address of the SMB server,<br>e.g. a Windows file server or a Samba host.<br>Shares and paths are given later, in API calls.',
+    'id_username': 'Username to authenticate as, e.g. a domain<br>account in the DOMAIN\\user form<br>or a local account name.',
+    'id_secret': 'Password for the username above.<br>It is stored encrypted in the ODB.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.smb.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SMB connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.smb.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.smb.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SMB connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.smb.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

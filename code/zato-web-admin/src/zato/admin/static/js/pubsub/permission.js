@@ -545,8 +545,22 @@ $.fn.zato.pubsub.permission.data_table = {};
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.permission.field_descriptions = {
+
+    'id_sec_base_id': 'The Basic Auth definition this permission applies to.<br>It represents an API client of pub/sub topics,<br>the same credentials are used to publish and subscribe.',
+    'id_access_type': 'What the client is allowed to do with matching topics.<br>Publisher can only send messages, subscriber can only<br>receive them, and publisher and subscriber can do both.',
+    'id_pattern_type_0': 'Topic patterns this permission covers.<br>Use * to match a whole name segment, e.g. orders.*<br>matches orders.processed but not orders.eu.processed.<br>Exact patterns are evaluated before wildcards.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.pubsub.permission.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new permission', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.pubsub.permission.field_descriptions
+    });
 
     // Function to populate security definitions and initialize form
     function initializeCreateForm() {
@@ -593,6 +607,11 @@ $.fn.zato.pubsub.permission.edit = function(id) {
     }
 
     $.fn.zato.data_table._create_edit('edit', 'Update permission `' + instance.name + '`', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.pubsub.permission.field_descriptions
+    });
 
     $('#edit-div').hide();
 
@@ -929,8 +948,10 @@ function populatePatterns(formType, patternString) {
             patternValue = patternValue.substring(4);
         }
 
+        // The first select carries the id the Patterns caption label points at
+        var selectId = index === 0 ? 'id_' + (formType === 'edit' ? 'edit-' : '') + 'pattern_type_0' : '';
         var row = $('<div class="pattern-row">' +
-            '<select name="pattern_type_' + index + '" class="pattern-type-select">' +
+            '<select' + (selectId ? ' id="' + selectId + '"' : '') + ' name="pattern_type_' + index + '" class="pattern-type-select">' +
             '<option value="pub"' + (patternType === 'pub' ? ' selected' : '') + '>Publish</option>' +
             '<option value="sub"' + (patternType === 'sub' ? ' selected' : '') + '>Subscribe</option>' +
             '</select>' +

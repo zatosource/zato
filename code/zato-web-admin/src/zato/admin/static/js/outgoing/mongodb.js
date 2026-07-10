@@ -30,14 +30,38 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.mongodb.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services refer to it by this exact name.',
+    'id_server_list': 'MongoDB servers as host:port, one per line,<br>e.g. localhost:27017. List all the members<br>when connecting to a replica set.',
+    'id_username': 'Username to authenticate with.<br>Leave empty if the server<br>does not require authentication.',
+    'id_secret': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
+    'id_auth_source': 'Database the credentials are defined in.<br>MongoDB defaults to admin.',
+    'id_replica_set': 'Name of the replica set to require.<br>Leave empty for standalone servers.',
+    'id_pool_size_max': 'Maximum number of connections the client pool<br>keeps open to the server at the same time.',
+    'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates<br>used to verify the server\'s certificate.',
+    'id_tls_cert_key_file': 'Path to a PEM file with the client certificate<br>and its private key combined, for mutual TLS.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.mongodb.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing MongoDB connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.mongodb.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.mongodb.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing MongoDB connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.mongodb.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

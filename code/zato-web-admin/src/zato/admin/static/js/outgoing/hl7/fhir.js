@@ -34,14 +34,33 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.hl7.fhir.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services obtain a client with self.fhir[name].',
+    'id_address': 'Base URL of the FHIR server,<br>e.g. https://fhir.example.com.<br>Resource paths are appended to it.',
+    'id_username': 'Security definition the connection<br>authenticates with, e.g. Basic Auth or OAuth.<br>Pick no security for open servers.',
+    'id_extra': 'Additional client options, one key=value per line.<br>Passed as-is to the underlying FHIR client.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.hl7.fhir.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 FHIR connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.hl7.fhir.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.hl7.fhir.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 FHIR connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.hl7.fhir.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -348,7 +348,7 @@
 
                         <!-- 3 -->
                         <td>
-                            {% if connection == 'channel' %}<span class="gateway-badge" id="gw-badge-{{ item.id }}">GW</span>{% endif %}<span class="name-value">{{ item.name }}</span>
+                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}<span class="name-value">{{ item.name }}</span>
                         </td>
 
                         <!-- 4 -->
@@ -529,7 +529,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.host.id_for_label }}">Host</label></td>
                             <td>{{ create_form.host }}</td>
                         </tr>
                         {% endif %}
@@ -549,7 +549,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr class="gateway-service-list-row" id="gateway-service-list-row-create">
-                            <td style="vertical-align:middle">Gateway services</td>
+                            <td style="vertical-align:middle"><label for="id_gateway_service_list">Gateway services</label></td>
                             <td>
                                 <textarea id="id_gateway_service_list" name="gateway_service_list" rows="4" cols="40"></textarea>
                                 <br/>
@@ -604,7 +604,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Ping method
+                            <td style="vertical-align:middle"><label for="{{ create_form.ping_method.id_for_label }}">Ping method</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_ping_method }} </span>
                             </td>
@@ -613,7 +613,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle">Pool size
+                            <td style="vertical-align:middle"><label for="{{ create_form.pool_size.id_for_label }}">Pool size</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_pool_size }} </span>
                             </td>
@@ -622,7 +622,7 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle">Timeout (s)
+                            <td style="vertical-align:middle"><label for="{{ create_form.timeout.id_for_label }}">Timeout (s)</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
@@ -631,7 +631,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle">Content type</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.content_type.id_for_label }}">Content type</label></td>
                             <td>{{ create_form.content_type }}</td>
                         </tr>
                         {% endif %}
@@ -693,7 +693,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Validate SSL/TLS</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ create_form.validate_tls }}</td>
                         </tr>
                         {% endif %}
@@ -802,7 +802,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.host.id_for_label }}">Host</label></td>
                             <td>{{ edit_form.host }}</td>
                         </tr>
                         {% endif %}
@@ -822,7 +822,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr class="gateway-service-list-row" id="gateway-service-list-row-edit">
-                            <td style="vertical-align:middle">Gateway services</td>
+                            <td style="vertical-align:middle"><label for="id_edit-gateway_service_list">Gateway services</label></td>
                             <td>
                                 <textarea id="id_edit-gateway_service_list" name="edit-gateway_service_list" rows="4" cols="40"></textarea>
                                 <br/>
@@ -877,7 +877,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Ping method
+                            <td style="vertical-align:middle"><label for="{{ edit_form.ping_method.id_for_label }}">Ping method</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_ping_method }} </span>
                             </td>
@@ -886,7 +886,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle">Pool size
+                            <td style="vertical-align:middle"><label for="{{ edit_form.pool_size.id_for_label }}">Pool size</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_pool_size }} </span>
                             </td>
@@ -895,7 +895,7 @@
                         {% endif %}
 
                         <tr>
-                            <td style="vertical-align:middle">Timeout (s)
+                            <td style="vertical-align:middle"><label for="{{ edit_form.timeout.id_for_label }}">Timeout (s)</label>
                             <br/>
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
@@ -904,7 +904,7 @@
 
                         {% if transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle">Content type</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.content_type.id_for_label }}">Content type</label></td>
                             <td>{{ edit_form.content_type }}</td>
                         </tr>
                         {% endif %}
@@ -913,7 +913,7 @@
 
                         {% if connection == 'outgoing' %}
                         <tr>
-                            <td style="vertical-align:middle">Validate SSL/TLS</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ edit_form.validate_tls }}</td>
                         </tr>
                         {% endif %}

@@ -28,12 +28,36 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.odata.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to invoke the OData API.',
+    'id_address': 'Service root URL of the OData API,<br>e.g. https://host/sap/opu/odata/sap/API_BUSINESS_PARTNER.<br>All entity sets are addressed relative to it.',
+    'id_username': 'Username for Basic authentication.<br>Leave empty with OAuth2 - the secret is set<br>separately with the Change secret link.',
+    'id_token_url': 'OAuth2 token endpoint the connection obtains<br>access tokens from, e.g.<br>https://login.microsoftonline.com/tenant/oauth2/v2.0/token.',
+    'id_tenant_id': 'Directory or tenant the OAuth2 client belongs to,<br>e.g. an Entra ID tenant with Microsoft APIs.',
+    'id_client_id': 'OAuth2 client ID registered with the<br>authorization server. Its secret is set<br>with the Change secret link.',
+    'id_scopes': 'OAuth2 scopes requested with each token,<br>one per line, e.g.<br>https://environment.dynamics.com/.default.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.odata.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing OData connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.odata.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.odata.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing OData connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.odata.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.odata.data_table.new_row = function(item, data, include_tr) {

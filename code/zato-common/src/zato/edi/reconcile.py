@@ -18,6 +18,7 @@ from sqlalchemy import and_, exists, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditSource, event_table
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,12 +106,26 @@ class Reconciler:
         control_number:'str',
         cid:'str',
         data:'str',
+        doc_type:'str' = '',
         ) -> 'None':
         """ Writes one reconciliation event - the pair is the object name
-        and the normalized control number is the message id.
+        and the normalized control number is the message id. A document type
+        joins the event's JSON data, which is what the business-document
+        timing guard of the alerting job runs on.
         """
         pair = _pair_key(sender, receiver)
         msg_id = _normalize_control_number(control_number)
+
+        # The document type joins whatever JSON data the caller gave - callers passing
+        # a doc_type must pass JSON data or none at all.
+        if doc_type:
+            if data:
+                details = loads(data)
+            else:
+                details = {}
+
+            details['doc_type'] = doc_type
+            data = dumps(details)
 
         self.audit_log.insert(AuditSource.X12, event_type, pair, cid=cid, msg_id=msg_id, data=data)
 
@@ -123,11 +138,12 @@ class Reconciler:
         control_number:'str',
         cid:'str' = '',
         data:'str' = '',
+        doc_type:'str' = '',
         ) -> 'None':
         """ Records that an interchange left for the partner - the send half
         of the reconciliation pair.
         """
-        self._record(AuditEvent.Interchange_Sent, sender, receiver, control_number, cid, data)
+        self._record(AuditEvent.Interchange_Sent, sender, receiver, control_number, cid, data, doc_type)
 
 # ################################################################################################################################
 
@@ -138,10 +154,11 @@ class Reconciler:
         control_number:'str',
         cid:'str' = '',
         data:'str' = '',
+        doc_type:'str' = '',
         ) -> 'None':
         """ Records that an interchange arrived from the partner.
         """
-        self._record(AuditEvent.Interchange_Received, sender, receiver, control_number, cid, data)
+        self._record(AuditEvent.Interchange_Received, sender, receiver, control_number, cid, data, doc_type)
 
 # ################################################################################################################################
 

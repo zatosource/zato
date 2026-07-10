@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -22,6 +23,7 @@
 
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
     {% comment %} SQL {% endcomment %}
@@ -170,12 +172,12 @@
                 <form novalidate action="{% url "out-sql-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:10%">Name</td>
+                            <td style="vertical-align:middle;width:10%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
                             <td colspan="3">{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
                             <td colspan="3">{{ create_form.is_active }}
                             |
                             Pool size
@@ -184,12 +186,12 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Type</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.engine.id_for_label }}">Type</label></td>
                             <td colspan="3">{{ create_form.engine }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.host.id_for_label }}">Host</label></td>
                             <td colspan="3">{{ create_form.host }}
                             |
                             Port
@@ -198,7 +200,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Database name</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.db_name.id_for_label }}">Database name</label></td>
                             <td colspan="3">{{ create_form.db_name }}
                             |
                             User
@@ -207,7 +209,7 @@
                         </tr>
 
                         <tr>
-                            <td colspan="4">Extra</td>
+                            <td colspan="4"><label for="{{ create_form.extra.id_for_label }}">Extra</label></td>
                         </tr>
 
                         <tr>
@@ -215,7 +217,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="4" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td colspan="3" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -231,12 +236,12 @@
                 <form novalidate action="{% url "out-sql-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:10%">Name</td>
+                            <td style="vertical-align:middle;width:10%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
                             <td colspan="3">{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
                             <td colspan="3">{{ edit_form.is_active }}
                             |
                             Pool size
@@ -245,12 +250,12 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Type</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.engine.id_for_label }}">Type</label></td>
                             <td colspan="3">{{ edit_form.engine }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.host.id_for_label }}">Host</label></td>
                             <td colspan="3">{{ edit_form.host }}
                             |
                             Port
@@ -259,7 +264,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Database name</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.db_name.id_for_label }}">Database name</label></td>
                             <td colspan="3">{{ edit_form.db_name }}
                             |
                             User
@@ -268,7 +273,7 @@
                         </tr>
 
                         <tr>
-                            <td colspan="4">Extra</td>
+                            <td colspan="4"><label for="{{ edit_form.extra.id_for_label }}">Extra</label></td>
                         </tr>
 
                         <tr>
@@ -276,7 +281,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="4" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td colspan="3" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -297,7 +305,7 @@
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Password</label></td>
                             <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
