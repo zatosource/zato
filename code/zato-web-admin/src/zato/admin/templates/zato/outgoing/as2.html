@@ -411,11 +411,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_compress">Compress</label></td>
-                                <td><label class="toggle-switch">{{ create_form.compress }}<span class="toggle-slider"></span></label><span class="joined-label">Before signing</span><label class="toggle-switch">{{ create_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                                <td><label class="toggle-switch">{{ create_form.compress }}<span class="toggle-slider"></span></label><label class="joined-label" for="id_compress_before_signing">Before signing</label><label class="toggle-switch">{{ create_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_mdn_mode">MDN</label></td>
-                                <td>{{ create_form.mdn_mode }}<span class="joined-label">Signed</span><label class="toggle-switch">{{ create_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.mdn_mode }}<label class="joined-label" for="id_mdn_signed">Signed</label><label class="toggle-switch">{{ create_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_async_mdn_url">Async MDN URL</label></td>
@@ -657,11 +657,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-compress">Compress</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.compress }}<span class="toggle-slider"></span></label><span class="joined-label">Before signing</span><label class="toggle-switch">{{ edit_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                                <td><label class="toggle-switch">{{ edit_form.compress }}<span class="toggle-slider"></span></label><label class="joined-label" for="id_edit-compress_before_signing">Before signing</label><label class="toggle-switch">{{ edit_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-mdn_mode">MDN</label></td>
-                                <td>{{ edit_form.mdn_mode }}<span class="joined-label">Signed</span><label class="toggle-switch">{{ edit_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.mdn_mode }}<label class="joined-label" for="id_edit-mdn_signed">Signed</label><label class="toggle-switch">{{ edit_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-async_mdn_url">Async MDN URL</label></td>

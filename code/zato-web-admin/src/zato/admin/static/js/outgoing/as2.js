@@ -93,7 +93,9 @@ $.fn.zato.outgoing.as2.field_descriptions = {
     'id_sign': 'Whether outgoing messages are signed<br>with your signing key. The select picks<br>the digest algorithm of signatures and MIC values -<br>SHA-256 is the standard, SHA-1 only<br>for partners that require it.',
     'id_encrypt': 'Whether outgoing messages are encrypted<br>to the partner\'s certificate. The select picks<br>the content encryption algorithm -<br>AES-CBC is the interop baseline,<br>GCM only for partners that accept it.',
     'id_compress': 'Whether outgoing messages are compressed<br>and whether compression runs before signing.<br>Both orders exist in the wild,<br>the partner\'s setup decides.',
+    'id_compress_before_signing': 'When on, the payload is compressed first<br>and the signature covers the compressed data.<br>When off, the message is signed first<br>and compression wraps the signed message.<br>The partner\'s setup decides which order works.',
     'id_mdn_mode': 'How the partner returns its receipt -<br>on the HTTP response, asynchronously<br>to a separate URL, or not at all.<br>The toggle decides if the receipt<br>must be signed.',
+    'id_mdn_signed': 'Whether the receipt requested from the partner<br>must be signed. A signed MDN proves who sent it<br>and its MIC value confirms the partner received<br>exactly the message that went out.',
     'id_async_mdn_url': 'Where the partner delivers asynchronous<br>receipts. Meaningful only when the MDN mode<br>is asynchronous.',
 
     // Partner tab
