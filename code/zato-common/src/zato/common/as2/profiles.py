@@ -73,10 +73,10 @@ def new_walmart_partnership() -> 'Partnership':
 
 # ################################################################################################################################
 
-def new_legacy_partnership() -> 'Partnership':
-    """ A partnership preset for old partners that cannot do better - SHA-1 signatures
-    and a SHA-1 MDN MIC. Their 3DES-encrypted messages are accepted on the way in,
-    while outgoing encryption stays on AES-128-CBC, which is never produced with 3DES.
+def new_sha1_3des_partnership() -> 'Partnership':
+    """ A partnership preset for old partners that require SHA-1 and 3DES and cannot
+    do better - SHA-1 signatures, 3DES-CBC encryption in both directions
+    and a SHA-1 MDN MIC.
     """
 
     # Our response to produce
@@ -85,7 +85,7 @@ def new_legacy_partnership() -> 'Partnership':
     out.sign = True
     out.sign_algorithm = DigestAlgorithm.SHA1
     out.encrypt = True
-    out.encryption_algorithm = EncryptionAlgorithm.AES_128_CBC
+    out.encryption_algorithm = EncryptionAlgorithm.DES_EDE3_CBC
 
     out.mdn_mode = MDNMode.Sync
     out.mdn_signed = True

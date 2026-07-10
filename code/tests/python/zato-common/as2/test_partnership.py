@@ -18,7 +18,7 @@ from zato.common.as2.config import build_partnership
 from zato.common.as2.partnership import active_verification_certificates, CertificateEntry, is_certificate_entry_active, \
     match_partnership, new_partnership, quote_as2_identifier, select_encryption_certificate, unquote_as2_identifier
 from zato.common.as2.profiles import EPCIS_Content_Type, FDA_Production_Identifier, new_default_partnership, \
-    new_dscsa_partnership, new_fda_esg_partnership, new_legacy_partnership, new_walmart_partnership
+    new_dscsa_partnership, new_fda_esg_partnership, new_sha1_3des_partnership, new_walmart_partnership
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -437,17 +437,16 @@ class TestProfiles:
         assert partnership.encryption_algorithm == EncryptionAlgorithm.AES_128_CBC
         assert partnership.compress is False
 
-    def test_legacy_partnership(self):
-        partnership = new_legacy_partnership()
+    def test_sha1_3des_partnership(self):
+        partnership = new_sha1_3des_partnership()
 
         assert partnership.sign is True
         assert partnership.sign_algorithm == DigestAlgorithm.SHA1
         assert partnership.mdn_mic_algorithms == [DigestAlgorithm.SHA1]
 
-        # 3DES is accepted from these partners on the way in only - outgoing
-        # encryption never produces it.
+        # 3DES travels in both directions with these partners.
         assert partnership.encrypt is True
-        assert partnership.encryption_algorithm == EncryptionAlgorithm.AES_128_CBC
+        assert partnership.encryption_algorithm == EncryptionAlgorithm.DES_EDE3_CBC
 
     def test_fda_esg_partnership(self):
         partnership = new_fda_esg_partnership()

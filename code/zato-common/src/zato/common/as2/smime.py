@@ -82,6 +82,14 @@ _gcm_tag_size = 16
 # The block size of 3DES in CBC mode, which its PKCS#7 padding is based on.
 _des_block_size = 8
 
+# The key and IV sizes of three-key 3DES in CBC mode.
+_des_key_size = 24
+_des_iv_size = 8
+
+# The low bit of every 3DES key byte is a parity bit (RFC 5652 section 6.3 key expectations).
+_des_parity_bit = 0x01
+_des_key_bits_mask = 0xFE
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -621,7 +629,7 @@ def _transfer_decode(part:'SMIMEPart') -> 'bytes':
 
 def _build_sha1_signed_data(content:'bytes', keystore:'Keystore') -> 'bytes':
     """ Builds a detached SHA-1 SignedData structure in-house - the library refuses to create
-    new SHA-1 signatures, yet legacy partners still require them.
+    new SHA-1 signatures, yet some partners still require them.
     """
     signing_key = cast_('RSAPrivateKey', keystore.signing_key)
     signing_certificate = keystore.signing_certificate
@@ -700,7 +708,7 @@ def sign(
     # The signature covers the complete inner MIME entity - headers and content alike.
     content = serialize_part(part, prevent_canonicalization)
 
-    # SHA-1 for legacy partners is built in-house because the library refuses it ..
+    # SHA-1 for partners that require it is built in-house because the library refuses it ..
     if algorithm == DigestAlgorithm.SHA1:
         signature = _build_sha1_signed_data(content, keystore)
 
@@ -1067,6 +1075,74 @@ def _encrypt_gcm(content:'bytes', certificate:'Certificate', algorithm:'str', ke
 
 # ################################################################################################################################
 
+def _new_3des_key() -> 'bytes':
+    """ Returns a fresh three-key 3DES key with the parity bit of every byte set,
+    as DES key material is defined to carry odd parity.
+    """
+    raw = urandom(_des_key_size)
+
+    key_bytes = bytearray()
+
+    for byte in raw:
+
+        # Keep the seven key bits and count how many of them are set ..
+        key_bits = byte & _des_key_bits_mask
+        ones_count = bin(key_bits).count('1')
+
+        # .. the parity bit makes the total number of set bits odd.
+        if ones_count % 2 == 0:
+            key_bits |= _des_parity_bit
+
+        key_bytes.append(key_bits)
+
+    out = bytes(key_bytes)
+    return out
+
+# ################################################################################################################################
+
+def _add_cbc_padding(content:'bytes') -> 'bytes':
+    """ Appends the PKCS#7 block padding of a CBC plaintext - the counterpart of _strip_cbc_padding.
+    """
+    pad_length = _des_block_size - (len(content) % _des_block_size)
+
+    out = content + bytes([pad_length]) * pad_length
+    return out
+
+# ################################################################################################################################
+
+def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
+    """ Builds a CMS EnvelopedData structure with 3DES-CBC content encryption per RFC 5652 -
+    the outbound path for partners that cannot decrypt AES, the exact structure
+    _decrypt_3des parses on the way in.
+    """
+    # A fresh content encryption key and IV for every message.
+    content_key = _new_3des_key()
+    initialization_vector = urandom(_des_iv_size)
+
+    # CBC needs the plaintext padded to whole blocks before encryption.
+    padded = _add_cbc_padding(content)
+
+    cipher = Cipher(TripleDES(content_key), CBC(initialization_vector))
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(padded) + encryptor.finalize()
+
+    recipient_info = _build_key_transport_recipient(content_key, certificate)
+    recipient_infos = _der(_tag_set, recipient_info)
+
+    # The algorithm identifier carries the IV as its parameter.
+    algorithm_identifier = _der(_tag_sequence, _oid_des_ede3_cbc + _der_octet_string(initialization_vector))
+
+    encrypted_content = _der(_tag_context_0_implicit, ciphertext)
+    encrypted_content_info = _der(_tag_sequence, _oid_data + algorithm_identifier + encrypted_content)
+
+    version = _der_integer(0)
+    enveloped = _der(_tag_sequence, version + recipient_infos + encrypted_content_info)
+
+    out = _der(_tag_sequence, _oid_enveloped_data + _der(_tag_context_0, enveloped))
+    return out
+
+# ################################################################################################################################
+
 def encrypt(
     part:'SMIMEPart',
     certificate:'Certificate',
@@ -1090,6 +1166,11 @@ def encrypt(
     # .. the GCM opt-in is built in-house because the library has no AuthEnvelopedData support ..
     elif key_size := _gcm_key_size_by_name.get(algorithm):
         envelope = _encrypt_gcm(content, certificate, algorithm, key_size)
+
+    # .. 3DES for partners that cannot decrypt AES is built in-house
+    # because the library refuses to produce it ..
+    elif algorithm == EncryptionAlgorithm.DES_EDE3_CBC:
+        envelope = _encrypt_3des(content, certificate)
 
     # .. and anything else is not an algorithm outgoing messages may use.
     else:
@@ -1247,8 +1328,8 @@ def _strip_cbc_padding(padded:'bytes') -> 'bytes':
 # ################################################################################################################################
 
 def _decrypt_3des(der:'bytes', explicit_content:'DERElement', keystore:'Keystore') -> 'bytes':
-    """ Decrypts a 3DES-CBC EnvelopedData in-house - accepted from legacy partners on the way in,
-    never produced on the way out.
+    """ Decrypts a 3DES-CBC EnvelopedData in-house - the counterpart of _encrypt_3des,
+    accepted from partners that send 3DES.
     """
     enveloped = _read_der_element(der, explicit_content.content_offset)
     children = _der_children(der, enveloped)
@@ -1305,7 +1386,7 @@ def _decrypt_enveloped(der:'bytes', explicit_content:'DERElement', keystore:'Key
     try:
         out = pkcs7_decrypt_der(der, match.certificate, match.key, [])
 
-    # The library only does AES-CBC - 3DES from legacy partners is decrypted in-house.
+    # The library only does AES-CBC - 3DES from partners that send it is decrypted in-house.
     except UnsupportedAlgorithm:
         out = _decrypt_3des(der, explicit_content, keystore)
 
@@ -1378,8 +1459,7 @@ def _decrypt_auth_enveloped(der:'bytes', explicit_content:'DERElement', keystore
 
 def decrypt(part:'SMIMEPart', keystore:'Keystore') -> 'SMIMEPart':
     """ Decrypts an application/pkcs7-mime entity back into the MIME entity underneath.
-    Handles EnvelopedData with AES-CBC, 3DES from legacy partners on the way in only,
-    and AES-GCM AuthEnvelopedData.
+    Handles EnvelopedData with AES-CBC or 3DES, and AES-GCM AuthEnvelopedData.
     """
     der = _transfer_decode(part)
 
