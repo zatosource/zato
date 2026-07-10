@@ -18,7 +18,7 @@ import httpx
 import pytest
 
 # Zato
-from zato.common.as2.common import AS2Error, Default, MDNMode, TransferMode
+from zato.common.as2.common import AS2Error, Default, DigestAlgorithm, EncryptionAlgorithm, MDNMode, TransferMode
 from zato.common.as2.inbound import handle, StoredMDN
 from zato.common.as2.mdn import build_mdn, MDNRequest, new_processed_disposition, normalize_message_id, parse_mdn
 from zato.common.as2.outbound import build_message, PayloadItem, send
@@ -185,6 +185,35 @@ class TestRoundtrip:
 
         # Both sides computed the same MIC.
         assert inbound.mic == result.mic
+
+    def test_sha1_signed_3des_encrypted(self, parties):
+
+        # The exact wire combination the SHA-1 and 3DES partnership preset produces -
+        # an in-house SHA-1 SignedData inside an in-house 3DES envelope,
+        # with a signed SHA-1 MDN MIC.
+        exchange = _new_exchange(parties)
+        exchange.sender_partnership.sign_algorithm = DigestAlgorithm.SHA1
+        exchange.sender_partnership.encryption_algorithm = EncryptionAlgorithm.DES_EDE3_CBC
+        exchange.sender_partnership.mdn_mic_algorithms = [DigestAlgorithm.SHA1]
+
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert result.message_id
+        assert result.mic
+        assert result.http_status == OK
+
+        # The receiver delivered exactly one document, byte for byte.
+        inbound = exchange.results[0]
+
+        assert not inbound.is_error
+        assert not inbound.is_duplicate
+        assert len(inbound.payloads) == 1
+        assert inbound.payloads[0].data == _payload
+
+        # Both sides computed the same SHA-1 MIC.
+        assert inbound.mic == result.mic
+        assert result.mic.endswith('sha-1')
 
     def test_signed_only(self, parties):
         exchange = _new_exchange(parties)

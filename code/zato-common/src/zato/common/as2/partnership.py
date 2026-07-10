@@ -138,8 +138,8 @@ class Partnership:
     http_timeout_seconds: int = Default.HTTP_Timeout_Seconds
     verify_tls: bool = True
 
-    # The AS2-Version header of outgoing messages - pinnable for legacy peers,
-    # while inbound never rejects on version.
+    # The AS2-Version header of outgoing messages - pinnable for peers that require
+    # an older value, while inbound never rejects on version.
     as2_version: str = Default.AS2_Version
 
     # The transfer encoding of outgoing payloads and the per-partner escape hatches

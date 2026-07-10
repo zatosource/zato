@@ -43,7 +43,7 @@ class Failure:
 
 class DigestAlgorithm:
     """ Digest algorithms for signatures and MIC values, in their RFC 5751 spelling.
-    SHA-1 exists only for legacy partners that cannot do better.
+    SHA-1 exists only for partners that require it and cannot do better.
     """
     SHA1   = 'sha-1'
     SHA256 = 'sha-256'
@@ -54,13 +54,16 @@ class DigestAlgorithm:
 # ################################################################################################################################
 
 class EncryptionAlgorithm:
-    """ Content encryption algorithms for outgoing messages. The CBC ones are the interop baseline,
+    """ Content encryption algorithms for outgoing messages. The AES-CBC ones are the interop baseline,
     the GCM ones use CMS AuthEnvelopedData and are opt-in per partner, never the default.
+    3DES exists for partners that cannot decrypt AES and for the Drummond certification event,
+    never the default either.
     """
-    AES_128_CBC = 'aes-128-cbc'
-    AES_256_CBC = 'aes-256-cbc'
-    AES_128_GCM = 'aes-128-gcm'
-    AES_256_GCM = 'aes-256-gcm'
+    AES_128_CBC  = 'aes-128-cbc'
+    AES_256_CBC  = 'aes-256-cbc'
+    AES_128_GCM  = 'aes-128-gcm'
+    AES_256_GCM  = 'aes-256-gcm'
+    DES_EDE3_CBC = 'des-ede3-cbc'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,8 +108,9 @@ class Default:
     Digest_Algorithm     = DigestAlgorithm.SHA256
     Encryption_Algorithm = EncryptionAlgorithm.AES_256_CBC
 
-    # The AS2-Version header value of outgoing messages - pinnable per partner for legacy peers,
-    # while inbound never rejects on version and an absent version means 1.0.
+    # The AS2-Version header value of outgoing messages - pinnable per partner for peers
+    # that require an older value, while inbound never rejects on version
+    # and an absent version means 1.0.
     AS2_Version = '1.2'
 
     # The Content-Type of outgoing payloads unless the partnership names another one.

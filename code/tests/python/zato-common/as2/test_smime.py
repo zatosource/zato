@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from subprocess import run as subprocess_run
 
 # cryptography
-from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
 # pytest
 import pytest
@@ -320,11 +320,21 @@ class TestEncryptDecrypt:
 
         assert exception_info.value.modifier == AS2Error.Decryption_Failed
 
+    def test_3des_roundtrip(self, parties):
+        part = _edi_part()
+
+        encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.DES_EDE3_CBC)
+        decrypted = decrypt(encrypted, parties.receiver)
+
+        assert 'smime-type=enveloped-data' in encrypted.content_type
+        assert _edi_payload not in encrypted.data
+        assert decrypted.data == _edi_payload
+        assert decrypted.content_type == _edi_content_type
+
     def test_3des_is_accepted_inbound(self, parties, tmp_path):
         part = _edi_part()
 
-        # Encrypt to the receiver with an implementation we did not write, using 3DES
-        # which is only ever accepted on the way in.
+        # Encrypt to the receiver using 3DES with an implementation we did not write.
         payload_path = tmp_path / 'payload.bin'
         certificate_path = tmp_path / 'recipient.pem'
         envelope_path = tmp_path / 'envelope.der'
@@ -348,6 +358,40 @@ class TestEncryptDecrypt:
 
         assert decrypted.data == _edi_payload
         assert decrypted.content_type == _edi_content_type
+
+    def test_3des_is_readable_by_openssl(self, parties, tmp_path):
+        part = _edi_part()
+
+        # Encrypt with our own implementation, using 3DES ..
+        encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.DES_EDE3_CBC)
+
+        # .. and decrypt with an implementation we did not write, proving that partners
+        # whose stacks require 3DES can read what we emit.
+        envelope_path = tmp_path / 'envelope.der'
+        key_path = tmp_path / 'receiver-key.pem'
+        certificate_path = tmp_path / 'receiver-cert.pem'
+        plaintext_path = tmp_path / 'plaintext.bin'
+
+        key_pem = parties.receiver.decryption_key.private_bytes(
+            Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        certificate_pem = parties.sender.peer_encryption_certificate.public_bytes(Encoding.PEM)
+
+        _ = envelope_path.write_bytes(encrypted.data)
+        _ = key_path.write_bytes(key_pem)
+        _ = certificate_path.write_bytes(certificate_pem)
+
+        command = [
+            'openssl', 'smime', '-decrypt', '-binary',
+            '-inform', 'DER',
+            '-in', str(envelope_path),
+            '-inkey', str(key_path),
+            '-recip', str(certificate_path),
+            '-out', str(plaintext_path),
+        ]
+        _ = subprocess_run(command, check=True)
+
+        # What openssl recovered is the complete serialized MIME entity that was encrypted.
+        assert plaintext_path.read_bytes() == serialize_part(part)
 
 # ################################################################################################################################
 # ################################################################################################################################
