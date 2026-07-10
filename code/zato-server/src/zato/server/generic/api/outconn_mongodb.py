@@ -1,29 +1,65 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from logging import getLogger
-from uuid import uuid4
-
-# Bunch
-from zato.common.ext.bunch import bunchify
 
 # PyMongo
 from pymongo import MongoClient
 
 # Zato
+from zato.common.api import MongoDB
+from zato.common.typing_ import cast_
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.ext.bunch import Bunch
+    from zato.common.typing_ import stranydict, strlist
+    from zato.server.base.parallel import ParallelServer
+    Bunch = Bunch
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many milliseconds one second has - the client expects timeouts in milliseconds
+# while the configuration keeps them in seconds.
+_ms_per_second = 1000
+
+# Default values applied when a configuration key is missing or None
+outconn_mongodb_config_defaults:'dict[str, object]' = {
+    'server_list': MongoDB.Default.Server_List,
+    'username': '',
+    'auth_source': MongoDB.Default.Auth_Source,
+    'replica_set': '',
+    'app_name': MongoDB.Default.App_Name,
+    'pool_size_max': MongoDB.Default.Pool_Size_Max,
+    'connect_timeout': MongoDB.Default.Connect_Timeout,
+    'server_select_timeout': MongoDB.Default.Server_Select_Timeout,
+    'is_tls_enabled': False,
+    'tls_ca_certs_file': '',
+    'tls_cert_key_file': '',
+    'is_tls_validation_enabled': True,
+}
+
+# Config keys that must be integers but may arrive as strings from opaque storage
+outconn_mongodb_int_config_keys = ('pool_size_max', 'connect_timeout', 'server_select_timeout')
+
+# Config keys that must be booleans but may arrive as strings from opaque storage
+outconn_mongodb_bool_config_keys = ('is_tls_enabled', 'is_tls_validation_enabled')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,89 +69,78 @@ class OutconnMongoDBWrapper(Wrapper):
     """
     wrapper_type = 'MongoDB connection'
 
-    def __init__(self, *args, **kwargs):
-        super(OutconnMongoDBWrapper, self).__init__(*args, **kwargs)
-        self._impl = None  # type: MongoClient
+    def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
+        super(OutconnMongoDBWrapper, self).__init__(config, server)
+        self._impl:'MongoClient' = cast_('MongoClient', None)
 
 # ################################################################################################################################
 
-    def _init_impl(self):
+    def _init_impl(self) -> 'None':
 
         with self.update_lock:
 
-            write_to_replica = self.config.write_to_replica
-            if not isinstance(write_to_replica, int) or isinstance(write_to_replica, bool):
-                try:
-                    write_to_replica = int(write_to_replica)
-                except(ValueError, TypeError):
-                    write_to_replica = 0
+            # Each line of the configuration is one host:port pair to connect to
+            server_list:'strlist' = self.config.server_list.splitlines()
+
+            # The password may still be encrypted if it went through a path
+            # that did not decrypt it - decrypting a plain string is a no-op.
+            password = self.server.decrypt(self.config.secret)
+
+            # Timeouts are configured in seconds but the client expects milliseconds
+            connect_timeout_ms = self.config.connect_timeout * _ms_per_second
+            server_select_timeout_ms = self.config.server_select_timeout * _ms_per_second
 
             # Configuration of the underlying client
-            client_config = bunchify({
-                'host': self.config.server_list.splitlines(),
-                'tz_aware': self.config.is_tz_aware,
-                'connect': True,
-                'maxPoolSize': self.config.pool_size_max,
-                'minPoolSize': 0,
-                'maxIdleTimeMS': self.config.max_idle_time * 1000,
-                'socketTimeoutMS': self.config.socket_timeout * 1000,
-                'connectTimeoutMS': self.config.connect_timeout * 1000,
-                'serverSelectionTimeoutMS': self.config.server_select_timeout * 1000,
-                'waitQueueTimeoutMS': self.config.wait_queue_timeout * 1000,
-                'heartbeatFrequencyMS': self.config.hb_frequency * 1000,
+            client_config:'stranydict' = {
+                'host': server_list,
                 'appname': self.config.app_name,
-                'retryWrites': self.config.should_retry_write,
-                'zlibCompressionLevel': self.config.zlib_level,
-                'w': write_to_replica,
-                'wTimeoutMS': self.config.write_timeout,
-                'journal': self.config.is_write_journal_enabled,
-                'fsync': self.config.is_write_fsync_enabled,
-                'replicaSet': self.config.replica_set or None,
-                'readPreference': self.config.read_pref_type,
-                'readPreferenceTags': self.config.read_pref_tag_list or '',
-                'maxStalenessSeconds': self.config.read_pref_max_stale,
-                'username': self.config.username,
-                'password': self.config.secret or self.config.get('password') or '{}.{}'.format(self.__class__.__name__, uuid4().hex),
-                'authSource': self.config.auth_source,
-                'authMechanism': self.config.auth_mechanism,
-            })
+                'maxPoolSize': self.config.pool_size_max,
+                'connectTimeoutMS': connect_timeout_ms,
+                'serverSelectionTimeoutMS': server_select_timeout_ms,
+            }
 
-            client_config.password = self.server.decrypt(client_config.password) # type: ignore
+            # Credentials are given to the client only if a username was configured -
+            # otherwise the server is assumed to accept unauthenticated connections.
+            if self.config.username:
+                client_config['username'] = self.config.username
+                client_config['password'] = password
+                client_config['authSource'] = self.config.auth_source
 
-            if self.config.document_class:
-                client_config.document_class = self.config.document_class
+            # A replica set name is optional
+            if self.config.replica_set:
+                client_config['replicaSet'] = self.config.replica_set
 
-            if self.config.compressor_list:
-                client_config.compressors = self.config.compressor_list
-
+            # TLS is optional too and all of its options use the pymongo 4 names
             if self.config.is_tls_enabled:
-                client_config.ssl = self.config.is_tls_enabled
-                client_config.ssl_certfile = self.config.tls_cert_file
-                client_config.ssl_keyfile = self.config.tls_private_key_file
-                client_config.ssl_pem_passphrase = self.config.tls_pem_passphrase
-                client_config.ssl_cert_reqs = self.config.tls_validate
-                client_config.ssl_ca_certs = self.config.tls_ca_certs_file
-                client_config.ssl_crlfile = self.config.tls_crl_file
-                client_config.ssl_match_hostname = self.config.is_tls_match_hostname_enabled
+                client_config['tls'] = True
 
-            # Create the actual connection object
+                if self.config.tls_ca_certs_file:
+                    client_config['tlsCAFile'] = self.config.tls_ca_certs_file
+
+                if self.config.tls_cert_key_file:
+                    client_config['tlsCertificateKeyFile'] = self.config.tls_cert_key_file
+
+                if not self.config.is_tls_validation_enabled:
+                    client_config['tlsAllowInvalidCertificates'] = True
+
+            # Create the actual connection object - the client connects lazily
+            # and repairs its topology in the background, which is why there is
+            # no ping here - pinging would block the init greenlet for the whole
+            # server-selection timeout when a server is down and it would race
+            # with edits or deletes that close the client mid-flight. Explicit
+            # pings, e.g. from the dashboard, still go through self._ping.
             self._impl = MongoClient(**client_config)
-
-            # Confirm the connection was established
-            self.ping()
-
-            # We can assume we are connected now
             self.is_connected = True
 
 # ################################################################################################################################
 
-    def _delete(self):
+    def _delete(self) -> 'None':
         self._impl.close()
 
 # ################################################################################################################################
 
-    def _ping(self):
-        self._impl.admin.command('ismaster')
+    def _ping(self) -> 'None':
+        _ = self._impl.admin.command('ping')
 
 # ################################################################################################################################
 # ################################################################################################################################
