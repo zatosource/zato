@@ -60,6 +60,12 @@ class ModuleCtx:
     # How long to sleep between readiness checks
     Ready_Sleep = 2
 
+    # Hard resource limits for the container so a test run can never overwhelm the host -
+    # queue manager startup is CPU-hungry and spawns hundreds of processes if left unbounded
+    CPU_Limit    = '2'
+    Memory_Limit = '2g'
+    PID_Limit    = '2048'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -124,9 +130,17 @@ def start_ibm_mq(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None
     command:'strlist' = [
         'docker', 'run', '-d', '--rm',
         '--name', container_name,
+        '--cpus', ModuleCtx.CPU_Limit,
+        '--memory', ModuleCtx.Memory_Limit,
+        '--pids-limit', ModuleCtx.PID_Limit,
         '-e', 'LICENSE=accept',
         '-e', 'MQ_QMGR_NAME=' + ModuleCtx.Queue_Manager,
         '-e', 'MQ_APP_PASSWORD=' + ModuleCtx.Password,
+
+        # The web console is a Java server the tests never talk to and it is by far
+        # the most expensive part of the container, so it stays off.
+        '-e', 'MQ_ENABLE_EMBEDDED_WEB_SERVER=false',
+
         '-p', f'{port}:1414',
     ]
 

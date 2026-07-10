@@ -18,6 +18,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.soap.client import SOAPClient
 from zato.common.soap.common import SOAPFault, SOAPVersion
 from zato.common.soap.message import SOAPMessage
+from certs import build_tls_material
 from soap_channel import create_soap_channel, delete_soap_channel, wait_for_channel_fixture_services
 from soap_outconn import create_soap_outconn, delete_soap_outconn, invoke_soap_outconn_from_ide, \
     wait_for_soap_invoker_service
@@ -118,6 +119,16 @@ def _invoke_expecting_fault(client:'SOAPClient', operation:'str', message:'SOAPM
             raise Exception(f'Expected a fault from `{client.address}`, got: {response!r}')
 
     raise Exception(f'No fault from `{client.address}` within {_Propagation_Timeout}s, last error: {last_error!r}')
+
+# ################################################################################################################################
+
+def _read_pem(path:'str') -> 'str':
+    """ Reads PEM material from a file into the string a definition or a client keeps.
+    """
+    with open(path) as pem_file:
+        out = pem_file.read()
+
+    return out
 
 # ################################################################################################################################
 
@@ -401,6 +412,361 @@ class TestSOAPChannelEndToEnd:
             assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
 
             anonymous_client.close()
+
+        # Clean up.
+        delete_soap_channel(page, channel_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_WSS_Log_Patterns)
+    def test_wss_x509_signed(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ An X.509 channel that requires signatures - a message signed with the key
+        of the pinned certificate is admitted, an unsigned one is rejected.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        wait_for_channel_fixture_services(page, base_url)
+
+        # Real signing material - a CA-signed certificate and its key for the counterparty.
+        material = build_tls_material('127.0.0.1')
+
+        counterparty_key_pem = _read_pem(material.client_key_path)
+        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
+
+        name = _Test_Name_Prefix + 'wss-x509-signed'
+        url_path = '/' + name
+
+        # The definition pins the counterparty's certificate for signature verification ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': True,
+            'encrypt': False,
+            'peer_certificate': counterparty_certificate_pem,
+        })
+
+        # .. and the channel enforces it.
+        channel_id = create_soap_channel(page, base_url, name, _Protected_Service, url_path, {
+            'soap_action': 'urn:cdc:iisb:2014:submitSingleMessage',
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        message = SOAPMessage()
+        message.namespace = 'urn:cdc:iisb:2014'
+        message.facilityID = 'FAC-01'
+
+        # A message signed with the pinned certificate's key is admitted ..
+        client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'x509',
+                'sign': True,
+                'encrypt': False,
+                'signing_key': counterparty_key_pem,
+                'signing_certificate_chain': counterparty_certificate_pem,
+            },
+        })
+
+        response = _invoke_with_retry(client, 'submitSingleMessage', message)
+        operation_response = response.submitSingleMessageResponse
+
+        assert operation_response.status == 'ok', f'Expected an ok response, got: {operation_response!r}'
+        assert operation_response.verifiedMode == 'x509', f'Expected the verified mode, got: {operation_response!r}'
+
+        client.close()
+
+        # .. and an unsigned one is rejected with a Sender fault.
+        unsigned_client = _new_channel_client(server_port, url_path, {'soap_version': '1.2'})
+        fault = _invoke_expecting_fault(unsigned_client, 'submitSingleMessage', message)
+
+        expected_code = _Sender_Code_By_Version[SOAPVersion.V12]
+        assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
+
+        unsigned_client.close()
+
+        # Clean up.
+        delete_soap_channel(page, channel_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_WSS_Log_Patterns)
+    def test_wss_x509_encrypted(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ An X.509 channel that requires encrypted bodies - the channel decrypts the body
+        with its own key and the service reads it in the clear, while a plaintext message
+        is rejected.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        wait_for_channel_fixture_services(page, base_url)
+
+        # Real decryption material - the channel's own key and its certificate the counterparty encrypts to.
+        material = build_tls_material('127.0.0.1')
+
+        channel_key_pem = _read_pem(material.server_key_path)
+        channel_certificate_pem = _read_pem(material.server_certificate_path)
+
+        name = _Test_Name_Prefix + 'wss-x509-encrypted'
+        url_path = '/' + name
+
+        # The definition holds the channel's own decryption key ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': False,
+            'encrypt': True,
+            'decryption_key': channel_key_pem,
+        })
+
+        # .. and the channel with the registry service reads the decrypted body.
+        channel_id = create_soap_channel(page, base_url, name, _Registry_Service, url_path, {
+            'soap_action': 'urn:cdc:iisb:2014:submitSingleMessage',
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        message_control_id = 'MSG-' + CryptoManager.generate_hex_string()
+
+        message = SOAPMessage()
+        message.namespace = 'urn:cdc:iisb:2014'
+        message.facilityID = 'FAC-01'
+        message.hl7Message = f'MSH|^~\\&|MYAPP|FAC-01|IIS|STATE|20260115||VXU^V04^VXU_V04|{message_control_id}|P|2.5.1'
+
+        # A message encrypted to the channel's certificate is decrypted and the service
+        # reads its fields, which is what the ACK's control id proves ..
+        client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'x509',
+                'sign': False,
+                'encrypt': True,
+                'peer_certificate': channel_certificate_pem,
+            },
+        })
+
+        response = _invoke_with_retry(client, 'submitSingleMessage', message)
+        acknowledgment = getattr(response.submitSingleMessageResponse, 'return')
+
+        assert f'MSA|AA|{message_control_id}' in acknowledgment, \
+            f'Expected the control id echoed in MSA, got: {acknowledgment}'
+
+        client.close()
+
+        # .. and a plaintext message is rejected with a Sender fault.
+        plaintext_client = _new_channel_client(server_port, url_path, {'soap_version': '1.2'})
+        fault = _invoke_expecting_fault(plaintext_client, 'submitSingleMessage', message)
+
+        expected_code = _Sender_Code_By_Version[SOAPVersion.V12]
+        assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
+
+        plaintext_client.close()
+
+        # Clean up.
+        delete_soap_channel(page, channel_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_WSS_Log_Patterns)
+    def test_wss_x509_signed_and_encrypted(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ An X.509 channel that requires both a signature and an encrypted body,
+        with the signer validated through trust anchors rather than pinning -
+        a signer outside the trust chain is rejected.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        wait_for_channel_fixture_services(page, base_url)
+
+        # Real crypto material - the channel's own key pair and the counterparty's,
+        # both chaining up to the same test CA.
+        material = build_tls_material('127.0.0.1')
+
+        channel_key_pem = _read_pem(material.server_key_path)
+        channel_certificate_pem = _read_pem(material.server_certificate_path)
+        counterparty_key_pem = _read_pem(material.client_key_path)
+        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
+        ca_pem = _read_pem(material.ca_path)
+
+        name = _Test_Name_Prefix + 'wss-x509-full'
+        url_path = '/' + name
+
+        # The definition decrypts with its own key and trusts any signer under the CA ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': True,
+            'encrypt': True,
+            'decryption_key': channel_key_pem,
+            'trust_anchors': ca_pem,
+        })
+
+        # .. and the channel enforces it.
+        channel_id = create_soap_channel(page, base_url, name, _Protected_Service, url_path, {
+            'soap_action': 'urn:cdc:iisb:2014:submitSingleMessage',
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        message = SOAPMessage()
+        message.namespace = 'urn:cdc:iisb:2014'
+        message.facilityID = 'FAC-01'
+
+        # A message signed under the CA and encrypted to the channel is admitted ..
+        client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'x509',
+                'sign': True,
+                'encrypt': True,
+                'signing_key': counterparty_key_pem,
+                'signing_certificate_chain': counterparty_certificate_pem,
+                'peer_certificate': channel_certificate_pem,
+            },
+        })
+
+        response = _invoke_with_retry(client, 'submitSingleMessage', message)
+        operation_response = response.submitSingleMessageResponse
+
+        assert operation_response.status == 'ok', f'Expected an ok response, got: {operation_response!r}'
+        assert operation_response.verifiedMode == 'x509', f'Expected the verified mode, got: {operation_response!r}'
+
+        client.close()
+
+        # .. while a signer under a different CA is rejected even though
+        # the channel can still decrypt the body.
+        untrusted_material = build_tls_material('127.0.0.1')
+
+        untrusted_key_pem = _read_pem(untrusted_material.client_key_path)
+        untrusted_certificate_pem = _read_pem(untrusted_material.client_certificate_path)
+
+        untrusted_client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'x509',
+                'sign': True,
+                'encrypt': True,
+                'signing_key': untrusted_key_pem,
+                'signing_certificate_chain': untrusted_certificate_pem,
+                'peer_certificate': channel_certificate_pem,
+            },
+        })
+
+        fault = _invoke_expecting_fault(untrusted_client, 'submitSingleMessage', message)
+
+        expected_code = _Sender_Code_By_Version[SOAPVersion.V12]
+        assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
+
+        untrusted_client.close()
+
+        # Clean up.
+        delete_soap_channel(page, channel_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_WSS_Log_Patterns)
+    def test_wss_saml(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ A SAML channel that requires a signed assertion from a known issuer -
+        the right assertion is admitted, a wrong issuer and an unsigned assertion
+        are each rejected.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        wait_for_channel_fixture_services(page, base_url)
+
+        # Real signing material - a CA-signed certificate and its key for the counterparty.
+        material = build_tls_material('127.0.0.1')
+
+        counterparty_key_pem = _read_pem(material.client_key_path)
+        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
+        ca_pem = _read_pem(material.ca_path)
+
+        name = _Test_Name_Prefix + 'wss-saml'
+        url_path = '/' + name
+        issuer = 'urn:issuer:' + name
+
+        # The definition requires a signed assertion from this issuer, chaining up to the test CA ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'saml', {
+            'issuer': issuer,
+            'sign': True,
+            'trust_anchors': ca_pem,
+        })
+
+        # .. and the channel enforces it.
+        channel_id = create_soap_channel(page, base_url, name, _Protected_Service, url_path, {
+            'soap_action': 'urn:cdc:iisb:2014:submitSingleMessage',
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        message = SOAPMessage()
+        message.namespace = 'urn:cdc:iisb:2014'
+        message.facilityID = 'FAC-01'
+
+        # A signed assertion from the expected issuer is admitted ..
+        client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'saml',
+                'issuer': issuer,
+                'subject': 'CN=Test Subject',
+                'sign': True,
+                'signing_key': counterparty_key_pem,
+                'signing_certificate_chain': counterparty_certificate_pem,
+            },
+        })
+
+        response = _invoke_with_retry(client, 'submitSingleMessage', message)
+        operation_response = response.submitSingleMessageResponse
+
+        assert operation_response.status == 'ok', f'Expected an ok response, got: {operation_response!r}'
+        assert operation_response.verifiedMode == 'saml', f'Expected the verified mode, got: {operation_response!r}'
+
+        client.close()
+
+        expected_code = _Sender_Code_By_Version[SOAPVersion.V12]
+
+        # .. an assertion from a different issuer is rejected ..
+        wrong_issuer_client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'saml',
+                'issuer': 'urn:issuer:untrusted:' + name,
+                'subject': 'CN=Test Subject',
+                'sign': True,
+                'signing_key': counterparty_key_pem,
+                'signing_certificate_chain': counterparty_certificate_pem,
+            },
+        })
+
+        fault = _invoke_expecting_fault(wrong_issuer_client, 'submitSingleMessage', message)
+        assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
+
+        wrong_issuer_client.close()
+
+        # .. and so is an unsigned assertion, even from the expected issuer.
+        unsigned_client = _new_channel_client(server_port, url_path, {
+            'soap_version': '1.2',
+            'security': {
+                'mode': 'saml',
+                'issuer': issuer,
+                'subject': 'CN=Test Subject',
+                'sign': False,
+            },
+        })
+
+        fault = _invoke_expecting_fault(unsigned_client, 'submitSingleMessage', message)
+        assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
+
+        unsigned_client.close()
 
         # Clean up.
         delete_soap_channel(page, channel_id)

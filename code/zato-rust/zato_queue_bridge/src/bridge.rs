@@ -24,11 +24,32 @@ pub const TYPE_CHANNEL_IBM_MQ: &str = "channel-ibm-mq";
 /// Connection type marker for IBM MQ outgoing connections.
 pub const TYPE_OUTCONN_IBM_MQ: &str = "outconn-ibm-mq";
 
-/// Deserializes a JSON value that may be `null` or `true`/`false` into a `bool`,
-/// treating `null` as `false`. Needed because the ODB stores `ssl` as `None`
-/// for connections that have never touched the SSL toggle.
+/// A boolean flag as serialized by the various config sources.
+///
+/// The ODB stores flags like `ssl` as `null` for connections that have never
+/// touched the toggle, while dashboard broker messages carry an empty string
+/// for an unchecked toggle and a real boolean for a checked one.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum FlagValue {
+    /// A real boolean, as stored by enmasse and checked dashboard toggles.
+    Bool(bool),
+    /// An empty string from an unchecked dashboard toggle, or a "true"/"false" text.
+    Text(String),
+}
+
+/// Deserializes a JSON value that may be `null`, a boolean or a string into a `bool`,
+/// treating `null` and the empty string as `false`.
 fn deserialize_nullable_bool<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
-    Option::<bool>::deserialize(deserializer).map(|opt| opt.unwrap_or(false))
+    let parsed = Option::<FlagValue>::deserialize(deserializer)?;
+
+    let out = match parsed {
+        Some(FlagValue::Bool(value)) => value,
+        Some(FlagValue::Text(text)) => text == "true",
+        None => false,
+    };
+
+    Ok(out)
 }
 
 /// Deserializes a JSON value that may be `null` or a string into a `String`,

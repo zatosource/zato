@@ -200,6 +200,7 @@ def get_top_level_order() -> 'strlist':
         'odata',
         'sql',
         'outgoing_soap',
+        'outgoing_as2',
         'outgoing_as4',
         'microsoft_365',
         'confluence',
@@ -229,7 +230,9 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
 
-    order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'auth_endpoint', 'client_id_field', \
+    order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'sign', 'encrypt', \
+        'issuer', 'subject', 'audience', 'signing_key', 'signing_certificate_chain', 'decryption_key', \
+        'peer_certificate', 'trust_anchors', 'auth_endpoint', 'client_id_field', \
         'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', 'rate_limiting:list',
 
     order['groups'] = 'name', 'is_active', 'members:list',
@@ -243,6 +246,15 @@ def get_object_order(object_type:'str') -> 'strlist':
         'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
     order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
+    order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
+        'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
+        'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \
+        'as2_version', 'content_transfer_encoding', 'http_transfer_mode', 'http_timeout_seconds', \
+        'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries', 'preserve_filename', \
+        'warn_on_duplicate_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', \
+        'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert', \
+        'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', \
+        'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors',
     order['channel_as4'] = 'name', 'is_active', 'url_path', 'service', 'security', 'as4_profile', 'as4_from_party', \
         'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement', 'as4_mpc', 'as4_original_sender', 'as4_final_recipient', \
         'as4_extra_pmodes', 'as4_serviced_participants', 'as4_inbound_topic', 'as4_signing_key', 'as4_signing_cert_chain', \
@@ -312,6 +324,36 @@ def _yaml_quote(value:'any_') -> 'str':
 
     out = text
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _write_scalar_field(file_handle:'any_', line_prefix:'str', field_name:'str', value:'any_', block_indent:'int') -> 'None':
+    """ Writes a single scalar field, using a YAML block scalar for multi-line values
+    (e.g. PEM certificates and keys) so that newlines survive a round trip.
+    """
+    text = str(value)
+
+    if isinstance(value, str) and '\n' in text:
+
+        # A trailing newline needs the clip style, no trailing newline needs the strip style
+        if text.endswith('\n'):
+            indicator = '|'
+            text = text[:-1]
+        else:
+            indicator = '|-'
+
+        _ = file_handle.write(f'{line_prefix}{field_name}: {indicator}\n')
+
+        pad = ' ' * block_indent
+        for line in text.split('\n'):
+            if line:
+                _ = file_handle.write(f'{pad}{line}\n')
+            else:
+                _ = file_handle.write('\n')
+    else:
+        quoted = _yaml_quote(value)
+        _ = file_handle.write(f'{line_prefix}{field_name}: {quoted}\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -422,8 +464,7 @@ class FileWriter:
                                                 quoted_cleaned = _yaml_quote(cleaned_item)
                                                 _ = f.write(f'      - {quoted_cleaned}\n')
                                     else:
-                                        quoted_field_value = _yaml_quote(field_value)
-                                        _ = f.write(f'    {actual_field}: {quoted_field_value}\n')
+                                        _write_scalar_field(f, '    ', actual_field, field_value, 6)
 
                             # For regular fields
                             elif field in item:
@@ -440,8 +481,7 @@ class FileWriter:
                                         quoted_cleaned = _yaml_quote(cleaned_item)
                                         _ = f.write(f'      - {quoted_cleaned}\n')
                                 else:
-                                    quoted_field_value = _yaml_quote(field_value)
-                                    _ = f.write(f'    {field}: {quoted_field_value}\n')
+                                    _write_scalar_field(f, '    ', field, field_value, 6)
 
                 else:
                     # Write the element header for empty sections

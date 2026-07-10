@@ -287,6 +287,33 @@ class TestEnmasseCLI(TestCase):
             self.assertEqual(wss['mode'], 'username_token')
             self.assertTrue(wss['use_digest'])
 
+            # An X.509 definition survives with its switches and all of its PEM material
+            wss_x509 = exported_security['enmasse.wss.2']
+            wss_x509_input = input_security['enmasse.wss.2']
+            self.assertEqual(wss_x509['mode'], 'x509')
+            self.assertTrue(wss_x509['sign'])
+            self.assertTrue(wss_x509['encrypt'])
+
+            for field in ('signing_key', 'signing_certificate_chain', 'decryption_key', 'peer_certificate', 'trust_anchors'):
+                self.assertEqual(wss_x509[field], wss_x509_input[field], f'Field {field} mismatch for "enmasse.wss.2"')
+
+            # A SAML definition survives with its assertion fields and signing material
+            wss_saml = exported_security['enmasse.wss.3']
+            wss_saml_input = input_security['enmasse.wss.3']
+            self.assertEqual(wss_saml['mode'], 'saml')
+            self.assertEqual(wss_saml['issuer'], wss_saml_input['issuer'])
+            self.assertEqual(wss_saml['subject'], wss_saml_input['subject'])
+            self.assertEqual(wss_saml['audience'], wss_saml_input['audience'])
+            self.assertTrue(wss_saml['sign'])
+            self.assertEqual(wss_saml['signing_key'], wss_saml_input['signing_key'])
+            self.assertEqual(wss_saml['signing_certificate_chain'], wss_saml_input['signing_certificate_chain'])
+
+            # An inactive definition stays inactive with the digest switched off
+            wss_inactive = exported_security['enmasse.wss.4']
+            self.assertEqual(wss_inactive['mode'], 'username_token')
+            self.assertFalse(wss_inactive['use_digest'])
+            self.assertFalse(wss_inactive['is_active'])
+
             # Round 2: re-import the export, re-export
             self._import_file(export_1_path)
             self._export_file(export_2_path)
