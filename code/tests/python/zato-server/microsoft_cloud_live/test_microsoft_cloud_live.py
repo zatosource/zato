@@ -204,6 +204,31 @@ class TestMicrosoftCloudREST:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestMicrosoftCloudMS365Shim:
+
+    def _get_client(self, zato_server:'anydict') -> '_AdminClient':
+        return _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+
+# ################################################################################################################################
+
+    def test_cloud_ms365_shim(self, zato_server:'anydict') -> 'None':
+        """ The self.cloud.ms365 API works through the shim - .get(), .conn, .client(),
+        the with statement, .refresh() and .impl all map onto the same client.
+        """
+        client = self._get_client(zato_server)
+
+        result = client.invoke('test.microsoft.cloud.ms365-shim', {
+            'conn_name': _conn_name,
+        })
+
+        mails = {user['mail'] for user in result['users']}
+
+        assert 'maria.garcia@example.com' in mails
+        assert 'james.wilson@example.com' in mails
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestMicrosoftCloudPing:
 
     def _get_client(self, zato_server:'anydict') -> '_AdminClient':

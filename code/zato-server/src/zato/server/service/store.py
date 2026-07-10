@@ -577,6 +577,9 @@ class ServiceStore:
                 class_.cloud.jira = service_store.server.config_manager.cloud_jira
                 class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce
                 class_.microsoft.cloud.conn_dict = service_store.server.config_manager.cloud_microsoft_365
+
+                # The old self.cloud.ms365 API is a thin shim that translates into self.microsoft.cloud.
+                class_.cloud.ms365.microsoft_cloud = class_.microsoft.cloud
                 class_.microsoft.power_platform.conn_dict = service_store.server.config_manager.cloud_microsoft_power_automate
                 class_.amqp.publish = service_store.server.config_manager.amqp_invoke
                 class_.commands.init(service_store.server)

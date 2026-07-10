@@ -197,6 +197,15 @@ class Microsoft365Client:
 
 # ################################################################################################################################
 
+    def zato_delete_impl(self, reason:'str'='') -> 'None':
+
+        # There is nothing to close in the O365 account and, more importantly, having this method here
+        # means that deleting the connection never triggers a lazy build of an account via __getattr__.
+        with self.impl_lock:
+            self.impl = None
+
+# ################################################################################################################################
+
     def ping(self) -> 'None':
 
         # Get the underlying account ..

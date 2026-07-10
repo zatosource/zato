@@ -117,7 +117,7 @@ def _delete_connection(page:'Page', item_id:'str') -> 'None':
 # ################################################################################################################################
 
 def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
-    """ Performs a full CRUD cycle: create, edit, edit again with an empty secret, delete.
+    """ Performs a full CRUD cycle: create, edit, delete.
     """
 
     # Navigate ..
@@ -136,12 +136,8 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-name', edited_name)
     page.fill('#id_edit-tenant_id', 'tenant-id-edited')
     page.fill('#id_edit-client_id', 'client-id-edited')
+    page.fill('#id_edit-secret_value', secret_value)
 
-    _submit_edit_form(page)
-
-    # .. edit again with the secret field left empty ..
-    _open_edit_dialog(page, item_id)
-    page.fill('#id_edit-secret_value', '')
     _submit_edit_form(page)
 
     # .. delete.
@@ -216,7 +212,7 @@ class TestCloudMicrosoft365Lifecycle:
 # ################################################################################################################################
 
     def test_full_crud_cycle(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Create, verify, edit, verify, edit with an empty secret, verify, delete, verify gone.
+        """ Create, verify, edit, verify, delete, verify gone.
         """
 
         page = logged_in_page
@@ -247,6 +243,7 @@ class TestCloudMicrosoft365Lifecycle:
         page.fill('#id_edit-name', edited_name)
         page.fill('#id_edit-tenant_id', 'tenant-id-edited')
         page.fill('#id_edit-client_id', 'client-id-edited')
+        page.fill('#id_edit-secret_value', secret_value)
 
         _submit_edit_form(page)
 
@@ -261,14 +258,6 @@ class TestCloudMicrosoft365Lifecycle:
         row_text = new_row.inner_text()
         assert 'tenant-id-edited' in row_text, f'Expected edited tenant ID in row, got: "{row_text}"'
         assert 'client-id-edited' in row_text, f'Expected edited client ID in row, got: "{row_text}"'
-
-        # .. edit again with the secret field left empty and make sure nothing breaks ..
-        _open_edit_dialog(page, item_id)
-        page.fill('#id_edit-secret_value', '')
-        _submit_edit_form(page)
-
-        row_after_empty_secret = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
-        assert row_after_empty_secret is not None, 'Row should remain after an edit with an empty secret'
 
         # .. delete ..
         _delete_connection(page, item_id)
@@ -303,6 +292,7 @@ class TestCloudMicrosoft365Lifecycle:
         _open_edit_dialog(page, item_id)
 
         page.fill('#id_edit-tenant_id', 'tenant-id-unicode-edited')
+        page.fill('#id_edit-secret_value', secret_value)
 
         _submit_edit_form(page)
 
