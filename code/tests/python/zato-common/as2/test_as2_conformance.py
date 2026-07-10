@@ -18,6 +18,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode, b64encode
 from hashlib import sha256
+from pathlib import Path
 from subprocess import run as subprocess_run
 
 # asn1crypto
@@ -42,7 +43,7 @@ from zato.common.as2.inbound import handle
 from zato.common.as2.outbound import build_message
 from zato.common.as2.partnership import new_partnership
 from zato.common.as2.smime import decrypt, encrypt, new_part, sign, verify
-from zato.common.typing_ import anylist
+from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,13 +113,13 @@ class _GCMParameters(Sequence):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _edi_part():
+def _edi_part() -> 'any_':
     out = new_part(_edi_payload, _edi_content_type)
     return out
 
 # ################################################################################################################################
 
-def _make_sender_partnership():
+def _make_sender_partnership() -> 'any_':
     out = new_partnership()
 
     out.as2_from = _sender_identifier
@@ -129,7 +130,7 @@ def _make_sender_partnership():
 
 # ################################################################################################################################
 
-def _make_receiver_partnership():
+def _make_receiver_partnership() -> 'any_':
     out = new_partnership()
 
     out.as2_from = _receiver_identifier
@@ -185,45 +186,6 @@ def _mic_over(covered:'bytes') -> 'str':
     return out
 
 # ################################################################################################################################
-
-def _read_smime_entity(raw:'bytes') -> 'tuple[str, bytes]':
-    """ Splits an S/MIME entity as the openssl CLI writes it into its Content-Type value
-    and its body, unfolding the header continuation lines openssl emits.
-    """
-
-    # The outer headers end at the earliest blank line, whichever line ending frames it -
-    # openssl writes the outer headers with bare LF while the body parts keep CRLF.
-    crlf_index = raw.find(b'\r\n\r\n')
-    lf_index = raw.find(b'\n\n')
-
-    if crlf_index == -1:
-        crlf_index = len(raw)
-    if lf_index == -1:
-        lf_index = len(raw)
-
-    if crlf_index < lf_index:
-        header_block = raw[:crlf_index]
-        body = raw[crlf_index + 4:]
-    else:
-        header_block = raw[:lf_index]
-        body = raw[lf_index + 2:]
-
-    # Continuation lines start with whitespace - join them back onto their header line.
-    unfolded = header_block.replace(b'\r\n', b'\n')
-    unfolded = unfolded.replace(b'\n ', b' ')
-    unfolded = unfolded.replace(b'\n\t', b' ')
-
-    content_type = ''
-
-    for line in unfolded.split(b'\n'):
-        name, _, value = line.partition(b':')
-        if name.lower() == b'content-type':
-            content_type = value.strip().decode('ascii')
-
-    out = (content_type, body)
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class TestHeaderGrammarConformance:
@@ -231,7 +193,7 @@ class TestHeaderGrammarConformance:
     the literal grammar of the specification.
     """
 
-    def test_headers_follow_the_literal_grammar(self, parties):
+    def test_headers_follow_the_literal_grammar(self, parties:'any_') -> 'None':
         partnership = _make_sender_partnership()
 
         _, headers, message_id, _ = build_message(partnership, parties.sender, _edi_payload)
@@ -256,7 +218,7 @@ class TestHeaderGrammarConformance:
         assert headers['Content-Type'].startswith('application/pkcs7-mime; smime-type=enveloped-data')
 
     @pytest.mark.parametrize('algorithm', _micalg_names)
-    def test_micalg_parameter_uses_the_literal_names(self, parties, algorithm):
+    def test_micalg_parameter_uses_the_literal_names(self, parties:'any_', algorithm:'str') -> 'None':
         part = _edi_part()
 
         signed = sign(part, parties.sender, digest_algorithm=algorithm)
@@ -274,7 +236,7 @@ class TestMDNConformance:
     that recomputes with hashlib over the literally typed covered entity.
     """
 
-    def test_report_layout_and_disposition_recompute(self, parties):
+    def test_report_layout_and_disposition_recompute(self, parties:'any_') -> 'None':
         sender_partnership = _make_sender_partnership()
         sender_partnership.mdn_signed = False
 
@@ -322,7 +284,7 @@ class TestSignedDataRecompute:
     hashlib over the covered part and the signature verifies with the public key alone.
     """
 
-    def test_signature_recomputes_independently(self, parties):
+    def test_signature_recomputes_independently(self, parties:'any_') -> 'None':
         part = _edi_part()
         signed = sign(part, parties.sender)
 
@@ -380,7 +342,7 @@ class TestEnvelopedDataRecompute:
     with cryptography primitives only, using nothing but what the DER itself declares.
     """
 
-    def test_cbc_envelope_decrypts_with_primitives_alone(self, parties):
+    def test_cbc_envelope_decrypts_with_primitives_alone(self, parties:'any_') -> 'None':
         part = _edi_part()
         encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.AES_256_CBC)
 
@@ -413,7 +375,7 @@ class TestEnvelopedDataRecompute:
 
         assert plaintext == _edi_entity
 
-    def test_gcm_envelope_decrypts_with_primitives_alone(self, parties):
+    def test_gcm_envelope_decrypts_with_primitives_alone(self, parties:'any_') -> 'None':
         part = _edi_part()
         encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.AES_256_GCM)
 
@@ -455,7 +417,7 @@ class TestOpenSSLOracle:
     we verify and decrypt.
     """
 
-    def test_our_signature_verifies_with_openssl(self, parties, tmp_path):
+    def test_our_signature_verifies_with_openssl(self, parties:'any_', tmp_path:'Path') -> 'None':
         part = _edi_part()
         signed = sign(part, parties.sender)
 
@@ -482,7 +444,7 @@ class TestOpenSSLOracle:
         # What openssl recovered is the covered entity, byte for byte.
         assert content_path.read_bytes() == _edi_entity
 
-    def test_openssl_signature_verifies_with_ours(self, parties, tmp_path):
+    def test_openssl_signature_verifies_with_ours(self, parties:'any_', tmp_path:'Path') -> 'None':
         # Sign with an implementation we did not write ..
         payload_path = tmp_path / 'payload.bin'
         key_path = tmp_path / 'sender-key.pem'
@@ -530,7 +492,7 @@ class TestOpenSSLOracle:
         assert result.part.data == _edi_payload
         assert result.part.content_type == _edi_content_type
 
-    def test_our_envelope_decrypts_with_openssl(self, parties, tmp_path):
+    def test_our_envelope_decrypts_with_openssl(self, parties:'any_', tmp_path:'Path') -> 'None':
         part = _edi_part()
         encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.AES_256_CBC)
 
@@ -559,7 +521,7 @@ class TestOpenSSLOracle:
 
         assert plaintext_path.read_bytes() == _edi_entity
 
-    def test_openssl_envelope_decrypts_with_ours(self, parties, tmp_path):
+    def test_openssl_envelope_decrypts_with_ours(self, parties:'any_', tmp_path:'Path') -> 'None':
         # Encrypt to the receiver with an implementation we did not write ..
         payload_path = tmp_path / 'payload.bin'
         certificate_path = tmp_path / 'recipient.pem'
