@@ -9,7 +9,7 @@
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-graphql test-as2 test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub test-ui-mapper _test-ui test-common test-distlock \
-	test-audit-log test-audit-log-ui test-logging test-ibm-mq \
+	test-audit-log test-audit-log-ui test-logging test-ibm-mq test-mongodb \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -571,6 +571,12 @@ test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato server against a simulated Microsoft cloud.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/microsoft_cloud_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_microsoft_cloud_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
@@ -656,6 +662,13 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-mongodb: ## MongoDB connection tests against a live server, plain and TLS.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/mongodb/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mongodb/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mongodb \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.

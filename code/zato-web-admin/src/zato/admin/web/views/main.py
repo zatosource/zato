@@ -20,9 +20,17 @@ from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
 
 # Zato
 from zato.admin.settings import LOGIN_REDIRECT_URL
+from zato.admin.web.auth.common import auth_config, AuthType
+from zato.admin.web.auth.entra import EntraAuthError, get_authorize_url, handle_callback
 from zato.admin.web.forms.main import AuthenticationForm
 from zato.admin.web.util import get_user_profile
 from zato.admin.web.views import method_allowed
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 
@@ -42,14 +50,18 @@ def index(req):
 
 # ################################################################################################################################
 
-def get_login_response(req, needs_post_form_data, has_errors):
+def get_login_response(req, needs_post_form_data, has_errors, entra_error:'str'=''):
 
     form = AuthenticationForm(req.POST if needs_post_form_data else None)
+
+    is_entra = auth_config.auth_type == AuthType.Entra
 
     return TemplateResponse(req, 'zato/login.html', {
         'form': form,
         'next': req.GET.get('next', ''),
-        'has_errors': has_errors or form.errors
+        'has_errors': has_errors or form.errors,
+        'entra_enabled': is_entra,
+        'entra_error': entra_error,
     })
 
 # ################################################################################################################################
@@ -68,6 +80,28 @@ def login(req):
 
         # No data was POST-ed so there cannot be any errors yet
         has_errors = False
+
+        # With Entra ID enabled, a GET may go straight to Microsoft - either because auto-login is on
+        # or because the person clicked the Microsoft button. The auth=built-in query parameter
+        # always keeps the plain form reachable so local accounts can log in too.
+        if auth_config.auth_type == AuthType.Entra:
+
+            requested_auth = req.GET.get('auth', '')
+            wants_built_in = requested_auth == AuthType.Built_In
+            wants_entra = requested_auth == AuthType.Entra
+
+            needs_entra_redirect = auth_config.auto_login
+            if wants_entra:
+                needs_entra_redirect = True
+            if wants_built_in:
+                needs_entra_redirect = False
+
+            if needs_entra_redirect:
+                next_path = req.GET.get('next', '')
+                authorize_url = get_authorize_url(req, next_path)
+
+                logger.info('Redirecting to the Entra ID authorize URL')
+                return HttpResponseRedirect(authorize_url)
     else:
 
         logger.info('Login request -> POST')
@@ -122,6 +156,30 @@ def login(req):
     # Here, we know that we need to return the form, either because it is a GET request
     # or because it was POST but credentials were invalid
     return get_login_response(req, needs_post_form_data, has_errors)
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def login_callback(req:'any_') -> 'any_':
+
+    logger.info('Login callback request received')
+
+    # Complete the sign-in with the external identity provider ..
+    try:
+        next_path = handle_callback(req)
+    except EntraAuthError as e:
+        logger.warning('Entra ID login error -> `%s`', e.args[0])
+        return get_login_response(req, False, False, entra_error=e.args[0])
+
+    # .. make sure the redirect-to address is valid ..
+    if not is_safe_url(url=next_path, allowed_hosts=req.get_host()):
+        next_path = resolve_url(LOGIN_REDIRECT_URL)
+
+    # .. and the person can go to the dashboard now.
+    logger.info('Entra ID login completed, redirecting to `%s`', next_path)
+
+    out = HttpResponseRedirect(next_path)
+    return out
 
 # ################################################################################################################################
 

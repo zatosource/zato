@@ -38,6 +38,17 @@
 <!-- Preloads the image so it's always displayed properly in the actual app -->
 <img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
 
+{% if entra_enabled %}
+<div id="entra-login" style="width:45%;margin:0 auto;padding-top:14px;text-align:center">
+    <a href="/accounts/login/?auth=entra{% if next %}&amp;next={{ next|urlencode }}{% endif %}">Sign in with Microsoft</a>
+    {% if entra_error %}
+    <div id="entra-error" style="padding-top:8px">
+        {{ entra_error }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <div style="width:45%;margin: 0px auto -1px auto;padding-top:10px">
     <form id="login-form" novalidate method="post" action="{% url "login" %}">
         {% csrf_token %}

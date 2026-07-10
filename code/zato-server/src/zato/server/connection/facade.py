@@ -38,6 +38,7 @@ from zato.server.connection.smb import SMBConnection
 ################################################################################################################################
 
 if 0:
+    from pymongo import MongoClient
     from requests import Response
     from zato.common.as2.outbound import SendResult as AS2SendResult
     from zato.common.as4.outbound import PullResult, SendResult
@@ -872,6 +873,32 @@ class SMBFacade:
         wrapper = item['conn']
 
         out = SMBConnection(self.cid, wrapper)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MongoDBFacade:
+    """ Provides dict-like access to MongoDB outgoing connections from services via self.mongodb.
+    """
+    cid: 'str'
+    _outconn_mongodb: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_mongodb = config_manager.outconn_mongodb
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'MongoClient':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._outconn_mongodb[name]
+
+        # The wrapper holds the underlying pymongo client
+        wrapper = item['conn']
+
+        out = wrapper.client
         return out
 
 # ################################################################################################################################
