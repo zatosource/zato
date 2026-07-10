@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.x12.ack import AckResult, ElementNoteResult, FunctionalAcknowledgment997, ImplementationAcknowledgment999, \
      SegmentNoteResult, SetAckResult, TA1Result, X12AckError, build_997, build_999, build_ta1, parse_997, parse_999, parse_ta1
 from zato.x12.base import X12GenericMessage, X12GenericSegment, X12HierarchicalLoop, X12Message, X12Segment
-from zato.x12.control import ControlNumberStore
+from zato.x12.control import ControlNumberStore, SequenceInfo, get_control_db_path
 from zato.x12.envelope import X12EnvelopeError, X12FunctionalGroup, X12Interchange, parse_x12
 from zato.x12.preflight import check_usage_indicator, gs1_check_digit, is_valid_gtin, is_valid_sscc, preflight_invoice, \
      preflight_purchase_order, preflight_ship_notice
@@ -38,6 +38,7 @@ __all__ = [
     'ST',
     'SegmentNoteResult',
     'Separators',
+    'SequenceInfo',
     'SetAckResult',
     'SetValidationResult',
     'TA1',
@@ -60,6 +61,7 @@ __all__ = [
     'check_usage_indicator',
     'default_separators',
     'extract_business_key',
+    'get_control_db_path',
     'gs1_check_digit',
     'is_valid_gtin',
     'is_valid_sscc',
