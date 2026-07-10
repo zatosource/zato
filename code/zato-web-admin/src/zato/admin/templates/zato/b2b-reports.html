@@ -1,0 +1,172 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}B2B reports{% endblock %}
+
+{% block "extra_css" %}
+<style nonce="{{ CSP_NONCE }}">
+
+.b2b-report-section {
+    margin-bottom:2rem;
+}
+
+.b2b-report-filters {
+    margin-bottom:1.5rem;
+}
+
+.b2b-report-filters input[type="text"] {
+    width:14rem;
+}
+
+.b2b-report-export {
+    margin-left:0.75rem;
+    font-size:smaller;
+}
+
+.b2b-report-table th.b2b-report-sortable {
+    cursor:pointer;
+}
+
+.b2b-report-count {
+    text-align:right;
+}
+
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/b2b_reports.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.b2b.reports.init();
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+    <h2 class="zato">B2B reports</h2>
+
+    <form method="get" action="{% url "b2b-reports" %}" class="b2b-report-filters">
+        <input type="hidden" name="cluster" value="{{ cluster_id }}">
+        <label>Range:
+            <select name="range">
+                {% for item in ranges %}
+                <option value="{{ item.value }}" {% if item.value == time_range %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Partner:
+            <input type="text" name="partner" value="{{ partner }}" placeholder="Any partner">
+        </label>
+        <input type="submit" value="Show">
+    </form>
+
+    <div class="b2b-report-section">
+        <h3 class="zato">Volume
+            <a class="b2b-report-export" href="{% url "b2b-reports-csv" %}?table=volume&amp;range={{ time_range }}&amp;partner={{ partner|urlencode }}&amp;cluster={{ cluster_id }}">Export CSV</a>
+        </h3>
+
+        {% if volume_rows %}
+        <table class="zato-table b2b-report-table" id="b2b-report-volume">
+            <thead>
+                <tr>
+                    <th class="b2b-report-sortable" data-sort-type="text">Period</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Source</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Partner</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Document type</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Sent</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Received</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in volume_rows %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td>{{ row.period }}</td>
+                    <td>{{ row.source }}</td>
+                    <td><a href="{{ row.link }}">{{ row.partner }}</a></td>
+                    <td>{% if row.doc_type %}{{ row.doc_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                    <td class="b2b-report-count">{{ row.sent }}</td>
+                    <td class="b2b-report-count">{{ row.received }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="form_hint">No traffic in the selected range.</p>
+        {% endif %}
+    </div>
+
+    <div class="b2b-report-section">
+        <h3 class="zato">Outcomes
+            <a class="b2b-report-export" href="{% url "b2b-reports-csv" %}?table=outcomes&amp;range={{ time_range }}&amp;partner={{ partner|urlencode }}&amp;cluster={{ cluster_id }}">Export CSV</a>
+        </h3>
+
+        {% if outcome_rows %}
+        <table class="zato-table b2b-report-table" id="b2b-report-outcomes">
+            <thead>
+                <tr>
+                    <th class="b2b-report-sortable" data-sort-type="text">Source</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Partner</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Document type</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Delivered</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Failed</th>
+                    <th>Failure breakdown</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in outcome_rows %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td>{{ row.source }}</td>
+                    <td><a href="{{ row.link }}">{{ row.partner }}</a></td>
+                    <td>{% if row.doc_type %}{{ row.doc_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                    <td class="b2b-report-count">{{ row.delivered }}</td>
+                    <td class="b2b-report-count">{{ row.failed }}</td>
+                    <td>{% if row.failure_breakdown %}{{ row.failure_breakdown }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="form_hint">No outcomes in the selected range.</p>
+        {% endif %}
+    </div>
+
+    <div class="b2b-report-section">
+        <h3 class="zato">Acknowledgment discipline
+            <a class="b2b-report-export" href="{% url "b2b-reports-csv" %}?table=acks&amp;range={{ time_range }}&amp;partner={{ partner|urlencode }}&amp;cluster={{ cluster_id }}">Export CSV</a>
+        </h3>
+
+        {% if ack_rows %}
+        <table class="zato-table b2b-report-table" id="b2b-report-acks">
+            <thead>
+                <tr>
+                    <th class="b2b-report-sortable" data-sort-type="text">Partner</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Acknowledged</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Average turnaround (s)</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Max turnaround (s)</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Outstanding</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Rejected</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in ack_rows %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td><a href="{{ row.link }}">{{ row.partner }}</a></td>
+                    <td class="b2b-report-count">{{ row.acknowledged }}</td>
+                    <td class="b2b-report-count">{{ row.average_seconds }}</td>
+                    <td class="b2b-report-count">{{ row.max_seconds }}</td>
+                    <td class="b2b-report-count"><a href="{{ row.outstanding_link }}">{{ row.outstanding }}</a></td>
+                    <td class="b2b-report-count">{{ row.rejected }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="form_hint">No acknowledgment activity in the selected range.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
