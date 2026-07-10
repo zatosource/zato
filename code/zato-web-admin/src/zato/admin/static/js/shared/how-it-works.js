@@ -71,11 +71,67 @@ $.fn.zato.how_it_works.init = function(config) {
         // .. jump to the clicked field ..
         var state = howItWorks._state;
         if (state) {
+            // .. the clicked label may sit in a block expanded after activation ..
+            howItWorks._refreshFields(state);
             var fieldIndex = howItWorks._findFieldIndex(state, fieldId);
             if (fieldIndex >= 0) {
                 howItWorks._showFieldTooltip(state, fieldIndex);
             }
         }
+    });
+
+    // .. mark group header cells, e.g. "Pool" next to a Toggle options link ..
+    $.fn.zato.how_it_works._markGroupLabels(config);
+
+    // .. clicking an expanded group's name shows its first field's tooltip ..
+    $(container).off('click.how_it_works_group').on('click.how_it_works_group', 'td.how-it-works-group-label', function(event) {
+        event.stopPropagation();
+
+        var howItWorks = $.fn.zato.how_it_works;
+        var groupSelector = this._howItWorksGroupSelector;
+        var groupRows = container.querySelectorAll(groupSelector);
+
+        // .. do nothing while the group is collapsed ..
+        if (!groupRows.length || groupRows[0].offsetParent === null) {
+            return;
+        }
+
+        // .. if help mode is active for another dialog, leave it first ..
+        if (howItWorks._state && howItWorks._state.container !== container) {
+            howItWorks._deactivate();
+        }
+
+        // .. activate help mode on this badge if nothing is active yet ..
+        if (!howItWorks._state) {
+            howItWorks._activate(badge);
+        }
+
+        var state = howItWorks._state;
+        if (!state) {
+            return;
+        }
+
+        // .. the group was expanded after activation, so re-collect first ..
+        howItWorks._refreshFields(state);
+
+        // .. jump to the first described field inside the group ..
+        for (var rowIndex = 0; rowIndex < groupRows.length; rowIndex++) {
+            var labels = groupRows[rowIndex].querySelectorAll('label[for]');
+            for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
+                var fieldIndex = howItWorks._findFieldIndex(state, labels[labelIndex].getAttribute('for'));
+                if (fieldIndex >= 0) {
+                    howItWorks._showFieldTooltip(state, fieldIndex);
+                    return;
+                }
+            }
+        }
+    });
+
+    // .. the help cursor on a group name only makes sense while it is expanded ..
+    $(container).off('mouseenter.how_it_works_group').on('mouseenter.how_it_works_group', 'td.how-it-works-group-label', function() {
+        var groupRows = container.querySelectorAll(this._howItWorksGroupSelector);
+        var isExpanded = groupRows.length && groupRows[0].offsetParent !== null;
+        this.classList.toggle('how-it-works-group-expanded', !!isExpanded);
     });
 
     // .. set up inline per-row badges if configured ..
@@ -101,6 +157,40 @@ $.fn.zato.how_it_works._markLabels = function(config) {
         if (descriptions[lookupId]) {
             label.classList.add('how-it-works-label');
         }
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._markGroupLabels = function(config) {
+
+    var container = document.getElementById(config.divId.replace('#', ''));
+
+    // .. any toggle function counts, e.g. toggle_visibility or page-specific ones,
+    // .. as long as it receives a class selector for the rows it expands ..
+    var links = container.querySelectorAll('a[href*="toggle"]');
+
+    for (var linkIndex = 0; linkIndex < links.length; linkIndex++) {
+
+        var link = links[linkIndex];
+        var match = link.getAttribute('href').match(/toggle\w*\('(\.[^']+)'\)/);
+        if (!match) {
+            continue;
+        }
+
+        var row = link.closest('tr');
+        if (!row) {
+            continue;
+        }
+
+        // .. the group's name is the text of the row's first cell ..
+        var nameCell = row.querySelector('td');
+        if (!nameCell || !nameCell.textContent.trim()) {
+            continue;
+        }
+
+        nameCell.classList.add('how-it-works-group-label');
+        nameCell._howItWorksGroupSelector = match[1];
     }
 };
 
@@ -278,6 +368,8 @@ $.fn.zato.how_it_works._activate = function(badge) {
     // .. bind click on selects to switch field ..
     $(container).on('mousedown.how_it_works_select', 'select', function(event) {
         var fieldId = this.id;
+        // .. the select may sit in a block expanded after activation ..
+        $.fn.zato.how_it_works._refreshFields(state);
         var fieldIndex = $.fn.zato.how_it_works._findFieldIndexByInput(state, fieldId);
         if (fieldIndex >= 0) {
             if (fieldIndex !== state.currentIndex) {
@@ -305,6 +397,8 @@ $.fn.zato.how_it_works._activate = function(badge) {
         if (!label) {
             return;
         }
+        // .. the focused field may sit in a block expanded after activation ..
+        $.fn.zato.how_it_works._refreshFields(state);
         var fieldIndex = $.fn.zato.how_it_works._findFieldIndex(state, label.getAttribute('for'));
         if (fieldIndex >= 0) {
             if (fieldIndex !== state.currentIndex) {
@@ -342,11 +436,38 @@ $.fn.zato.how_it_works._activate = function(badge) {
         if ($(target).closest('.how-it-works-badge').length) {
             return;
         }
+        // .. group name cells have their own click handling ..
+        if ($(target).closest('.how-it-works-group-label').length) {
+            return;
+        }
         if ($(target).closest('.tippy-box').length) {
             return;
         }
         $.fn.zato.how_it_works._deactivate();
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._refreshFields = function(state) {
+
+    // .. remember which field is currently shown ..
+    var currentField = state.fields[state.currentIndex];
+    var currentFieldId = currentField ? currentField.fieldId : null;
+
+    // .. re-collect, e.g. a toggle block may have been expanded or collapsed
+    // .. since activation, changing which rows are visible ..
+    state.fields = $.fn.zato.how_it_works._collectFields(state.container, state.config);
+
+    // .. keep pointing at the same field if it is still visible ..
+    var newIndex = 0;
+    if (currentFieldId) {
+        var foundIndex = $.fn.zato.how_it_works._findFieldIndex(state, currentFieldId);
+        if (foundIndex >= 0) {
+            newIndex = foundIndex;
+        }
+    }
+    state.currentIndex = newIndex;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -471,6 +592,10 @@ $.fn.zato.how_it_works._onKeydown = function(event) {
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
         event.preventDefault();
+
+        // .. re-collect fields first, a toggle block may have been expanded meanwhile ..
+        $.fn.zato.how_it_works._refreshFields(state);
+
         var nextIndex = state.currentIndex + 1;
         if (nextIndex < state.fields.length) {
             $.fn.zato.how_it_works._showFieldTooltip(state, nextIndex);
@@ -480,6 +605,10 @@ $.fn.zato.how_it_works._onKeydown = function(event) {
 
     if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
         event.preventDefault();
+
+        // .. re-collect fields first, a toggle block may have been expanded meanwhile ..
+        $.fn.zato.how_it_works._refreshFields(state);
+
         var previousIndex = state.currentIndex - 1;
         if (previousIndex >= 0) {
             $.fn.zato.how_it_works._showFieldTooltip(state, previousIndex);
@@ -633,6 +762,15 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
                 var customTarget = rows[rowIndex].querySelector(config.targetSelector);
                 if (customTarget) {
                     targetElement = customTarget;
+                }
+            }
+
+            // .. when the label wraps its own control, anchor at the control itself
+            // .. so the tooltip centers on the input, not on the label plus input box ..
+            if (targetElement === label) {
+                var control = document.getElementById(fieldId);
+                if (control && label.contains(control)) {
+                    targetElement = control;
                 }
             }
 

@@ -36,6 +36,11 @@ label.how-it-works-label {
     cursor: help;
 }
 
+/* Group name cells, e.g. "Pool", are clickable only while their block is expanded */
+td.how-it-works-group-label.how-it-works-group-expanded {
+    cursor: help;
+}
+
 /* ------------------------------------------------------------ */
 /* How it works - the one crucial thing in each tooltip         */
 /* ------------------------------------------------------------ */
