@@ -49,7 +49,10 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
+$.namespace('zato.as2_keystore');
 $.namespace('zato.audit_log');
+$.namespace('zato.b2b');
+$.namespace('zato.b2b.control_numbers');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.as4');
@@ -72,6 +75,7 @@ $.namespace('zato.cloud.aws');
 $.namespace('zato.cloud.confluence');
 $.namespace('zato.cloud.jira');
 $.namespace('zato.cloud.microsoft_365');
+$.namespace('zato.cloud.microsoft_power_automate');
 $.namespace('zato.cloud.salesforce');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');

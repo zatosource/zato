@@ -276,6 +276,12 @@ class AS2:
     # The fields that hold private keys - they are encrypted at rest.
     Secret_Fields = ('as2_signing_key', 'as2_decryption_key', 'as2_next_decryption_key')
 
+    # The fields that make up our own keystore, stored on the inbound AS2 channel -
+    # the signing pair, the current decryption key and the next decryption pair
+    # staged for rotation.
+    Keystore_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_next_decryption_key',
+        'as2_next_decryption_cert')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -840,6 +846,7 @@ class GENERIC:
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
+            CLOUD_MICROSOFT_POWER_AUTOMATE = 'cloud-microsoft-power-automate'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_LDAP = 'outconn-ldap'
@@ -969,42 +976,15 @@ class ODATA:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MONGODB:
+class MongoDB:
 
-    class DEFAULT:
-        AUTH_SOURCE      = 'admin'
-        HB_FREQUENCY     = 10
-        MAX_IDLE_TIME    = 600
-        MAX_STALENESS    = -1
-        POOL_SIZE_MIN    = 0
-        POOL_SIZE_MAX    = 5
-        SERVER_LIST      = '127.0.0.1:27017'
-        WRITE_TO_REPLICA = ''
-        WRITE_TIMEOUT    = 5
-        ZLIB_LEVEL       = -1
-
-        class TIMEOUT:
-            CONNECT = 10
-            SERVER_SELECT  = 5
-            SOCKET  = 30
-            WAIT_QUEUE  = 10
-
-    class READ_PREF:
-        PRIMARY = NameId('Primary', 'primary')
-        PRIMARY_PREFERRED = NameId('Primary pref.', 'primaryPreferred')
-        SECONDARY = NameId('Secondary', 'secondary')
-        SECONDARY_PREFERRED = NameId('Secondary pref.', 'secondaryPreferred')
-        NEAREST = NameId('Nearest', 'nearest')
-
-        def __iter__(self):
-            return iter((self.PRIMARY, self.PRIMARY_PREFERRED, self.SECONDARY, self.SECONDARY_PREFERRED, self.NEAREST))
-
-    class AUTH_MECHANISM:
-        SCRAM_SHA_1 = NameId('SCRAM-SHA-1')
-        SCRAM_SHA_256 = NameId('SCRAM-SHA-256')
-
-        def __iter__(self):
-            return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
+    class Default:
+        Server_List = 'localhost:27017'
+        Auth_Source = 'admin'
+        App_Name = 'Zato'
+        Pool_Size_Max = 10
+        Connect_Timeout = 10
+        Server_Select_Timeout = 5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1088,10 +1068,26 @@ class Atlassian:
 class Microsoft365:
 
     class Default:
+        Address = 'https://graph.microsoft.com'
+        Auth_Server_URL = 'https://login.microsoftonline.com'
         Auth_Redirect_URL = 'https://zato.io/ext/redirect/oauth2'
         Scopes = [
             'https://graph.microsoft.com/.default'
         ]
+        Verify_TLS = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MicrosoftPowerAutomate:
+
+    class Default:
+        Address = 'https://api.flow.microsoft.com'
+        API_Version = '2016-11-01'
+        Login_URL = 'https://login.microsoftonline.com'
+        Pool_Size = 20
+        Scope = 'https://service.flow.microsoft.com/.default'
+        Trigger_Name = 'manual'
 
 # ################################################################################################################################
 # ################################################################################################################################

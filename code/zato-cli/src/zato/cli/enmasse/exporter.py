@@ -23,7 +23,9 @@ from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
-from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
+from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
+from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
+from zato.cli.enmasse.exporters.mongodb import MongoDBExporter
 from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
 from zato.cli.enmasse.exporters.smb import SMBExporter
@@ -89,10 +91,12 @@ class EnmasseYAMLExporter:
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
+        self.mongodb_exporter = MongoDBExporter(self)
         self.odata_exporter = ODataExporter(self)
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
-        self.microsoft_365_exporter = Microsoft365Exporter(self)
+        self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
+        self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
@@ -359,12 +363,30 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
-    def export_microsoft_365(self, session:'SASession') -> 'list':
+    def export_mongodb(self, session:'SASession') -> 'list':
+        """ Exports MongoDB connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        mongodb_list = self.mongodb_exporter.export(session, self.cluster_id)
+        return mongodb_list
+
+# ################################################################################################################################
+
+    def export_microsoft_cloud(self, session:'SASession') -> 'list':
         """ Exports Microsoft 365 connection definitions.
         """
         _ = self.get_cluster(session) # Ensure cluster info is loaded
-        microsoft_365_list = self.microsoft_365_exporter.export(session, self.cluster_id)
-        return microsoft_365_list
+        microsoft_cloud_list = self.microsoft_cloud_exporter.export(session, self.cluster_id)
+        return microsoft_cloud_list
+
+# ################################################################################################################################
+
+    def export_microsoft_power_automate(self, session:'SASession') -> 'list':
+        """ Exports Microsoft Power Automate connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        microsoft_power_automate_list = self.microsoft_power_automate_exporter.export(session, self.cluster_id)
+        return microsoft_power_automate_list
 
 # ################################################################################################################################
 
@@ -565,10 +587,20 @@ class EnmasseYAMLExporter:
         if smb_defs:
             output_dict['smb'] = smb_defs
 
+        # Export MongoDB connection definitions
+        mongodb_defs = self.export_mongodb(session)
+        if mongodb_defs:
+            output_dict['mongodb'] = mongodb_defs
+
         # Export Microsoft 365 connection definitions
-        microsoft_365_defs = self.export_microsoft_365(session)
-        if microsoft_365_defs:
-            output_dict['microsoft_365'] = microsoft_365_defs
+        microsoft_cloud_defs = self.export_microsoft_cloud(session)
+        if microsoft_cloud_defs:
+            output_dict['microsoft_cloud'] = microsoft_cloud_defs
+
+        # Export Microsoft Power Automate connection definitions
+        microsoft_power_automate_defs = self.export_microsoft_power_automate(session)
+        if microsoft_power_automate_defs:
+            output_dict['microsoft_power_automate'] = microsoft_power_automate_defs
 
         # Export Confluence connection definitions
         confluence_defs = self.export_confluence(session)

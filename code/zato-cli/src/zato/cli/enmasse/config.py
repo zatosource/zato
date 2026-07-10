@@ -31,12 +31,14 @@ class _object_type:
     Groups = 'groups'                             #
 
     LDAP = 'ldap'                                 #
+    MongoDB = 'mongodb'                           #
     OData = 'odata'                               #
     SFTP = 'sftp'                                 #
     SMB = 'smb'                                   #
     Confluence = 'confluence'                     #
     Jira = 'jira'                                 #
-    Microsoft_365 = 'cloud_microsoft_365'         #
+    Microsoft_Cloud = 'microsoft_cloud'           #
+    Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
     Search_ElasticSearch = 'elastic_search'       #
 
     # Channel_AMQP = 'channel_amqp'               #
@@ -54,8 +56,9 @@ _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'
 _object_alias[_object_type.LDAP] = 'outgoing_ldap'
+_object_alias[_object_type.MongoDB] = 'outgoing_mongodb'
 _object_alias[_object_type.OData] = 'outgoing_odata'
-_object_alias[_object_type.Microsoft_365] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
+_object_alias[_object_type.Microsoft_Cloud] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
@@ -103,6 +106,16 @@ _attr_default[_object_type.Jira] = {
     'is_active': True,
     'is_cloud': True,
     'api_version': 'v2'
+}
+
+_attr_default[_object_type.MongoDB] = {
+    'is_active': True,
+    'server_list': 'localhost:27017',
+    'auth_source': 'admin',
+    'app_name': 'Zato',
+    'pool_size_max': 10,
+    'connect_timeout': 10,
+    'server_select_timeout': 5
 }
 
 _attr_default[_object_type.Odoo] = {

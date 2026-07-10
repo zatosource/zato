@@ -46,6 +46,8 @@ if 0:
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cloud.aws import AWSClient
+    from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
+    from zato.server.connection.cloud.microsoft_power_automate import MicrosoftPowerAutomateClient
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
@@ -60,6 +62,8 @@ if 0:
     AMQPFacade = AMQPFacade
     Arrow = Arrow
     AWSClient = AWSClient
+    Microsoft365Client = Microsoft365Client
+    MicrosoftPowerAutomateClient = MicrosoftPowerAutomateClient
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
     IOProcessor = IOProcessor
@@ -257,10 +261,10 @@ class Outgoing:
     fetched from the service's config manager.
     """
     __slots__ = ('amqp', 'as2', 'as4', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap',
-        'mongodb', 'redis')
+        'redis')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
-            sap=None, ldap=None, mongodb=None, redis=None, as2=None, as4=None):
+            sap=None, ldap=None, redis=None, as2=None, as4=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
 
@@ -283,8 +287,6 @@ class Outgoing:
         self.sap  = cast_('ConfigDict', sap)
         self.ldap = cast_('stranydict', ldap)
 
-        self.mongodb = cast_('stranydict', mongodb)
-
         self.redis = cast_('KVDBAPI', redis)
 
 # ################################################################################################################################
@@ -293,12 +295,66 @@ class Outgoing:
 class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'confluence', 'jira', 'salesforce', 'ms365'
+    __slots__ = 'confluence', 'jira', 'salesforce'
 
     confluence: 'stranydict'
     jira: 'stranydict'
     salesforce: 'stranydict'
-    ms365: 'stranydict'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MicrosoftCloudFacade:
+    """ The API through which Microsoft cloud connections are accessed by their names,
+    e.g. self.microsoft.cloud['My Connection'].
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'Microsoft365Client':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MicrosoftPowerPlatformFacade:
+    """ The API through which Microsoft Power Platform connections are accessed by their names,
+    e.g. self.microsoft.power_platform['My Connection'].
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'MicrosoftPowerAutomateClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Microsoft:
+    """ A container for Microsoft connections a service can establish.
+    """
+    __slots__ = 'cloud', 'power_platform'
+
+    cloud: 'MicrosoftCloudFacade'
+    power_platform: 'MicrosoftPowerPlatformFacade'
+
+    def __init__(self) -> 'None':
+        self.cloud = MicrosoftCloudFacade()
+        self.power_platform = MicrosoftPowerPlatformFacade()
 
 # ################################################################################################################################
 # ################################################################################################################################
