@@ -59,6 +59,7 @@ from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
+from zato.server.generic.api.cloud_aws import CloudAWSWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
@@ -93,7 +94,6 @@ if 0:
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
     from zato.server.store import BaseAPI
     ConfigStore    = ConfigStore
@@ -179,6 +179,9 @@ class ConfigManager(_ConfigManagerBase):
 
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
+
+        # Generic connections - Cloud - AWS
+        self.cloud_aws = {}
 
         # Generic connections - Cloud - Confluence
         self.cloud_confluence = {}
@@ -277,6 +280,7 @@ class ConfigManager(_ConfigManagerBase):
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: self.channel_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: self.cloud_aws,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
@@ -300,6 +304,7 @@ class ConfigManager(_ConfigManagerBase):
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: ChannelMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: CloudAWSWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
@@ -904,6 +909,7 @@ class ConfigManager(_ConfigManagerBase):
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
+        cloud_aws_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
@@ -927,6 +933,7 @@ class ConfigManager(_ConfigManagerBase):
             channel_kafka_map,
             channel_mcp_map,
             channel_openapi_map,
+            cloud_aws_map,
             cloud_confluence_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
@@ -945,6 +952,7 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         password_maps = [
+            cloud_aws_map,
             outconn_hl7_fhir_map,
             outconn_ibm_mq_map,
             outconn_kafka_map,

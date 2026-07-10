@@ -43,6 +43,7 @@ kombu==5.5.4
 ldap3==2.10.2rc2
 lxml==6.1.0
 more-itertools==9.0.0
+moto[server]==5.2.2
 msal==1.34
 multipart==1.2.2
 ndg-httpsclient==0.4.0

@@ -45,6 +45,7 @@ if 0:
     from zato.common.odb.api import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
@@ -58,6 +59,7 @@ if 0:
     strnone = strnone
     AMQPFacade = AMQPFacade
     Arrow = Arrow
+    AWSClient = AWSClient
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
     IOProcessor = IOProcessor
@@ -297,6 +299,25 @@ class Cloud:
     jira: 'stranydict'
     salesforce: 'stranydict'
     ms365: 'stranydict'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AWSFacade:
+    """ The API through which AWS connections are accessed by their names, e.g. self.aws['My AWS'].
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'AWSClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

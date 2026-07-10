@@ -51,7 +51,7 @@ from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, Outgoing, Request
 
 # Zato
 from zato.server.reqresp.payload import IOPayload
@@ -374,6 +374,7 @@ class Service:
     http_method_handlers = {}
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
+    aws = AWSFacade()
     cloud = Cloud()
     odb:'ODBManager'
     static_config:'Bunch'
