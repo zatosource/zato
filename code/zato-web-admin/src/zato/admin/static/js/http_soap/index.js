@@ -77,6 +77,12 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
     $.fn.zato.http_soap.update_gateway_badges();
 
+    // Removing a scheduler parameter row
+    $(document).on('click', '.scheduler-param-remove', function() {
+        $(this).closest('.scheduler-param-row').remove();
+        return false;
+    });
+
     if($.fn.zato.http_soap.is_rest_outgoing()) {
 
         // Attach date-time pickers to the scheduler start date fields in both popups ..
@@ -151,7 +157,10 @@ $.fn.zato.http_soap.is_rest_outgoing = function() {
 
 $.fn.zato.http_soap.tab_labels = {
     config:    'Config',
-    scheduler: 'Scheduler'
+    scheduler: 'Scheduler',
+    request:   'Request',
+    response:  'Response',
+    callback:  'Callback'
 };
 
 $.fn.zato.http_soap.reset_tabs = function(action) {
@@ -165,6 +174,107 @@ $.fn.zato.http_soap.reset_tabs = function(action) {
         default_tab:  'config',
         tab_labels:   $.fn.zato.http_soap.tab_labels
     });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Scheduler parameter rows - each row is a key, a value and the value's Text/JSONata mode,
+// serialized to a hidden JSON field before the form is submitted.
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.scheduler_param_kinds = ['query_string', 'path_params', 'headers'];
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.add_scheduler_param_row = function(action, kind, key, value, mode) {
+
+    var row = $('<tr class="scheduler-param-row"></tr>');
+
+    var jsonata_cell = $('<td class="scheduler-param-jsonata-cell"></td>');
+    var jsonata_toggle = $('<label class="toggle-switch" title="Evaluate the value as JSONata"></label>');
+    var jsonata_checkbox = $('<input type="checkbox" class="scheduler-param-jsonata">');
+    if(mode === 'jsonata') {
+        jsonata_checkbox.prop('checked', true);
+    }
+    var jsonata_slider = $('<span class="toggle-slider"></span>');
+    jsonata_toggle.append(jsonata_checkbox);
+    jsonata_toggle.append(jsonata_slider);
+    jsonata_cell.append(jsonata_toggle);
+
+    var key_cell = $('<td class="scheduler-param-key-cell"></td>');
+    var key_input = $('<input type="text" class="scheduler-param-key" placeholder="Name">');
+    if(key) {
+        key_input.val(key);
+    }
+    key_cell.append(key_input);
+
+    var value_cell = $('<td class="scheduler-param-value-cell"></td>');
+    var value_input = $('<input type="text" class="scheduler-param-value" placeholder="Value">');
+    if(value) {
+        value_input.val(value);
+    }
+    value_cell.append(value_input);
+
+    var remove_cell = $('<td class="scheduler-param-remove-cell"></td>');
+    var remove_link = $('<a href="javascript:void(0)" class="scheduler-param-remove" title="Remove" aria-label="Remove">x</a>');
+    remove_cell.append(remove_link);
+
+    row.append(jsonata_cell);
+    row.append(key_cell);
+    row.append(value_cell);
+    row.append(remove_cell);
+
+    $('#scheduler-' + kind + '-rows-' + action).append(row);
+
+    // A newly added row is ready to be typed into right away
+    key_input.focus();
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.reset_scheduler_param_rows = function(action) {
+    $.each($.fn.zato.http_soap.scheduler_param_kinds, function(ignored, kind) {
+        $('#scheduler-' + kind + '-rows-' + action).empty();
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.data_table.before_submit_hook = function(form) {
+
+    var is_edit = $(form).attr('id') === 'edit-form';
+
+    // Only the create form of outgoing REST connections uses row-based parameters
+    if(is_edit || !$.fn.zato.http_soap.is_rest_outgoing()) {
+        return true;
+    }
+
+    $.each($.fn.zato.http_soap.scheduler_param_kinds, function(ignored, kind) {
+
+        var out = [];
+
+        $('#scheduler-' + kind + '-rows-create').find('.scheduler-param-row').each(function() {
+            var key = $(this).find('.scheduler-param-key').val().trim();
+            if(!key) {
+                return;
+            }
+            var is_jsonata = $(this).find('.scheduler-param-jsonata').prop('checked');
+            out.push({
+                key: key,
+                value: $(this).find('.scheduler-param-value').val(),
+                mode: is_jsonata ? 'jsonata' : 'text'
+            });
+        });
+
+        // The rows are serialized to a hidden input created on demand, there is no server-rendered field for them
+        var hidden = $(form).find('input[name="scheduler_' + kind + '"]');
+        if(!hidden.length) {
+            hidden = $('<input type="hidden">').attr('name', 'scheduler_' + kind);
+            $(form).append(hidden);
+        }
+        hidden.val(out.length ? JSON.stringify(out) : '');
+    });
+
+    return true;
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -293,15 +403,59 @@ $.fn.zato.http_soap.field_descriptions = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.http_soap.rest_outgoing_field_descriptions = {
+
+    // Config tab
+    'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
+    'id_url_path': 'URL path on the remote server,<br>e.g. /api/employees.<br>May contain {placeholders} filled in<br>by the Request tab\'s path params.',
+    'id_security': 'Security definition used with each request,<br>e.g. Basic Auth or an OAuth bearer token.',
+
+    // Scheduler tab
+    'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',
+    'id_scheduler_start_date': 'When the first scheduled invocation takes place,<br>entered in your own timezone.',
+
+    // Request tab
+    'id_scheduler_method': 'HTTP method for scheduled requests.',
+    'id_scheduler_query_string': 'Query parameters sent with each scheduled request.<br>A value is sent exactly as typed unless its JSONata toggle<br>is on, then it is an expression evaluated<br>each time the request fires, e.g.<br>' +
+        '<code>"Date ge \'" & $substring($now(), 0, 10) & "\'"</code>',
+    'id_scheduler_path_params': 'Values for the {placeholders} in the URL path.<br>A value is sent exactly as typed, e.g. <code>emea</code>,<br>unless its JSONata toggle is on, then it is evaluated<br>each time the request fires, e.g.<br>' +
+        '<code>$substring($now(), 0, 10)</code>',
+    'id_scheduler_headers': 'Extra HTTP headers sent with each scheduled request.<br>A value is sent exactly as typed unless its JSONata toggle<br>is on, then it is evaluated each time the request fires.',
+    'id_scheduler_data': 'Request body sent with each scheduled request.<br>It is either sent exactly as typed<br>or it is JSONata that builds the body, e.g.<br>' +
+        '<code>{"since": $substring($now(), 0, 10)}</code>',
+
+    // Response tab
+    'id_scheduler_response_map': 'JSONata that reshapes the response<br>before the callback receives it, e.g.<br>' +
+        '<code>$.{ "id": permit_id, "email": email }</code><br>Leave empty to pass the response through as-is.',
+
+    // Callback tab
+    'id_scheduler_callback_type': 'Where each response is delivered - to a service,<br>a pub/sub topic or another REST connection.',
+    'id_scheduler_service': 'The service invoked with the response<br>each time the connection fires.',
+    'id_scheduler_callback_topic': 'The pub/sub topic the response is published to.',
+    'id_scheduler_callback_rest': 'The outgoing REST connection<br>the response is sent to.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.http_soap.init_how_it_works = function(action) {
+
     var transport = $('input[name="transport"]').val();
-    if(transport != 'soap') {
+    var descriptions;
+
+    if(transport == 'soap') {
+        descriptions = $.fn.zato.http_soap.field_descriptions;
+    }
+    else if($.fn.zato.http_soap.is_rest_outgoing()) {
+        descriptions = $.fn.zato.http_soap.rest_outgoing_field_descriptions;
+    }
+    else {
         return;
     }
+
     $.fn.zato.how_it_works.init({
         badgeId: action + '-how-it-works',
         divId: '#' + action + '-div',
-        descriptions: $.fn.zato.http_soap.field_descriptions
+        descriptions: descriptions
     });
 }
 
@@ -313,6 +467,7 @@ $.fn.zato.http_soap.create = function(object_type) {
     $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
     $.fn.zato.http_soap.reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
+    $.fn.zato.http_soap.reset_scheduler_param_rows('create');
     $.fn.zato.http_soap.init_how_it_works('create');
 }
 

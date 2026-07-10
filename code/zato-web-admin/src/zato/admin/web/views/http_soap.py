@@ -72,7 +72,7 @@ _scheduler_field_names = (
     'scheduler_path_params',
     'scheduler_headers',
     'scheduler_data',
-    'scheduler_security',
+    'scheduler_data_mode',
     'scheduler_response_map',
     'scheduler_callback_type',
     'scheduler_service',

@@ -1,0 +1,17 @@
+{% comment %}
+Response tab for outgoing REST connections - how the scheduler transforms the response.
+
+Expects in the context:
+* form         - the create or edit form
+* action       - "create" or "edit"
+* field_prefix - "" for create, "edit-" for edit
+{% endcomment %}
+
+<table class="form-data">
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}scheduler_response_map">Response map</label></td>
+        <td>{{ form.scheduler_response_map }}</td>
+    </tr>
+
+</table>
