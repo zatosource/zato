@@ -44,6 +44,32 @@ $.fn.zato.security.oauth._on_tab_change = function(div_id) {
     };
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.oauth.field_descriptions = {
+
+    // Dynamic tokens tab
+    'id_name': 'A unique name for this definition.<br>Used to identify it in outgoing connections,<br>logs and the dashboard.',
+    'id_data_format': 'The format of token requests - JSON or form data.<br>Most auth servers expect form data.',
+    'id_auth_server_url': 'The token endpoint of your auth server,<br>e.g. https://auth.example.com/oauth2/token.<br>Zato requests and refreshes tokens there<br>automatically, before they expire.',
+    'id_username': 'Your OAuth client ID -<br>the identifier sent to the auth server<br>with each token request.',
+    'id_secret': 'The OAuth client secret matching the client ID.<br>Sent to the auth server with each token request.',
+    'id_client_id_field': 'The field name that carries the client ID<br>in token requests, client_id by default.<br>Change it if your server expects a different one.',
+    'id_client_secret_field': 'The field name that carries the client secret<br>in token requests, client_secret by default.',
+    'id_grant_type': 'The OAuth grant type to request,<br>client_credentials by default.',
+    'id_extra_fields': 'Additional key=value pairs to include<br>in token requests, one per line,<br>for servers that need non-standard parameters.',
+    'id_scopes': 'OAuth scopes to request, one per line.<br>The auth server limits the token<br>to what these scopes allow.',
+
+    // Static tokens tab
+    'id_create_static_name': 'A unique name for this definition.<br>It mirrors the name from the dynamic tab -<br>both fields hold the same value.',
+    'id_edit_static_name': 'A unique name for this definition.<br>It mirrors the name from the dynamic tab -<br>both fields hold the same value.',
+    'id_static_header': 'The HTTP header the token goes into,<br>Authorization by default.',
+    'id_static_prefix': 'Text placed before the token in the header,<br>Bearer by default. Leave it empty<br>if the server expects the bare token.',
+    'id_static_token': 'The fixed token sent with each request.<br>It is never refreshed automatically -<br>update it here whenever it changes.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.security.oauth.create = function() {
     $.fn.zato.form_tabs.reset({
         div_id: '#create-div',
@@ -54,6 +80,11 @@ $.fn.zato.security.oauth.create = function() {
         on_change: $.fn.zato.security.oauth._on_tab_change('#create-div')
     });
     $.fn.zato.data_table._create_edit('create', 'Create a Bearer token definition', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.security.oauth.field_descriptions
+    });
 }
 
 $.fn.zato.security.oauth.edit = function(id) {
@@ -96,6 +127,11 @@ $.fn.zato.security.oauth.edit = function(id) {
 
     // Open the dialog without auto-populate
     $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id, undefined, false);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.security.oauth.field_descriptions
+    });
 }
 
 $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {

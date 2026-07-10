@@ -265,15 +265,11 @@ class TestRESTChannelExtras:
 
             # .. submit and wait for the row ..
             submit_create_form(page)
-            _ = wait_for_channel_row(page, channel_name)
+            row = wait_for_channel_row(page, channel_name)
 
-            # .. the GW badge is visible on the row ..
-            row = page.query_selector(f'#data-table tbody tr:has(span.name-value:text-is("{channel_name}"))')
-            id_cell = row.query_selector('td[class*="item_id_"]')
-            channel_id = id_cell.inner_text().strip()
-
-            badge_class = page.evaluate(f'document.getElementById("gw-badge-{channel_id}").className')
-            assert 'visible' in badge_class, f'Expected a visible GW badge, got class: "{badge_class}"'
+            # .. the GW badge is shown on the row ..
+            badge = row.query_selector('span.gateway-badge')
+            assert badge is not None, 'Expected a GW badge on the gateway channel row'
 
             # .. and a live call through the gateway reaches the echo service.
             request_body = '{"phrase": "Through the gateway"}'

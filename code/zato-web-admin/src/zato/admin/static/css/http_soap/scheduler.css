@@ -4,12 +4,7 @@ td.scheduler-request-cell {
     padding:12px 8px;
 }
 
-/* Hovering or working inside a block highlights the whole block */
-
-.scheduler-request-table > tbody > tr:hover > td,
-.scheduler-request-table > tbody > tr:focus-within > td {
-    background:rgba(0, 0, 0, 0.04);
-}
+/* The block hover highlight comes from /static/css/shared/form-highlight.css */
 
 /* Parameter tables - a JSONata toggle, a name, a value and a remove badge per row */
 

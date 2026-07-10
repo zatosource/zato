@@ -30,14 +30,35 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.sftp.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>and the command shell runs against it.',
+    'id_address': 'Where the SFTP server listens, as host<br>or host:port, e.g. sftp.example.com:22.',
+    'id_username': 'Username to log in to the SFTP server as.<br>Leave empty if the server takes the identity<br>from the private key alone.',
+    'id_secret': 'Password for the username above.<br>Leave empty when logging in<br>with a private key instead.',
+    'id_private_key': 'Name of an environment variable that holds<br>the path to the private key file,<br>e.g. Zato_SFTP_Key. Used instead of a password.',
+    'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts any host key.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.sftp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SFTP connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.sftp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SFTP connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.sftp.field_descriptions
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

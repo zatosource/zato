@@ -92,6 +92,7 @@ $.namespace('zato.email');
 $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
 $.namespace('zato.form');
+$.namespace('zato.form_highlight');
 $.namespace('zato.form_tabs');
 $.namespace('zato.groups');
 $.namespace('zato.groups.data_table');

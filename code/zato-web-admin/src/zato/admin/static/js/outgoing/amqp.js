@@ -30,12 +30,36 @@ $(document).ready(function() {
     $.fn.zato.data_table.maybe_open_create_form($.fn.zato.outgoing.amqp.create);
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.amqp.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services publish messages through it,<br>referring to it by this exact name.',
+    'id_address': 'Address of the AMQP broker as host:port,<br>e.g. localhost:5672 for RabbitMQ.',
+    'id_username': 'Username the connection authenticates with,<br>e.g. guest on a default RabbitMQ broker.',
+    'id_password': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
+    'id_content_type': 'MIME type stamped on published messages,<br>e.g. application/json or text/xml.<br>Consumers use it to decide how to parse the body.',
+    'id_content_encoding': 'Content encoding property of published messages,<br>e.g. utf-8. Tells consumers how the body bytes<br>are encoded.',
+    'id_app_id': 'Application ID stamped on published messages.<br>Lets consumers tell which producer<br>a message came from.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.amqp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing AMQP connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.amqp.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.amqp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update outgoing AMQP connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.amqp.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {

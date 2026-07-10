@@ -27,12 +27,39 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.kafka.field_descriptions = {
+    'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this channel consumes messages.<br>Inactive channels leave their topic untouched.',
+    'id_address': 'Address of the Kafka bootstrap server as host:port,<br>e.g. localhost:9092. It is used to discover<br>the rest of the cluster.',
+    'id_topic': 'Topic to consume messages from.<br>Each message published to it<br>invokes the service below.',
+    'id_group_id': 'Consumer group this channel joins.<br>Kafka balances topic partitions among<br>consumers sharing the same group ID<br>and tracks their offsets per group.',
+    'id_service': 'Service invoked for each message from the topic.<br>The message body is in self.request.payload.',
+    'id_ssl': 'Whether the connection to the brokers uses TLS.<br>When on, the certificate files below apply.',
+    'id_ssl_ca_file': 'Path to a PEM file with the CA certificate<br>that signed the brokers\' certificates.',
+    'id_ssl_cert_file': 'Path to a PEM file with the client certificate,<br>needed only when the brokers<br>require mutual TLS.',
+    'id_ssl_key_file': 'Path to the PEM private key matching<br>the client certificate.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.kafka.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Kafka channel', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.channel.kafka.field_descriptions
+    });
 }
 
 $.fn.zato.channel.kafka.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Kafka channel', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.channel.kafka.field_descriptions
+    });
 }
 
 $.fn.zato.channel.kafka.data_table.new_row = function(item, data, include_tr) {

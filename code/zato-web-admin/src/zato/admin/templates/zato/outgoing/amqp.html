@@ -5,6 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 
     <style type="text/css">
         button[aria-label="Show Password"] {
@@ -22,7 +23,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/amqp.js"></script>
 
 
@@ -142,22 +147,22 @@
                 <form novalidate action="{% url "out-amqp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.address.id_for_label }}">Address</label></td>
                             <td>{{ create_form.address }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.username.id_for_label }}">Username</label></td>
                             <td>{{ create_form.username }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.password.id_for_label }}">Password</label></td>
                             <td>{{ create_form.password }}</td>
                         </tr>
 
@@ -181,22 +186,25 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Content type</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.content_type.id_for_label }}">Content type</label></td>
                             <td>{{ create_form.content_type }}</td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Encoding</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.content_encoding.id_for_label }}">Encoding</label></td>
                             <td>{{ create_form.content_encoding }}</td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">App ID</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.app_id.id_for_label }}">App ID</label></td>
                             <td>{{ create_form.app_id }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -212,22 +220,22 @@
                 <form novalidate action="{% url "out-amqp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.address.id_for_label }}">Address</label></td>
                             <td>{{ edit_form.address }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.username.id_for_label }}">Username</label></td>
                             <td>{{ edit_form.username }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.password.id_for_label }}">Password</label></td>
                             <td>{{ edit_form.password }}</td>
                         </tr>
 
@@ -251,22 +259,25 @@
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Content type</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.content_type.id_for_label }}">Content type</label></td>
                             <td>{{ edit_form.content_type }}</td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">Encoding</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.content_encoding.id_for_label }}">Encoding</label></td>
                             <td>{{ edit_form.content_encoding }}</td>
                         </tr>
 
                         <tr class="more-options-block hidden">
-                            <td style="vertical-align:middle">App ID</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.app_id.id_for_label }}">App ID</label></td>
                             <td>{{ edit_form.app_id }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

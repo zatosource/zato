@@ -50,14 +50,31 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.hl7.mllp.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services send messages through it with<br>self.mllp[name].send(data).',
+    'id_address': 'The remote MLLP endpoint as host:port,<br>e.g. 10.20.30.40:2575.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.hl7.mllp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP outgoing connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.hl7.mllp.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.hl7.mllp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the HL7 MLLP outgoing connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.hl7.mllp.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

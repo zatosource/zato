@@ -5,6 +5,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -14,7 +15,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/mcp.js"></script>
 
@@ -163,7 +168,10 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -235,7 +243,10 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

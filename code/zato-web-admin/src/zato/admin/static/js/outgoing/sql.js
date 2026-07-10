@@ -28,12 +28,35 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.sql.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.out.sql.get.',
+    'id_is_active': 'Whether this connection pool can be used.<br>Services cannot run queries<br>through an inactive connection.',
+    'id_engine': 'The database type - it selects the driver<br>and SQL dialect, and picking one fills in<br>the default port and database name below.',
+    'id_host': 'Host name or IP address the database server<br>listens on, with the port in the field next to it.',
+    'id_db_name': 'Name of the database to connect to,<br>with the database user in the field next to it.<br>The user\'s password is set with the Change password link.',
+    'id_extra': 'Extra engine options as key=value pairs,<br>one per line, e.g. echo=True or pool_pre_ping=True.<br>They are passed to the underlying SQLAlchemy engine.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.sql.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing SQL connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.sql.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.sql.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing SQL connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.sql.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.sql.data_table.new_row = function(item, data, include_tr) {

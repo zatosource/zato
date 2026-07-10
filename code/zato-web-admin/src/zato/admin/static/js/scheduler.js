@@ -321,8 +321,60 @@ $.fn.zato.scheduler.data_table.add_row = function(data, action, job_type, includ
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.field_descriptions = {
+
+    'one_time': {
+        'name': 'A unique name for this job.<br>Used in logs and on the scheduler dashboard.',
+        'is_active': 'Whether the scheduler runs this job.<br>An inactive job keeps its definition<br>but never fires.',
+        'start_date': 'The exact date and time the job runs.<br>A one-time job fires once at this moment<br>and never again.',
+        'service': 'The service invoked when the job fires.<br>Data from the extra field is available to it<br>as self.request.raw_request.',
+        'extra': 'Optional data passed to the service on each run,<br>available as self.request.raw_request.<br>Use it to parameterize the service.',
+        'on_success_service': 'A service invoked each time this job<br>completes successfully, e.g. for follow-up<br>processing or notifications.',
+        'on_success_job': 'Another scheduler job to run after this one<br>completes successfully. Lets you chain jobs<br>into sequences.',
+        'on_error_service': 'A service invoked when this job\'s execution fails.<br>Use it for alerting or compensating actions.',
+        'on_error_job': 'Another scheduler job to run when this one fails,<br>e.g. a cleanup or retry job.',
+    },
+
+    'interval_based': {
+        'name': 'A unique name for this job.<br>Used in logs and on the scheduler dashboard.',
+        'start_date': 'When the first execution takes place.<br>Later runs follow at each interval,<br>counted from this moment.',
+        'service': 'The service invoked each time the job fires.<br>Data from the extra field is available to it<br>as self.request.raw_request.',
+        'extra': 'Optional data passed to the service on each run,<br>available as self.request.raw_request.<br>Use it to parameterize the service.',
+        'timezone': 'The timezone the start time and intervals<br>are computed in. Leave empty to use<br>the scheduler server\'s own timezone.',
+        'on_success_service': 'A service invoked each time this job<br>completes successfully, e.g. for follow-up<br>processing or notifications.',
+        'on_success_job': 'Another scheduler job to run after this one<br>completes successfully. Lets you chain jobs<br>into sequences.',
+        'on_error_service': 'A service invoked when this job\'s execution fails.<br>Use it for alerting or compensating actions.',
+        'on_error_job': 'Another scheduler job to run when this one fails,<br>e.g. a cleanup or retry job.',
+    },
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.get_field_descriptions = function(action, job_type) {
+
+    var base = $.fn.zato.scheduler.field_descriptions[job_type];
+
+    // Create-form field ids look like id_create-one_time-name while edit-form ids,
+    // after the library normalizes id_edit- to id_, look like id_one_time-name.
+    var prefix = action === 'edit' ? 'id_' + job_type + '-' : 'id_create-' + job_type + '-';
+
+    var out = {};
+    $.each(base, function(field_name, description) {
+        out[prefix + field_name] = description;
+    });
+
+    return out;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.scheduler.create = function(job_type) {
     $.fn.zato.scheduler._create_edit('create', job_type, null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-' + job_type + '-how-it-works',
+        divId: '#create-' + job_type,
+        descriptions: $.fn.zato.scheduler.get_field_descriptions('create', job_type)
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -344,6 +396,11 @@ $.fn.zato.scheduler.execute = function(id, link_elem) {
 
 $.fn.zato.scheduler.edit = function(job_type, id) {
     $.fn.zato.scheduler._create_edit('edit', job_type, id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-' + job_type + '-how-it-works',
+        divId: '#edit-' + job_type,
+        descriptions: $.fn.zato.scheduler.get_field_descriptions('edit', job_type)
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

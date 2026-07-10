@@ -77,14 +77,31 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.openapi.field_descriptions = {
+    'id_name': 'A unique name for this OpenAPI channel.<br>The URL path below is derived from it<br>as a slug, so the name decides the address<br>the specification is served under.',
+    'id_is_active': 'Whether the OpenAPI specification<br>can be downloaded from the URL path.<br>Inactive channels do not serve it.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.openapi.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create an OpenAPI channel', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.channel.openapi.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update OpenAPI channel', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.channel.openapi.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

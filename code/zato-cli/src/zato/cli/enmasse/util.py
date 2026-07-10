@@ -252,7 +252,8 @@ def get_object_order(object_type:'str') -> 'strlist':
         'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
         'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \
         'as2_version', 'content_transfer_encoding', 'http_transfer_mode', 'http_timeout_seconds', \
-        'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries', 'preserve_filename', \
+        'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries', 'ship_notice_window_hours', \
+        'alerting_opt_out', 'preserve_filename', \
         'warn_on_duplicate_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', \
         'inbound_topic', 'inbound_service', 'as2_partner_cert', 'as2_partner_next_cert', \
         'as2_partner_next_cert_from', 'as2_signing_cert_chain', 'as2_next_decryption_cert', \

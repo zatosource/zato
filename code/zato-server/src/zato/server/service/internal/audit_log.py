@@ -24,8 +24,11 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import dictlist, stranydict
+    from zato.common.as2.outbound import SendResult
+    from zato.common.typing_ import dictlist, stranydict, strnone
+    SendResult = SendResult
     stranydict = stranydict
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,11 +69,17 @@ class ResendAS2Message(AdminService):
 
             connection_name = find_connection_name(configs, as2_from, as2_to)
 
-            # Deliver the payload through the real pipeline and record the new attempt.
+            # Deliver the payload through the real pipeline and record the new attempt -
+            # the resend records the events itself so it can link them to the original
+            # by the correlation id, hence the connection's own recording is turned off.
             invoker = self.as2[connection_name]
             reconciler = MDNReconciler(self.server.name)
 
-            result = resend(event, invoker.send, reconciler, self.cid)
+            def send(payload:'str', filename:'strnone') -> 'SendResult':
+                out = invoker.send(payload, filename, needs_audit=False)
+                return out
+
+            result = resend(event, send, reconciler, self.cid)
             report = describe_send_result(result)
 
         except Exception:

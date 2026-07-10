@@ -1,0 +1,7 @@
+/* Form block hover highlight - rows are marked with the class below by
+   /static/js/shared/form-highlight.js when their form has enough fields */
+
+tr.form-highlight-row:hover > td,
+tr.form-highlight-row:focus-within > td {
+    background:rgba(0, 0, 0, 0.04);
+}

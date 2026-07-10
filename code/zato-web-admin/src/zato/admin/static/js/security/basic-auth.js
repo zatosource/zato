@@ -31,13 +31,33 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.basic_auth.field_descriptions = {
+    'id_name': 'A unique name for this definition.<br>Used to identify it in channels, connections,<br>logs and the dashboard.',
+    'id_username': 'The username part of the credentials.<br>Channels check it against incoming requests,<br>outgoing connections send it to the remote server.',
+    'id_realm': 'The HTTP authentication realm, API by default.<br>Returned in WWW-Authenticate challenges<br>when a request carries no valid credentials.',
+    'id_password': 'The password part of the credentials.<br>A random one is assigned at creation,<br>change it before the definition is used.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.basic_auth.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a Basic Auth definition', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.security.basic_auth.field_descriptions
+    });
 }
 
 $.fn.zato.security.basic_auth.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit Basic Auth definition', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.security.basic_auth.field_descriptions
+    });
 }
 
 $.fn.zato.security.basic_auth.data_table.new_row = function(item, data, include_tr) {

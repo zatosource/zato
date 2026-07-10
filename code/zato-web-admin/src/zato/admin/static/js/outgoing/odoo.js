@@ -28,12 +28,37 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.odoo.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>through self.out.odoo.get.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot invoke Odoo<br>through an inactive connection.',
+    'id_host': 'Host name or IP address the Odoo server<br>listens on, without any protocol prefix.',
+    'id_port': 'Port the Odoo server listens on.<br>The standard Odoo port is 8069.',
+    'id_user': 'Odoo login of the account the connection<br>authenticates as. Its password is set<br>separately with the Change password link.',
+    'id_database': 'Name of the Odoo database to work with.<br>One server may host multiple databases<br>and each connection uses exactly one.',
+    'id_protocol': 'How to talk to Odoo - XML-RPC or JSON-RPC,<br>each in plain or TLS form. The TLS variants<br>require the server to expose HTTPS.',
+    'id_pool_size': 'How many connections are kept open in the pool.<br>More lets concurrent services call Odoo in parallel<br>at the cost of more open sessions.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.odoo.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing Odoo connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.odoo.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.odoo.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing Odoo connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.odoo.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.odoo.data_table.new_row = function(item, data, include_tr) {

@@ -38,14 +38,35 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.cloud.salesforce.field_descriptions = {
+    'id_name': 'A unique name for this Salesforce connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_address': 'Address of the Salesforce instance,<br>e.g. https://example.my.salesforce.com.<br>All API calls the connection makes go to this host.',
+    'id_username': 'Username the connection logs in as.<br>Records are read and written<br>with this user\'s permissions.',
+    'id_password': 'Password of the user above. Used together with<br>the consumer key and secret to obtain<br>OAuth2 access tokens from Salesforce.',
+    'id_consumer_key': 'Consumer key of the connected app created<br>in Salesforce for Zato. Found under the app\'s<br>Manage Consumer Details in Salesforce setup.',
+    'id_consumer_secret': 'Consumer secret of the same connected app.<br>Keep it confidential, it works like a password.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cloud.salesforce.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Salesforce connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.cloud.salesforce.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.salesforce.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Salesforce connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.cloud.salesforce.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

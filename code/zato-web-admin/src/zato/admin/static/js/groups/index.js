@@ -124,6 +124,13 @@ $.fn.zato.groups.badge_picker.load = function(action, group_id) {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.field_descriptions = {
+
+    'id_name': 'A unique name for this security group.<br>Assign the group to REST channels so that<br>all its members can invoke them,<br>without listing each definition separately.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Create / Edit actions
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -131,6 +138,11 @@ $.fn.zato.groups.create = function() {
     $.fn.zato.groups.badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a security group', null);
     $('#create-div').dialog('option', 'width', '45em');
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.groups.field_descriptions
+    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,6 +152,11 @@ $.fn.zato.groups.edit = function(id) {
     $.fn.zato.groups.badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Edit the security group', id);
     $('#edit-div').dialog('option', 'width', '45em');
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.groups.field_descriptions
+    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -21,6 +22,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/cloud/microsoft_365.js"></script>
 
@@ -212,7 +214,10 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -293,7 +298,10 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -315,7 +323,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top">
-                                Step #1
+                                <label for="reset_oauth2_scopes_url_step_1">Step #1</label>
                             </td>
                             <td style="vertical-align:top !important; padding-bottom: 0.5rem">
                                 In a new tab, log in to Azure and open the address below
@@ -324,7 +332,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:top">
-                                Step #2
+                                <label for="reset_oauth2_scopes_url_step_2">Step #2</label>
                             </td>
                             <td style="line-height: 1rem">
                                 Paste below the address of the page that Azure redirected you to

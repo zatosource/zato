@@ -28,12 +28,38 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.ftp.field_descriptions = {
+    'id_name': 'A unique name for this connection.<br>Services refer to it by this exact name.',
+    'id_is_active': 'Whether this connection can be used.<br>Inactive connections cannot be used by services.',
+    'id_dircache': 'When on, directory listings are cached<br>for faster repeated access. Turn off if other<br>systems change the directories often.',
+    'id_host': 'Hostname or IP address of the FTP server,<br>e.g. ftp.example.com.',
+    'id_port': 'TCP port the FTP server listens on.<br>The standard FTP port is 21.',
+    'id_timeout': 'How many seconds to wait for the server<br>during network operations before giving up.',
+    'id_user': 'Username to log in with.<br>Leave empty for anonymous FTP.<br>The password is set separately<br>with the Change password link.',
+    'id_acct': 'Account information sent with the FTP ACCT<br>command. Most servers do not use it,<br>leave empty unless yours requires it.',
+    'id_default_directory': 'Directory to change to right after logging in.<br>Relative paths are then resolved against it.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.ftp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new outgoing FTP connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.ftp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the outgoing FTP connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.outgoing.ftp.field_descriptions
+    });
 }
 
 $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {

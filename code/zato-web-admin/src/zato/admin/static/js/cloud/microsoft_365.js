@@ -36,14 +36,34 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.cloud.microsoft_365.field_descriptions = {
+    'id_name': 'A unique name for this Microsoft 365 connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the connection signs in to. Found on the overview page<br>of the app registration in the Azure portal.',
+    'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as. The app\'s API permissions<br>decide what the connection can access.',
+    'id_secret_value': 'Value of a client secret created for the app registration.<br>Note that secrets expire in Azure<br>and need to be rotated periodically.',
+    'id_scopes': 'OAuth2 scopes the connection requests, one per line.<br>The default https://graph.microsoft.com/.default<br>grants all permissions assigned to the app in Azure.',
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cloud.microsoft_365.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new Microsoft 365 connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.cloud.microsoft_365.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cloud.microsoft_365.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the Microsoft 365 connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.cloud.microsoft_365.field_descriptions
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

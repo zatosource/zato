@@ -75,7 +75,6 @@ $(document).ready(function() {
     });
 
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
-    $.fn.zato.http_soap.update_gateway_badges();
 
     // Removing a scheduler parameter row
     $(document).on('click', '.scheduler-param-remove', function() {
@@ -141,8 +140,6 @@ $.fn.zato.data_table.after_populate = function() {
             $.fn.zato.http_soap.toggle_scheduler_callback(action);
         });
     }
-
-    $.fn.zato.http_soap.update_gateway_badges();
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -542,9 +539,14 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     /* 3 */
+    var is_gateway_channel = false;
     if(is_channel) {
-        var gw_badge_class = (item.service === $.fn.zato.http_soap.gateway_trigger_service) ? 'gateway-badge visible' : 'gateway-badge';
-        row += String.format('<td><span class="{0}" id="gw-badge-{1}">GW</span><span class="name-value">{2}</span></td>', gw_badge_class, item.id, item.name);
+        if(!is_soap) {
+            is_gateway_channel = item.service === $.fn.zato.http_soap.gateway_trigger_service;
+        }
+    }
+    if(is_gateway_channel) {
+        row += String.format('<td><span class="gateway-badge">GW</span><span class="name-value">{0}</span></td>', item.name);
     }
     else {
         row += String.format('<td><span class="name-value">{0}</span></td>', item.name);
@@ -715,21 +717,6 @@ $.fn.zato.http_soap.set_gateway_url_path = function(suffix, service_name) {
             $.fn.zato.http_soap.previous_url_path[suffix] = '';
         }
     }
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.http_soap.update_gateway_badges = function() {
-    var trigger_service = $.fn.zato.http_soap.gateway_trigger_service;
-    $.each($.fn.zato.data_table.data, function(id, item) {
-        var badge = $('#gw-badge-' + id);
-        if(item.service === trigger_service) {
-            badge.addClass('visible');
-        }
-        else {
-            badge.removeClass('visible');
-        }
-    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

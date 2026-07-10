@@ -4,6 +4,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -13,8 +14,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 
     {% comment %} FTP {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/ftp.js"></script>
@@ -233,7 +238,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -316,7 +324,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -338,7 +349,7 @@
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Password</td>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Password</label></td>
                             <td>{{ change_password_form.password }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />

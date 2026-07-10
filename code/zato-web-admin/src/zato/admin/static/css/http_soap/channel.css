@@ -8,7 +8,7 @@
 }
 
 .gateway-badge {
-    display: none;
+    display: inline-block;
     background-color: #8b5cf6;
     color: #fff;
     font-family: monospace;
@@ -19,8 +19,4 @@
     margin-right: 6px;
     border-radius: 3px;
     vertical-align: middle;
-}
-
-.gateway-badge.visible {
-    display: inline-block;
 }

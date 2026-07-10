@@ -28,13 +28,32 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.apikey.field_descriptions = {
+    'id_name': 'A unique name for this API key definition.<br>Used to identify it in channels, connections,<br>logs and the dashboard.',
+    'id_header': 'The HTTP header that carries the key,<br>X-API-Key by default.<br>Clients must send the key in exactly this header.',
+    'id_password': 'The API key itself, sent as the header\'s value.<br>Each client application should have its own key<br>so access can be tracked and revoked per client.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.security.apikey.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create an API key', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.security.apikey.field_descriptions
+    });
 }
 
 $.fn.zato.security.apikey.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit API key', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.security.apikey.field_descriptions
+    });
 }
 
 $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) {

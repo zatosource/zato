@@ -27,13 +27,38 @@ $(document).ready(function() {
     });
 })
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.email.smtp.field_descriptions = {
+    'id_name': 'A unique name for this SMTP connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can send e-mail.<br>Services cannot send anything through<br>an inactive connection.',
+    'id_host': 'Hostname of the SMTP server to connect to,<br>e.g. smtp.example.com.',
+    'id_port': 'Port the SMTP server listens on.<br>Common values are 25 for plain connections,<br>465 for SSL/TLS and 587 for STARTTLS.',
+    'id_timeout': 'How many seconds to wait for the server to respond<br>before a send attempt is abandoned.',
+    'id_username': 'Username the connection authenticates with.<br>Leave empty if the server does not require credentials.<br>The password is set separately<br>with the Change password link.',
+    'id_mode': 'How the connection is secured. Plain sends everything<br>unencrypted, SSL uses TLS from the start<br>and STARTTLS upgrades a plain connection to TLS.',
+    'id_is_debug': 'When on, the full SMTP protocol conversation<br>is written out to server logs.<br>Useful when diagnosing delivery issues.',
+    'id_ping_address': 'Recipient address that pings of this connection<br>send their test messages to.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.email.smtp.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new SMTP connection', null);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'create-how-it-works',
+        divId: '#create-div',
+        descriptions: $.fn.zato.email.smtp.field_descriptions
+    });
 }
 
 $.fn.zato.email.smtp.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the SMTP connection', id);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.email.smtp.field_descriptions
+    });
 }
 
 $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
