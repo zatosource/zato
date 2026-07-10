@@ -45,7 +45,7 @@ _service_edit = 'zato.channel.as2.keystore.edit'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_expiry_info(cert_chain:'str') -> 'anydict':
+def get_expiry_info(cert_chain:'str') -> 'anydict':
     """ Returns the not-after date of the first certificate in a pasted PEM chain,
     the number of days left until then and whether that is close enough to warn about.
     """
@@ -89,8 +89,8 @@ def index(req:'any_') -> 'TemplateResponse':
 
     # The expiry of our signing certificate and of the staged next certificate
     # is computed for display only.
-    signing_expiry = _get_expiry_info(data['as2_signing_cert_chain'])
-    next_cert_expiry = _get_expiry_info(data['as2_next_decryption_cert'])
+    signing_expiry = get_expiry_info(data['as2_signing_cert_chain'])
+    next_cert_expiry = get_expiry_info(data['as2_next_decryption_cert'])
 
     return_data = {
         'cluster_id': default_cluster_id,

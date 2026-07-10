@@ -169,8 +169,18 @@ $.fn.zato.outgoing.as2.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.as2_from);
     row += String.format('<td>{0}</td>', item.as2_to);
 
+    // The expiry of the partner's certificate is computed server-side,
+    // so a fresh row shows a placeholder until the page is reloaded.
+    row += "<td><span class='form_hint'>---</span></td>";
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\" class=\"ping-link\">Test</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\" class=\"ping-link\">Ping</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" data-name=\"{0}\" onclick=\"$.fn.zato.outgoing.as2.send_test_message(this)\" class=\"send-test-link\">Send test</a>", item.name));
+
+    // The audit log of this connection's exchanges is filed under its AS2 identity pair.
+    var audit_object_name = encodeURIComponent(item.as2_from.trim() + ':' + item.as2_to.trim());
+    row += String.format('<td><a href="/zato/audit-log/?source=as2&object_name={0}&cluster=1">Audit log</a></td>', audit_object_name);
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.as2.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.as2.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
@@ -237,6 +247,91 @@ $.fn.zato.outgoing.as2.delete_ = function(id) {
         'Outgoing AS2 connection `{0}` deleted',
         'Are you sure you want to delete outgoing AS2 connection `{0}`?',
         true);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.as2.send_test_config = {
+    url: '/zato/outgoing/as2/send-test-message/',
+    modal_title: 'Test message result',
+    no_mdn_label: 'No MDN received',
+    error_label: 'Test message could not be sent',
+    signed_label: 'signature verified',
+    unsigned_label: 'unsigned',
+    mic_matched_label: 'MIC matched',
+    mic_mismatch_label: 'MIC mismatch'
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.as2.build_send_test_label = function(report) {
+    var config = $.fn.zato.outgoing.as2.send_test_config;
+
+    // A delivery that raised an exception carries its traceback in the details ..
+    if(report.error) {
+        return config.error_label;
+    }
+
+    // .. one that came back without an MDN is reported by its transport outcome ..
+    if(!report.has_mdn) {
+        return config.no_mdn_label + ' (HTTP ' + report.http_status + ')';
+    }
+
+    // .. and an MDN is reported by its disposition, signature and MIC comparison.
+    var parts = [report.disposition];
+
+    parts.push(report.mdn_signed ? config.signed_label : config.unsigned_label);
+
+    if(report.mic_matched !== null) {
+        parts.push(report.mic_matched ? config.mic_matched_label : config.mic_mismatch_label);
+    }
+
+    return parts.join('; ');
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.as2.parse_send_test_response = function(jqXHR, textStatus) {
+    var config = $.fn.zato.outgoing.as2.send_test_config;
+    var body = jqXHR.responseText;
+
+    // A non-2xx response carries an exception message rather than a report ..
+    var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+    if(!is_http_ok) {
+        return {
+            is_success: false,
+            label: config.error_label,
+            details_title: config.error_label,
+            details_body: body
+        };
+    }
+
+    // .. a report is JSON with the MDN outcome inside.
+    var report = JSON.parse(body);
+    var label = $.fn.zato.outgoing.as2.build_send_test_label(report);
+
+    return {
+        is_success: report.is_ok,
+        label: label,
+        details_title: label,
+        details_body: JSON.stringify(report, null, 2)
+    };
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.outgoing.as2.send_test_message = function(link_elem) {
+    var config = $.fn.zato.outgoing.as2.send_test_config;
+    var name = link_elem.getAttribute('data-name');
+
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: config.url,
+        data: 'name=' + encodeURIComponent(name),
+        parse: $.fn.zato.outgoing.as2.parse_send_test_response,
+        details_modal_title: config.modal_title
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

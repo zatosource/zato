@@ -701,6 +701,8 @@ urlpatterns += [
         login_required(out_as2.change_password), name='out-as2-change-password'),
     url(r'^zato/outgoing/as2/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_as2.ping), name='out-as2-ping'),
+    url(r'^zato/outgoing/as2/send-test-message/$',
+        login_required(out_as2.send_test_message), name='out-as2-send-test-message'),
     ]
 
 # ################################################################################################################################

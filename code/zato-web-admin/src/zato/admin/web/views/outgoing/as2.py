@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.as2 import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed, ping_connection
+    invoke_action_handler, method_allowed, ping_connection
+from zato.admin.web.views.as2_keystore import get_expiry_info
 from zato.common.api import AS2, GENERIC, generic_attrs
 from zato.common.ext.bunch import Bunch
 
@@ -62,6 +63,25 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit', req=self.req),
             'change_password_form': ChangePasswordForm(),
         }
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item):
+
+        # The expiry of the partner's pasted certificate is computed for display only -
+        # an expired partner certificate is the single most common AS2 operational failure.
+        partner_cert = getattr(item, 'as2_partner_cert', '')
+        expiry = get_expiry_info(partner_cert)
+
+        item.cert_expiry = expiry['date']
+        item.cert_expiry_is_warning = expiry['is_warning']
+
+        # The audit log of this connection's exchanges is filed under its AS2 identity pair.
+        as2_from = getattr(item, 'as2_from', '')
+        as2_to = getattr(item, 'as2_to', '')
+        item.audit_log_object_name = f'{as2_from.strip()}:{as2_to.strip()}'
+
+        return item
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,6 +165,13 @@ def change_password(req):
 @method_allowed('POST')
 def ping(req, id, cluster_id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'AS2 connection')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_test_message(req):
+    out = invoke_action_handler(req, 'zato.outgoing.as2.send-test-message', ('name',))
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

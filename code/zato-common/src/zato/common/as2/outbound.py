@@ -18,7 +18,8 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.as2.common import AS2Exception, Default, MDNMode, TransferMode
-from zato.common.as2.mdn import DispositionType, ModifierKind, new_message_id, normalize_message_id, parse_mdn
+from zato.common.as2.mdn import describe_disposition, DispositionType, ModifierKind, new_message_id, normalize_message_id, \
+    parse_mdn
 from zato.common.as2.partnership import active_verification_certificates, quote_as2_identifier, select_encryption_certificate
 from zato.common.as2.smime import compress, compute_mic, encode_base64_lines, encrypt, new_part, \
     select_mic_algorithm, sign, SMIMEPart
@@ -30,10 +31,11 @@ from zato.common.crypto.api import CryptoManager
 if 0:
     from zato.common.as2.mdn import MDNInfo
     from zato.common.as2.partnership import Partnership
-    from zato.common.typing_ import anytuple, strnone, strstrdict
+    from zato.common.typing_ import anytuple, stranydict, strnone, strstrdict
     from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
     certificate_list = certificate_list
+    stranydict = stranydict
     strnone = strnone
     strstrdict = strstrdict
 
@@ -464,6 +466,65 @@ def send(
     # arrives later through its own channel and reconciles against the stored MIC.
     else:
         out.is_ok = response.is_success
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def new_send_report() -> 'stranydict':
+    """ Returns an empty delivery report - the JSON-friendly shape a completed delivery
+    and a failed attempt share, so callers always read the same keys.
+    """
+    out:'stranydict' = {
+        'is_ok': False,
+        'message_id': '',
+        'http_status': 0,
+        'has_mdn': False,
+        'mdn_signed': False,
+        'disposition': '',
+        'mic_matched': None,
+        'error': '',
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def describe_send_result(result:'SendResult') -> 'stranydict':
+    """ Turns one delivery result into a JSON-friendly report of the MDN outcome -
+    whether the receipt arrived signed, what its disposition says and whether
+    its Received-Content-MIC agrees with the one computed at send time.
+    """
+
+    # Our response to produce
+    out = new_send_report()
+
+    out['is_ok'] = result.is_ok
+    out['message_id'] = result.message_id
+    out['http_status'] = result.http_status
+
+    mdn = result.mdn
+
+    # With no MDN on the response, the transport details are everything there is to report.
+    if not mdn:
+        return out
+
+    out['has_mdn'] = True
+    out['mdn_signed'] = mdn.is_signed
+    out['disposition'] = describe_disposition(mdn.disposition, mdn.modifier_kind, mdn.modifier)
+
+    # The Received-Content-MIC is compared with the one computed at send time,
+    # both the digest and the algorithm - an MDN without one leaves the comparison undecided.
+    if mdn.mic:
+        sent_digest, _, sent_algorithm = result.mic.partition(', ')
+
+        if mdn.mic != sent_digest:
+            out['mic_matched'] = False
+        elif mdn.mic_algorithm != sent_algorithm:
+            out['mic_matched'] = False
+        else:
+            out['mic_matched'] = True
 
     return out
 

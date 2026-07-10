@@ -37,6 +37,13 @@
         .data-popup td .toggle-switch {
             vertical-align: middle;
         }
+        /* The partner certificate's not-after date, red when it is about to expire. */
+        .cert-expiry {
+            font-weight: 600;
+        }
+        .cert-expiry-warning {
+            color: #c0392b;
+        }
     </style>
 {% endblock %}
 
@@ -64,8 +71,11 @@
             'endpoint_url',
             'as2_from',
             'as2_to',
+            'cert_expiry',
             '_change_password',
             '_ping',
+            '_send_test',
+            '_audit_log',
             '_edit',
             '_delete',
             'id',
@@ -159,7 +169,10 @@
                         <th><a href="#">Endpoint URL</a></th>
                         <th><a href="#">AS2-From</a></th>
                         <th><a href="#">AS2-To</a></th>
+                        <th><a href="#">Certificate expires</a></th>
 
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -231,9 +244,12 @@
                         <td>{{ item.endpoint_url }}</td>
                         <td>{{ item.as2_from }}</td>
                         <td>{{ item.as2_to }}</td>
+                        <td>{% if item.cert_expiry %}<span class="cert-expiry{% if item.cert_expiry_is_warning %} cert-expiry-warning{% endif %}">{{ item.cert_expiry }}</span>{% else %}<span class="form_hint">---</span>{% endif %}</td>
 
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Test</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
+                        <td><a href="javascript:void(0)" data-name="{{ item.name }}" onclick="$.fn.zato.outgoing.as2.send_test_message(this)" class="send-test-link">Send test</a></td>
+                        <td><a href="/zato/audit-log/?source=as2&amp;object_name={{ item.audit_log_object_name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.as2.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.as2.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -290,7 +306,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='55'>No results</td>
+                        <td colspan='58'>No results</td>
                     </tr>
                 {% endif %}
 
