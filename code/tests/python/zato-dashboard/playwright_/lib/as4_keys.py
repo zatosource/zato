@@ -24,6 +24,9 @@ from cryptography.x509.oid import NameOID
 _rsa_public_exponent = 65537
 _rsa_key_size = 2048
 
+# How long the throwaway certificates stay valid
+_default_validity_days = 365
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -37,7 +40,7 @@ class PartyPEM:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_self_signed(common_name:'str') -> 'PartyPEM':
+def _make_self_signed(common_name:'str', validity_days:'int'=_default_validity_days) -> 'PartyPEM':
     """ Generates one throwaway RSA key with a self-signed certificate, both as PEM text.
     """
     key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
@@ -50,7 +53,7 @@ def _make_self_signed(common_name:'str') -> 'PartyPEM':
     builder = builder.public_key(key.public_key())
     builder = builder.serial_number(random_serial_number())
     builder = builder.not_valid_before(now - timedelta(days=1))
-    builder = builder.not_valid_after(now + timedelta(days=365))
+    builder = builder.not_valid_after(now + timedelta(days=validity_days))
     builder = builder.add_extension(BasicConstraints(ca=False, path_length=None), critical=True)
 
     certificate = builder.sign(key, SHA256())
@@ -70,6 +73,15 @@ def new_test_parties() -> 'tuple[PartyPEM, PartyPEM]':
     receiver = _make_self_signed('as4-test-receiver')
 
     out = (sender, receiver)
+    return out
+
+# ################################################################################################################################
+
+def new_party(common_name:'str', validity_days:'int'=_default_validity_days) -> 'PartyPEM':
+    """ One party with a certificate of the given validity - a short one exercises
+    the expiry warnings the Dashboard shows.
+    """
+    out = _make_self_signed(common_name, validity_days)
     return out
 
 # ################################################################################################################################
