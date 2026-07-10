@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# stdlib
-import logging
-
-# Zato
-from zato.common.api import GENERIC
-from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.outgoing.mongodb import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-     method_allowed, ping_connection
 # Bunch
 from zato.common.ext.bunch import Bunch
 
+# Zato
+from zato.admin.web.forms.outgoing.mongodb import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, SKIP_VALUE
+from zato.common.api import GENERIC
+
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+_fields_required = ('name', 'server_list')
+_fields_optional = ('is_active', 'username', 'auth_source', 'replica_set', 'app_name', 'pool_size_max', 'connect_timeout',
+    'server_select_timeout', 'is_tls_enabled', 'tls_ca_certs_file', 'tls_cert_key_file', 'is_tls_validation_enabled')
 
+# Fields that the MongoDB client expects to be integers
+_int_fields = ('pool_size_max', 'connect_timeout', 'server_select_timeout')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
@@ -35,42 +35,25 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id', 'type_'
-
-    output_required = ('id', 'name', 'server_list', 'pool_size_max', 'connect_timeout',
-        'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
-
-    output_optional = ('is_active', 'username', 'app_name', 'replica_set', 'auth_source', 'auth_mechanism',
-        'is_tz_aware', 'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
-        'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
-        'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
-        'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
-        'tls_ciphers')
-
+    output_required = ('id',) + _fields_required
+    output_optional = _fields_optional
     output_repeated = True
 
     def handle(self):
         return {
             'show_search_form': True,
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
-            'change_password_form': ChangePasswordForm()
+            'create_form': CreateForm(req=self.req),
+            'edit_form': EditForm(prefix='edit', req=self.req),
         }
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = ('name', 'server_list', 'pool_size_max', 'connect_timeout',
-        'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
-
-    input_optional = ('is_active', 'username', 'app_name', 'replica_set', 'auth_source', 'auth_mechanism',
-        'is_tz_aware', 'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
-        'is_write_journal_enabled', 'is_write_fsync_enabled', 'should_retry_write', 'read_pref_type', 'read_pref_tag_list',
-        'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
-        'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
-        'tls_ciphers')
-
+    input_required = _fields_required
+    input_optional = _fields_optional + ('secret',)
     output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -81,21 +64,30 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1 # We use pool_size_max from opaque attributes
 
     def on_after_set_input(self):
-        # Convert to integers, as expected by MongoDB driver
-        for name in 'hb_frequency', 'max_idle_time', 'write_to_replica', 'read_pref_max_stale', 'zlib_level':
-            value = self.input.get(name, None)
-            if value is not None:
+
+        # Convert to integers, as expected by the MongoDB client
+        for name in _int_fields:
+            if value := self.input.get(name):
                 self.input[name] = int(value)
+
+    def pre_process_item(self, name, value):
+        # An empty password on input means the current one is to be kept,
+        # which is why the field cannot be sent to the backend at all.
+        if name == 'secret' and not value:
+            return SKIP_VALUE
+        return value
 
     def success_message(self, item):
         return 'Successfully {} outgoing MongoDB connection `{}`'.format(self.verb, item.name)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'out-mongodb-create'
     service_name = 'zato.generic.connection.create'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
@@ -104,17 +96,12 @@ class Edit(_CreateEdit):
     service_name = 'zato.generic.connection.edit'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'out-mongodb-delete'
     error_message = 'Could not delete outgoing MongoDB connection'
     service_name = 'zato.generic.connection.delete'
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
 
 # ################################################################################################################################
 
