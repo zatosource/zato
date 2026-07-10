@@ -51,15 +51,11 @@ def _certificate_to_pem(certificate):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _FakeConfigStore:
-    def __init__(self):
-        self.generic_connection = {}
-
-# ################################################################################################################################
-
 class _FakeConfigManager:
     def __init__(self):
-        self.config_store = _FakeConfigStore()
+
+        # The live per-type dict of AS2 outgoing connection configs, keyed by name
+        self.outconn_as2 = {}
 
 # ################################################################################################################################
 
@@ -201,7 +197,7 @@ def _make_runtime(
             next_cert=next_cert,
             next_cert_from=next_cert_from,
         )
-        server.config_manager.config_store.generic_connection['PartnerCorp AS2'] = {'config': config}
+        server.config_manager.outconn_as2['PartnerCorp AS2'] = config
 
     runtime = AS2ChannelRuntime(server, _channel_config(parties, service_name, channel_topic))
 
@@ -368,9 +364,8 @@ class TestRouting:
             assert topic == AS2.Default.Inbound_Topic
 
             # An edit of the Dashboard-managed connection reroutes the very next message.
-            server.config_manager.config_store.generic_connection['PartnerCorp AS2'] = {
-                'config': _partnership_config(inbound_topic='orders.after-the-edit'),
-            }
+            server.config_manager.outconn_as2['PartnerCorp AS2'] = \
+                _partnership_config(inbound_topic='orders.after-the-edit')
 
             body, headers, _, _ = _build_wire_message(parties)
             result = runtime.handle('cid-2', body, headers)
@@ -522,7 +517,7 @@ class TestRejections:
             # The partnership arrives - the same message must now be processable,
             # because a failed delivery never counted as processed.
             config = _partnership_config()
-            server.config_manager.config_store.generic_connection['PartnerCorp AS2'] = {'config': config}
+            server.config_manager.outconn_as2['PartnerCorp AS2'] = config
 
             second = runtime.handle('cid-2', body, headers)
 
