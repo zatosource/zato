@@ -325,6 +325,8 @@ urlpatterns += [
         login_required(audit_log.poll), name='audit-log-poll'),
     url(r'^zato/audit-log/details/$',
         login_required(audit_log.details), name='audit-log-details'),
+    url(r'^zato/audit-log/resubmit/$',
+        login_required(audit_log.resubmit), name='audit-log-resubmit'),
 
     # AS2 keystore
 

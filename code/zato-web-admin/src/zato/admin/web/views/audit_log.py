@@ -9,18 +9,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 
 # Django
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.views import method_allowed
+from zato.admin.web.views import invoke_action_handler, method_allowed
 from zato.common.as2.mdn import describe_disposition
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, event_table, get_audit_engine
+from zato.common.audit_log.query import outstanding_conditions
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
 
@@ -54,6 +56,9 @@ _row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
 
+# The status query parameter value narrowing the page down to open exchanges
+_status_outstanding = 'outstanding'
+
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
 _source_title = {
     'pubsub': 'Pub/sub audit log',
@@ -63,6 +68,7 @@ _source_title = {
     'soap-outgoing': 'Outgoing SOAP audit log',
     'email-imap': 'IMAP audit log',
     'as2': 'AS2 audit log',
+    'x12': 'X12 audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -138,6 +144,18 @@ _as2_columns = [
     {'key': 'mic', 'label': 'MIC', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+    {'key': 'action', 'label': 'Actions', 'type': 'action'},
+]
+
+_x12_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Control number', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
 # Per-source table columns
@@ -149,6 +167,52 @@ _source_columns = {
     'soap-outgoing': _soap_outgoing_columns,
     'email-imap': _email_imap_columns,
     'as2': _as2_columns,
+    'x12': _x12_columns,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class OutstandingFilter:
+    """ The outstanding filter of one source - the event that opens an exchange, the acknowledgment
+    that closes it, and whether the close matches on the partner pair too. AS2 MDNs answer
+    the Message-ID alone while X12 acknowledgments echo both the pair and the control number.
+    """
+    open_event: str = ''
+    close_event: str = ''
+    needs_object_name_match: bool = False
+
+# ################################################################################################################################
+
+def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_name_match:'bool') -> 'OutstandingFilter':
+    out = OutstandingFilter()
+    out.open_event = open_event
+    out.close_event = close_event
+    out.needs_object_name_match = needs_object_name_match
+    return out
+
+# ################################################################################################################################
+
+# The sources whose pages carry the outstanding filter pill
+_source_outstanding = {
+    'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
+    'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Per-source resubmit actions - each source declares which of its events are resubmittable,
+# how the row action is labelled and which service performs it.
+_as2_resubmit = {
+    AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.as2.resend'},
+    AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.as2.reprocess'},
+}
+
+# The sources whose pages carry resubmit actions
+_source_resubmit = {
+    'as2': _as2_resubmit,
 }
 
 # ################################################################################################################################
@@ -197,7 +261,7 @@ def _escape_like(query:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _build_where(source:'str', object_name:'str', query:'str') -> 'anylist':
+def _build_where(source:'str', object_name:'str', query:'str', status:'str') -> 'anylist':
     """ Builds the WHERE conditions for the poll query.
     """
 
@@ -220,7 +284,66 @@ def _build_where(source:'str', object_name:'str', query:'str') -> 'anylist':
 
         out.append(or_(*like_parts))
 
+    # The outstanding filter narrows the page down to the open exchanges of this source -
+    # the sent messages or interchanges whose acknowledgment has not arrived.
+    if status == _status_outstanding:
+        if outstanding := _source_outstanding.get(source):
+            conditions = outstanding_conditions(
+                source,
+                outstanding.open_event,
+                outstanding.close_event,
+                outstanding.needs_object_name_match,
+            )
+            out.extend(conditions)
+
     return out
+
+# ################################################################################################################################
+
+def _get_resubmit_labels(source:'str') -> 'anydict':
+    """ Returns the per-event-type labels of this source's resubmit actions,
+    which is what tells the frontend which rows get an action link at all.
+    """
+
+    # Our response to produce
+    out:'anydict' = {}
+
+    if actions := _source_resubmit.get(source):
+        for event_type, action in actions.items():
+            out[event_type] = action['label']
+
+    return out
+
+# ################################################################################################################################
+
+def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None':
+    """ Flags the rows whose event was already resubmitted - a resubmit lands as a new event
+    whose correlation id is the CID of the original one.
+    """
+    cids:'anylist' = []
+
+    for row in rows:
+        row['is_resubmitted'] = False
+
+        if row['cid']:
+            cids.append(row['cid'])
+
+    if not cids:
+        return
+
+    stmt = select(event_table.c.correl_id).where(and_(
+        event_table.c.source == source,
+        event_table.c.correl_id.in_(cids),
+    ))
+
+    resubmitted = set()
+
+    for db_row in connection.execute(stmt):
+        resubmitted.add(db_row[0])
+
+    for row in rows:
+        if row['cid'] in resubmitted:
+            row['is_resubmitted'] = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,9 +355,16 @@ def object_index(req:'any_') -> 'TemplateResponse':
     source = req.GET['source']
     object_name = req.GET['object_name']
 
+    # The page can open pre-filtered to the open exchanges of this source
+    status = req.GET.get('status', '')
+
     # The frontend renders the table headers and cells based on this source's columns
     columns = _source_columns[source]
     columns_json = json.dumps(columns)
+
+    # The per-event-type resubmit labels of this source, empty for sources without resubmit
+    resubmit_labels = _get_resubmit_labels(source)
+    resubmit_labels_json = json.dumps(resubmit_labels)
 
     return TemplateResponse(req, 'zato/audit_log.html', {
         'cluster_id': default_cluster_id,
@@ -245,6 +375,9 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'poll_url': _poll_url,
         'columns': columns,
         'columns_json': columns_json,
+        'status': status,
+        'has_outstanding_filter': source in _source_outstanding,
+        'resubmit_labels_json': resubmit_labels_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
     })
@@ -260,6 +393,7 @@ def poll(req:'any_') -> 'HttpResponse':
     source = body['source']
     object_name = body['object_name']
     query = body['query']
+    status = body['status']
 
     page = body['page']
     page_size = body['page_size']
@@ -267,7 +401,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(source, object_name, query)
+    where_conditions = _build_where(source, object_name, query, status)
 
     rows:'anylist' = []
 
@@ -278,11 +412,18 @@ def poll(req:'any_') -> 'HttpResponse':
         column = event_table.c[column_name]
         select_columns.append(column)
 
+    # Outstanding items are shown oldest first - the longest-waiting exchange is the most
+    # urgent one - while the regular view shows the newest events first.
+    if status == _status_outstanding:
+        order_by = event_table.c.id.asc()
+    else:
+        order_by = event_table.c.id.desc()
+
     # Build both queries upfront ..
     count_query = select(func.count()).select_from(event_table).where(*where_conditions)
 
     offset = (page - 1) * page_size
-    page_query = select(*select_columns).where(*where_conditions).order_by(event_table.c.id.desc()). \
+    page_query = select(*select_columns).where(*where_conditions).order_by(order_by). \
         limit(page_size).offset(offset)
 
     # .. and run them against the shared audit log database.
@@ -304,6 +445,10 @@ def poll(req:'any_') -> 'HttpResponse':
             row['data'] = data[:_data_preview_len]
 
             rows.append(row)
+
+        # Rows already resubmitted get their marker, on sources with resubmit actions.
+        if source in _source_resubmit:
+            _mark_resubmitted(connection, source, rows)
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
     response_bytes = response_json.encode('utf-8')
@@ -341,6 +486,33 @@ def details(req:'any_') -> 'HttpResponse':
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def resubmit(req:'any_') -> 'HttpResponse':
+    """ Resubmits one audit event - a resend for outbound rows, a reprocess for inbound ones,
+    performed by the service the event's source registered for that event type.
+    The new attempt lands as its own event linked to the original one by CID.
+    """
+    # Form data is always a string while the event id column is numeric
+    event_id = int(req.POST['id'])
+
+    # Find which event this is, so the right service can perform the resubmit.
+    lookup_query = select(event_table.c.source, event_table.c.event_type).where(event_table.c.id == event_id)
+    engine = get_audit_engine()
+
+    with engine.connect() as connection:
+        row = connection.execute(lookup_query).fetchone()
+
+    source, event_type = row
+
+    # Each source declares which of its events are resubmittable and which service performs it.
+    actions = _source_resubmit[source]
+    action = actions[event_type]
+
+    out = invoke_action_handler(req, action['service'], extra={'event_id': event_id})
     return out
 
 # ################################################################################################################################

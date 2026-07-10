@@ -124,17 +124,23 @@ class MDNReconciler:
         mic:'str' = '',
         async_mdn_url:'str' = '',
         cid:'str' = '',
+        correl_id:'str' = '',
+        payload:'str' = '',
+        filename:'str' = '',
         ) -> 'None':
         """ Records that a message left for the partner - the send half of the reconciliation pair.
         The MIC computed at send time and the URL an asynchronous MDN is expected on travel
-        in the event data, so the returned MDN can reconcile against them.
+        in the event data, so the returned MDN can reconcile against them. The clear payload
+        and its filename travel there too, which is what a later resend runs on, and an operator
+        resend of a stored message links back to the original event through the correlation id.
         """
         pair = _pair_key(as2_from, as2_to)
         message_id = normalize_message_id(message_id)
 
-        data = dumps({'mic': mic, 'async_mdn_url': async_mdn_url})
+        data = dumps({'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename})
 
-        self.audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, pair, cid=cid, msg_id=message_id, data=data)
+        self.audit_log.insert(
+            AuditSource.AS2, AuditEvent.Message_Sent, pair, cid=cid, msg_id=message_id, correl_id=correl_id, data=data)
 
 # ################################################################################################################################
 
