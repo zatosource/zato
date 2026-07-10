@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +21,7 @@ from cryptography.x509.oid import NameOID
 import pytest
 
 # Zato
+from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.util.xml_.keystore import Keystore, new_keystore
 
 # ################################################################################################################################
@@ -28,6 +30,25 @@ from zato.common.util.xml_.keystore import Keystore, new_keystore
 # RSA parameters for throwaway test keys.
 _rsa_public_exponent = 65537
 _rsa_key_size = 2048
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def audit_db_env(tmp_path):
+    """ Points the audit database at a per-test SQLite file, so every test that records
+    audit events - directly or through the live send and receive pipelines - runs
+    on its own isolated database instead of the environment-wide default one.
+    """
+    db_path = os.path.join(str(tmp_path), 'audit.db')
+
+    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
+    os.environ[AuditLogCtx.Env_Name] = db_path
+
+    yield db_path
+
+    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
+    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
 
 # ################################################################################################################################
 # ################################################################################################################################

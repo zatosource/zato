@@ -83,6 +83,9 @@ class SendResult:
     # The parsed and verified MDN, when a synchronous one arrived.
     mdn: 'MDNInfo | None' = None
 
+    # The complete raw MIME body that went over the wire, kept as delivery evidence.
+    request_body: bytes = b''
+
     # The raw HTTP response, kept for audit purposes.
     http_status: int = 0
     response_body: bytes = b''
@@ -450,6 +453,7 @@ def send(
 
     out.message_id = sent_message_id
     out.mic = mic
+    out.request_body = body
 
     response = _post(partnership, body, headers, client)
 

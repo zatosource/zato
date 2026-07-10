@@ -21,6 +21,7 @@ from logging import getLogger
 from sqlalchemy import and_, exists, select
 
 # Zato
+from zato.common.as2.audit import encode_raw_mime
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.mdn import DispositionType, ModifierKind, normalize_message_id, parse_mdn
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
@@ -127,17 +128,20 @@ class MDNReconciler:
         correl_id:'str' = '',
         payload:'str' = '',
         filename:'str' = '',
+        raw_mime:'str' = '',
         ) -> 'None':
         """ Records that a message left for the partner - the send half of the reconciliation pair.
         The MIC computed at send time and the URL an asynchronous MDN is expected on travel
         in the event data, so the returned MDN can reconcile against them. The clear payload
         and its filename travel there too, which is what a later resend runs on, and an operator
         resend of a stored message links back to the original event through the correlation id.
+        The raw MIME body that went over the wire is kept alongside as delivery evidence.
         """
         pair = _pair_key(as2_from, as2_to)
         message_id = normalize_message_id(message_id)
 
-        data = dumps({'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename})
+        data = dumps({'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename,
+            'raw_mime': raw_mime})
 
         self.audit_log.insert(
             AuditSource.AS2, AuditEvent.Message_Sent, pair, cid=cid, msg_id=message_id, correl_id=correl_id, data=data)
@@ -337,9 +341,12 @@ def process_incoming_mdn(
 
     message_id = normalize_message_id(mdn.original_message_id)
 
-    # What the MDN reported, kept alongside the arrival event.
+    # What the MDN reported, kept alongside the arrival event - the raw MDN bytes
+    # are the partner's signed receipt, which is the evidence half of non-repudiation.
+    raw_mime = encode_raw_mime(body)
+
     mdn_data = dumps({'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
-        'mic': mdn.mic})
+        'mic': mdn.mic, 'raw_mime': raw_mime})
 
     # An unknown or already-reconciled Message-ID is accepted and logged, never errored ..
     pending = reconciler.match(message_id)

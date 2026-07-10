@@ -131,6 +131,8 @@ class CreateForm(forms.Form):
     preserve_filename = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     ack_overdue_after = forms.CharField(required=False, initial=0, widget=forms.TextInput(attrs=_number_attrs))
     resend_max_retries = forms.CharField(required=False, initial=0, widget=forms.TextInput(attrs=_number_attrs))
+    alerting_opt_out = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    ship_notice_window_hours = forms.CharField(required=False, initial=0, widget=forms.TextInput(attrs=_number_attrs))
 
     # More
     as2_version = forms.ChoiceField(initial=Default.AS2_Version, widget=forms.Select())

@@ -31,10 +31,11 @@ _as2_string_field_names = ('isa_qualifier', 'isa_id', 'gs_id', 'unb_id', 'sign_a
 
 # Checkbox fields - they arrive from the form as 'on' or not at all and need real booleans.
 _as2_bool_field_names = ('sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed', 'preserve_filename',
-    'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename')
+    'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename', 'alerting_opt_out')
 
 # Numeric fields - an empty input means zero, which keeps the partnership's own default in place.
-_as2_int_field_names = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries')
+_as2_int_field_names = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries',
+    'ship_notice_window_hours')
 
 _as2_field_names = _as2_required_field_names + _as2_string_field_names + _as2_bool_field_names + _as2_int_field_names
 

@@ -134,6 +134,10 @@ class InboundResult:
     is_error: bool = False
     error_modifier: 'strnone' = None
 
+    # The disposition the MDN was built with - clean processing or the matching error,
+    # kept on the result so the caller can record it as delivery evidence.
+    disposition: 'Disposition | None' = None
+
     # The MDN to deliver asynchronously, when the sender asked for one.
     pending_async_mdn: 'PendingAsyncMDN | None' = None
 
@@ -424,6 +428,7 @@ def handle(
         out.error_modifier = AS2Error.Unknown_Trading_Relationship
 
         disposition = new_error_disposition(AS2Error.Unknown_Trading_Relationship)
+        out.disposition = disposition
         _attach_mdn(out, request, disposition, '', None)
 
         return out
@@ -470,6 +475,7 @@ def handle(
 
         # .. and answer with the MDN the sender asked for.
         disposition = new_processed_disposition()
+        out.disposition = disposition
         _attach_mdn(out, request, disposition, out.mic, keystore)
 
     # Failures still produce an MDN with the matching disposition modifier -
@@ -480,6 +486,7 @@ def handle(
         out.payloads = []
 
         disposition = disposition_from_exception(e)
+        out.disposition = disposition
         _attach_mdn(out, request, disposition, out.mic, keystore)
 
     return out

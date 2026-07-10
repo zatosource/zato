@@ -22,11 +22,11 @@ from dataclasses import dataclass
 from sqlalchemy import select
 
 # Zato
+from zato.common.as2.audit import record_message_received, record_send_result
 from zato.common.as2.common import AS2Exception
-from zato.common.as2.mdn import normalize_message_id
 from zato.common.as2.partnership import match_partnership
-from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
-from zato.common.json_internal import dumps, loads
+from zato.common.audit_log.api import AuditEvent, event_table, get_audit_engine
+from zato.common.json_internal import loads
 from zato.common.typing_ import dict_field
 from zato.edi.envelope import read_envelope
 
@@ -168,32 +168,6 @@ def find_connection_name(configs:'dictlist', as2_from:'str', as2_to:'str') -> 's
 
 # ################################################################################################################################
 
-def record_message_received(
-    audit_log:'AuditLog',
-    as2_from:'str',
-    as2_to:'str',
-    message_id:'str',
-    *,
-    payload:'str' = '',
-    filename:'str' = '',
-    content_type:'str' = '',
-    cid:'str' = '',
-    correl_id:'str' = '',
-    ) -> 'None':
-    """ Records that a message arrived from the partner, with the clear payload stored alongside
-    so a later reprocess can re-publish it. A reprocess of a stored message links back
-    to the original event through the correlation id.
-    """
-    pair = f'{as2_from.strip()}:{as2_to.strip()}'
-    message_id = normalize_message_id(message_id)
-
-    data = dumps({'payload': payload, 'filename': filename, 'content_type': content_type})
-
-    audit_log.insert(
-        AuditSource.AS2, AuditEvent.Message_Received, pair, cid=cid, msg_id=message_id, correl_id=correl_id, data=data)
-
-# ################################################################################################################################
-
 def resend(event:'StoredEvent', send:'callable_', reconciler:'MDNReconciler', cid:'str') -> 'SendResult':
     """ Sends the payload stored with an outbound event again, as a fresh AS2 message
     with a new Message-ID - an operator action, unlike the automatic resend that reuses
@@ -215,19 +189,20 @@ def resend(event:'StoredEvent', send:'callable_', reconciler:'MDNReconciler', ci
     # Deliver the payload through the real pipeline - a fresh Message-ID is assigned inside ..
     result = send(payload, filename)
 
-    # .. and the new attempt becomes its own event, linked to the original by its CID.
+    # .. and the new attempt becomes its own event, linked to the original by its CID,
+    # with the synchronous MDN recorded too when one rode back on the response.
     if filename is None:
         filename = ''
 
-    reconciler.record_message_sent(
+    record_send_result(
+        reconciler,
         as2_from,
         as2_to,
-        result.message_id,
-        mic=result.mic,
-        cid=cid,
-        correl_id=event.cid,
+        result,
         payload=payload,
         filename=filename,
+        cid=cid,
+        correl_id=event.cid,
     )
 
     return result

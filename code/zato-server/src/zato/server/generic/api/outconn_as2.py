@@ -21,10 +21,12 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.api import AS2
+from zato.common.as2.audit import record_send_result
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.config import build_keystore, build_partnership
 from zato.common.as2.outbound import send as outbound_send, send_payload
 from zato.common.as2.partnership import HTTPAuth
+from zato.common.as2.reconcile import MDNReconciler
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 
@@ -156,6 +158,9 @@ class _AS2Connection:
         self.config = config
         self.name = config['name']
 
+        # Audit events of this connection's exchanges are recorded under the server's name.
+        self.server_name = server.name
+
         # The partnership is who the two parties are and how their messages are secured -
         # its certificate rotation lists are consulted per message, at send time,
         # so an activation date crossing takes effect without a pool rebuild ..
@@ -181,9 +186,11 @@ class _AS2Connection:
 
 # ################################################################################################################################
 
-    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None) -> 'SendResult':
+    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'SendResult':
         """ Delivers one AS2 message to the partnership's endpoint and reconciles
-        the synchronous MDN when one was requested.
+        the synchronous MDN when one was requested. Every delivery is recorded
+        in the audit log as non-repudiation evidence, unless the caller records
+        the attempt itself, the way an operator resend does.
         """
         # A string payload serializes itself into bytes - X12 and EDIFACT objects arrive this way.
         if isinstance(payload, str):
@@ -192,6 +199,34 @@ class _AS2Connection:
         logger.info('AS2 out -> %s; name:%s; cid:%s', self.partnership.endpoint_url, self.name, cid)
 
         out = outbound_send(self.partnership, self.keystore, payload, filename, client=self.http_client)
+
+        # The delivery and its synchronous MDN, when one arrived, become audit events -
+        # the clear payload is stored only for a single document, which is what
+        # a later resend runs on, while the raw MIME preserves everything either way.
+        if needs_audit:
+
+            if isinstance(payload, bytes):
+                clear_payload = payload.decode('utf8', 'replace')
+            else:
+                clear_payload = ''
+
+            if filename is None:
+                stored_filename = ''
+            else:
+                stored_filename = filename
+
+            reconciler = MDNReconciler(self.server_name)
+
+            record_send_result(
+                reconciler,
+                self.partnership.as2_from,
+                self.partnership.as2_to,
+                out,
+                payload=clear_payload,
+                filename=stored_filename,
+                async_mdn_url=self.partnership.async_mdn_url,
+                cid=cid,
+            )
 
         # A delivery whose MDN did not reconcile is worth a warning in the log,
         # while the result itself carries everything the caller needs to react.
@@ -271,13 +306,13 @@ class OutconnAS2Wrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None) -> 'SendResult':
+    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'SendResult':
         """ Delivers one AS2 message through a pooled connection, blocking to cover
         the window while the connection queue is still being built at startup.
         """
         with self.client(should_block=True, block_timeout=_as2_block_timeout) as client:
             client = cast_('_AS2Connection', client)
-            out = client.send(cid, payload, filename)
+            out = client.send(cid, payload, filename, needs_audit=needs_audit)
 
         return out
 
