@@ -17,9 +17,10 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import add_http_soap_select
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
-    get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
+    get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, SecurityList
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
@@ -60,6 +61,25 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.NTLM,
     SEC_DEF_TYPE.OAUTH,
 }
+
+# Names of the fields that describe a scheduled invocation of an outgoing REST connection
+_scheduler_field_names = (
+    'scheduler_run_every',
+    'scheduler_run_unit',
+    'scheduler_start_date',
+    'scheduler_method',
+    'scheduler_query_string',
+    'scheduler_path_params',
+    'scheduler_headers',
+    'scheduler_data',
+    'scheduler_security',
+    'scheduler_response_map',
+    'scheduler_callback_type',
+    'scheduler_service',
+    'scheduler_callback_topic',
+    'scheduler_callback_rest',
+    'scheduler_job_id',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +123,10 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'data_encoding': params.get(prefix + 'data_encoding'),
         'gateway_service_list': params.get(prefix + 'gateway_service_list'),
     }
+
+    # Scheduler fields exist only in the forms of outgoing REST connections
+    for name in _scheduler_field_names:
+        message[name] = params.get(prefix + name)
 
     return message
 
@@ -185,6 +209,11 @@ def index(req): # type: ignore
             create_form.fields['url_path'].required = False
             edit_form.fields['url_path'].required = False
 
+        # The scheduler tab lets outgoing REST connections deliver responses to other outgoing REST connections
+        if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
+            add_http_soap_select(create_form, 'scheduler_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP)
+            add_http_soap_select(edit_form, 'scheduler_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP)
+
         input_dict = {
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
@@ -260,6 +289,11 @@ def index(req): # type: ignore
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
 
+            # Scheduler details are opaque attributes so they are absent from connections that never set them
+            if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
+                for name in _scheduler_field_names:
+                    setattr(http_soap, name, item.get(name))
+
             items.append(http_soap)
 
         meta = response.meta
@@ -301,6 +335,9 @@ def index(req): # type: ignore
         'internal_services': internal_services,
         'zato_template_name': 'zato/http_soap/index.html',
         }
+
+    # The scheduler tab's start date picker needs the user's date and time format
+    return_data.update(get_js_dt_format(req.zato.user_profile))
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 

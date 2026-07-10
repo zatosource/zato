@@ -1,0 +1,20 @@
+/* ------------------------------------------------------------ */
+/* Outgoing REST connections - scheduler tab                     */
+/* ------------------------------------------------------------ */
+
+/* Variables scoped to .data-popup so they never leak to the dashboard. */
+.data-popup {
+    --scheduler-section-color: #52616e;
+    --scheduler-section-border: #d4dbe0;
+}
+
+/* Section headers grouping the scheduler tab's fields. */
+.data-popup td.scheduler-form-section {
+    padding: 12px 4px 4px 4px;
+    border-bottom: 1px solid var(--scheduler-section-border);
+    color: var(--scheduler-section-color);
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}

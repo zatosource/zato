@@ -203,6 +203,7 @@ def get_top_level_order() -> 'strlist':
         'outgoing_as2',
         'outgoing_as4',
         'microsoft_cloud',
+        'microsoft_fabric',
         'microsoft_power_automate',
         'confluence',
         'jira',
@@ -265,6 +266,7 @@ def get_object_order(object_type:'str') -> 'strlist':
         'as4_final_recipient', 'as4_extra_pmodes', 'as4_use_discovery', 'as4_sml_domain', 'as4_signing_key', \
         'as4_signing_cert_chain', 'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors',
     order['microsoft_cloud'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
+    order['microsoft_fabric'] = 'name', 'is_active', 'address', 'client_id', 'tenant_id',
     order['microsoft_power_automate'] = 'name', 'is_active', 'address', 'client_id', 'tenant_id', 'environment_id',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',

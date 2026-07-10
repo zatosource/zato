@@ -35,6 +35,7 @@ type_display_names = {
     'mongodb': 'MongoDB connection',
     'smb': 'SMB connection',
     'microsoft_cloud': 'Microsoft 365 connection',
+    'microsoft_fabric': 'Microsoft Fabric connection',
     'microsoft_power_automate': 'Microsoft Power Automate connection',
     'elastic_search': 'ElasticSearch connection'
 }

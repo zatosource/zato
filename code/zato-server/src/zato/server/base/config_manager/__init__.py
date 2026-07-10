@@ -63,6 +63,7 @@ from zato.server.generic.api.cloud_aws import CloudAWSWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
+from zato.server.generic.api.cloud_microsoft_fabric import CloudMicrosoftFabricWrapper
 from zato.server.generic.api.cloud_microsoft_power_automate import CloudMicrosoftPowerAutomateWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
@@ -196,6 +197,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Cloud - Microsoft 365
         self.cloud_microsoft_365 = {}
 
+        # Generic connections - Cloud - Microsoft Fabric
+        self.cloud_microsoft_fabric = {}
+
         # Generic connections - Cloud - Microsoft Power Automate
         self.cloud_microsoft_power_automate = {}
 
@@ -288,6 +292,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: self.cloud_microsoft_fabric,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: self.cloud_microsoft_power_automate,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
@@ -313,6 +318,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: CloudMicrosoftFabricWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: CloudMicrosoftPowerAutomateWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
@@ -919,6 +925,8 @@ class ConfigManager(_ConfigManagerBase):
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
+        cloud_microsoft_fabric_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC, {})
         cloud_microsoft_power_automate_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
@@ -945,6 +953,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_confluence_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
+            cloud_microsoft_fabric_map,
             cloud_microsoft_power_automate_map,
             cloud_salesforce_map,
             outconn_as2_map,
@@ -962,6 +971,7 @@ class ConfigManager(_ConfigManagerBase):
 
         password_maps = [
             cloud_aws_map,
+            cloud_microsoft_fabric_map,
             cloud_microsoft_power_automate_map,
             outconn_hl7_fhir_map,
             outconn_ibm_mq_map,

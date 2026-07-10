@@ -24,6 +24,7 @@ from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
+from zato.cli.enmasse.exporters.microsoft_fabric import MicrosoftFabricExporter
 from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
 from zato.cli.enmasse.exporters.mongodb import MongoDBExporter
 from zato.cli.enmasse.exporters.odata import ODataExporter
@@ -96,6 +97,7 @@ class EnmasseYAMLExporter:
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
         self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
+        self.microsoft_fabric_exporter = MicrosoftFabricExporter(self)
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
@@ -381,6 +383,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_microsoft_fabric(self, session:'SASession') -> 'list':
+        """ Exports Microsoft Fabric connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        microsoft_fabric_list = self.microsoft_fabric_exporter.export(session, self.cluster_id)
+        return microsoft_fabric_list
+
+# ################################################################################################################################
+
     def export_microsoft_power_automate(self, session:'SASession') -> 'list':
         """ Exports Microsoft Power Automate connection definitions.
         """
@@ -596,6 +607,11 @@ class EnmasseYAMLExporter:
         microsoft_cloud_defs = self.export_microsoft_cloud(session)
         if microsoft_cloud_defs:
             output_dict['microsoft_cloud'] = microsoft_cloud_defs
+
+        # Export Microsoft Fabric connection definitions
+        microsoft_fabric_defs = self.export_microsoft_fabric(session)
+        if microsoft_fabric_defs:
+            output_dict['microsoft_fabric'] = microsoft_fabric_defs
 
         # Export Microsoft Power Automate connection definitions
         microsoft_power_automate_defs = self.export_microsoft_power_automate(session)

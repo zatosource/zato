@@ -379,6 +379,15 @@
 
 // ////////////////////////////////////////////////////////////////////////
 // Overlay mode - mounts the highlight pane inside a draggable modal shell.
+//
+// Besides the init options, open_overlay accepts:
+//
+//   title        - the overlay heading (required)
+//   title_detail - optional selectable text after the heading, e.g. a CID
+//   tabs         - optional array of {label, text, ace_mode} objects - when given,
+//                  a tab bar precedes the editor and clicking a tab swaps
+//                  the editor content for that tab's, the first tab being
+//                  the initial one
 // ////////////////////////////////////////////////////////////////////////
 
     var _$overlay = null;
@@ -484,18 +493,60 @@
         var $content = _$overlay.find('.zato-highlight-pane-overlay-content');
         $content.css({position: '', margin: '', left: '', top: '', transform: ''});
 
-        // .. clear the body and mount the highlight pane ..
+        // .. clear the body ..
         var $body = _$overlay.find('.zato-highlight-pane-overlay-body');
         $body.empty();
 
+        // .. with tabs, a tab bar precedes the editor and the first tab provides the initial content ..
+        var initialText = config.text;
+        var initialMode = config.ace_mode;
+
+        if (config.tabs) {
+
+            var tabBar = document.createElement('div');
+            tabBar.className = 'zato-highlight-pane-overlay-tabs';
+
+            for (var tabIdx = 0; tabIdx < config.tabs.length; tabIdx++) {
+                var tabConfig = config.tabs[tabIdx];
+                var tabButton = document.createElement('button');
+                tabButton.className = 'zato-highlight-pane-overlay-tab';
+                tabButton.setAttribute('type', 'button');
+                tabButton.setAttribute('data-tab-index', tabIdx);
+                tabButton.textContent = tabConfig.label;
+                tabBar.appendChild(tabButton);
+            }
+
+            $body.append(tabBar);
+
+            initialText = config.tabs[0].text;
+            initialMode = config.tabs[0].ace_mode;
+        }
+
+        // .. mount the highlight pane ..
         _currentPane = $.fn.zato.highlight_pane.init({
             container: $body,
-            text: config.text,
+            text: initialText,
             editable: config.editable,
             buttons: config.buttons,
             ace_options: config.ace_options,
-            ace_mode: config.ace_mode
+            ace_mode: initialMode
         });
+
+        // .. clicking a tab swaps the editor content for that tab's ..
+        if (config.tabs) {
+            var $tabs = $body.find('.zato-highlight-pane-overlay-tab');
+            $tabs.first().addClass('zato-highlight-pane-overlay-tab-active');
+
+            $tabs.on('click', function() {
+                var tabIndex = parseInt($(this).attr('data-tab-index'), 10);
+                var tab = config.tabs[tabIndex];
+
+                _currentPane.setValue(tab.text, tab.ace_mode);
+
+                $tabs.removeClass('zato-highlight-pane-overlay-tab-active');
+                $(this).addClass('zato-highlight-pane-overlay-tab-active');
+            });
+        }
 
         // .. and show the overlay.
         _$overlay.removeClass('hidden');

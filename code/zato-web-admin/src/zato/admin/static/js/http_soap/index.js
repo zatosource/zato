@@ -77,6 +77,30 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
     $.fn.zato.http_soap.update_gateway_badges();
 
+    if($.fn.zato.http_soap.is_rest_outgoing()) {
+
+        // Attach date-time pickers to the scheduler start date fields in both popups ..
+        var picker_ids = ['#id_scheduler_start_date', '#id_edit-scheduler_start_date'];
+        $.each(picker_ids, function(ignored, picker_id) {
+            $(picker_id).datetimepicker(
+                {
+                    'dateFormat':$('#js_date_format').val(),
+                    'timeFormat':$('#js_time_format').val(),
+                    'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
+                }
+            );
+        });
+
+        // .. and show the callback widget matching the callback type selected.
+        $.each(['create', 'edit'], function(ignored, action) {
+            var suffix = action === 'edit' ? 'edit-' : '';
+            $('#id_' + suffix + 'scheduler_callback_type').change(function() {
+                $.fn.zato.http_soap.toggle_scheduler_callback(action);
+            });
+            $.fn.zato.http_soap.toggle_scheduler_callback(action);
+        });
+    }
+
     $.each(['', 'edit-'], function(ignored, suffix) {
 
         var elem = $(String.format('#id_{0}serialization_type', suffix));
@@ -106,7 +130,60 @@ $.fn.zato.data_table.after_populate = function() {
         $.fn.zato.http_soap.toggle_gateway_service_list(suffix, service_elem.val());
     });
 
+    if($.fn.zato.http_soap.is_rest_outgoing()) {
+        $.each(['create', 'edit'], function(ignored, action) {
+            $.fn.zato.http_soap.toggle_scheduler_callback(action);
+        });
+    }
+
     $.fn.zato.http_soap.update_gateway_badges();
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.is_rest_outgoing = function() {
+    var connection = $('input[name="connection"]').val();
+    var transport = $('input[name="transport"]').val();
+    return connection === 'outgoing' && transport === 'plain_http';
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.tab_labels = {
+    config:    'Config',
+    scheduler: 'Scheduler'
+};
+
+$.fn.zato.http_soap.reset_tabs = function(action) {
+    if(!$.fn.zato.http_soap.is_rest_outgoing()) {
+        return;
+    }
+    var is_edit = action === 'edit';
+    $.fn.zato.form_tabs.reset({
+        div_id:       is_edit ? '#edit-div' : '#create-div',
+        panel_prefix: is_edit ? 'http-soap-edit-tab-panel-' : 'http-soap-create-tab-panel-',
+        default_tab:  'config',
+        tab_labels:   $.fn.zato.http_soap.tab_labels
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.toggle_scheduler_callback = function(action) {
+
+    var suffix = action === 'edit' ? 'edit-' : '';
+    var callback_type = $('#id_' + suffix + 'scheduler_callback_type').val();
+
+    // Show only the callback widget matching the type selected, hiding its siblings.
+    var callback_rows = {
+        'service': $('#scheduler-callback-service-row-' + action),
+        'topic':   $('#scheduler-callback-topic-row-' + action),
+        'rest':    $('#scheduler-callback-rest-row-' + action)
+    };
+
+    $.each(callback_rows, function(row_type, row) {
+        row.toggleClass('hidden', row_type !== callback_type);
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,6 +311,7 @@ $.fn.zato.http_soap.create = function(object_type) {
 
     var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/');
     $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
+    $.fn.zato.http_soap.reset_tabs('create');
     $.fn.zato.data_table._create_edit('create', 'Create a new ' + object_type, null);
     $.fn.zato.http_soap.init_how_it_works('create');
 }
@@ -243,6 +321,7 @@ $.fn.zato.http_soap.create = function(object_type) {
 $.fn.zato.http_soap.edit = function(id) {
     var url = String.format('/zato/http-soap/get-security-groups/zato-api-creds/?http_soap_channel_id=' + id);
     $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
+    $.fn.zato.http_soap.reset_tabs('edit');
     $.fn.zato.data_table._create_edit('edit', 'Update the object', id);
     $.fn.zato.http_soap.init_how_it_works('edit');
 }

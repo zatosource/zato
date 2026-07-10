@@ -846,6 +846,7 @@ class GENERIC:
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
+            CLOUD_MICROSOFT_FABRIC = 'cloud-microsoft-fabric'
             CLOUD_MICROSOFT_POWER_AUTOMATE = 'cloud-microsoft-power-automate'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_AS2 = 'outconn-as2'
@@ -1088,6 +1089,19 @@ class MicrosoftPowerAutomate:
         Pool_Size = 20
         Scope = 'https://service.flow.microsoft.com/.default'
         Trigger_Name = 'manual'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MicrosoftFabric:
+
+    class Default:
+        Address = 'https://api.fabric.microsoft.com/v1'
+        Login_URL = 'https://login.microsoftonline.com'
+        OneLake_Address = 'https://onelake.dfs.fabric.microsoft.com'
+        OneLake_Scope = 'https://storage.azure.com/.default'
+        Pool_Size = 20
+        Scope = 'https://api.fabric.microsoft.com/.default'
 
 # ################################################################################################################################
 # ################################################################################################################################

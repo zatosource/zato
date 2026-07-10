@@ -13,6 +13,10 @@ $.fn.zato.audit_log.config = {
     detailsURL: '/zato/audit-log/details/',
     emptyValue: '---',
 
+    // The overlay tab labels - the raw payload and its parsed EDI document view
+    rawTabLabel: 'Raw',
+    parsedTabLabel: 'Parsed',
+
     // The per-source column list, assigned in init
     columns: []
 };
@@ -192,14 +196,31 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
             var copyMessageButton = $.fn.zato.highlight_pane.buttons.copy();
             copyMessageButton.label = 'Copy message';
 
-            $.fn.zato.highlight_pane.open_overlay({
+            var overlayConfig = {
                 title: 'Message data',
                 title_detail: cid,
                 text: data.data,
                 editable: false,
                 ace_mode: aceMode,
                 buttons: [copyCIDButton, copyMessageButton]
-            });
+            };
+
+            // A payload that carries an EDI document additionally gets its parsed view,
+            // as a second tab next to the raw wire format.
+            if (data.parsed !== '') {
+
+                var rawMode = aceMode;
+                if (rawMode === null) {
+                    rawMode = $.fn.zato.highlight_pane.detect_ace_mode(data.data);
+                }
+
+                overlayConfig.tabs = [
+                    {label: config.rawTabLabel, text: data.data, ace_mode: rawMode},
+                    {label: config.parsedTabLabel, text: data.parsed, ace_mode: 'ace/mode/text'}
+                ];
+            }
+
+            $.fn.zato.highlight_pane.open_overlay(overlayConfig);
         }
     });
 };
