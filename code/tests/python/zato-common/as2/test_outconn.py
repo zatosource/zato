@@ -27,7 +27,17 @@ from zato.common.as2.inbound import handle
 from zato.common.as2.mdn import normalize_message_id
 from zato.common.as2.partnership import new_partnership
 from zato.common.ext.bunch import Bunch
+from zato.common.typing_ import cast_
+from zato.server.connection.facade import AS2Facade
 from zato.server.generic.api.outconn_as2 import _AS2Connection, OutconnAS2Wrapper
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.server.base.config_manager import ConfigManager
+    ConfigManager = ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -453,6 +463,75 @@ class TestWrapper:
         wrapper.add_client()
 
         assert wrapper.client.queue.qsize() == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _FakeConfigManager:
+    """ Just enough of a config manager for the facade - the per-type dict
+    of AS2 outgoing connections is all it reads.
+    """
+
+    def __init__(self, outconn_as2:'stranydict') -> 'None':
+        self.outconn_as2 = outconn_as2
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_facade(parties:'any_', requests:'anylist', results:'anylist') -> 'AS2Facade':
+    """ Builds the facade over one pooled connection wired to the mock wire,
+    the way a service sees it after Service._init ran.
+    """
+    server = _FakeServer()
+    config = _connection_config(parties)
+
+    wrapper = OutconnAS2Wrapper(config, server)
+    wrapper.add_client()
+
+    # The pooled connection talks to the mock wire.
+    queue = cast_('any_', wrapper.client.queue)
+    connection = queue.queue[0]
+    connection.http_client = _new_mock_client(parties, requests, results)
+
+    # The config manager holds the per-type dict the way the server builds it -
+    # one item per connection, with the wrapper under the item's conn key.
+    item = Bunch()
+    item['conn'] = wrapper
+
+    config_manager = _FakeConfigManager({config['name']: item})
+
+    out = AS2Facade()
+    out.init('cid-1', cast_('ConfigManager', config_manager))
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestFacade:
+
+    def test_send_carries_the_cid_for_the_user(self, parties:'any_') -> 'None':
+
+        requests = []
+        results = []
+
+        facade = _make_facade(parties, requests, results)
+
+        # The one-liner a service runs - no cid anywhere in user code.
+        connection = facade['PartnerCorp AS2']
+        result = connection.send(_payload)
+
+        assert result.is_ok
+        assert len(requests) == 1
+        assert not results[0].is_error
+        assert results[0].payloads[0].data == _payload
+
+    def test_an_unknown_name_raises_a_key_error(self, parties:'any_') -> 'None':
+
+        facade = _make_facade(parties, [], [])
+
+        with pytest.raises(KeyError):
+            _ = facade['No Such Partner']
 
 # ################################################################################################################################
 # ################################################################################################################################
