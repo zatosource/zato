@@ -129,6 +129,11 @@ class Default:
     # only, informational per its RFC, and inbound values never drive behavior.
     EDIINT_Features = 'multiple-attachments, AS2-Reliability'
 
+    # How many days after a next certificate's activation date its rotation is completed
+    # in the stored configuration - the window keeps inbound messages signed
+    # with the old certificate verifiable shortly after the cutover.
+    Rotation_Grace_Days = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 

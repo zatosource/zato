@@ -1630,12 +1630,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from contextlib import closing
         from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, \
             ensure_mcp_channel_exists, ensure_openapi_channel_exists
+        from zato.common.util.scheduler import ensure_as2_rotation_job_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
 
-            if openapi_created or mcp_created:
+            # The job completing AS2 certificate rotations always lives in the main ODB,
+            # no matter where the AS2 connections themselves are stored.
+            as2_rotation_job_created = ensure_as2_rotation_job_exists(session, self.cluster_id)
+
+            if openapi_created or mcp_created or as2_rotation_job_created:
                 session.commit()
 
             if openapi_created:
@@ -1643,6 +1648,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
+
+            if as2_rotation_job_created:
+                logger.info('Created AS2 rotation completion job')
 
         # AS2 channels are auto-created in the external AS2/AS4 database when one is configured
         if is_ext_db_configured():

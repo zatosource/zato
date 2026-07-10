@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
+from datetime import datetime, timezone
 from traceback import format_exc
 from urllib.parse import parse_qsl
 from uuid import uuid4
@@ -16,6 +17,7 @@ from uuid import uuid4
 # Zato
 from zato.common.api import AS2, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, \
      SEC_DEF_TYPE_NAME, ZATO_NONE
+from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
@@ -752,3 +754,55 @@ class InvokeGraphQL(_BaseService):
         elapsed = time.monotonic() - start
         self.response.payload.response_data = json.dumps(result, indent=2)
         self.response.payload.response_time = f'{elapsed:.3f}s'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The entries of a live connection's config dict that must not travel to the edit service -
+# the live wrapper objects plus the values the config manager adds at runtime,
+# with the secret left out so the edit keeps the one already stored.
+_rotation_runtime_only_keys = ('conn', 'parent', 'secret', 'queue_build_cap', 'auth_url')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CompleteAS2Rotation(AdminService):
+    """ Completes the scheduled certificate rotation of every outgoing AS2 connection
+    whose next-certificate activation date plus the grace window has passed -
+    the next certificate becomes the current one and the next-certificate fields are cleared.
+    """
+    name = AS2.Default.Rotation_Service
+
+    def handle(self) -> 'None':
+
+        # One reference moment for the whole sweep
+        now = datetime.now(timezone.utc)
+
+        # Take a snapshot of the current connections because completing a rotation modifies the container ..
+        conn_dicts = list(self.server.config_manager.outconn_as2.values())
+
+        for conn_dict in conn_dicts:
+
+            # .. skip the connections with no rotation to complete ..
+            if not needs_rotation_completion(conn_dict, now):
+                continue
+
+            # .. copy the config without its runtime-only entries ..
+            request = {}
+            for key, value in conn_dict.items():
+                if key in _rotation_runtime_only_keys:
+                    continue
+                request[key] = value
+
+            # .. promote the next certificate to the current one ..
+            complete_rotation(request)
+
+            # .. and persist the change through the edit service, which keeps the ext-db id mapping,
+            # .. secret re-encryption and the cluster-wide propagation correct.
+            _ = self.invoke('zato.generic.connection.edit', request)
+
+            self.logger.info('Completed AS2 certificate rotation for connection `%s`', request['name'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+

@@ -260,6 +260,12 @@ class AS2:
         MDN_Channel_Name     = 'zato.channel.as2.mdn'
         MDN_Channel_URL_Path = '/zato/as2/mdn'
 
+        # The interval job every server ensures exists for completing partner certificate
+        # rotations, the service the job invokes and how often the job runs.
+        Rotation_Job_Name           = 'zato.outgoing.as2.complete-rotation'
+        Rotation_Job_Interval_Hours = 1
+        Rotation_Service            = 'zato.generic.connection.complete-as2-rotation'
+
     # The AS2 configuration fields shared by channels and outgoing connections.
     Common_Fields = ('as2_signing_key', 'as2_signing_cert_chain', 'as2_decryption_key', 'as2_next_decryption_key',
         'as2_next_decryption_cert', 'as2_peer_signing_cert', 'as2_peer_encryption_cert', 'as2_trust_anchors')

@@ -95,7 +95,8 @@ _Payment_Request = {
 }
 
 # The SOAP 1.1 envelope the external submitter posts to the invoice channel
-_Submitted_Invoice_Envelope = b"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:inv="urn:example-erp/codeunit/InvoiceEntryService">
+_Submitted_Invoice_Envelope = b"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" \
+xmlns:inv="urn:example-erp/codeunit/InvoiceEntryService">
     <soapenv:Header/>
     <soapenv:Body>
         <inv:ImportInvoice>

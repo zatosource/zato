@@ -98,8 +98,8 @@ $.fn.zato.outgoing.as2.field_descriptions = {
 
     // Partner tab
     'id_as2_partner_cert': 'The partner\'s current certificate in PEM.<br>It verifies their signatures and encrypts<br>messages sent to them.',
-    'id_as2_partner_next_cert': 'The partner\'s next certificate in PEM,<br>staged ahead of a rotation. Both certificates<br>are accepted during the overlap window.',
-    'id_as2_partner_next_cert_from': 'The date the next certificate starts<br>being accepted, e.g. 2026-08-01.<br>With no date, the pasted certificate<br>is accepted right away.',
+    'id_as2_partner_next_cert': 'The partner\'s next certificate in PEM,<br>staged ahead of a rotation. Both certificates<br>are accepted during the overlap window<br>and one day after the activation date<br>this certificate becomes the current one.',
+    'id_as2_partner_next_cert_from': 'The date the next certificate starts<br>being accepted, e.g. 2026-08-01.<br>With no date, the pasted certificate<br>is accepted right away.<br>With a date, the rotation completes<br>automatically one day after it.',
     'id_as2_peer_signing_cert': 'A pinned partner signing certificate in PEM.<br>Leave empty to verify against<br>the partner certificate above.',
     'id_as2_peer_encryption_cert': 'A pinned partner encryption certificate in PEM.<br>Leave empty to encrypt to<br>the partner certificate above.',
     'id_as2_trust_anchors': 'CA certificates in PEM that partner<br>certificates must chain up to.<br>An alternative to pinning one certificate.',
