@@ -7,15 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from contextlib import contextmanager
 
 # SQLAlchemy
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import func, or_, select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx, \
-    event_table, get_audit_engine
+from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_engine_encrypted, \
+    assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
+from live_sql.env import database_env
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table, get_audit_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -42,49 +43,18 @@ _other_channel_name = 'audit.test.other-channel'
 # An event time old enough for retention to always delete it
 _expired_event_time_iso = '2020-01-01T00:00:00+00:00'
 
-# All the environment variables that select and configure the audit log database
-_env_names = (
-    AuditLogCtx.Env_Type,
-    AuditLogCtx.Env_Host,
-    AuditLogCtx.Env_Port,
-    AuditLogCtx.Env_Username,
-    AuditLogCtx.Env_Password,
-    AuditLogCtx.Env_Name,
-    AuditLogCtx.Env_SSL,
-    AuditLogCtx.Env_SSL_CA_File,
-    AuditLogCtx.Env_SSL_Cert_File,
-    AuditLogCtx.Env_SSL_Key_File,
-    AuditLogCtx.Env_SSL_Verify,
-)
+# The prefix all the audit log database environment variables share
+_env_prefix = 'Zato_Audit_Log_DB_'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @contextmanager
-def audit_log_env(values:'stranydict') -> 'envgen':
+def audit_log_env(details:'stranydict') -> 'envgen':
     """ Points the Zato_Audit_Log_DB_* variables at one backend for the duration of a test.
     """
-
-    # Save everything that is set now so it can be restored later ..
-    saved:'stranydict' = {}
-
-    for name in _env_names:
-        saved[name] = os.environ.pop(name, None)
-
-    # .. apply the backend under test ..
-    os.environ.update(values)
-
-    try:
+    with database_env(_env_prefix, details):
         yield
-
-    # .. and restore the previous environment afterwards.
-    finally:
-        for name in _env_names:
-            _ = os.environ.pop(name, None)
-
-        for name, value in saved.items():
-            if value is not None:
-                os.environ[name] = value
 
 # ################################################################################################################################
 
@@ -258,12 +228,7 @@ def assert_mysql_connection_encrypted() -> 'None':
     """ Confirms the current MySQL session really is encrypted.
     """
     engine = get_audit_engine()
-
-    with engine.connect() as connection:
-        row = connection.execute(text("show session status like 'Ssl_cipher'")).fetchone()
-
-    cipher = row[1]
-    assert cipher, 'Expected a non-empty SSL cipher for the MySQL session'
+    assert_mysql_engine_encrypted(engine)
 
 # ################################################################################################################################
 
@@ -271,11 +236,7 @@ def assert_postgresql_connection_encrypted() -> 'None':
     """ Confirms the current PostgreSQL session really is encrypted.
     """
     engine = get_audit_engine()
-
-    with engine.connect() as connection:
-        is_ssl = connection.execute(text('select ssl from pg_stat_ssl where pid = pg_backend_pid()')).scalar()
-
-    assert is_ssl is True, 'Expected the PostgreSQL session to use SSL'
+    assert_postgresql_engine_encrypted(engine)
 
 # ################################################################################################################################
 # ################################################################################################################################

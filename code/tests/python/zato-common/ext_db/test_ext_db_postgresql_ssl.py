@@ -13,8 +13,8 @@ import pytest
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from common import assert_postgresql_connection_encrypted, audit_log_env, run_audit_log_scenario
-from zato.common.audit_log.api import AuditLog
+from common import assert_postgresql_connection_encrypted, ext_db_env, run_ext_db_scenario
+from zato.common.ext_db.api import get_ext_db_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,25 +26,25 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_audit_log_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -> 'None':
-    """ The complete audit log scenario against a PostgreSQL server that requires TLS,
+def test_ext_db_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -> 'None':
+    """ The complete external AS2/AS4 database scenario against a PostgreSQL server that requires TLS,
     confirming the session really is encrypted.
     """
-    with audit_log_env(postgresql_ssl_server.details):
-        run_audit_log_scenario()
+    with ext_db_env(postgresql_ssl_server.details):
+        run_ext_db_scenario()
         assert_postgresql_connection_encrypted()
 
 # ################################################################################################################################
 
-def test_audit_log_postgresql_ssl_is_required(postgresql_ssl_server:'DatabaseServer') -> 'None':
+def test_ext_db_postgresql_ssl_is_required(postgresql_ssl_server:'DatabaseServer') -> 'None':
     """ Connecting without SSL to a PostgreSQL server that requires TLS must fail.
     """
     details = dict(postgresql_ssl_server.details)
     details['ssl'] = 'off'
 
-    with audit_log_env(details):
+    with ext_db_env(details):
         with pytest.raises(DBAPIError):
-            _ = AuditLog('test-audit-log-server')
+            _ = get_ext_db_engine()
 
 # ################################################################################################################################
 # ################################################################################################################################

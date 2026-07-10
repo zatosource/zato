@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.api import ZATO_NOT_GIVEN
+from zato.common.ext_db.api import is_ext_object_id, to_local_id
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.api import parse_literal_dict
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -535,14 +536,23 @@ class DeleteMeta(AdminServiceMeta):
             if not (input_id or input_name):
                 raise BadRequest(self.cid, 'Either id or name is required on input')
 
-            with closing(self.odb.session()) as session:
+            # Objects from the external AS2/AS4 database are recognized by their offset ids
+            # and they are stored in that database under their local ids.
+            object_id = input_id or 0
+
+            if is_ext_object_id(object_id):
+                db_input_id = to_local_id(input_id)
+            else:
+                db_input_id = input_id
+
+            with closing(self.server.get_config_session(object_id=object_id)) as session:
                 attrs._meta_session = session
                 try:
                     query = session.query(attrs.model)
 
                     if input_id:
                         query = query.\
-                            filter(attrs.model.id==input_id)
+                            filter(attrs.model.id==db_input_id)
 
                     else:
                         query = query.\

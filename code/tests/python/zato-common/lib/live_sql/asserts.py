@@ -6,45 +6,37 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytest
-import pytest
-
 # SQLAlchemy
-from sqlalchemy.exc import DBAPIError
-
-# Zato
-from common import assert_postgresql_connection_encrypted, audit_log_env, run_audit_log_scenario
-from zato.common.audit_log.api import AuditLog
+from sqlalchemy import text
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from live_sql.containers import DatabaseServer
-    DatabaseServer = DatabaseServer
+    from sqlalchemy.engine import Engine
+    Engine = Engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_audit_log_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -> 'None':
-    """ The complete audit log scenario against a PostgreSQL server that requires TLS,
-    confirming the session really is encrypted.
+def assert_mysql_connection_encrypted(engine:'Engine') -> 'None':
+    """ Confirms that sessions of this MySQL engine really are encrypted.
     """
-    with audit_log_env(postgresql_ssl_server.details):
-        run_audit_log_scenario()
-        assert_postgresql_connection_encrypted()
+    with engine.connect() as connection:
+        row = connection.execute(text("show session status like 'Ssl_cipher'")).fetchone()
+
+    cipher = row[1]
+    assert cipher, 'Expected a non-empty SSL cipher for the MySQL session'
 
 # ################################################################################################################################
 
-def test_audit_log_postgresql_ssl_is_required(postgresql_ssl_server:'DatabaseServer') -> 'None':
-    """ Connecting without SSL to a PostgreSQL server that requires TLS must fail.
+def assert_postgresql_connection_encrypted(engine:'Engine') -> 'None':
+    """ Confirms that sessions of this PostgreSQL engine really are encrypted.
     """
-    details = dict(postgresql_ssl_server.details)
-    details['ssl'] = 'off'
+    with engine.connect() as connection:
+        is_ssl = connection.execute(text('select ssl from pg_stat_ssl where pid = pg_backend_pid()')).scalar()
 
-    with audit_log_env(details):
-        with pytest.raises(DBAPIError):
-            _ = AuditLog('test-audit-log-server')
+    assert is_ssl is True, 'Expected the PostgreSQL session to use SSL'
 
 # ################################################################################################################################
 # ################################################################################################################################

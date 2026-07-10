@@ -30,6 +30,7 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeplo
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
+from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
@@ -679,6 +680,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
+
+# ################################################################################################################################
+
+    def get_config_session(self, *, object_type:'str'='', object_id:'int'=0) -> 'any_':
+        """ Returns an SQL session for configuration objects - a session to the external AS2/AS4 database
+        if one is configured and the object belongs to it, a session to the main ODB otherwise.
+        """
+
+        # AS2/AS4 objects are recognized either by their type ..
+        if needs_ext_db(object_type):
+            out = get_ext_db_session()
+            return out
+
+        # .. or by their id, which is always offset for objects from the external database.
+        if is_ext_object_id(object_id):
+            out = get_ext_db_session()
+            return out
+
+        out = self.odb.session()
+        return out
 
 # ################################################################################################################################
 
@@ -1564,10 +1585,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
             mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
-            as2_created = ensure_as2_channel_exists(session, self.cluster_id)
-            as2_mdn_created = ensure_as2_mdn_channel_exists(session, self.cluster_id)
 
-            if openapi_created or mcp_created or as2_created or as2_mdn_created:
+            if openapi_created or mcp_created:
                 session.commit()
 
             if openapi_created:
@@ -1575,6 +1594,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if mcp_created:
                 logger.info('Created MCP handler channel')
+
+        # AS2 channels are auto-created in the external AS2/AS4 database when one is configured
+        if is_ext_db_configured():
+            as2_session = get_ext_db_session()
+        else:
+            as2_session = self.odb.session()
+
+        with closing(as2_session) as session:
+            as2_created = ensure_as2_channel_exists(session, self.cluster_id)
+            as2_mdn_created = ensure_as2_mdn_channel_exists(session, self.cluster_id)
+
+            if as2_created or as2_mdn_created:
+                session.commit()
 
             if as2_created:
                 logger.info('Created AS2 inbound channel')

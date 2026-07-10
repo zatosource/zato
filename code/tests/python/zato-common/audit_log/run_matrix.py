@@ -14,16 +14,19 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 # Zato
-from certificates import generate_certificates
-from containers import start_mysql, start_postgresql, stop_container
+from conftest import ModuleCtx as ConftestCtx
+from live_sql.certificates import generate_certificates
+from live_sql.containers import start_mysql, start_postgresql, stop_container
+from live_sql.env import build_env
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from containers import DatabaseServer
+    from live_sql.containers import DatabaseServer
     from zato.common.typing_ import stranydict, strlist
 
     DatabaseServer = DatabaseServer
@@ -66,6 +69,9 @@ _certificate_dir_mode = 0o755
 
 # The backends every UI test runs against, in this order
 _backend_names = ('sqlite', 'mysql', 'postgresql', 'mysql-ssl', 'postgresql-ssl')
+
+# The prefix all the audit log database environment variables share
+_env_prefix = 'Zato_Audit_Log_DB_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,18 +124,48 @@ def main() -> 'None':
     failed:'strlist' = []
 
     try:
-        servers['mysql'] = start_mysql(needs_ssl=False)
-        servers['postgresql'] = start_postgresql(needs_ssl=False)
-        servers['mysql-ssl'] = start_mysql(needs_ssl=True, certificates=certificates)
-        servers['postgresql-ssl'] = start_postgresql(needs_ssl=True, certificates=certificates)
+        servers['mysql'] = start_mysql(
+            container_name=ConftestCtx.MySQL_Container,
+            port=ConftestCtx.MySQL_Port,
+            username=ConftestCtx.Username,
+            password=ConftestCtx.Password,
+            db_name=ConftestCtx.DB_Name,
+            needs_ssl=False,
+        )
+        servers['postgresql'] = start_postgresql(
+            container_name=ConftestCtx.PostgreSQL_Container,
+            port=ConftestCtx.PostgreSQL_Port,
+            username=ConftestCtx.Username,
+            password=ConftestCtx.Password,
+            db_name=ConftestCtx.DB_Name,
+            needs_ssl=False,
+        )
+        servers['mysql-ssl'] = start_mysql(
+            container_name=ConftestCtx.MySQL_SSL_Container,
+            port=ConftestCtx.MySQL_SSL_Port,
+            username=ConftestCtx.Username,
+            password=ConftestCtx.Password,
+            db_name=ConftestCtx.DB_Name,
+            needs_ssl=True,
+            certificates=certificates,
+        )
+        servers['postgresql-ssl'] = start_postgresql(
+            container_name=ConftestCtx.PostgreSQL_SSL_Container,
+            port=ConftestCtx.PostgreSQL_SSL_Port,
+            username=ConftestCtx.Username,
+            password=ConftestCtx.Password,
+            db_name=ConftestCtx.DB_Name,
+            needs_ssl=True,
+            certificates=certificates,
+        )
 
         # The per-backend environments the components are restarted with
         backend_env:'stranydict' = {
             'sqlite': {},
-            'mysql': servers['mysql'].env,
-            'postgresql': servers['postgresql'].env,
-            'mysql-ssl': servers['mysql-ssl'].env,
-            'postgresql-ssl': servers['postgresql-ssl'].env,
+            'mysql': build_env(_env_prefix, servers['mysql'].details),
+            'postgresql': build_env(_env_prefix, servers['postgresql'].details),
+            'mysql-ssl': build_env(_env_prefix, servers['mysql-ssl'].details),
+            'postgresql-ssl': build_env(_env_prefix, servers['postgresql-ssl'].details),
         }
 
         for backend_name in _backend_names:

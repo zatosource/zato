@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from common import audit_log_env, run_audit_log_scenario
+from common import ext_db_env, run_ext_db_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -19,11 +19,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_audit_log_mysql(mysql_server:'DatabaseServer') -> 'None':
-    """ The complete audit log scenario against a live MySQL server.
+def test_ext_db_postgresql(postgresql_server:'DatabaseServer') -> 'None':
+    """ The complete external AS2/AS4 database scenario against a live PostgreSQL server.
     """
-    with audit_log_env(mysql_server.details):
-        run_audit_log_scenario()
+    with ext_db_env(postgresql_server.details):
+        run_ext_db_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

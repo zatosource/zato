@@ -21,12 +21,12 @@ def test_audit_log_sqlite(tmp_path:'os.PathLike') -> 'None':
     """
     db_path = os.path.join(str(tmp_path), 'audit.db')
 
-    env = {
-        AuditLogCtx.Env_Type: AuditLogCtx.Type_SQLite,
-        AuditLogCtx.Env_Name: db_path,
+    details = {
+        'type': AuditLogCtx.Type_SQLite,
+        'name': db_path,
     }
 
-    with audit_log_env(env):
+    with audit_log_env(details):
         run_audit_log_scenario()
 
     # The database file was created under the path the environment pointed at

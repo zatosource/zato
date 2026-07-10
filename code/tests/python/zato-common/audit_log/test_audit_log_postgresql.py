@@ -13,7 +13,7 @@ from common import audit_log_env, run_audit_log_scenario
 # ################################################################################################################################
 
 if 0:
-    from containers import DatabaseServer
+    from live_sql.containers import DatabaseServer
     DatabaseServer = DatabaseServer
 
 # ################################################################################################################################
@@ -22,7 +22,7 @@ if 0:
 def test_audit_log_postgresql(postgresql_server:'DatabaseServer') -> 'None':
     """ The complete audit log scenario against a live PostgreSQL server.
     """
-    with audit_log_env(postgresql_server.env):
+    with audit_log_env(postgresql_server.details):
         run_audit_log_scenario()
 
 # ################################################################################################################################

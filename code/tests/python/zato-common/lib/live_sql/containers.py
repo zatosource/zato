@@ -18,14 +18,13 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 # Zato
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
+    from live_sql.certificates import CertificatePaths
     from zato.common.typing_ import optional, stranydict, strlist
 
     CertificatePaths = CertificatePaths
@@ -40,22 +39,9 @@ class ModuleCtx:
     MySQL_Image      = 'mysql:8.4'
     PostgreSQL_Image = 'postgres:16'
 
-    # Host ports the containers listen on
-    MySQL_Port          = 23306
-    MySQL_SSL_Port      = 23307
-    PostgreSQL_Port     = 25432
-    PostgreSQL_SSL_Port = 25433
-
-    # Names of the containers so stale ones can be removed
-    MySQL_Container          = 'zato-audit-log-test-mysql'
-    MySQL_SSL_Container      = 'zato-audit-log-test-mysql-ssl'
-    PostgreSQL_Container     = 'zato-audit-log-test-postgresql'
-    PostgreSQL_SSL_Container = 'zato-audit-log-test-postgresql-ssl'
-
-    # Database credentials shared by all the containers
-    Username = 'zato_audit_log'
-    Password = 'test-audit-log-password'
-    DB_Name  = 'zato_audit_log'
+    # Database types the servers report in their connection details
+    Type_MySQL      = 'mysql'
+    Type_PostgreSQL = 'postgresql'
 
     # How long to wait for a database to accept connections
     Ready_Timeout = 300
@@ -68,7 +54,7 @@ class ModuleCtx:
 
 class DatabaseServer(NamedTuple):
     container_name: str
-    env: 'stranydict'
+    details: 'stranydict'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,58 +105,60 @@ def _get_ssl_connect_args(certificates:'CertificatePaths') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _base_env(db_type:'str', port:'int') -> 'stranydict':
-    """ Returns the Zato_Audit_Log_DB_* variables pointing at one of our containers.
+def _base_details(db_type:'str', port:'int', username:'str', password:'str', db_name:'str') -> 'stranydict':
+    """ Returns the connection details pointing at one of our containers.
     """
     out:'stranydict' = {
-        AuditLogCtx.Env_Type:     db_type,
-        AuditLogCtx.Env_Host:     'localhost',
-        AuditLogCtx.Env_Port:     str(port),
-        AuditLogCtx.Env_Username: ModuleCtx.Username,
-        AuditLogCtx.Env_Password: ModuleCtx.Password,
-        AuditLogCtx.Env_Name:     ModuleCtx.DB_Name,
+        'type':     db_type,
+        'host':     'localhost',
+        'port':     str(port),
+        'username': username,
+        'password': password,
+        'name':     db_name,
     }
 
     return out
 
 # ################################################################################################################################
 
-def _ssl_env(certificates:'CertificatePaths') -> 'stranydict':
-    """ Returns the Zato_Audit_Log_DB_SSL_* variables pointing at the generated certificates.
+def _ssl_details(certificates:'CertificatePaths') -> 'stranydict':
+    """ Returns the SSL connection details pointing at the generated certificates.
     """
     out:'stranydict' = {
-        AuditLogCtx.Env_SSL:           'on',
-        AuditLogCtx.Env_SSL_CA_File:   certificates.ca_cert,
-        AuditLogCtx.Env_SSL_Cert_File: certificates.client_cert,
-        AuditLogCtx.Env_SSL_Key_File:  certificates.client_key,
+        'ssl':           'on',
+        'ssl_ca_file':   certificates.ca_cert,
+        'ssl_cert_file': certificates.client_cert,
+        'ssl_key_file':  certificates.client_key,
     }
 
     return out
 
 # ################################################################################################################################
 
-def start_mysql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None) -> 'DatabaseServer':
+def start_mysql(
+    *,
+    container_name:'str',
+    port:'int',
+    username:'str',
+    password:'str',
+    db_name:'str',
+    needs_ssl:'bool',
+    certificates:'certificatepathsnone' = None,
+    ) -> 'DatabaseServer':
     """ Starts a MySQL container, optionally one that requires TLS for all TCP connections.
     Certificates are always given when needs_ssl is True and they are dereferenced only then.
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
-
-    if needs_ssl:
-        container_name = ModuleCtx.MySQL_SSL_Container
-        port = ModuleCtx.MySQL_SSL_Port
-    else:
-        container_name = ModuleCtx.MySQL_Container
-        port = ModuleCtx.MySQL_Port
 
     _remove_stale_container(container_name)
 
     command:'strlist' = [
         'docker', 'run', '-d', '--rm',
         '--name', container_name,
-        '-e', 'MYSQL_ROOT_PASSWORD=' + ModuleCtx.Password,
-        '-e', 'MYSQL_DATABASE=' + ModuleCtx.DB_Name,
-        '-e', 'MYSQL_USER=' + ModuleCtx.Username,
-        '-e', 'MYSQL_PASSWORD=' + ModuleCtx.Password,
+        '-e', 'MYSQL_ROOT_PASSWORD=' + password,
+        '-e', 'MYSQL_DATABASE=' + db_name,
+        '-e', 'MYSQL_USER=' + username,
+        '-e', 'MYSQL_PASSWORD=' + password,
         '-p', f'{port}:3306',
     ]
 
@@ -190,8 +178,7 @@ def start_mysql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None)
     _ = subprocess.run(command, check=True, capture_output=True)
 
     # Wait until the database accepts connections from the host
-    engine_url = 'mysql+pymysql://{}:{}@localhost:{}/{}'.format(
-        ModuleCtx.Username, ModuleCtx.Password, port, ModuleCtx.DB_Name)
+    engine_url = f'mysql+pymysql://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
         connect_args = _get_ssl_connect_args(ssl_certificates)
@@ -200,37 +187,39 @@ def start_mysql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None)
 
     _wait_until_ready(engine_url, connect_args)
 
-    env = _base_env(AuditLogCtx.Type_MySQL, port)
+    details = _base_details(ModuleCtx.Type_MySQL, port, username, password, db_name)
 
     if needs_ssl:
-        env.update(_ssl_env(ssl_certificates))
+        details.update(_ssl_details(ssl_certificates))
 
-    out = DatabaseServer(container_name=container_name, env=env)
+    out = DatabaseServer(container_name=container_name, details=details)
     return out
 
 # ################################################################################################################################
 
-def start_postgresql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None) -> 'DatabaseServer':
+def start_postgresql(
+    *,
+    container_name:'str',
+    port:'int',
+    username:'str',
+    password:'str',
+    db_name:'str',
+    needs_ssl:'bool',
+    certificates:'certificatepathsnone' = None,
+    ) -> 'DatabaseServer':
     """ Starts a PostgreSQL container, optionally one that requires TLS for all TCP connections.
     Certificates are always given when needs_ssl is True and they are dereferenced only then.
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
-
-    if needs_ssl:
-        container_name = ModuleCtx.PostgreSQL_SSL_Container
-        port = ModuleCtx.PostgreSQL_SSL_Port
-    else:
-        container_name = ModuleCtx.PostgreSQL_Container
-        port = ModuleCtx.PostgreSQL_Port
 
     _remove_stale_container(container_name)
 
     command:'strlist' = [
         'docker', 'run', '-d', '--rm',
         '--name', container_name,
-        '-e', 'POSTGRES_USER=' + ModuleCtx.Username,
-        '-e', 'POSTGRES_PASSWORD=' + ModuleCtx.Password,
-        '-e', 'POSTGRES_DB=' + ModuleCtx.DB_Name,
+        '-e', 'POSTGRES_USER=' + username,
+        '-e', 'POSTGRES_PASSWORD=' + password,
+        '-e', 'POSTGRES_DB=' + db_name,
         '-p', f'{port}:5432',
     ]
 
@@ -248,8 +237,7 @@ def start_postgresql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = 
     _ = subprocess.run(command, check=True, capture_output=True)
 
     # Wait until the database accepts connections from the host
-    engine_url = 'postgresql+pg8000://{}:{}@localhost:{}/{}'.format(
-        ModuleCtx.Username, ModuleCtx.Password, port, ModuleCtx.DB_Name)
+    engine_url = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{db_name}'
 
     if needs_ssl:
         connect_args = _get_ssl_connect_args(ssl_certificates)
@@ -258,12 +246,12 @@ def start_postgresql(*, needs_ssl:'bool', certificates:'certificatepathsnone' = 
 
     _wait_until_ready(engine_url, connect_args)
 
-    env = _base_env(AuditLogCtx.Type_PostgreSQL, port)
+    details = _base_details(ModuleCtx.Type_PostgreSQL, port, username, password, db_name)
 
     if needs_ssl:
-        env.update(_ssl_env(ssl_certificates))
+        details.update(_ssl_details(ssl_certificates))
 
-    out = DatabaseServer(container_name=container_name, env=env)
+    out = DatabaseServer(container_name=container_name, details=details)
     return out
 
 # ################################################################################################################################
