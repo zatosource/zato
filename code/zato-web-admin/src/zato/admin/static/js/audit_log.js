@@ -11,14 +11,26 @@ $.fn.zato.audit_log = {};
 $.fn.zato.audit_log.config = {
     pageSize: 25,
     detailsURL: '/zato/audit-log/details/',
+    resubmitURL: '/zato/audit-log/resubmit/',
     emptyValue: '---',
 
     // The overlay tab labels - the raw payload and its parsed EDI document view
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
 
-    // The per-source column list, assigned in init
-    columns: []
+    // The status filter value narrowing the page down to open exchanges
+    outstandingStatus: 'outstanding',
+
+    // What the resubmit outcome is reported with
+    resubmitModalTitle: 'Resubmit result',
+    resubmitErrorLabel: 'Resubmit failed',
+    resentLabel: 'Resent',
+    reprocessedLabel: 'Reprocessed to',
+    resubmittedMarkerLabel: 'resubmitted',
+
+    // The per-source column list and resubmit labels, assigned in init
+    columns: [],
+    resubmitLabels: {}
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -101,6 +113,30 @@ $.fn.zato.audit_log.cellRenderers = {
         }
 
         return '<td class="audit-log-data-preview">' + escapeHTML(data) + '</td>';
+    },
+
+    // The resubmit action of the row - resend for outbound events, reprocess for inbound ones -
+    // plus a marker on rows that were already resubmitted. Event types without a registered
+    // action, e.g. the arrival of an MDN, have nothing to resubmit.
+    'action': function(row, column) {
+        var config = $.fn.zato.audit_log.config;
+
+        var label = config.resubmitLabels[row.event_type];
+
+        if (!label) {
+            return '<td>' + config.emptyValue + '</td>';
+        }
+
+        var html = '<td>';
+        html += '<a href="javascript:void(0)" class="audit-log-resubmit-link" data-id="' + row.id + '">' + label + '</a>';
+
+        if (row.is_resubmitted) {
+            html += ' <span class="audit-log-resubmitted-marker">' + config.resubmittedMarkerLabel + '</span>';
+        }
+
+        html += '</td>';
+
+        return html;
     }
 };
 
@@ -227,12 +263,82 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.audit_log.buildResubmitLabel = function(report) {
+    var config = $.fn.zato.audit_log.config;
+
+    // A resubmit that raised an exception carries its traceback in the details ..
+    if (report.error) {
+        return config.resubmitErrorLabel;
+    }
+
+    // .. a reprocess is reported by where the payload went ..
+    if (report.action === 'reprocess') {
+        return config.reprocessedLabel + ' ' + report.target_kind + ' ' + report.target_name;
+    }
+
+    // .. and a resend by the CID its new attempt travels under.
+    return config.resentLabel + '; CID ' + report.cid;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
+    var config = $.fn.zato.audit_log.config;
+    var body = jqXHR.responseText;
+
+    // A non-2xx response carries an exception message rather than a report ..
+    var isHTTPOK = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+    if (!isHTTPOK) {
+        return {
+            is_success: false,
+            label: config.resubmitErrorLabel,
+            details_title: config.resubmitErrorLabel,
+            details_body: body
+        };
+    }
+
+    // .. a report is JSON with the outcome inside.
+    var report = JSON.parse(body);
+    var label = $.fn.zato.audit_log.buildResubmitLabel(report);
+
+    // The new attempt and the marker on the original row appear once the table refreshes.
+    var pagination = $.fn.zato.audit_log.pagination;
+    pagination.fetch_page(pagination.current_page());
+
+    return {
+        is_success: report.is_ok,
+        label: label,
+        details_title: label,
+        details_body: JSON.stringify(report, null, 2)
+    };
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.audit_log.resubmit = function(linkElement) {
+    var config = $.fn.zato.audit_log.config;
+
+    var eventId = linkElement.getAttribute('data-id');
+
+    $.fn.zato.action_runner.run({
+        link_elem: linkElement,
+        url: config.resubmitURL,
+        data: 'id=' + encodeURIComponent(eventId),
+        parse: $.fn.zato.audit_log.parseResubmitResponse,
+        details_modal_title: config.resubmitModalTitle
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.init = function(initConfig) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
 
-    // The columns to render come from the server, per source ..
+    // The columns to render and the resubmit labels come from the server, per source ..
     config.columns = initConfig.columns;
+    config.resubmitLabels = initConfig.resubmitLabels;
 
     // .. wire up the paginated table ..
     var pagination = kit.pagination.init({
@@ -241,13 +347,17 @@ $.fn.zato.audit_log.init = function(initConfig) {
         filters: {
             source: initConfig.source,
             object_name: initConfig.object_name,
-            query: ''
+            query: '',
+            status: initConfig.status
         },
         table_body: '#audit-log-table-body',
         container_top: '#audit-log-pagination-top',
         container_bottom: '#audit-log-pagination-bottom',
         render_page: $.fn.zato.audit_log.renderPage
     });
+
+    // .. the resubmit outcome handler refreshes the table through this reference ..
+    $.fn.zato.audit_log.pagination = pagination;
 
     // .. let the search form filter the events ..
     $('#audit-log-search-form').on('submit', function(event) {
@@ -257,6 +367,38 @@ $.fn.zato.audit_log.init = function(initConfig) {
 
         pagination.set_filters({query: query});
         pagination.fetch_page(1);
+    });
+
+    // .. the outstanding pill toggles between all events and the open exchanges,
+    // .. keeping the status query parameter of the page URL in sync ..
+    $('#audit-log-outstanding-pill').on('click', function(event) {
+        event.preventDefault();
+
+        var pill = $(this);
+        var wasActive = pill.hasClass('audit-log-filter-pill-active');
+
+        var newStatus = wasActive ? '' : config.outstandingStatus;
+        pill.toggleClass('audit-log-filter-pill-active', !wasActive);
+
+        pagination.set_filters({status: newStatus});
+        pagination.fetch_page(1);
+
+        var urlParams = new URLSearchParams(window.location.search);
+
+        if (newStatus) {
+            urlParams.set('status', newStatus);
+        } else {
+            urlParams.delete('status');
+        }
+
+        history.replaceState(null, '', '?' + urlParams.toString());
+    });
+
+    // .. each resubmit link sends its row's payload out again ..
+    $(document).on('click', '.audit-log-resubmit-link', function(event) {
+        event.preventDefault();
+
+        $.fn.zato.audit_log.resubmit(this);
     });
 
     // .. and let each CID open the complete message of its event in an overlay.

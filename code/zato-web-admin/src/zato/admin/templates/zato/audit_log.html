@@ -26,6 +26,30 @@ img.help-icon[id=""] { display: none; }
     font-family: monospace;
     word-break: break-all;
 }
+
+.audit-log-filter-pill {
+    align-self: center;
+    cursor: pointer;
+    background: #eef1f5;
+    color: #4a5568;
+}
+
+.audit-log-filter-pill-active {
+    background: #012845;
+    color: #fff;
+}
+
+.audit-log-resubmitted-marker {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #e0f0ff;
+    color: #012845;
+}
 </style>
 {% endblock %}
 
@@ -39,6 +63,7 @@ img.help-icon[id=""] { display: none; }
 {% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
@@ -46,7 +71,9 @@ $(document).ready(function() {
         poll_url: '{{ poll_url }}',
         source: '{{ source }}',
         object_name: '{{ object_name }}',
-        columns: {{ columns_json|safe }}
+        status: '{{ status }}',
+        columns: {{ columns_json|safe }},
+        resubmitLabels: {{ resubmit_labels_json|safe }}
     });
 });
 </script>
@@ -64,6 +91,10 @@ $(document).ready(function() {
     <form class="audit-log-search-form" id="audit-log-search-form">
         <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search ..">
         <button type="submit" class="action-button">Search</button>
+        {% if has_outstanding_filter %}
+        <a href="#" id="audit-log-outstanding-pill"
+            class="detail-component-pill audit-log-filter-pill{% if status == 'outstanding' %} audit-log-filter-pill-active{% endif %}">Outstanding</a>
+        {% endif %}
     </form>
 
     <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
