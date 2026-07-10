@@ -19,6 +19,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.defaults import default_cluster_id
 
@@ -26,7 +27,8 @@ from zato.common.defaults import default_cluster_id
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,7 +47,8 @@ _default_page_size = 25
 _data_preview_len = 200
 
 # The columns returned to the frontend, in the order they appear in the select below
-_row_columns = ('id', 'cid', 'source', 'event_type', 'event_time_iso', 'msg_id', 'endpoint', 'outcome', 'size', 'data')
+_row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'endpoint', 'outcome', 'size',
+    'data')
 
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
@@ -58,6 +61,7 @@ _source_title = {
     'rest-outgoing': 'Outgoing REST audit log',
     'soap-outgoing': 'Outgoing SOAP audit log',
     'email-imap': 'IMAP audit log',
+    'as2': 'AS2 audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -123,6 +127,18 @@ _email_imap_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_as2_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'disposition', 'label': 'Disposition', 'type': 'text'},
+    {'key': 'mic', 'label': 'MIC', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # Per-source table columns
 _source_columns = {
     'pubsub': _pubsub_columns,
@@ -131,6 +147,42 @@ _source_columns = {
     'rest-outgoing': _rest_outgoing_columns,
     'soap-outgoing': _soap_outgoing_columns,
     'email-imap': _email_imap_columns,
+    'as2': _as2_columns,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _enrich_as2_row(row:'anydict') -> 'None':
+    """ Extracts the disposition and MIC of an AS2 event out of its JSON data,
+    so they render as columns of their own.
+    """
+    row['disposition'] = ''
+    row['mic'] = ''
+
+    data = row['data']
+    if not data:
+        return
+
+    # A payload that is not JSON, e.g. a raw MIME body, has nothing to extract.
+    try:
+        details = json.loads(data)
+    except ValueError:
+        return
+
+    # A message-sent event carries the MIC computed at send time,
+    # an mdn-received event carries what the receipt itself reported.
+    if mic := details.get('mic'):
+        row['mic'] = mic
+
+    if disposition := details.get('disposition'):
+        row['disposition'] = describe_disposition(disposition, details['modifier_kind'], details['modifier'])
+
+# ################################################################################################################################
+
+# Per-source row enrichment - a source with columns extracted out of the event data registers itself here
+_source_row_enrich = {
+    'as2': _enrich_as2_row,
 }
 
 # ################################################################################################################################
@@ -242,7 +294,11 @@ def poll(req:'any_') -> 'HttpResponse':
         for db_row in connection.execute(page_query):
             row = dict(zip(_row_columns, db_row))
 
-            # Only a preview of the payload goes into the table.
+            # Sources with extra columns extract them out of the full payload first ..
+            if enrich := _source_row_enrich.get(source):
+                enrich(row)
+
+            # .. and only a preview of the payload goes into the table.
             data = row['data']
             row['data'] = data[:_data_preview_len]
 

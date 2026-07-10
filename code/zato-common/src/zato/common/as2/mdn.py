@@ -297,6 +297,19 @@ def disposition_from_exception(exception:'AS2ProtocolException') -> 'Disposition
 # ################################################################################################################################
 # ################################################################################################################################
 
+def describe_disposition(disposition:'str', modifier_kind:'str', modifier:'str') -> 'str':
+    """ Builds the human-readable outcome of a parsed MDN disposition,
+    e.g. `processed` or `processed/error: unknown-trading-partner`.
+    """
+    if modifier_kind:
+        out = f'{disposition}/{modifier_kind}: {modifier}'
+    else:
+        out = disposition
+
+    return out
+
+# ################################################################################################################################
+
 def format_disposition(disposition:'Disposition') -> 'str':
     """ Emits a Disposition field value in the historic RFC 4130 construction -
     the form every AS2 implementation accepts.
