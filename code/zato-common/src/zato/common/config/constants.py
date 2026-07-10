@@ -32,7 +32,8 @@ Holiday_Calendar    = 'holiday_calendar'
 LDAP                = 'ldap'
 Confluence          = 'confluence'
 Jira                = 'jira'
-Microsoft_365       = 'microsoft_365'
+Microsoft_Cloud     = 'microsoft_cloud'
+Microsoft_Power_Automate = 'microsoft_power_automate'
 PubSub_Topic        = 'pubsub_topic'
 PubSub_Permission   = 'pubsub_permission'
 PubSub_Subscription = 'pubsub_subscription'
@@ -63,7 +64,8 @@ All_Sections = frozenset([
     LDAP,
     Confluence,
     Jira,
-    Microsoft_365,
+    Microsoft_Cloud,
+    Microsoft_Power_Automate,
     PubSub_Topic,
     PubSub_Permission,
     PubSub_Subscription,

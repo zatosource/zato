@@ -32,8 +32,10 @@ type_display_names = {
     'confluence': 'Confluence connection',
     'jira': 'Jira connection',
     'ldap': 'LDAP connection',
+    'mongodb': 'MongoDB connection',
     'smb': 'SMB connection',
-    'microsoft_365': 'Microsoft 365 connection',
+    'microsoft_cloud': 'Microsoft 365 connection',
+    'microsoft_power_automate': 'Microsoft Power Automate connection',
     'elastic_search': 'ElasticSearch connection'
 }
 

@@ -327,7 +327,14 @@
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">AS2</a></li>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">AS2 &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">Connections</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "as2-keystore" %}?cluster={{ cluster_id|default:"1" }}">Keystore</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "b2b-control-numbers" %}?cluster={{ cluster_id|default:"1" }}">Control numbers</a></li>
+                                                </ul>
+                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">AS4</a></li>
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
@@ -389,6 +396,7 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Microsoft Power Automate</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
                             </li>
@@ -433,6 +441,9 @@
                                             </li>
                                             <li class="child">
                                                 <a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP (AD)</a>
+                                            </li>
+                                            <li class="child">
+                                                <a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a>
                                             </li>
                                         </ul>
                                     </li>

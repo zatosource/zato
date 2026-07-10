@@ -38,7 +38,9 @@ from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafka
 from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.ldap import LDAPImporter
-from zato.cli.enmasse.importers.microsoft_365 import Microsoft365Importer
+from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
+from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
+from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
@@ -83,7 +85,9 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.as2',
-                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
+                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_cloud',
+                        'zato.cli.enmasse.importers.microsoft_power_automate',
+                        'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
                         'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
@@ -126,10 +130,12 @@ class EnmasseYAMLImporter:
         self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
+        self.mongodb_defs = {}
         self.odata_defs = {}
         self.sftp_defs = {}
         self.smb_defs = {}
-        self.microsoft_365_defs = {}
+        self.microsoft_cloud_defs = {}
+        self.microsoft_power_automate_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
         self.outgoing_as2_defs = {}
@@ -168,10 +174,12 @@ class EnmasseYAMLImporter:
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
+        self.mongodb_importer = MongoDBImporter(self)
         self.odata_importer = ODataImporter(self)
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
-        self.microsoft_365_importer = Microsoft365Importer(self)
+        self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
+        self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
         self.as2_importer = AS2Importer(self)
@@ -711,6 +719,31 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_mongodb(self, mongodb_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes MongoDB connection definitions from a YAML configuration with the database.
+        """
+        if not mongodb_list:
+            return [], []
+
+        count = len(mongodb_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} MongoDB connection {noun}')
+
+        # Examine each MongoDB connection item
+        for idx, item in enumerate(mongodb_list):
+            logger.info('MongoDB connection item %d: %s', idx, item)
+
+        mongodb_created, mongodb_updated = self.mongodb_importer.sync_definitions(mongodb_list, session)
+
+        # Get MongoDB definitions from the MongoDB importer
+        self.mongodb_defs = self.mongodb_importer.connection_defs
+        logger.info('Processed MongoDB connection definitions: created=%d updated=%d',
+            len(mongodb_created), len(mongodb_updated))
+
+        return mongodb_created, mongodb_updated
+
+# ################################################################################################################################
+
     def sync_channel_hl7_mllp(self, channel_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
         if not channel_hl7_mllp_list:
             return [], []
@@ -869,27 +902,54 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_microsoft_365(self, microsoft_365_list:'list', session:'SASession') -> 'tuple':
+    def sync_microsoft_cloud(self, microsoft_cloud_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft 365 connection definitions from a YAML configuration with the database.
         """
-        if not microsoft_365_list:
+        if not microsoft_cloud_list:
             return [], []
 
-        count = len(microsoft_365_list)
+        count = len(microsoft_cloud_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} Microsoft 365 connection {noun}')
 
         # Examine each Microsoft 365 connection item
-        for idx, item in enumerate(microsoft_365_list):
+        for idx, item in enumerate(microsoft_cloud_list):
             logger.info('Microsoft 365 connection item %d: %s', idx, item)
 
-        microsoft_365_created, microsoft_365_updated = self.microsoft_365_importer.sync_definitions(microsoft_365_list, session)
+        microsoft_cloud_created, microsoft_cloud_updated = self.microsoft_cloud_importer.sync_definitions(
+            microsoft_cloud_list, session)
 
         # Get Microsoft 365 definitions from the Microsoft 365 importer
-        self.microsoft_365_defs = self.microsoft_365_importer.connection_defs
-        logger.info('Processed Microsoft 365 connection definitions: created=%d updated=%d', len(microsoft_365_created), len(microsoft_365_updated))
+        self.microsoft_cloud_defs = self.microsoft_cloud_importer.connection_defs
+        logger.info('Processed Microsoft 365 connection definitions: created=%d updated=%d',
+            len(microsoft_cloud_created), len(microsoft_cloud_updated))
 
-        return microsoft_365_created, microsoft_365_updated
+        return microsoft_cloud_created, microsoft_cloud_updated
+
+# ################################################################################################################################
+
+    def sync_microsoft_power_automate(self, microsoft_power_automate_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Microsoft Power Automate connection definitions from a YAML configuration with the database.
+        """
+        if not microsoft_power_automate_list:
+            return [], []
+
+        count = len(microsoft_power_automate_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Microsoft Power Automate connection {noun}')
+
+        # Examine each Microsoft Power Automate connection item
+        for idx, item in enumerate(microsoft_power_automate_list):
+            logger.info('Microsoft Power Automate connection item %d: %s', idx, item)
+
+        created, updated = self.microsoft_power_automate_importer.sync_definitions(microsoft_power_automate_list, session)
+
+        # Get Microsoft Power Automate definitions from the Microsoft Power Automate importer
+        self.microsoft_power_automate_defs = self.microsoft_power_automate_importer.connection_defs
+        logger.info('Processed Microsoft Power Automate connection definitions: created=%d updated=%d',
+            len(created), len(updated))
+
+        return created, updated
 
 # ################################################################################################################################
 
@@ -1189,6 +1249,14 @@ class EnmasseYAMLImporter:
         if smb_updated:
             self.updated_objects['smb'] = smb_updated
 
+        # Process MongoDB connection definitions
+        mongodb_list = yaml_config.get('mongodb') or yaml_config.get('outgoing_mongodb', [])
+        mongodb_created, mongodb_updated = self.sync_mongodb(mongodb_list, session)
+        if mongodb_created:
+            self.created_objects['mongodb'] = mongodb_created
+        if mongodb_updated:
+            self.updated_objects['mongodb'] = mongodb_updated
+
         # Process IBM MQ channel definitions
         channel_ibm_mq_list = yaml_config.get('channel_ibm_mq', [])
         channel_ibm_mq_created, channel_ibm_mq_updated = self.sync_channel_ibm_mq(channel_ibm_mq_list, session)
@@ -1254,18 +1322,32 @@ class EnmasseYAMLImporter:
             self.updated_objects['outgoing_hl7_mllp'] = outgoing_hl7_mllp_updated
 
         # Process Microsoft 365 connection definitions
-        ms365_list = yaml_config.get('microsoft_365', [])
+        microsoft_cloud_list = yaml_config.get('microsoft_cloud', [])
         generic_list = yaml_config.get('zato_generic_connection')
         if generic_list:
             for item in generic_list:
                 item_type = item.get('type_')
                 if item_type == 'cloud-microsoft-365':
-                    ms365_list.append(item)
-        ms365_created, ms365_updated = self.sync_microsoft_365(ms365_list, session)
-        if ms365_created:
-            self.created_objects['microsoft_365'] = ms365_created
-        if ms365_updated:
-            self.updated_objects['microsoft_365'] = ms365_updated
+                    microsoft_cloud_list.append(item)
+        microsoft_cloud_created, microsoft_cloud_updated = self.sync_microsoft_cloud(microsoft_cloud_list, session)
+        if microsoft_cloud_created:
+            self.created_objects['microsoft_cloud'] = microsoft_cloud_created
+        if microsoft_cloud_updated:
+            self.updated_objects['microsoft_cloud'] = microsoft_cloud_updated
+
+        # Process Microsoft Power Automate connection definitions
+        power_automate_list = yaml_config.get('microsoft_power_automate', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-microsoft-power-automate':
+                    power_automate_list.append(item)
+        power_automate_created, power_automate_updated = self.sync_microsoft_power_automate(power_automate_list, session)
+        if power_automate_created:
+            self.created_objects['microsoft_power_automate'] = power_automate_created
+        if power_automate_updated:
+            self.updated_objects['microsoft_power_automate'] = power_automate_updated
 
         # Process ElasticSearch connection definitions
         es_created, es_updated = self.sync_es(yaml_config.get('elastic_search', []), session)

@@ -46,12 +46,12 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
-    KeysightContainer, MLLPFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+    KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, Microsoft, Outgoing, Request
 
 # Zato
 from zato.server.reqresp.payload import IOPayload
@@ -376,6 +376,7 @@ class Service:
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     aws = AWSFacade()
     cloud = Cloud()
+    microsoft = Microsoft()
     odb:'ODBManager'
     static_config:'Bunch'
 
@@ -475,7 +476,6 @@ class Service:
             self._config_manager.sql_pool_store,
             self._config_store.out_sap,
             self._config_manager.outconn_ldap,
-            self._config_manager.outconn_mongodb,
             as2=self._config_manager.outconn_as2,
             as4=self._config_manager.config_store.out_as4,
         ) # type: Outgoing
@@ -509,6 +509,9 @@ class Service:
 
         # SMB facade for outgoing connections
         self.smb = SMBFacade()
+
+        # MongoDB facade for outgoing connections
+        self.mongodb = MongoDBFacade()
 
 # ################################################################################################################################
 
@@ -651,6 +654,9 @@ class Service:
 
         # SMB facade
         self.smb.init(self.cid, self._config_manager)
+
+        # MongoDB facade
+        self.mongodb.init(self.cid, self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
@@ -1725,34 +1731,28 @@ class BusinessCentralAdapter(AdapterBase):
         address_full = f'{base_url}/{endpoint}'
 
         # .. get the connection ..
-        conn = self.cloud.ms365.get(conn_name).conn # type: ignore
+        conn = self.microsoft.cloud[conn_name]
 
-        # .. obtain a new client ..
-        with conn.client() as client:
+        # .. make the request ..
+        response = conn.connection.get(address_full)
 
-            # .. make sure our access token is fresh ..
-            client.refresh()
+        # .. do we have a 200 OK ..
+        if response.status_code == OK:
 
-            # .. make the request ..
-            response = client.impl.connection.get(address_full)
+            # .. if yes, we can extract our response ..
+            data = response.json()
 
-            # .. do we have a 200 OK ..
-            if response.status_code == OK:
+            # .. if we have a model, map the result through it ..
+            if model:
+                data = self._map_with_model(model, data)
 
-                # .. if yes, we can extract our response ..
-                data = response.json()
+            # .. now, we can return the result to the caller.
+            return data
 
-                # .. if we have a model, map the result through it ..
-                if model:
-                    data = self._map_with_model(model, data)
-
-                # .. now, we can return the result to the caller.
-                return data
-
-            # .. otherwise, raise an exception.
-            else:
-                msg = f'Endpoint invocation error ({response.status_code}) -> {response.text}'
-                raise Exception(msg)
+        # .. otherwise, raise an exception.
+        else:
+            msg = f'Endpoint invocation error ({response.status_code}) -> {response.text}'
+            raise Exception(msg)
 
 # ################################################################################################################################
 

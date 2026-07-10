@@ -531,7 +531,7 @@ outgoing_as4:
     as4_action: IE3F26
     as4_mpc: urn:fdc:ec.europa.eu:2019:mpc
 
-microsoft_365:
+microsoft_cloud:
 
   - name: enmasse.cloud.microsoft365.1
     is_active: true
@@ -539,6 +539,16 @@ microsoft_365:
     secret_value: Zato_Enmasse_Env.Microsoft365SecretValue
     scopes: Mail.Read Mail.Send
     tenant_id: 87654321-4321-4321-4321-cba987654321
+
+microsoft_power_automate:
+
+  - name: enmasse.cloud.microsoft-power-automate.1
+    is_active: true
+    address: https://api.flow.microsoft.com
+    client_id: 23456789-2345-2345-2345-23456789abcd
+    client_secret: Zato_Enmasse_Env.MicrosoftPowerAutomateClientSecret
+    tenant_id: 98765432-5432-5432-5432-dcba98765432
+    environment_id: Default-98765432-5432-5432-5432-dcba98765432
 
 confluence:
 

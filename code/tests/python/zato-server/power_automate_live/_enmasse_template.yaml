@@ -1,0 +1,17 @@
+microsoft_power_automate:
+
+  - name: test.power.automate.main
+    address: http://127.0.0.1:{{power_automate_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    client_secret: "{{client_secret}}"
+    environment_id: "{{environment_id}}"
+    token_url: http://127.0.0.1:{{power_automate_port}}/{{tenant_id}}/oauth2/v2.0/token
+
+  - name: test.power.automate.bad-credentials
+    address: http://127.0.0.1:{{power_automate_port}}
+    tenant_id: "{{tenant_id}}"
+    client_id: "{{client_id}}"
+    client_secret: "{{invalid_client_secret}}"
+    environment_id: "{{environment_id}}"
+    token_url: http://127.0.0.1:{{power_automate_port}}/{{tenant_id}}/oauth2/v2.0/token

@@ -25,6 +25,7 @@ from zato.admin.web.views.cloud import aws as cloud_aws
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
+from zato.admin.web.views.cloud import microsoft_power_automate as cloud_microsoft_power_automate
 from zato.admin.web.views.cloud import salesforce as cloud_salesforce
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
@@ -65,7 +66,9 @@ from zato.admin.web.views.pubsub import queue as pubsub_queue
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+from zato.admin.web.views import as2_keystore
 from zato.admin.web.views import audit_log
+from zato.admin.web.views import b2b
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import mapping
 from zato.admin.web.views import scheduler_dashboard
@@ -82,6 +85,7 @@ urlpatterns = [
 # ################################################################################################################################
 
     url(r'^accounts/login/$', main.login, name='login'),
+    url(r'^accounts/login/callback/$', main.login_callback, name='login-callback'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^zato/session-keepalive/$', login_required(main.session_keepalive), name='session-keepalive'),
@@ -320,6 +324,20 @@ urlpatterns += [
         login_required(audit_log.poll), name='audit-log-poll'),
     url(r'^zato/audit-log/details/$',
         login_required(audit_log.details), name='audit-log-details'),
+
+    # AS2 keystore
+
+    url(r'^zato/as2/keystore/$',
+        login_required(as2_keystore.index), name='as2-keystore'),
+    url(r'^zato/as2/keystore/save/$',
+        login_required(as2_keystore.save), name='as2-keystore-save'),
+
+    # X12 control numbers
+
+    url(r'^zato/b2b-control-numbers/$',
+        login_required(b2b.control_numbers), name='b2b-control-numbers'),
+    url(r'^zato/b2b-control-numbers/set-next/$',
+        login_required(b2b.set_next), name='b2b-control-numbers-set-next'),
 
     # Scheduler import demo config
 
@@ -603,8 +621,6 @@ urlpatterns += [
         login_required(out_mongodb.Edit()), name=out_mongodb.Edit.url_name),
     url(r'^zato/outgoing/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
-    url(r'^zato/outgoing/mongodb/change-password/$',
-        login_required(out_mongodb.change_password), name='out-mongodb-change-password'),
     url(r'^zato/outgoing/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.ping), name='out-mongodb-ping'),
     ]
@@ -909,8 +925,6 @@ urlpatterns += [
         login_required(out_mongodb.Edit()), name=out_mongodb.Edit.url_name),
     url(r'^zato/outgoing/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
-    url(r'^zato/outgoing/mongodb/change-password/$',
-        login_required(out_mongodb.change_password), name='out-mongodb-change-password'),
     url(r'^zato/outgoing/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_mongodb.ping), name='out-mongodb-ping'),
     ]
@@ -1035,6 +1049,22 @@ urlpatterns += [
         login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
     url(r'^zato/cloud/jira/reset-oauth2-scopes/$',
         login_required(cloud_microsoft_365.reset_oauth2_scopes), name='cloud-microsoft-365-reset-oauth2-scopes'),
+    ]
+
+urlpatterns += [
+
+    # .. Microsoft Power Automate
+
+    url(r'^zato/cloud/microsoft-power-automate/$',
+        login_required(cloud_microsoft_power_automate.Index()), name=cloud_microsoft_power_automate.Index.url_name),
+    url(r'^zato/cloud/microsoft-power-automate/create/$',
+        login_required(cloud_microsoft_power_automate.Create()), name=cloud_microsoft_power_automate.Create.url_name),
+    url(r'^zato/cloud/microsoft-power-automate/edit/$',
+        login_required(cloud_microsoft_power_automate.Edit()), name=cloud_microsoft_power_automate.Edit.url_name),
+    url(r'^zato/cloud/microsoft-power-automate/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_power_automate.Delete()), name=cloud_microsoft_power_automate.Delete.url_name),
+    url(r'^zato/cloud/microsoft-power-automate/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_microsoft_power_automate.ping), name='cloud-microsoft-power-automate-ping'),
     ]
 
 urlpatterns += [
