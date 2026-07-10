@@ -531,7 +531,7 @@ $.fn.zato.how_it_works._showFieldTooltip = function(state, index) {
     var result = tippy(target, {
         content: tooltipContent,
         allowHTML: true,
-        placement: state.config.placement || 'left',
+        placement: field.placement || state.config.placement || 'left',
         theme: 'dark',
         arrow: true,
         interactive: true,
@@ -640,6 +640,10 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
                 element: targetElement,
                 fieldId: fieldId,
                 description: description,
+
+                // .. with several fields in one row the tooltip goes above the field,
+                // .. otherwise it would cover the neighboring fields to the left ..
+                placement: labels.length > 1 ? 'top' : null,
             });
         }
     }
