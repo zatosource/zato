@@ -1390,6 +1390,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._queue_bridge.reload(channels=channels, outgoing=outgoing)
             self._queue_bridge_started = True
 
+            self._start_queue_bridge_request_listener()
             self._start_queue_bridge_recv_listener(b64decode)
 
             logger.info('Queue bridge client connected, recv listener started')
@@ -1426,6 +1427,54 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         out_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
         logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), ch_noun, len(outgoing), out_noun)
         self._queue_bridge.reload(channels=channels, outgoing=outgoing)  # type: ignore[union-attr]
+
+# ################################################################################################################################
+
+    def _start_queue_bridge_request_listener(self) -> 'None':
+        """ Listens for request_config messages from the queue bridge and responds with a reload.
+        The bridge sends them when it starts after this server is already up, e.g. when it is restarted.
+        """
+        request_redis = self._queue_bridge.new_redis_conn() # type: ignore[union-attr]
+
+        request_stream = 'zato:queue_bridge:stream:request'
+        group_name = 'server-request'
+        consumer_name = 'server-request-0'
+
+        try:
+            _ = request_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+        def _request_listener_loop() -> 'None':
+            logger.info('Queue bridge request listener loop entering')
+            while True:
+                try:
+                    result = request_redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={request_stream: '>'},
+                        count=10,
+                        block=5000,
+                    )
+
+                    if not result:
+                        continue
+
+                    for stream_name, messages in result: # type: ignore[union-attr]
+                        for msg_id, fields in messages:
+                            command = fields['command']
+                            if command == 'request_config':
+                                logger.info('Queue bridge requested config, sending reload')
+                                self._reload_queue_bridge()
+                            _ = request_redis.xack(stream_name, group_name, msg_id)
+
+                except Exception:
+                    logger.warning('Error in queue bridge request listener: %s', format_exc())
+                    sleep(1)
+
+        _ = spawn(_request_listener_loop)
+        logger.info('Queue bridge request listener greenlet started')
 
 # ################################################################################################################################
 

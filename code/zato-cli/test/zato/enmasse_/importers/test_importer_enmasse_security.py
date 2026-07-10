@@ -24,8 +24,8 @@ from zato.common.defaults import default_server_base_dir
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
-    any_, stranydict = any_, stranydict
+    from zato.common.typing_ import any_, anylist, stranydict
+    any_, anylist, stranydict = any_, anylist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,13 +144,28 @@ class TestEnmasseSecurity(TestCase):
 
 # ################################################################################################################################
 
+    def _get_wss_defs_from_yaml(self) -> 'anylist':
+        """ Returns all the WS-Security definitions the YAML template holds.
+        """
+
+        # Our response to produce
+        out = []
+
+        for item in self.yaml_config['security']:
+            if item['type'] == 'wss':
+                out.append(item)
+
+        return out
+
+# ################################################################################################################################
+
     def test_wss_creation(self):
-        """ Test the creation of WS-Security definitions.
+        """ Test the creation of WS-Security definitions in all their modes.
         """
         self._setup_test_environment()
 
         # Filter only WS-Security definitions
-        wss_defs = [item for item in self.yaml_config['security'] if item.get('type') == 'wss']
+        wss_defs = self._get_wss_defs_from_yaml()
         self.assertTrue(len(wss_defs) > 0, 'No WS-Security definitions found in YAML')
 
         # Process security definitions
@@ -159,17 +174,111 @@ class TestEnmasseSecurity(TestCase):
         # Assert the correct number of items were created
         self.assertEqual(len(sec_created), len(wss_defs), 'Not all WS-Security definitions were created')
 
-        # Verify each definition was created correctly
+        # Index the created instances and the YAML items by name for the per-mode checks below ..
+        created_by_name = {}
+        yaml_by_name = {}
+
         for instance in sec_created:
             self.assertIn(instance.name, self.importer.sec_defs)
-            self.assertEqual(instance.name, 'enmasse.wss.1')
-            self.assertEqual(instance.username, 'enmasse.1')
             self.assertIsNotNone(instance.password)
+            created_by_name[instance.name] = instance
 
-            # The mode and its details live in opaque attributes
-            opaque = json.loads(instance.opaque1)
-            self.assertEqual(opaque['mode'], 'username_token')
-            self.assertTrue(opaque['use_digest'])
+        for item in wss_defs:
+            yaml_by_name[item['name']] = item
+
+        # .. a UsernameToken definition keeps its mode and digest switch in opaque attributes ..
+        username_token = created_by_name['enmasse.wss.1']
+        self.assertEqual(username_token.username, 'enmasse.1')
+        self.assertTrue(username_token.is_active)
+
+        opaque = json.loads(username_token.opaque1)
+        self.assertEqual(opaque['mode'], 'username_token')
+        self.assertTrue(opaque['use_digest'])
+
+        # .. an X.509 definition keeps its switches and all of its PEM material in opaque attributes ..
+        x509 = created_by_name['enmasse.wss.2']
+        x509_yaml = yaml_by_name['enmasse.wss.2']
+        self.assertEqual(x509.username, 'enmasse.2')
+        self.assertTrue(x509.is_active)
+
+        opaque = json.loads(x509.opaque1)
+        self.assertEqual(opaque['mode'], 'x509')
+        self.assertTrue(opaque['sign'])
+        self.assertTrue(opaque['encrypt'])
+
+        for field in ('signing_key', 'signing_certificate_chain', 'decryption_key', 'peer_certificate', 'trust_anchors'):
+            self.assertEqual(opaque[field], x509_yaml[field], f'Field {field} mismatch for enmasse.wss.2')
+
+        # .. a SAML definition keeps its assertion fields and signing material in opaque attributes ..
+        saml = created_by_name['enmasse.wss.3']
+        saml_yaml = yaml_by_name['enmasse.wss.3']
+        self.assertEqual(saml.username, 'enmasse.3')
+        self.assertTrue(saml.is_active)
+
+        opaque = json.loads(saml.opaque1)
+        self.assertEqual(opaque['mode'], 'saml')
+        self.assertEqual(opaque['issuer'], 'https://idp.example.com/enmasse')
+        self.assertEqual(opaque['subject'], 'enmasse.subject.3')
+        self.assertEqual(opaque['audience'], 'https://api.example.com/enmasse')
+        self.assertTrue(opaque['sign'])
+        self.assertEqual(opaque['signing_key'], saml_yaml['signing_key'])
+        self.assertEqual(opaque['signing_certificate_chain'], saml_yaml['signing_certificate_chain'])
+
+        # .. and a definition may be inactive with the digest switched off.
+        inactive = created_by_name['enmasse.wss.4']
+        self.assertEqual(inactive.username, 'enmasse.4')
+        self.assertFalse(inactive.is_active)
+
+        opaque = json.loads(inactive.opaque1)
+        self.assertEqual(opaque['mode'], 'username_token')
+        self.assertFalse(opaque['use_digest'])
+
+# ################################################################################################################################
+
+    def test_wss_opaque_update(self):
+        """ Test that opaque attributes absent from an updated YAML item are preserved from the database.
+        """
+        self._setup_test_environment()
+
+        # First pass creates all the WS-Security definitions
+        wss_defs = self._get_wss_defs_from_yaml()
+        _, _ = self.security_importer.sync_security_definitions(wss_defs, self.session)
+
+        # Build an update for the X.509 definition that changes the username
+        # and carries none of the PEM material the definition already holds.
+        original = cast_('stranydict', None)
+
+        for item in wss_defs:
+            if item['name'] == 'enmasse.wss.2':
+                original = item
+                break
+
+        self.assertIsNotNone(original, 'enmasse.wss.2 not found in YAML')
+
+        updated_item = {
+            'name': 'enmasse.wss.2',
+            'type': 'wss',
+            'username': 'enmasse.2.updated',
+            'mode': 'x509',
+        }
+
+        # Second pass updates the definition from the trimmed-down item
+        _, sec_updated = self.security_importer.sync_security_definitions([updated_item], self.session)
+        self.assertEqual(len(sec_updated), 1, 'Expected exactly one updated definition')
+
+        # The username change went through ..
+        instance = sec_updated[0]
+        self.assertEqual(instance.name, 'enmasse.wss.2')
+        self.assertEqual(instance.username, 'enmasse.2.updated')
+
+        # .. and the PEM material and switches the update did not mention are still there.
+        opaque = json.loads(instance.opaque1)
+        self.assertEqual(opaque['mode'], 'x509')
+        self.assertTrue(opaque['sign'])
+        self.assertTrue(opaque['encrypt'])
+
+        for field in ('signing_key', 'signing_certificate_chain', 'decryption_key', 'peer_certificate', 'trust_anchors'):
+            self.assertEqual(opaque[field], original[field], f'Field {field} not preserved for enmasse.wss.2')
 
 # ################################################################################################################################
 

@@ -233,6 +233,17 @@ class Generic(ConfigManagerImpl):
         # Now, edit the connection which will actually delete it and create again
         self._edit_generic_connection(edit_msg, secret=msg['password'])
 
+        # Connections managed by the queue bridge also need the new secret pushed there -
+        # the edit above only rebuilt the server-side wrapper. The edit call stored
+        # the new secret in the message, which is what the notifiers read.
+        type_ = edit_msg['type_']
+
+        if type_ in (COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ):
+            self._notify_queue_bridge_channel('edit', edit_msg)
+
+        elif type_ in (COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ):
+            self._notify_queue_bridge_outconn('edit', edit_msg)
+
 # ################################################################################################################################
 
     def reconnect_generic(self, conn_id:'int') -> 'None':

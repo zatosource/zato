@@ -122,6 +122,21 @@ class TestEnmasseSecurityExporter(TestCase):
                 if 'extra_fields' in yaml_def:
                     self.assertEqual(exported_def.get('extra_fields'), yaml_def.get('extra_fields'), f'Extra fields mismatch for security definition "{name}"')
 
+            # Check WS-Security fields - every mode-specific attribute must round-trip through opaque storage
+            if yaml_def.get('type') == 'wss':
+                wss_fields = [
+                    'is_active', 'mode', 'use_digest', 'sign', 'encrypt', 'signing_key', 'signing_certificate_chain',
+                    'decryption_key', 'peer_certificate', 'trust_anchors', 'issuer', 'subject', 'audience',
+                ]
+
+                for field in wss_fields:
+                    if field in yaml_def:
+                        self.assertIn(field, exported_def, f'Field {field} missing from export of "{name}"')
+                        self.assertEqual(exported_def[field], yaml_def[field], f'Field {field} mismatch for security definition "{name}"')
+
+                # Passwords are never exported
+                self.assertNotIn('password', exported_def, f'Password must not be exported for "{name}"')
+
             # Check rate_limiting if present in the YAML definition
             if rate_limiting := yaml_def.get('rate_limiting'):
                 self.assertIn('rate_limiting', exported_def, f'rate_limiting missing from export of "{name}"')

@@ -67,6 +67,60 @@ security:
     mode: username_token
     use_digest: true
 
+  - name: enmasse.wss.2
+    username: enmasse.2
+    password: abcdef123456
+    type: wss
+    mode: x509
+    sign: true
+    encrypt: true
+    signing_key: |-
+      -----BEGIN PRIVATE KEY-----
+      RW5tYXNzZVdTU1NpZ25pbmdLZXkyCg==
+      -----END PRIVATE KEY-----
+    signing_certificate_chain: |-
+      -----BEGIN CERTIFICATE-----
+      RW5tYXNzZVdTU1NpZ25pbmdDaGFpbjIK
+      -----END CERTIFICATE-----
+    decryption_key: |-
+      -----BEGIN PRIVATE KEY-----
+      RW5tYXNzZVdTU0RlY3J5cHRpb25LZXkyCg==
+      -----END PRIVATE KEY-----
+    peer_certificate: |-
+      -----BEGIN CERTIFICATE-----
+      RW5tYXNzZVdTU1BlZXJDZXJ0aWZpY2F0ZTIK
+      -----END CERTIFICATE-----
+    trust_anchors: |-
+      -----BEGIN CERTIFICATE-----
+      RW5tYXNzZVdTU1RydXN0QW5jaG9yczIK
+      -----END CERTIFICATE-----
+
+  - name: enmasse.wss.3
+    username: enmasse.3
+    password: abcdef123456
+    type: wss
+    mode: saml
+    issuer: https://idp.example.com/enmasse
+    subject: enmasse.subject.3
+    audience: https://api.example.com/enmasse
+    sign: true
+    signing_key: |-
+      -----BEGIN PRIVATE KEY-----
+      RW5tYXNzZVdTU1NpZ25pbmdLZXkzCg==
+      -----END PRIVATE KEY-----
+    signing_certificate_chain: |-
+      -----BEGIN CERTIFICATE-----
+      RW5tYXNzZVdTU1NpZ25pbmdDaGFpbjMK
+      -----END CERTIFICATE-----
+
+  - name: enmasse.wss.4
+    username: enmasse.4
+    password: abcdef123456
+    type: wss
+    is_active: false
+    mode: username_token
+    use_digest: false
+
   - name: enmasse.apikey.1
     type: apikey
     username: enmasse.1

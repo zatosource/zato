@@ -31,9 +31,7 @@ class GetByID(AdminService):
     """
     input = 'cluster_id', 'id'
     output = 'id', 'name', 'is_active', 'sec_type', \
-        '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
-        Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
-        '-sig_method', Integer('-max_nonce_log')
+        '-username', '-realm', '-password_type', '-proto_version', '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -47,9 +45,7 @@ class GetList(AdminService):
     """
     input = '-cluster_id', List('-sec_type'), Boolean('-needs_internal', default=True)
     output = 'id', 'name', 'is_active', 'sec_type', \
-        '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
-        Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
-        '-sig_method', Integer('-max_nonce_log')
+        '-username', '-realm', '-password_type', '-proto_version', '-sig_method', Integer('-max_nonce_log')
 
     def handle(self):
 

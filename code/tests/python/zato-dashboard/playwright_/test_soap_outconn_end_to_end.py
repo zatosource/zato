@@ -12,6 +12,9 @@ from base64 import b64decode, b64encode
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.soap.common import NS
+from zato.common.util.xml_.core import qname
+from certs import build_tls_material
 from soap_outconn import create_soap_outconn, delete_soap_outconn, invoke_soap_outconn_from_ide, \
     wait_for_soap_invoker_service
 from wss_definition import change_wss_password, create_wss_definition, delete_wss_definition
@@ -35,6 +38,16 @@ _Propagation_Timeout = 30
 _Propagation_Poll_Interval = 1.0
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _read_pem(path:'str') -> 'str':
+    """ Reads PEM material from a file into the string a definition or an endpoint keeps.
+    """
+    with open(path) as pem_file:
+        out = pem_file.read()
+
+    return out
+
 # ################################################################################################################################
 
 def _invoke_with_retry(page:'Page', base_url:'str', outconn_name:'str', operation:'str', **kwargs:'any_') -> 'anydict':
@@ -183,8 +196,8 @@ class TestSOAPOutconnEndToEnd:
 
     def test_signed_saml(
         self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
-        """ The attached SAML definition produces a signed assertion the endpoint
-        verifies against its trust anchors.
+        """ The attached SAML definition produces a signed assertion with an audience
+        restriction the endpoint verifies against its trust anchors.
         """
 
         page = logged_in_page
@@ -193,20 +206,15 @@ class TestSOAPOutconnEndToEnd:
         wait_for_soap_invoker_service(page, base_url)
 
         # Real signing material - a CA-signed certificate and its key.
-        from certs import build_tls_material
         material = build_tls_material('127.0.0.1')
 
-        with open(material.client_key_path) as key_file:
-            signing_key_pem = key_file.read()
-
-        with open(material.client_certificate_path) as cert_file:
-            signing_cert_pem = cert_file.read()
-
-        with open(material.ca_path) as ca_file:
-            ca_pem = ca_file.read()
+        signing_key_pem = _read_pem(material.client_key_path)
+        signing_cert_pem = _read_pem(material.client_certificate_path)
+        ca_pem = _read_pem(material.ca_path)
 
         name = _Test_Name_Prefix + 'saml'
         issuer = 'urn:issuer:' + name
+        audience = 'urn:audience:' + name
 
         # The server-side endpoint requires a signed assertion from this issuer,
         # chaining up to the test CA.
@@ -222,6 +230,7 @@ class TestSOAPOutconnEndToEnd:
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'saml', {
             'issuer': issuer,
             'subject': 'CN=Test Subject',
+            'audience': audience,
             'sign': True,
             'signing_key': signing_key_pem,
             'signing_certificate_chain': signing_cert_pem,
@@ -242,6 +251,205 @@ class TestSOAPOutconnEndToEnd:
         )
 
         assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
+
+        # The assertion carried the definition's audience restriction on the wire.
+        audience_element = soap_test_server.last_request['envelope'].find(f'.//{qname(NS.SAML2, "Audience")}')
+
+        assert audience_element is not None, 'Expected an Audience element in the assertion'
+        assert audience_element.text == audience, f'Expected the audience, got: {audience_element.text}'
+
+        # Clean up.
+        delete_soap_outconn(page, outconn_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    def test_x509_signed(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
+        """ The attached X.509 definition signs outgoing messages and the endpoint
+        pins the connection's certificate to verify them.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wait_for_soap_invoker_service(page, base_url)
+
+        # Real signing material - a CA-signed certificate and its key.
+        material = build_tls_material('127.0.0.1')
+
+        signing_key_pem = _read_pem(material.client_key_path)
+        signing_cert_pem = _read_pem(material.client_certificate_path)
+
+        name = _Test_Name_Prefix + 'x509-signed'
+
+        # The server-side endpoint requires a signature from exactly this certificate.
+        path = '/end-to-end-x509-signed'
+        soap_test_server.configure(path, enforce_wss={
+            'mode': 'x509',
+            'sign': True,
+            'encrypt': False,
+            'peer_certificate': signing_cert_pem,
+        })
+
+        # Create the X.509 definition in the browser, signing on, with its material ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': True,
+            'encrypt': False,
+            'signing_key': signing_key_pem,
+            'signing_certificate_chain': signing_cert_pem,
+        })
+
+        # .. create the connection with that definition attached ..
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        # .. and invoke it - the endpoint rejects the message unless the signature checks out.
+        result = _invoke_with_retry(page, base_url, name, 'submitSingleMessage',
+            namespace='urn:cdc:iisb:2014',
+            fields={'facilityID': 'FAC-01'},
+            response_fields=['status'],
+        )
+
+        assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
+
+        # Clean up.
+        delete_soap_outconn(page, outconn_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    def test_x509_encrypted(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
+        """ The attached X.509 definition encrypts the body to the endpoint's certificate -
+        no plaintext leaves the connection and the endpoint decrypts with its own key.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wait_for_soap_invoker_service(page, base_url)
+
+        # Real encryption material - the endpoint's own key pair.
+        material = build_tls_material('127.0.0.1')
+
+        endpoint_key_pem = _read_pem(material.server_key_path)
+        endpoint_cert_pem = _read_pem(material.server_certificate_path)
+
+        name = _Test_Name_Prefix + 'x509-encrypted'
+
+        # The server-side endpoint requires an encrypted body it decrypts with its own key.
+        path = '/end-to-end-x509-encrypted'
+        soap_test_server.configure(path, enforce_wss={
+            'mode': 'x509',
+            'sign': False,
+            'encrypt': True,
+            'decryption_key': endpoint_key_pem,
+        })
+
+        # Create the X.509 definition in the browser, encryption on, with the endpoint's certificate ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': False,
+            'encrypt': True,
+            'peer_certificate': endpoint_cert_pem,
+        })
+
+        # .. create the connection with that definition attached ..
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        # .. and invoke it with a field value unique to this test.
+        facility_id = 'FAC-' + CryptoManager.generate_hex_string()
+
+        result = _invoke_with_retry(page, base_url, name, 'submitSingleMessage',
+            namespace='urn:cdc:iisb:2014',
+            fields={'facilityID': facility_id},
+            response_fields=['status'],
+        )
+
+        # The endpoint decrypted the body and answered ..
+        assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
+
+        # .. and the wire carried no plaintext.
+        raw_body = soap_test_server.last_request['raw_body']
+        assert facility_id.encode() not in raw_body, 'The plaintext leaked to the wire'
+
+        # Clean up.
+        delete_soap_outconn(page, outconn_id)
+        delete_wss_definition(page, wss_id)
+
+# ################################################################################################################################
+
+    def test_x509_signed_and_encrypted(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
+        """ The attached X.509 definition both signs and encrypts - the endpoint decrypts
+        with its own key and validates the signer through its trust anchors.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wait_for_soap_invoker_service(page, base_url)
+
+        # Real crypto material - the connection's own key pair and the endpoint's,
+        # both chaining up to the same test CA.
+        material = build_tls_material('127.0.0.1')
+
+        signing_key_pem = _read_pem(material.client_key_path)
+        signing_cert_pem = _read_pem(material.client_certificate_path)
+        endpoint_key_pem = _read_pem(material.server_key_path)
+        endpoint_cert_pem = _read_pem(material.server_certificate_path)
+        ca_pem = _read_pem(material.ca_path)
+
+        name = _Test_Name_Prefix + 'x509-full'
+
+        # The server-side endpoint decrypts with its own key and trusts any signer under the CA.
+        path = '/end-to-end-x509-full'
+        soap_test_server.configure(path, enforce_wss={
+            'mode': 'x509',
+            'sign': True,
+            'encrypt': True,
+            'decryption_key': endpoint_key_pem,
+            'trust_anchors': ca_pem,
+        })
+
+        # Create the X.509 definition in the browser, signing and encryption on, with all its material ..
+        wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
+            'sign': True,
+            'encrypt': True,
+            'signing_key': signing_key_pem,
+            'signing_certificate_chain': signing_cert_pem,
+            'peer_certificate': endpoint_cert_pem,
+        })
+
+        # .. create the connection with that definition attached ..
+        outconn_id = create_soap_outconn(page, base_url, name, soap_test_server.address, {
+            'url_path': path,
+            'soap_version': '1.2',
+            'security': f'WS-Security/{name}',
+        })
+
+        # .. and invoke it with a field value unique to this test.
+        facility_id = 'FAC-' + CryptoManager.generate_hex_string()
+
+        result = _invoke_with_retry(page, base_url, name, 'submitSingleMessage',
+            namespace='urn:cdc:iisb:2014',
+            fields={'facilityID': facility_id},
+            response_fields=['status'],
+        )
+
+        # The endpoint decrypted the body and verified the signature ..
+        assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
+
+        # .. and the wire carried no plaintext.
+        raw_body = soap_test_server.last_request['raw_body']
+        assert facility_id.encode() not in raw_body, 'The plaintext leaked to the wire'
 
         # Clean up.
         delete_soap_outconn(page, outconn_id)
