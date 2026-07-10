@@ -396,6 +396,9 @@ $.fn.zato.http_soap.field_descriptions = {
     'id_params_pri': 'Whether parameters from the URL<br>or from the message body win<br>when both carry the same name.',
     'id_method': 'HTTP method required for incoming requests.<br>Leave empty to accept any method.',
     'id_http_accept': 'Accept header required for incoming requests.<br>Leave the default to accept any content.',
+    'id_data_format': 'Format of the messages exchanged, e.g. JSON.<br>With a format selected, payloads are parsed<br>before your service sees them.',
+    'id_merge_url_params_req': 'When on, parameters from the URL path<br>and the query string are merged into the request,<br>so services read them like regular input.',
+    'id_match_slash': 'When on, {placeholders} in the URL path<br>can also match values that contain slashes.<br>When off, a placeholder stops at each slash,<br>matching exactly one path segment.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -406,6 +409,7 @@ $.fn.zato.http_soap.rest_outgoing_field_descriptions = {
     'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
     'id_url_path': 'URL path on the remote server,<br>e.g. /api/employees.<br>May contain {placeholders} filled in<br>by the Request tab\'s path params.',
     'id_security': 'Security definition used with each request,<br>e.g. Basic Auth or an OAuth bearer token.',
+    'id_data_format': 'Format of the data this connection exchanges,<br>e.g. JSON. Responses are parsed accordingly,<br>so services receive ready-to-use objects.',
 
     // Scheduler tab
     'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',

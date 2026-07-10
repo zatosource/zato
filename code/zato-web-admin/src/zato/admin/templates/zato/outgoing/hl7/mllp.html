@@ -183,7 +183,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ create_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -194,28 +194,28 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ create_form.pool_size }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.should_log_messages.id_for_label }}">
                                 Log I/O
                                 {{ create_form.should_log_messages }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.max_wait_time.id_for_label }}">
                                 Timeout
                                 <span class="form_hint">(s)</span>
                                 {{ create_form.max_wait_time }}
@@ -224,7 +224,7 @@
                             </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="{{ create_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -237,14 +237,14 @@
                             <td>Max. size</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.max_msg_size.id_for_label }}">
                                 Message
                                 {{ create_form.max_msg_size }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.read_buffer_size.id_for_label }}">
                                 Read buffer
                                 {{ create_form.read_buffer_size }}
                                 </label>
@@ -256,14 +256,14 @@
                             <td>Separator</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.start_seq.id_for_label }}">
                                 Start
                                 {{ create_form.start_seq }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.end_seq.id_for_label }}">
                                 End
                                 {{ create_form.end_seq }}
                                 </label>
@@ -275,14 +275,14 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.recv_timeout.id_for_label }}">
                                 Recv. tmt.
                                 {{ create_form.recv_timeout }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.logging_level.id_for_label }}">
                                 Log level
                                 {{ create_form.logging_level }}
                                 </label>
@@ -294,14 +294,14 @@
                             <td>Retry</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.max_retries.id_for_label }}">
                                 Max retries
                                 {{ create_form.max_retries }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.backoff_base_seconds.id_for_label }}">
                                 Backoff base
                                 <span class="form_hint">(s)</span>
                                 {{ create_form.backoff_base_seconds }}
@@ -309,7 +309,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.backoff_cap_seconds.id_for_label }}">
                                 Backoff cap
                                 <span class="form_hint">(s)</span>
                                 {{ create_form.backoff_cap_seconds }}
@@ -317,7 +317,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.backoff_jitter_percent.id_for_label }}">
                                 Jitter
                                 <span class="form_hint">(%)</span>
                                 {{ create_form.backoff_jitter_percent }}
@@ -330,7 +330,7 @@
                             <td>Circuit breaker</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.circuit_breaker_threshold_percent.id_for_label }}">
                                 Threshold
                                 <span class="form_hint">(%)</span>
                                 {{ create_form.circuit_breaker_threshold_percent }}
@@ -338,7 +338,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.circuit_breaker_window_seconds.id_for_label }}">
                                 Window
                                 <span class="form_hint">(s)</span>
                                 {{ create_form.circuit_breaker_window_seconds }}
@@ -346,7 +346,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.circuit_breaker_reset_seconds.id_for_label }}">
                                 Reset
                                 <span class="form_hint">(s)</span>
                                 {{ create_form.circuit_breaker_reset_seconds }}
@@ -359,7 +359,7 @@
                             <td>TLS</td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.tls_cert_path.id_for_label }}">
                                 Cert
                                 {{ create_form.tls_cert_path }}
                                 </label>
@@ -371,7 +371,7 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.tls_key_path.id_for_label }}">
                                 Key
                                 {{ create_form.tls_key_path }}
                                 </label>
@@ -383,7 +383,7 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ create_form.tls_ca_path.id_for_label }}">
                                 CA
                                 {{ create_form.tls_ca_path }}
                                 </label>
@@ -416,7 +416,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="{{ edit_form.name.id_for_label }}">
                                 Name
                                 </label>
                             </td>
@@ -427,28 +427,28 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ edit_form.pool_size }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.should_log_messages.id_for_label }}">
                                 Log I/O
                                 {{ edit_form.should_log_messages }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.max_wait_time.id_for_label }}">
                                 Timeout
                                 <span class="form_hint">(s)</span>
                                 {{ edit_form.max_wait_time }}
@@ -457,7 +457,7 @@
                             </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="{{ edit_form.address.id_for_label }}">
                                 Address
                                 </label>
                             </td>
@@ -470,14 +470,14 @@
                             <td>Max. size</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.max_msg_size.id_for_label }}">
                                 Message
                                 {{ edit_form.max_msg_size }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.read_buffer_size.id_for_label }}">
                                 Read buffer
                                 {{ edit_form.read_buffer_size }}
                                 </label>
@@ -489,14 +489,14 @@
                             <td>Separator</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.start_seq.id_for_label }}">
                                 Start
                                 {{ edit_form.start_seq }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.end_seq.id_for_label }}">
                                 End
                                 {{ edit_form.end_seq }}
                                 </label>
@@ -508,14 +508,14 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.recv_timeout.id_for_label }}">
                                 Recv. tmt.
                                 {{ edit_form.recv_timeout }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.logging_level.id_for_label }}">
                                 Log level
                                 {{ edit_form.logging_level }}
                                 </label>
@@ -527,14 +527,14 @@
                             <td>Retry</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.max_retries.id_for_label }}">
                                 Max retries
                                 {{ edit_form.max_retries }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.backoff_base_seconds.id_for_label }}">
                                 Backoff base
                                 <span class="form_hint">(s)</span>
                                 {{ edit_form.backoff_base_seconds }}
@@ -542,7 +542,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.backoff_cap_seconds.id_for_label }}">
                                 Backoff cap
                                 <span class="form_hint">(s)</span>
                                 {{ edit_form.backoff_cap_seconds }}
@@ -550,7 +550,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.backoff_jitter_percent.id_for_label }}">
                                 Jitter
                                 <span class="form_hint">(%)</span>
                                 {{ edit_form.backoff_jitter_percent }}
@@ -563,7 +563,7 @@
                             <td>Circuit breaker</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.circuit_breaker_threshold_percent.id_for_label }}">
                                 Threshold
                                 <span class="form_hint">(%)</span>
                                 {{ edit_form.circuit_breaker_threshold_percent }}
@@ -571,7 +571,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.circuit_breaker_window_seconds.id_for_label }}">
                                 Window
                                 <span class="form_hint">(s)</span>
                                 {{ edit_form.circuit_breaker_window_seconds }}
@@ -579,7 +579,7 @@
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.circuit_breaker_reset_seconds.id_for_label }}">
                                 Reset
                                 <span class="form_hint">(s)</span>
                                 {{ edit_form.circuit_breaker_reset_seconds }}
@@ -592,7 +592,7 @@
                             <td>TLS</td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.tls_cert_path.id_for_label }}">
                                 Cert
                                 {{ edit_form.tls_cert_path }}
                                 </label>
@@ -604,7 +604,7 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.tls_key_path.id_for_label }}">
                                 Key
                                 {{ edit_form.tls_key_path }}
                                 </label>
@@ -616,7 +616,7 @@
                             <td></td>
                             <td>
 
-                                <label>
+                                <label for="{{ edit_form.tls_ca_path.id_for_label }}">
                                 CA
                                 {{ edit_form.tls_ca_path }}
                                 </label>

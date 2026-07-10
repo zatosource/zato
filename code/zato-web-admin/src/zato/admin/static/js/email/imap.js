@@ -43,8 +43,14 @@ $(document).ready(function() {
 
 $.fn.zato.email.imap.field_descriptions = {
     'id_name': 'A unique name for this IMAP connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_server_type': 'What kind of server this is - generic IMAP<br>for any standard server or Microsoft 365<br>for cloud mailboxes accessed with OAuth2.',
     'id_username': 'User or e-mail address the connection logs in as,<br>e.g. mailbox@example.com.<br>The password or secret is set separately<br>with the link in the connection\'s row.',
     'id_host': 'Hostname of the IMAP server to connect to,<br>e.g. imap.example.com.<br>Used with generic IMAP servers only.',
+    'id_port': 'Port the IMAP server listens on.<br>Default is 993, the standard port<br>for IMAP over SSL.',
+    'id_mode': 'Whether the connection is encrypted with SSL<br>or sent in plaintext. Use plain only<br>with servers on trusted networks.',
+    'id_timeout': 'How many seconds to wait for the server<br>when connecting and reading. Default is 10.',
+    'id_debug_level': 'Verbosity of the underlying IMAP library,<br>from 0 (quiet) to 2 (detailed traffic logs).<br>Default is 0.',
     'id_get_criteria': 'IMAP search criteria selecting which messages<br>to download, e.g. UNSEEN or ALL.<br>Used with generic IMAP servers only.',
     'id_tenant_id': 'Directory (tenant) ID of the Microsoft Entra tenant<br>the mailbox belongs to.<br>Used with Microsoft 365 mailboxes only.',
     'id_client_id': 'Application (client) ID of the Azure app registration<br>the connection authenticates as.<br>Used with Microsoft 365 mailboxes only.',

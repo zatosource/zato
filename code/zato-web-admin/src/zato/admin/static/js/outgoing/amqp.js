@@ -40,6 +40,9 @@ $.fn.zato.outgoing.amqp.field_descriptions = {
     'id_content_type': 'MIME type stamped on published messages,<br>e.g. application/json or text/xml.<br>Consumers use it to decide how to parse the body.',
     'id_content_encoding': 'Content encoding property of published messages,<br>e.g. utf-8. Tells consumers how the body bytes<br>are encoded.',
     'id_app_id': 'Application ID stamped on published messages.<br>Lets consumers tell which producer<br>a message came from.',
+    'id_pool_size': 'How many connections to the broker<br>the pool keeps open. Each service publishing<br>concurrently needs one connection.<br>The default is 10.',
+    'id_priority': 'Priority stamped on published messages, 0 to 9,<br>with 9 the most urgent. Brokers deliver<br>higher priorities first on queues that<br>support priorities. The default is 5.',
+    'id_delivery_mode': 'Whether messages survive a broker restart.<br>Persistent ones are written to disk,<br>non-persistent ones stay in memory only<br>and are faster to publish.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

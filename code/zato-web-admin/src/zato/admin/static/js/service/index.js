@@ -30,8 +30,22 @@ $.fn.zato.service.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new service', null);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.service.field_descriptions = {
+    'id_is_active': 'Whether this service can be invoked.<br>An inactive service rejects all invocations,<br>whether from channels, the scheduler or other services.',
+    'id_slow_threshold': 'Executions taking longer than this many<br>milliseconds are logged as slow responses,<br>available in the service\'s details.',
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.service.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the service', id, $.fn.zato.service.add_stats);
+    $.fn.zato.how_it_works.init({
+        badgeId: 'edit-how-it-works',
+        divId: '#edit-div',
+        descriptions: $.fn.zato.service.field_descriptions
+    });
 }
 
 $.fn.zato.service.delete_ = function(id) {

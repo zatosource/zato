@@ -342,6 +342,13 @@ urlpatterns += [
     url(r'^zato/b2b-control-numbers/set-next/$',
         login_required(b2b.set_next), name='b2b-control-numbers-set-next'),
 
+    # B2B reports
+
+    url(r'^zato/b2b-reports/$',
+        login_required(b2b.reports), name='b2b-reports'),
+    url(r'^zato/b2b-reports/csv/$',
+        login_required(b2b.reports_csv), name='b2b-reports-csv'),
+
     # Scheduler import demo config
 
     url(r'^zato/scheduler/import-demo-config$',

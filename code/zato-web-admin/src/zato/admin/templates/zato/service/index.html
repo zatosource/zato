@@ -5,6 +5,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -16,6 +17,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/index.js"></script>
 
 
@@ -133,12 +135,12 @@
                         <tr>
                             <td style="vertical-align:middle;width:14%">Options</td>
                             <td>
-                            <label>
+                            <label for="{{ edit_form.is_active.id_for_label }}">
                             Active
                             {{ edit_form.is_active }}
                             </label>
                             |
-                            <label>
+                            <label for="{{ edit_form.slow_threshold.id_for_label }}">
                                 Slow threshold <span class="form_hint">(ms)</span>
                                 {{ edit_form.slow_threshold }}
                             </label>
@@ -146,7 +148,10 @@
                         </tr>
 
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

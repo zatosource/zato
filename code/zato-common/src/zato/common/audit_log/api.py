@@ -97,8 +97,8 @@ _default_ports = {
     ModuleCtx.Type_Oracle:     1521,
 }
 
-# How many days of events are kept
-_retention_days = 30
+# How many days of events are kept - also the widest window the reports run over
+Retention_Days = 30
 
 # Retention runs after every that many inserts
 _retention_check_interval = 1000
@@ -457,7 +457,7 @@ class AuditLog:
     def _run_retention(self, now:'datetime') -> 'None':
         """ Deletes events older than the retention window.
         """
-        cutoff = now - timedelta(days=_retention_days)
+        cutoff = now - timedelta(days=Retention_Days)
         cutoff_iso = cutoff.isoformat()
 
         delete_stmt = event_table.delete().where(event_table.c.event_time_iso < cutoff_iso)

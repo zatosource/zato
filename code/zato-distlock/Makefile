@@ -4,6 +4,9 @@
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-distlock
 
+Zato_Test_Python := $(Zato_Python_Dir)/py
+include $(CURDIR)/../tests/check.mk
+
 test:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/distlock/test_*.py -s

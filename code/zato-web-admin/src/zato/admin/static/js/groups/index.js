@@ -128,6 +128,8 @@ $.fn.zato.groups.badge_picker.load = function(action, group_id) {
 $.fn.zato.groups.field_descriptions = {
 
     'id_name': 'A unique name for this security group.<br>Assign the group to REST channels so that<br>all its members can invoke them,<br>without listing each definition separately.',
+    'badge-filter-text-create': 'The security definitions belonging to this group.<br>Move them between Available and Selected,<br>filtering by type or name to find them faster.',
+    'badge-filter-text-edit': 'The security definitions belonging to this group.<br>Move them between Available and Selected,<br>filtering by type or name to find them faster.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

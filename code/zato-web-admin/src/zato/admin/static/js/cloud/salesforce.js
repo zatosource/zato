@@ -40,6 +40,8 @@ $(document).ready(function() {
 
 $.fn.zato.cloud.salesforce.field_descriptions = {
     'id_name': 'A unique name for this Salesforce connection.<br>Used to identify it in services, logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_api_version': 'Version of the Salesforce REST API to invoke,<br>e.g. 54.0. It decides which objects and fields<br>are available to the connection.',
     'id_address': 'Address of the Salesforce instance,<br>e.g. https://example.my.salesforce.com.<br>All API calls the connection makes go to this host.',
     'id_username': 'Username the connection logs in as.<br>Records are read and written<br>with this user\'s permissions.',
     'id_password': 'Password of the user above. Used together with<br>the consumer key and secret to obtain<br>OAuth2 access tokens from Salesforce.',

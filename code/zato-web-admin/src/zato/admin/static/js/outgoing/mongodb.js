@@ -32,12 +32,18 @@ $(document).ready(function() {
 
 $.fn.zato.outgoing.mongodb.field_descriptions = {
     'id_name': 'A unique name for this connection.<br>Services refer to it by this exact name.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
     'id_server_list': 'MongoDB servers as host:port, one per line,<br>e.g. localhost:27017. List all the members<br>when connecting to a replica set.',
     'id_username': 'Username to authenticate with.<br>Leave empty if the server<br>does not require authentication.',
     'id_secret': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
     'id_auth_source': 'Database the credentials are defined in.<br>MongoDB defaults to admin.',
     'id_replica_set': 'Name of the replica set to require.<br>Leave empty for standalone servers.',
+    'id_app_name': 'Application name reported to the server.<br>It shows up in MongoDB logs and currentOp output,<br>making this client easy to identify.',
     'id_pool_size_max': 'Maximum number of connections the client pool<br>keeps open to the server at the same time.',
+    'id_connect_timeout': 'How many seconds to wait for the TCP connection<br>to a server before giving up. Default is 10.',
+    'id_server_select_timeout': 'How many seconds to keep looking for a suitable<br>server, e.g. a replica set primary,<br>before an operation fails. Default is 5.',
+    'id_is_tls_enabled': 'When on, all traffic to the servers is encrypted<br>with TLS. Required for the certificate<br>options below to take effect.',
+    'id_is_tls_validation_enabled': 'When on, the server\'s certificate is verified<br>against the CA certs file below.<br>Turn it off only with test environments.',
     'id_tls_ca_certs_file': 'Path to a PEM file with CA certificates<br>used to verify the server\'s certificate.',
     'id_tls_cert_key_file': 'Path to a PEM file with the client certificate<br>and its private key combined, for mutual TLS.',
 };

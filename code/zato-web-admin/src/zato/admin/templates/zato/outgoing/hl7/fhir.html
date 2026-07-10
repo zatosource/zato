@@ -167,14 +167,14 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ create_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ create_form.pool_size }}
                                 </label>
@@ -230,7 +230,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_name">
+                                <label for="id_edit-name">
                                 Name
                                 </label>
                             </td>
@@ -239,14 +239,14 @@
                         <tr>
                             <td></td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
 
                                 |
 
-                                <label>
+                                <label for="{{ edit_form.pool_size.id_for_label }}">
                                 Pool size
                                 {{ edit_form.pool_size }}
                                 </label>
@@ -255,7 +255,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_address">
+                                <label for="id_edit-address">
                                 Address
                                 </label>
                             </td>
@@ -265,7 +265,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_username">
+                                <label for="id_edit-username">
                                 Security
                                 </label>
                             </td>
@@ -275,7 +275,7 @@
                         </tr>
                         <tr>
                             <td colspan="2">
-                                <label for="id_extra">
+                                <label for="id_edit-extra">
                                 Extra
                                 </label>
                                 {{ edit_form.extra }}

@@ -269,7 +269,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:19%">
-                            <label for="id_name">Name</label>
+                            <label for="{{ create_form.name.id_for_label }}">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
                         </tr>
@@ -277,12 +277,12 @@
                             <td style="vertical-align:middle">
                             </td>
                             <td>
-                            <label>
+                            <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
                             </label>
                             |
-                            <label>
+                            <label for="{{ create_form.server_type.id_for_label }}">
                                 Server type
                                 {{ create_form.server_type }}
                             </label>
@@ -290,7 +290,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                            <label for="id_username">User / e-mail</label>
+                            <label for="{{ create_form.username.id_for_label }}">User / e-mail</label>
                             </td>
                             <td>{{ create_form.username }} </td>
                         </tr>
@@ -304,7 +304,7 @@
                         </tr>
                         <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_host">Host</label>
+                            <label for="{{ create_form.host.id_for_label }}">Host</label>
                             </td>
                             <td>{{ create_form.host }} </td>
                         </tr>
@@ -312,22 +312,22 @@
                             <td style="vertical-align:middle">
                             </td>
                             <td>
-                                <label>
+                                <label for="{{ create_form.port.id_for_label }}">
                                     Port
                                     {{ create_form.port }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.mode.id_for_label }}">
                                     Mode
                                     {{ create_form.mode }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.timeout.id_for_label }}">
                                     Timeout
                                     {{ create_form.timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ create_form.debug_level.id_for_label }}">
                                     Debug level
                                     <span class="form_hint">(0-2)</span>
                                     {{ create_form.debug_level }}
@@ -336,7 +336,7 @@
                         </tr>
                         <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_get_criteria">Get criteria
+                            <label for="{{ create_form.get_criteria.id_for_label }}">Get criteria
                             <br/>
                             <span class="form_hint">(Def.: {{ default_get_criteria }})</span>
                             </label>
@@ -352,19 +352,19 @@
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_tenant_id">Tenant ID</label>
+                            <label for="{{ create_form.tenant_id.id_for_label }}">Tenant ID</label>
                             </td>
                             <td>{{ create_form.tenant_id }} </td>
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_client_id">Client ID</label>
+                            <label for="{{ create_form.client_id.id_for_label }}">Client ID</label>
                             </td>
                             <td>{{ create_form.client_id }} </td>
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_filter_criteria">Filter
+                            <label for="{{ create_form.filter_criteria.id_for_label }}">Filter
                             <br/>
                             <span class="form_hint">(Def.: {{ default_filter_criteria }})</span>
                             </label>
@@ -380,7 +380,7 @@
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_scheduler_run_every">Run every</label>
+                            <label for="{{ create_form.scheduler_run_every.id_for_label }}">Run every</label>
                             </td>
                             <td>
                                 {{ create_form.scheduler_run_every }}
@@ -389,19 +389,19 @@
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_scheduler_start_date">Start time</label>
+                            <label for="{{ create_form.scheduler_start_date.id_for_label }}">Start time</label>
                             </td>
                             <td>{{ create_form.scheduler_start_date }}</td>
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_scheduler_service">Service</label>
+                            <label for="{{ create_form.scheduler_service.id_for_label }}">Service</label>
                             </td>
                             <td>{{ create_form.scheduler_service }}</td>
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_scheduler_invoke_with">Invoke with</label>
+                            <label for="{{ create_form.scheduler_invoke_with.id_for_label }}">Invoke with</label>
                             </td>
                             <td>{{ create_form.scheduler_invoke_with }}</td>
                         </tr>
@@ -427,7 +427,7 @@
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:19%">
-                            <label for="id_name">Name</label>
+                            <label for="{{ edit_form.name.id_for_label }}">Name</label>
                             </td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
@@ -435,12 +435,12 @@
                             <td style="vertical-align:middle">
                             </td>
                             <td>
-                            <label>
+                            <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
                             </label>
                             |
-                            <label>
+                            <label for="{{ edit_form.server_type.id_for_label }}">
                                 Server type
                                 {{ edit_form.server_type }}
                             </label>
@@ -448,7 +448,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                            <label for="id_username">User / e-mail</label>
+                            <label for="{{ edit_form.username.id_for_label }}">User / e-mail</label>
                             </td>
                             <td>{{ edit_form.username }} </td>
                         </tr>
@@ -462,7 +462,7 @@
                         </tr>
                         <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_host">Host</label>
+                            <label for="{{ edit_form.host.id_for_label }}">Host</label>
                             </td>
                             <td>{{ edit_form.host }} </td>
                         </tr>
@@ -470,22 +470,22 @@
                             <td style="vertical-align:middle">
                             </td>
                             <td>
-                                <label>
+                                <label for="{{ edit_form.port.id_for_label }}">
                                     Port
                                     {{ edit_form.port }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.mode.id_for_label }}">
                                     Mode
                                     {{ edit_form.mode }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.timeout.id_for_label }}">
                                     Timeout
                                     {{ edit_form.timeout }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.debug_level.id_for_label }}">
                                     Debug level
                                     <span class="form_hint">(0-2)</span>
                                     {{ edit_form.debug_level }}
@@ -494,7 +494,7 @@
                         </tr>
                         <tr class="generic-imap-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_get_criteria">Get criteria
+                            <label for="{{ edit_form.get_criteria.id_for_label }}">Get criteria
                             <br/>
                             <span class="form_hint">(Def.: {{ default_get_criteria }})</span>
                             </label>
@@ -510,19 +510,19 @@
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_tenant_id">Tenant ID</label>
+                            <label for="{{ edit_form.tenant_id.id_for_label }}">Tenant ID</label>
                             </td>
                             <td>{{ edit_form.tenant_id }} </td>
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_client_id">Client ID</label>
+                            <label for="{{ edit_form.client_id.id_for_label }}">Client ID</label>
                             </td>
                             <td>{{ edit_form.client_id }} </td>
                         </tr>
                         <tr class="microsoft-365-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_filter_criteria">Filter
+                            <label for="{{ edit_form.filter_criteria.id_for_label }}">Filter
                             <br/>
                             <span class="form_hint">(Def.: {{ default_filter_criteria }})</span>
                             </label>
@@ -538,7 +538,7 @@
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_edit-scheduler_run_every">Run every</label>
+                            <label for="{{ edit_form.scheduler_run_every.id_for_label }}">Run every</label>
                             </td>
                             <td>
                                 {{ edit_form.scheduler_run_every }}
@@ -547,19 +547,19 @@
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_edit-scheduler_start_date">Start time</label>
+                            <label for="{{ edit_form.scheduler_start_date.id_for_label }}">Start time</label>
                             </td>
                             <td>{{ edit_form.scheduler_start_date }}</td>
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_edit-scheduler_service">Service</label>
+                            <label for="{{ edit_form.scheduler_service.id_for_label }}">Service</label>
                             </td>
                             <td>{{ edit_form.scheduler_service }}</td>
                         </tr>
                         <tr class="scheduler-options-block hidden">
                             <td style="vertical-align:middle">
-                            <label for="id_edit-scheduler_invoke_with">Invoke with</label>
+                            <label for="{{ edit_form.scheduler_invoke_with.id_for_label }}">Invoke with</label>
                             </td>
                             <td>{{ edit_form.scheduler_invoke_with }}</td>
                         </tr>

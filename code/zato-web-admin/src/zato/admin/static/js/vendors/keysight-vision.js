@@ -39,6 +39,7 @@ $(document).ready(function() {
 $.fn.zato.vendors.keysight.vision.field_descriptions = {
 
     'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection<br>and pings against it are rejected.',
     'id_host': 'Address of the Vision node\'s management interface,<br>including the scheme, e.g. https://vision.example.com.',
     'id_username': 'Username the connection authenticates with<br>against the Vision node\'s web API.',
     'id_password': 'Password for the username above.<br>After the connection is created, change it<br>with the Change password link.',

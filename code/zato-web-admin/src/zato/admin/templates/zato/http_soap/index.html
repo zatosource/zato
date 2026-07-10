@@ -519,7 +519,7 @@
                                 </label>
                                 {% if transport == 'plain_http' %}
                                     |
-                                    <label>
+                                    <label for="{{ create_form.data_format.id_for_label }}">
                                         Data format
                                         {{ create_form.data_format }}
                                     </label>
@@ -655,7 +655,7 @@
                             <td>
                                 {{ create_form.url_params_pri }}
                                 |
-                                <label>
+                                <label for="{{ create_form.merge_url_params_req.id_for_label }}">
                                 Merge to request
                                 {{ create_form.merge_url_params_req }}
                                 </label>
@@ -668,7 +668,7 @@
                                 {{ create_form.params_pri }}
                                 {% if connection == 'channel' %}
                                     |
-                                    <label>Match slash
+                                    <label for="{{ create_form.match_slash.id_for_label }}">Match slash
                                     {{ create_form.match_slash }}
                                     </label>
                                 {% endif %}
@@ -793,7 +793,7 @@
                                     {{ edit_form.is_active }}
                                 </label>
                                 |
-                                <label>
+                                <label for="{{ edit_form.data_format.id_for_label }}">
                                     Data format
                                     {{ edit_form.data_format }}
                                 </label>
@@ -935,7 +935,7 @@
                             <td>
                                 {{ edit_form.url_params_pri }}
                                 |
-                                <label>
+                                <label for="{{ edit_form.merge_url_params_req.id_for_label }}">
                                 Merge to request
                                 {{ edit_form.merge_url_params_req }}
                                 </label>
@@ -948,7 +948,7 @@
                                 {{ edit_form.params_pri }}
                                 {% if connection == 'channel' %}
                                     |
-                                    <label>Match slash
+                                    <label for="{{ edit_form.match_slash.id_for_label }}">Match slash
                                     {{ edit_form.match_slash }}
                                     </label>
                                 {% endif %}

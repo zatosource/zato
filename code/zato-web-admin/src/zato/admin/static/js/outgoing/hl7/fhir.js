@@ -39,6 +39,8 @@ $.fn.zato.outgoing.hl7.fhir.field_descriptions = {
     'id_address': 'Base URL of the FHIR server,<br>e.g. https://fhir.example.com.<br>Resource paths are appended to it.',
     'id_username': 'Security definition the connection<br>authenticates with, e.g. Basic Auth or OAuth.<br>Pick no security for open servers.',
     'id_extra': 'Additional client options, one key=value per line.<br>Passed as-is to the underlying FHIR client.',
+    'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_pool_size': 'How many connections to the FHIR server<br>the pool keeps open. Each service using<br>the client concurrently needs one.<br>The default is 10.',
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

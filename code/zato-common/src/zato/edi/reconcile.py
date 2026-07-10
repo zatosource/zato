@@ -107,6 +107,7 @@ class Reconciler:
         cid:'str',
         data:'str',
         doc_type:'str' = '',
+        outcome:'str' = '',
         ) -> 'None':
         """ Writes one reconciliation event - the pair is the object name
         and the normalized control number is the message id. A document type
@@ -127,7 +128,7 @@ class Reconciler:
             details['doc_type'] = doc_type
             data = dumps(details)
 
-        self.audit_log.insert(AuditSource.X12, event_type, pair, cid=cid, msg_id=msg_id, data=data)
+        self.audit_log.insert(AuditSource.X12, event_type, pair, cid=cid, msg_id=msg_id, outcome=outcome, data=data)
 
 # ################################################################################################################################
 
@@ -184,12 +185,15 @@ class Reconciler:
         control_number:'str',
         cid:'str' = '',
         data:'str' = '',
+        outcome:'str' = '',
         ) -> 'None':
         """ Records that a TA1, 997, 999 or CONTRL arrived for an interchange sent earlier -
         the sender and receiver are the ones of the original outbound interchange
-        and the control number is the one the acknowledgment echoes.
+        and the control number is the one the acknowledgment echoes. An acknowledgment
+        that rejected what it answered is recorded with an error outcome, which is
+        what the reports count rejected 997/999 acknowledgments from.
         """
-        self._record(AuditEvent.Ack_Received, sender, receiver, control_number, cid, data)
+        self._record(AuditEvent.Ack_Received, sender, receiver, control_number, cid, data, outcome=outcome)
 
 # ################################################################################################################################
 
