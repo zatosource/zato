@@ -1,20 +1,111 @@
-/* ------------------------------------------------------------ */
-/* Outgoing REST connections - scheduler tab                     */
-/* ------------------------------------------------------------ */
+/* Scheduler request tab in the forms of outgoing REST connections */
 
-/* Variables scoped to .data-popup so they never leak to the dashboard. */
-.data-popup {
-    --scheduler-section-color: #52616e;
-    --scheduler-section-border: #d4dbe0;
+td.scheduler-request-cell {
+    padding:12px 8px;
 }
 
-/* Section headers grouping the scheduler tab's fields. */
-.data-popup td.scheduler-form-section {
-    padding: 12px 4px 4px 4px;
-    border-bottom: 1px solid var(--scheduler-section-border);
-    color: var(--scheduler-section-color);
-    font-size: 0.55rem;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+/* Hovering or working inside a block highlights the whole block */
+
+.scheduler-request-table > tbody > tr:hover > td,
+.scheduler-request-table > tbody > tr:focus-within > td {
+    background:rgba(0, 0, 0, 0.04);
+}
+
+/* Parameter tables - a JSONata toggle, a name, a value and a remove badge per row */
+
+.scheduler-param-table {
+    border-collapse:collapse;
+    width:100%;
+}
+
+/* The header appears only once there is at least one parameter row */
+.scheduler-param-table thead {
+    display:none;
+}
+
+.scheduler-param-table:has(tbody tr) thead {
+    display:table-header-group;
+}
+
+.scheduler-param-table:has(tbody tr) {
+    margin-bottom:6px;
+}
+
+.scheduler-param-table th {
+    font-weight:500;
+    font-size:85%;
+    color:#444444;
+    text-align:center;
+    text-shadow:none;
+    padding:0 4px 3px 4px;
+}
+
+.scheduler-param-table td {
+    padding:3px 4px;
+    vertical-align:middle;
+    background:transparent !important;
+}
+
+.scheduler-param-table td.scheduler-param-jsonata-cell,
+.scheduler-param-table th:first-child {
+    width:1%;
+    text-align:center;
+    white-space:nowrap;
+}
+
+.scheduler-param-table td.scheduler-param-key-cell {
+    width:32%;
+}
+
+.scheduler-param-table td.scheduler-param-remove-cell {
+    width:1%;
+    white-space:nowrap;
+}
+
+.scheduler-param-table input.scheduler-param-key,
+.scheduler-param-table input.scheduler-param-value {
+    width:100%;
+    box-sizing:border-box;
+}
+
+/* The JSONata toggle needs its clickable area vertically centered */
+.scheduler-param-table .toggle-switch {
+    vertical-align:middle;
+}
+
+/* The remove badge follows the same look as the OK and Cancel buttons */
+
+a.scheduler-param-remove,
+a.scheduler-param-remove:hover,
+a.scheduler-param-remove:active {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    /* The lowercase x has its ink between the baseline and the x-height, and the
+       baseline sits low in the em box, so the glyph lands about 1px below the
+       geometric center, the bottom padding corrects that optically */
+    padding:0 0 2px 0;
+    box-sizing:border-box;
+    background:#dddddd;
+    background-image:linear-gradient(#ffffff, #dddddd);
+    border:1px solid;
+    border-color:#dddddd #bbbbbb #999999;
+    border-radius:4px;
+    color:#333333 !important;
+    font:bold 12px/1 "Helvetica Neue", Arial, "Liberation Sans", FreeSans, sans-serif;
+    text-decoration:none;
+    text-shadow:white 0 1px 1px;
+    cursor:pointer;
+}
+
+a.scheduler-param-remove:hover {
+    background-image:linear-gradient(#ffffff, #eeeeee 1px, #cccccc);
+}
+
+/* Body mode select sits above the body textarea */
+
+#id_scheduler_data_mode {
+    margin-bottom:6px;
 }

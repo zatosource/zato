@@ -51,6 +51,13 @@ scheduler_callback_type_choices = (
 )
 
 # ################################################################################################################################
+
+scheduler_value_mode_choices = (
+    ('text', 'Send as typed'),
+    ('jsonata', 'Evaluate as JSONata'),
+)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CreateForm(DataFormatForm):
@@ -86,13 +93,12 @@ class CreateForm(DataFormatForm):
     scheduler_run_unit = forms.ChoiceField(required=False, widget=forms.Select())
     scheduler_start_date = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%; height:19px'}))
 
-    # Scheduler - what request to build
-    scheduler_method = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:20%'}))
-    scheduler_query_string = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
-    scheduler_path_params = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
-    scheduler_headers = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
+    # Scheduler - what request to build. Query string, path params and headers have no form fields
+    # in the create form at all - they are edited as rows of widgets and serialized to JSON
+    # by JS into dynamically created hidden inputs before the form is submitted.
+    scheduler_method = forms.CharField(required=False, initial='POST', widget=forms.TextInput(attrs={'style':'width:20%'}))
     scheduler_data = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:4rem'}))
-    scheduler_security = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    scheduler_data_mode = forms.ChoiceField(required=False, widget=forms.Select())
 
     # Scheduler - how to transform the response
     scheduler_response_map = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:4rem'}))
@@ -142,8 +148,11 @@ class CreateForm(DataFormatForm):
         for value, label in scheduler_callback_type_choices:
             self.fields['scheduler_callback_type'].choices.append([value, label])
 
+        self.fields['scheduler_data_mode'].choices = []
+        for value, label in scheduler_value_mode_choices:
+            self.fields['scheduler_data_mode'].choices.append([value, label])
+
         add_security_select(self, security_list)
-        add_security_select(self, security_list, needs_no_security=False, field_name='scheduler_security')
 
         add_services(self, req)
 
@@ -154,6 +163,11 @@ class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     match_slash = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+    # The edit form still uses plain textareas, the row-based UI exists in the create form only for now
+    scheduler_query_string = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
+    scheduler_path_params = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
+    scheduler_headers = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:3rem'}))
 
 # ################################################################################################################################
 # ################################################################################################################################

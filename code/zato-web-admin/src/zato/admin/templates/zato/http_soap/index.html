@@ -35,6 +35,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/scheduler.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     {% endif %}
@@ -63,6 +65,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
@@ -493,6 +496,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
+                        <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
+                        <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
@@ -717,9 +723,24 @@
                         {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-request" role="tabpanel" hidden>
+                        {% include "zato/http_soap/request-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-response" role="tabpanel" hidden>
+                        {% include "zato/http_soap/response-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-callback" role="tabpanel" hidden>
+                        {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
                     <table class="form-data">
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -750,6 +771,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="config" role="tab" aria-selected="true">Config</button>
                         <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
+                        <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
+                        <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
@@ -971,9 +995,24 @@
                         {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-request" role="tabpanel" hidden>
+                        {% include "zato/http_soap/request-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-response" role="tabpanel" hidden>
+                        {% include "zato/http_soap/response-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-callback" role="tabpanel" hidden>
+                        {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
                     <table class="form-data">
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

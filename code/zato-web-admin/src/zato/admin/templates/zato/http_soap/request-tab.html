@@ -1,0 +1,134 @@
+{% comment %}
+Request tab for outgoing REST connections - what request the scheduler builds.
+
+Expects in the context:
+* form         - the create or edit form
+* action       - "create" or "edit"
+* field_prefix - "" for create, "edit-" for edit
+
+The create form edits parameters as rows of widgets, each with its own value mode,
+serialized by JS to hidden inputs created on demand before the form is submitted.
+The edit form still uses plain textareas until the row-based UI is confirmed.
+{% endcomment %}
+
+{% if action == "create" %}
+
+<table class="form-data scheduler-request-table">
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_scheduler_method">Method</label></td>
+        <td class="scheduler-request-cell">{{ form.scheduler_method }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_scheduler_query_string">Query string</label></td>
+        <td class="scheduler-request-cell">
+            <table class="scheduler-param-table">
+                <thead>
+                    <tr>
+                        <th>JSONata</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="scheduler-query_string-rows-create"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.http_soap.add_scheduler_param_row('create', 'query_string')">Add a parameter</a>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_scheduler_path_params">Path params</label></td>
+        <td class="scheduler-request-cell">
+            <table class="scheduler-param-table">
+                <thead>
+                    <tr>
+                        <th>JSONata</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="scheduler-path_params-rows-create"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.http_soap.add_scheduler_param_row('create', 'path_params')">Add a parameter</a>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_scheduler_headers">Headers</label></td>
+        <td class="scheduler-request-cell">
+            <table class="scheduler-param-table">
+                <thead>
+                    <tr>
+                        <th>JSONata</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="scheduler-headers-rows-create"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.http_soap.add_scheduler_param_row('create', 'headers')">Add a header</a>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_scheduler_data">Body</label></td>
+        <td class="scheduler-request-cell">
+            {{ form.scheduler_data_mode }}
+            <br/>
+            {{ form.scheduler_data }}
+        </td>
+    </tr>
+
+</table>
+
+{% else %}
+
+<table class="form-data">
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}scheduler_method">Method</label></td>
+        <td>
+            {{ form.scheduler_method }}
+            <span class="form_hint">Empty means the connection's own method</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_query_string">Query string</label></td>
+        <td>
+            {{ form.scheduler_query_string }}
+            <br/>
+            <span class="form_hint">key=value, one per line</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_path_params">Path params</label></td>
+        <td>
+            {{ form.scheduler_path_params }}
+            <br/>
+            <span class="form_hint">key=value, one per line, filling in the URL path's placeholders</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_headers">Headers</label></td>
+        <td>
+            {{ form.scheduler_headers }}
+            <br/>
+            <span class="form_hint">key=value, one per line</span>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_data">Body</label></td>
+        <td>{{ form.scheduler_data }}</td>
+    </tr>
+
+</table>
+
+{% endif %}
