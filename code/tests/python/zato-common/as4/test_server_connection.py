@@ -39,6 +39,9 @@ Other_Participant = '0088:7315458756324'
 
 Document_Type_Name = 'peppol-bis-billing-3-invoice'
 
+# The correlation id the outgoing wrapper calls are made with.
+Test_CID = 'test-cid-outgoing'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -211,7 +214,7 @@ class TestWrapperSend:
         channel = _make_channel(rsa_parties, 'edelivery1')
         _connect(wrapper, channel)
 
-        result = wrapper.send(Payload)
+        result = wrapper.send(Test_CID, Payload)
 
         # The wrapper verified the synchronous receipt.
         assert result.is_ok
@@ -235,7 +238,7 @@ class TestWrapperSend:
         channel = _make_channel(rsa_parties, 'edelivery1', service_name='my.service')
         _connect(wrapper, channel)
 
-        result = wrapper.send(Payload)
+        result = wrapper.send(Test_CID, Payload)
         assert result.is_ok
 
         # A configured service takes precedence over the topic.
@@ -251,7 +254,7 @@ class TestWrapperSend:
         wrapper.config['is_active'] = False
 
         with pytest.raises(AS4Exception) as exc:
-            _ = wrapper.send(Payload)
+            _ = wrapper.send(Test_CID, Payload)
 
         assert 'not active' in str(exc.value)
 
@@ -322,7 +325,7 @@ class TestSendTo:
         channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Serviced_Participant)
         _connect(wrapper, channel)
 
-        result = wrapper.send_to(Serviced_Participant, Document_Type_Name, Payload)
+        result = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         # The wrapper verified the receipt from the discovered endpoint.
         assert result.is_ok
@@ -358,7 +361,7 @@ class TestSendTo:
 
         wrapper.session = httpx.Client(transport=httpx.MockTransport(responder))
 
-        _ = wrapper.send_to(Serviced_Participant, Document_Type_Name, Payload)
+        _ = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         # The message went to the URL from the SMP record, not to the configured endpoint.
         assert urls_requested == ['https://ap.example.com/as4']
@@ -379,7 +382,7 @@ class TestNotServiced:
         _connect(wrapper, channel)
 
         with pytest.raises(AS4Exception) as exc:
-            _ = wrapper.send_to(Serviced_Participant, Document_Type_Name, Payload)
+            _ = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         # The error signal carries the code and detail the Peppol profile defines.
         assert 'EBMS:0004' in str(exc.value)
@@ -394,7 +397,7 @@ class TestNotServiced:
         channel = _make_channel(rsa_parties, 'peppol')
         _connect(wrapper, channel)
 
-        result = wrapper.send_to(Serviced_Participant, Document_Type_Name, Payload)
+        result = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         assert result.is_ok
         assert len(channel.server.pubsub_redis.published) == 1

@@ -165,7 +165,7 @@ class AS4Wrapper:
 
 # ################################################################################################################################
 
-    def _check_send_result(self, result:'SendResult') -> 'None':
+    def _check_send_result(self, cid:'str', result:'SendResult') -> 'None':
         """ Raises a descriptive exception if a send did not produce a valid receipt.
         """
         if result.is_ok:
@@ -181,14 +181,15 @@ class AS4Wrapper:
         # .. and raise an exception with everything that is known about the failure.
         if errors:
             details = '; '.join(errors)
-            raise AS4Exception(f'AS4 send failed over `{name}` (HTTP {result.http_status}) -> {details}')
+            raise AS4Exception(f'AS4 send failed over `{name}` (HTTP {result.http_status}); cid:{cid} -> {details}')
         else:
-            raise AS4Exception(f'AS4 send failed over `{name}` (HTTP {result.http_status}) - no receipt was returned')
+            raise AS4Exception(f'AS4 send failed over `{name}` (HTTP {result.http_status}); cid:{cid} - no receipt was returned')
 
 # ################################################################################################################################
 
     def send(
         self,
+        cid:'str',
         data:'strbytes',
         mime_type:'str'=AS4.Default.Payload_MIME_Type,
         conversation_id:'strnone'=None,
@@ -206,10 +207,10 @@ class AS4Wrapper:
 
         parts = [new_part(data, mime_type)]
 
-        logger.info('AS4 out -> %s; name:%s', pmode.endpoint_url, self.config['name'])
+        logger.info('AS4 out -> %s; name:%s; cid:%s', pmode.endpoint_url, self.config['name'], cid)
 
         out = outbound_send(pmode, keystore, parts, conversation_id, client=self.session)
-        self._check_send_result(out)
+        self._check_send_result(cid, out)
 
         return out
 
@@ -217,6 +218,7 @@ class AS4Wrapper:
 
     def send_to(
         self,
+        cid:'str',
         participant_id:'str',
         document_type:'str',
         data:'strbytes',
@@ -287,18 +289,18 @@ class AS4Wrapper:
 
         parts = [new_part(sbdh)]
 
-        logger.info('AS4 out -> %s; name:%s; to:%s; document:%s',
-            pmode.endpoint_url, self.config['name'], participant_id, document_type)
+        logger.info('AS4 out -> %s; name:%s; to:%s; document:%s; cid:%s',
+            pmode.endpoint_url, self.config['name'], participant_id, document_type, cid)
 
         # .. and post the message, verifying the receipt.
         out = outbound_send(pmode, send_keystore, parts, conversation_id, client=self.session)
-        self._check_send_result(out)
+        self._check_send_result(cid, out)
 
         return out
 
 # ################################################################################################################################
 
-    def pull(self, mpc:'strnone'=None) -> 'PullResult':
+    def pull(self, cid:'str', mpc:'strnone'=None) -> 'PullResult':
         """ Sends one pull request to the configured endpoint - the generic
         One-Way/Pull exchange - and processes whatever comes back.
         """
@@ -307,7 +309,7 @@ class AS4Wrapper:
         pmode = self._get_pmode()
         keystore = self._get_keystore()
 
-        logger.info('AS4 pull -> %s; name:%s; mpc:%s', pmode.endpoint_url, self.config['name'], mpc or pmode.mpc)
+        logger.info('AS4 pull -> %s; name:%s; mpc:%s; cid:%s', pmode.endpoint_url, self.config['name'], mpc or pmode.mpc, cid)
 
         out = outbound_pull(pmode, keystore, mpc, client=self.session)
 
@@ -321,7 +323,7 @@ class AS4Wrapper:
             # .. and raise an exception with everything that is known about the failure.
             name = self.config['name']
             details = '; '.join(errors)
-            raise AS4Exception(f'AS4 pull failed over `{name}` (HTTP {out.http_status}) -> {details}')
+            raise AS4Exception(f'AS4 pull failed over `{name}` (HTTP {out.http_status}); cid:{cid} -> {details}')
 
         return out
 
@@ -341,7 +343,7 @@ class AS4Wrapper:
         parts = [new_part(_ping_payload)]
 
         result = outbound_send(pmode, keystore, parts, client=self.session)
-        self._check_send_result(result)
+        self._check_send_result(cid, result)
 
         out = f'AS4 ping ok, cid:`{cid}`, message id:`{result.message_id}`'
         return out
