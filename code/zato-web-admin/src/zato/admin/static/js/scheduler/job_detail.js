@@ -365,7 +365,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     html += card('Service', service_link, true);
 
     var start_display = job.start_date ? kit.format_local_time(job.start_date) : '-';
-    html += card('Start date', start_display, false);
+    html += card('Start time', start_display, false);
 
     var status_html = job.is_active
         ? '<span style="color:#1b855e;font-weight:700">Active</span>'
