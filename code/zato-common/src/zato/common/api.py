@@ -830,6 +830,7 @@ class GENERIC:
             CHANNEL_MCP = 'channel-mcp'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
+            CLOUD_AWS = 'cloud-aws'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
@@ -1055,6 +1056,16 @@ class SALESFORCE:
     class Default:
         Address = 'https://example.my.salesforce.com'
         API_Version = '54.0'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AWS:
+
+    class Default:
+        Region = 'us-east-1'
+        Pool_Size = 20
+        Recv_Timeout = 250
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket
 import ssl
 import threading
+from base64 import b64encode
 from datetime import datetime, timedelta, timezone
 
 # cryptography
@@ -100,6 +101,7 @@ def _connection_config(parties, **overrides):
     out['is_active'] = True
     out['type_'] = 'outconn-as2'
     out['username'] = ''
+    out['secret'] = ''
     out['pool_size'] = 1
     out['queue_build_cap'] = 30
 
@@ -326,6 +328,41 @@ class TestConfigBridging:
         # Encryption stayed with the current certificate, so the receiver decrypts fine.
         assert result.is_ok
         assert not results[0].is_error
+
+    def test_username_turns_on_basic_authentication(self, parties:'any_') -> 'None':
+
+        connection, server, requests, _ = _make_connection(
+            parties,
+            username='as2-basic-user',
+            secret='as2-basic-password',
+        )
+
+        # The partnership carries the credentials ..
+        assert connection.partnership.http_auth
+        assert connection.partnership.http_auth.username == 'as2-basic-user'
+        assert connection.partnership.http_auth.password == 'as2-basic-password'
+
+        # .. the password went through the server's decryption like every secret ..
+        assert 'as2-basic-password' in server.decrypted
+
+        # .. and the delivery itself carries the matching Authorization header.
+        result = connection.send('cid-1', _payload)
+        assert result.is_ok
+
+        credentials = b64encode(b'as2-basic-user:as2-basic-password').decode('ascii')
+        assert requests[0].headers['authorization'] == f'Basic {credentials}'
+
+    def test_no_username_means_no_basic_authentication(self, parties:'any_') -> 'None':
+
+        connection, _, requests, _ = _make_connection(parties)
+
+        # No credentials are configured ..
+        assert connection.partnership.http_auth is None
+
+        # .. and the delivery carries no Authorization header.
+        result = connection.send('cid-1', _payload)
+        assert result.is_ok
+        assert 'authorization' not in requests[0].headers
 
     def test_next_decryption_pair_joins_the_rotation_entries(self, parties, make_rotated_pair):
 

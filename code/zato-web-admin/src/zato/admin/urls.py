@@ -21,6 +21,7 @@ from zato.admin.web.views.channel import as4 as channel_as4
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import openapi_ as channel_openapi
+from zato.admin.web.views.cloud import aws as cloud_aws
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
@@ -38,6 +39,7 @@ from zato.admin.web.views.channel import mcp as channel_mcp
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
+from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
@@ -669,6 +671,26 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # Outgoing AS2 connections
+
+    url(r'^zato/outgoing/as2/$',
+        login_required(out_as2.Index()), name=out_as2.Index.url_name),
+    url(r'^zato/outgoing/as2/create/$',
+        login_required(out_as2.Create()), name=out_as2.Create.url_name),
+    url(r'^zato/outgoing/as2/edit/$',
+        login_required(out_as2.Edit()), name=out_as2.Edit.url_name),
+    url(r'^zato/outgoing/as2/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_as2.Delete()), name=out_as2.Delete.url_name),
+    url(r'^zato/outgoing/as2/change-password/$',
+        login_required(out_as2.change_password), name='out-as2-change-password'),
+    url(r'^zato/outgoing/as2/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_as2.ping), name='out-as2-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
     # Outgoing AS4 connections
 
     url(r'^zato/outgoing/as4/$',
@@ -945,7 +967,25 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. Jira
+    # .. AWS
+
+    url(r'^zato/cloud/aws/$',
+        login_required(cloud_aws.Index()), name=cloud_aws.Index.url_name),
+    url(r'^zato/cloud/aws/create/$',
+        login_required(cloud_aws.Create()), name=cloud_aws.Create.url_name),
+    url(r'^zato/cloud/aws/edit/$',
+        login_required(cloud_aws.Edit()), name=cloud_aws.Edit.url_name),
+    url(r'^zato/cloud/aws/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_aws.Delete()), name=cloud_aws.Delete.url_name),
+    url(r'^zato/cloud/aws/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_aws.ping), name='cloud-aws-ping'),
+    url(r'^zato/cloud/aws/change-password/$',
+        login_required(cloud_aws.change_password), name='cloud-aws-change-password'),
+    ]
+
+urlpatterns += [
+
+    # .. Confluence
 
     url(r'^zato/cloud/confluence/$',
         login_required(cloud_confluence.Index()), name=cloud_confluence.Index.url_name),

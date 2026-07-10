@@ -572,6 +572,7 @@ class ServiceStore:
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
                 class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
+                class_.aws.conn_dict = service_store.server.config_manager.cloud_aws
                 class_.cloud.confluence = service_store.server.config_manager.cloud_confluence
                 class_.cloud.jira = service_store.server.config_manager.cloud_jira
                 class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce

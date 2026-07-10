@@ -559,6 +559,12 @@ test-sql-cloud: ## Snowflake and Redshift SQL tests against local protocol simul
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-aws: ## AWS connection tests through a live Zato server against a simulated AWS environment.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/aws_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_aws_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server against local protocol simulators.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \

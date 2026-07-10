@@ -14,9 +14,10 @@ from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, \
-     ZATO_NONE
+from zato.common.api import AS2, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, \
+     SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.broker_message import GENERIC
+from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
      to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
@@ -180,6 +181,14 @@ class _CreateEdit(_BaseService):
                 value = parse_simple_type(value)
 
             data[key] = value
+
+        # AS2 private keys are pasted as PEM and stored encrypted, unless they arrive encrypted already,
+        # e.g. when an edit sends back the values a previous save produced.
+        if data.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
+            for name in AS2.Secret_Fields:
+                if value := data.get(name):
+                    if not value.startswith(SECRETS.PREFIX):
+                        data[name] = self.server.encrypt(value)
 
         # Build a reusable flag indicating that a secret was sent on input. This is checked only after the
         # raw_request merge above because the plaintext secret arrives in the raw request, not in self.request.input.

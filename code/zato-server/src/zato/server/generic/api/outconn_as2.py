@@ -24,6 +24,7 @@ from zato.common.api import AS2
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.config import build_keystore, build_partnership
 from zato.common.as2.outbound import send as outbound_send, send_payload
+from zato.common.as2.partnership import HTTPAuth
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 
@@ -128,8 +129,10 @@ outconn_as2_config_defaults:'dict[str, object]' = {
     'as2_peer_encryption_cert': '',
     'as2_trust_anchors': '',
 
-    # The connection queue fields.
+    # The connection queue fields - the secret is the HTTP basic authentication
+    # password when a username is configured, changed through the Dashboard.
     'username': '',
+    'secret': '',
     'pool_size': AS2.Default.Pool_Size,
 }
 
@@ -159,8 +162,16 @@ class _AS2Connection:
         self.partnership = build_partnership(config)
 
         # .. the keystore holds our own keys and the partner's certificates -
-        # the private keys are decrypted only at this point.
+        # the private keys are decrypted only at this point ..
         self.keystore = build_keystore(config, server.decrypt)
+
+        # .. and a username turns on HTTP basic authentication, with the connection's
+        # own secret as the password, changed through the Dashboard.
+        if username := config['username']:
+            http_auth = HTTPAuth()
+            http_auth.username = username
+            http_auth.password = server.decrypt(config['secret'])
+            self.partnership.http_auth = http_auth
 
         # One HTTP client is shared by all exchanges over this connection.
         self.http_client = httpx.Client(

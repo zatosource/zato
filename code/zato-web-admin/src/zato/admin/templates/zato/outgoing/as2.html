@@ -1,0 +1,812 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Outgoing AS2 connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <style type="text/css">
+        /* The label column is only as wide as its longest label,
+           so labels sit right next to their fields. */
+        .data-popup .form-data td:first-child {
+            width: 1%;
+            white-space: nowrap;
+            padding-right: 14px;
+        }
+        /* Make room for seven tabs in the strip. */
+        .data-popup .dashboard-tabs > .dashboard-tab {
+            padding: 8px 12px;
+        }
+        /* A control that continues a row, right after another control. */
+        .data-popup .joined-control {
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        /* An inline label between two controls in the same row. */
+        .data-popup .joined-label {
+            margin-left: 14px;
+            margin-right: 6px;
+            color: #333;
+            vertical-align: middle;
+        }
+        .data-popup td .toggle-switch {
+            vertical-align: middle;
+        }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/as2.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'endpoint_url',
+            'as2_from',
+            'as2_to',
+            '_change_password',
+            '_ping',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+
+            'isa_qualifier',
+            'isa_id',
+            'gs_id',
+            'unb_id',
+            'subject',
+            'content_type',
+            'inbound_topic',
+            'inbound_service',
+
+            'sign',
+            'sign_algorithm',
+            'encrypt',
+            'encryption_algorithm',
+            'compress',
+            'compress_before_signing',
+            'mdn_mode',
+            'mdn_signed',
+            'async_mdn_url',
+
+            'as2_partner_cert',
+            'as2_partner_next_cert',
+            'as2_partner_next_cert_from',
+            'as2_signing_key',
+            'as2_signing_cert_chain',
+            'as2_decryption_key',
+            'as2_next_decryption_key',
+            'as2_next_decryption_cert',
+            'as2_peer_signing_cert',
+            'as2_peer_encryption_cert',
+            'as2_trust_anchors',
+
+            'verify_tls',
+            'username',
+            'http_timeout_seconds',
+            'http_transfer_mode',
+            'chunked_threshold_bytes',
+            'preserve_filename',
+            'ack_overdue_after',
+            'resend_max_retries',
+
+            'as2_version',
+            'content_transfer_encoding',
+            'force_base64',
+            'prevent_canonicalization',
+            'warn_on_duplicate_filename',
+            'pool_size',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <h2 class="zato">Outgoing AS2 connections</h2>
+
+{% with has_generic="1" generic_type="outconn-as2" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections"%}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.as2.create()">Create a new outgoing AS2 connection</a>
+        </div>
+
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Endpoint URL</a></th>
+                        <th><a href="#">AS2-From</a></th>
+                        <th><a href="#">AS2-To</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.endpoint_url }}</td>
+                        <td>{{ item.as2_from }}</td>
+                        <td>{{ item.as2_to }}</td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Test</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.as2.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.as2.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        <td class='ignore'>{{ item.isa_qualifier|default:'' }}</td>
+                        <td class='ignore'>{{ item.isa_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.gs_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.unb_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.subject|default:'' }}</td>
+                        <td class='ignore'>{{ item.content_type|default:'' }}</td>
+                        <td class='ignore'>{{ item.inbound_topic|default:'' }}</td>
+                        <td class='ignore'>{{ item.inbound_service|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.sign|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.sign_algorithm|default:'' }}</td>
+                        <td class='ignore'>{{ item.encrypt|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.encryption_algorithm|default:'' }}</td>
+                        <td class='ignore'>{{ item.compress|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.compress_before_signing|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.mdn_mode|default:'' }}</td>
+                        <td class='ignore'>{{ item.mdn_signed|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.async_mdn_url|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.as2_partner_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_partner_next_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_partner_next_cert_from|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_signing_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_signing_cert_chain|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_decryption_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_next_decryption_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_next_decryption_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_peer_signing_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_peer_encryption_cert|default:'' }}</td>
+                        <td class='ignore'>{{ item.as2_trust_anchors|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.verify_tls|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.username|default:'' }}</td>
+                        <td class='ignore'>{{ item.http_timeout_seconds|default:'0' }}</td>
+                        <td class='ignore'>{{ item.http_transfer_mode|default:'' }}</td>
+                        <td class='ignore'>{{ item.chunked_threshold_bytes|default:'0' }}</td>
+                        <td class='ignore'>{{ item.preserve_filename|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.ack_overdue_after|default:'0' }}</td>
+                        <td class='ignore'>{{ item.resend_max_retries|default:'0' }}</td>
+
+                        <td class='ignore'>{{ item.as2_version|default:'' }}</td>
+                        <td class='ignore'>{{ item.content_transfer_encoding|default:'' }}</td>
+                        <td class='ignore'>{{ item.force_base64|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.prevent_canonicalization|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.warn_on_duplicate_filename|yesno:'True,False' }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='55'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-as2-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="edi" role="tab" aria-selected="false">EDI</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="partner" role="tab" aria-selected="false">Partner</button>
+                        <button type="button" class="dashboard-tab" data-tab="keys" role="tab" aria-selected="false">Keys</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_name">Name</label></td>
+                                <td>{{ create_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_endpoint_url">Endpoint URL</label></td>
+                                <td>{{ create_form.endpoint_url }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as2_from">AS2-From</label></td>
+                                <td>{{ create_form.as2_from }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as2_to">AS2-To</label></td>
+                                <td>{{ create_form.as2_to }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_subject">Subject</label></td>
+                                <td>{{ create_form.subject }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-edi" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_isa_qualifier">ISA qualifier</label></td>
+                                <td>{{ create_form.isa_qualifier }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_isa_id">ISA ID</label></td>
+                                <td>{{ create_form.isa_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_gs_id">GS ID</label></td>
+                                <td>{{ create_form.gs_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_unb_id">UNB ID</label></td>
+                                <td>{{ create_form.unb_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_content_type">Content type</label></td>
+                                <td>{{ create_form.content_type }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_inbound_topic">Inbound topic</label></td>
+                                <td>{{ create_form.inbound_topic }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_inbound_service">Inbound service</label></td>
+                                <td>{{ create_form.inbound_service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_sign">Sign</label></td>
+                                <td><label class="toggle-switch">{{ create_form.sign }}<span class="toggle-slider"></span></label><span class="joined-control">{{ create_form.sign_algorithm }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_encrypt">Encrypt</label></td>
+                                <td><label class="toggle-switch">{{ create_form.encrypt }}<span class="toggle-slider"></span></label><span class="joined-control">{{ create_form.encryption_algorithm }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_compress">Compress</label></td>
+                                <td><label class="toggle-switch">{{ create_form.compress }}<span class="toggle-slider"></span></label><span class="joined-label">Before signing</span><label class="toggle-switch">{{ create_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_mdn_mode">MDN</label></td>
+                                <td>{{ create_form.mdn_mode }}<span class="joined-label">Signed</span><label class="toggle-switch">{{ create_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_async_mdn_url">Async MDN URL</label></td>
+                                <td>{{ create_form.async_mdn_url }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-partner" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_partner_cert">Partner certificate</label></td>
+                                <td>{{ create_form.as2_partner_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_partner_next_cert">Partner next certificate</label></td>
+                                <td>{{ create_form.as2_partner_next_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as2_partner_next_cert_from">Next certificate active from</label></td>
+                                <td>{{ create_form.as2_partner_next_cert_from }} <span class="form_hint">YYYY-MM-DD, empty = the certificate above is accepted immediately</span></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_peer_signing_cert">Peer signing certificate</label></td>
+                                <td>{{ create_form.as2_peer_signing_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_peer_encryption_cert">Peer encryption certificate</label></td>
+                                <td>{{ create_form.as2_peer_encryption_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_trust_anchors">Trust anchors</label></td>
+                                <td>{{ create_form.as2_trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-keys" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_signing_key">Signing key</label></td>
+                                <td>{{ create_form.as2_signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_signing_cert_chain">Signing certificate chain</label></td>
+                                <td>{{ create_form.as2_signing_cert_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_decryption_key">Decryption key</label></td>
+                                <td>{{ create_form.as2_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_next_decryption_key">Next decryption key</label></td>
+                                <td>{{ create_form.as2_next_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as2_next_decryption_cert">Next decryption certificate</label></td>
+                                <td>{{ create_form.as2_next_decryption_cert }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-delivery" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_verify_tls">Verify TLS</label></td>
+                                <td><label class="toggle-switch">{{ create_form.verify_tls }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_username">Username</label></td>
+                                <td>{{ create_form.username }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_http_timeout_seconds">Timeout</label></td>
+                                <td>{{ create_form.http_timeout_seconds }} <span class="form_hint">seconds, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_http_transfer_mode">Transfer mode</label></td>
+                                <td>{{ create_form.http_transfer_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_chunked_threshold_bytes">Chunking threshold</label></td>
+                                <td>{{ create_form.chunked_threshold_bytes }} <span class="form_hint">bytes, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_preserve_filename">Preserve filename</label></td>
+                                <td><label class="toggle-switch">{{ create_form.preserve_filename }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_ack_overdue_after">Ack. overdue after</label></td>
+                                <td>{{ create_form.ack_overdue_after }} <span class="form_hint">seconds, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_resend_max_retries">Max. resends</label></td>
+                                <td>{{ create_form.resend_max_retries }} <span class="form_hint">0 = default</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-create-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_as2_version">AS2 version</label></td>
+                                <td>{{ create_form.as2_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_content_transfer_encoding">Transfer encoding</label></td>
+                                <td>{{ create_form.content_transfer_encoding }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_force_base64">Force Base64</label></td>
+                                <td><label class="toggle-switch">{{ create_form.force_base64 }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_prevent_canonicalization">Prevent canonicalization</label></td>
+                                <td><label class="toggle-switch">{{ create_form.prevent_canonicalization }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_warn_on_duplicate_filename">Warn on duplicate filename</label></td>
+                                <td><label class="toggle-switch">{{ create_form.warn_on_duplicate_filename }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_pool_size">Pool size</label></td>
+                                <td>{{ create_form.pool_size }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-as2-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Connection settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                        <button type="button" class="dashboard-tab" data-tab="edi" role="tab" aria-selected="false">EDI</button>
+                        <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
+                        <button type="button" class="dashboard-tab" data-tab="partner" role="tab" aria-selected="false">Partner</button>
+                        <button type="button" class="dashboard-tab" data-tab="keys" role="tab" aria-selected="false">Keys</button>
+                        <button type="button" class="dashboard-tab" data-tab="delivery" role="tab" aria-selected="false">Delivery</button>
+                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-main" role="tabpanel">
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_edit-name">Name</label></td>
+                                <td>{{ edit_form.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_active">Active</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-endpoint_url">Endpoint URL</label></td>
+                                <td>{{ edit_form.endpoint_url }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as2_from">AS2-From</label></td>
+                                <td>{{ edit_form.as2_from }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as2_to">AS2-To</label></td>
+                                <td>{{ edit_form.as2_to }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-subject">Subject</label></td>
+                                <td>{{ edit_form.subject }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-edi" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_edit-isa_qualifier">ISA qualifier</label></td>
+                                <td>{{ edit_form.isa_qualifier }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-isa_id">ISA ID</label></td>
+                                <td>{{ edit_form.isa_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-gs_id">GS ID</label></td>
+                                <td>{{ edit_form.gs_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-unb_id">UNB ID</label></td>
+                                <td>{{ edit_form.unb_id }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-content_type">Content type</label></td>
+                                <td>{{ edit_form.content_type }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-inbound_topic">Inbound topic</label></td>
+                                <td>{{ edit_form.inbound_topic }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-inbound_service">Inbound service</label></td>
+                                <td>{{ edit_form.inbound_service }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-security" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_edit-sign">Sign</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.sign }}<span class="toggle-slider"></span></label><span class="joined-control">{{ edit_form.sign_algorithm }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-encrypt">Encrypt</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.encrypt }}<span class="toggle-slider"></span></label><span class="joined-control">{{ edit_form.encryption_algorithm }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-compress">Compress</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.compress }}<span class="toggle-slider"></span></label><span class="joined-label">Before signing</span><label class="toggle-switch">{{ edit_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-mdn_mode">MDN</label></td>
+                                <td>{{ edit_form.mdn_mode }}<span class="joined-label">Signed</span><label class="toggle-switch">{{ edit_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-async_mdn_url">Async MDN URL</label></td>
+                                <td>{{ edit_form.async_mdn_url }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-partner" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_partner_cert">Partner certificate</label></td>
+                                <td>{{ edit_form.as2_partner_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_partner_next_cert">Partner next certificate</label></td>
+                                <td>{{ edit_form.as2_partner_next_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as2_partner_next_cert_from">Next certificate active from</label></td>
+                                <td>{{ edit_form.as2_partner_next_cert_from }} <span class="form_hint">YYYY-MM-DD, empty = the certificate above is accepted immediately</span></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_peer_signing_cert">Peer signing certificate</label></td>
+                                <td>{{ edit_form.as2_peer_signing_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_peer_encryption_cert">Peer encryption certificate</label></td>
+                                <td>{{ edit_form.as2_peer_encryption_cert }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_trust_anchors">Trust anchors</label></td>
+                                <td>{{ edit_form.as2_trust_anchors }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-keys" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_signing_key">Signing key</label></td>
+                                <td>{{ edit_form.as2_signing_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_signing_cert_chain">Signing certificate chain</label></td>
+                                <td>{{ edit_form.as2_signing_cert_chain }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_decryption_key">Decryption key</label></td>
+                                <td>{{ edit_form.as2_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_next_decryption_key">Next decryption key</label></td>
+                                <td>{{ edit_form.as2_next_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as2_next_decryption_cert">Next decryption certificate</label></td>
+                                <td>{{ edit_form.as2_next_decryption_cert }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-delivery" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_edit-verify_tls">Verify TLS</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.verify_tls }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-username">Username</label></td>
+                                <td>{{ edit_form.username }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-http_timeout_seconds">Timeout</label></td>
+                                <td>{{ edit_form.http_timeout_seconds }} <span class="form_hint">seconds, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-http_transfer_mode">Transfer mode</label></td>
+                                <td>{{ edit_form.http_transfer_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-chunked_threshold_bytes">Chunking threshold</label></td>
+                                <td>{{ edit_form.chunked_threshold_bytes }} <span class="form_hint">bytes, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-preserve_filename">Preserve filename</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.preserve_filename }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-ack_overdue_after">Ack. overdue after</label></td>
+                                <td>{{ edit_form.ack_overdue_after }} <span class="form_hint">seconds, 0 = default</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-resend_max_retries">Max. resends</label></td>
+                                <td>{{ edit_form.resend_max_retries }} <span class="form_hint">0 = default</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-as2-edit-tab-panel-more" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td><label for="id_edit-as2_version">AS2 version</label></td>
+                                <td>{{ edit_form.as2_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-content_transfer_encoding">Transfer encoding</label></td>
+                                <td>{{ edit_form.content_transfer_encoding }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-force_base64">Force Base64</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.force_base64 }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-prevent_canonicalization">Prevent canonicalization</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.prevent_canonicalization }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-warn_on_duplicate_filename">Warn on duplicate filename</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.warn_on_duplicate_filename }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-pool_size">Pool size</label></td>
+                                <td>{{ edit_form.pool_size }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <table class="form-data">
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-as2-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

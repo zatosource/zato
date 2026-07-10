@@ -327,6 +327,7 @@
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">AS2</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">AS4</a></li>
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
@@ -375,6 +376,7 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Cloud &darr;</a>
                                 <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "cloud-aws" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a></li>
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
@@ -393,16 +395,14 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">Vendors &darr;</a>
                                 <ul>
-                                    {% if False %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Amazon &rarr;</a>
                                         <ul>
                                             <li class="child">
-                                                <a class="menu-link" href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:"1" }}">S3</a>
+                                                <a class="menu-link" href="{% url "cloud-aws" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a>
                                             </li>
                                         </ul>
                                     </li>
-                                    {% endif %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Atlassian &rarr;</a>
                                         <ul>
