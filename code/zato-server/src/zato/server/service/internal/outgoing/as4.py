@@ -75,8 +75,8 @@ class Pull(Service):
 
         # Where pulled payloads go - a service takes precedence over a topic.
         service_name = msg.get('service')
-        topic_name = msg.get('topic')
-        if not topic_name:
+
+        if not (topic_name := msg.get('topic')):
             topic_name = AS4.Default.Inbound_Topic
 
         # Send the pull request - an empty partition channel comes back as no message,
@@ -101,8 +101,11 @@ class Pull(Service):
             else:
                 _ = self.server.pubsub_redis.publish(topic_name, message, cid=self.cid, correl_id=self.cid)
 
-        self.logger.info('AS4 pull over `%s` - message `%s` pulled, %d payload(s) routed',
-            connection_name, result.user_message.message_id, len(result.payloads))
+        payload_count = len(result.payloads)
+        suffix = 'payload' if payload_count == 1 else 'payloads'
+
+        self.logger.info('AS4 pull over `%s` - message `%s` pulled, %d %s routed',
+            connection_name, result.user_message.message_id, payload_count, suffix)
 
 # ################################################################################################################################
 # ################################################################################################################################

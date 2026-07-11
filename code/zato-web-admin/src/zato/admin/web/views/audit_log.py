@@ -190,6 +190,7 @@ def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_na
     out.open_event = open_event
     out.close_event = close_event
     out.needs_object_name_match = needs_object_name_match
+
     return out
 
 # ################################################################################################################################
@@ -331,14 +332,15 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
     if not cids:
         return
 
-    stmt = select(event_table.c.correl_id).where(and_(
+    statement = select(event_table.c.correl_id).where(and_(
         event_table.c.source == source,
         event_table.c.correl_id.in_(cids),
     ))
 
     resubmitted = set()
+    result = connection.execute(statement)
 
-    for db_row in connection.execute(stmt):
+    for db_row in result:
         resubmitted.add(db_row[0])
 
     for row in rows:
@@ -366,7 +368,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
     resubmit_labels = _get_resubmit_labels(source)
     resubmit_labels_json = json.dumps(resubmit_labels)
 
-    return TemplateResponse(req, 'zato/audit_log.html', {
+    return_data = {
         'cluster_id': default_cluster_id,
         'source': source,
         'object_name': object_name,
@@ -380,7 +382,11 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'resubmit_labels_json': resubmit_labels_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
-    })
+    }
+
+    out = TemplateResponse(req, 'zato/audit_log.html', return_data)
+
+    return out
 
 # ################################################################################################################################
 
@@ -420,20 +426,29 @@ def poll(req:'any_') -> 'HttpResponse':
         order_by = event_table.c.id.desc()
 
     # Build both queries upfront ..
-    count_query = select(func.count()).select_from(event_table).where(*where_conditions)
+    count_query = select(func.count())
+    count_query = count_query.select_from(event_table)
+    count_query = count_query.where(*where_conditions)
 
     offset = (page - 1) * page_size
-    page_query = select(*select_columns).where(*where_conditions).order_by(order_by). \
-        limit(page_size).offset(offset)
+
+    page_query = select(*select_columns)
+    page_query = page_query.where(*where_conditions)
+    page_query = page_query.order_by(order_by)
+    page_query = page_query.limit(page_size)
+    page_query = page_query.offset(offset)
 
     # .. and run them against the shared audit log database.
     engine = get_audit_engine()
 
     with engine.connect() as connection:
 
-        total = connection.execute(count_query).scalar()
+        count_result = connection.execute(count_query)
+        total = count_result.scalar()
 
-        for db_row in connection.execute(page_query):
+        page_result = connection.execute(page_query)
+
+        for db_row in page_result:
             row = dict(zip(_row_columns, db_row))
 
             # Sources with extra columns extract them out of the full payload first ..
@@ -454,6 +469,7 @@ def poll(req:'any_') -> 'HttpResponse':
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')
+
     return out
 
 # ################################################################################################################################
@@ -475,7 +491,9 @@ def details(req:'any_') -> 'HttpResponse':
 
     with engine.connect() as connection:
 
-        row = connection.execute(details_query).fetchone()
+        result = connection.execute(details_query)
+        row = result.fetchone()
+
         if row:
             data = row[0]
 
@@ -486,6 +504,7 @@ def details(req:'any_') -> 'HttpResponse':
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')
+
     return out
 
 # ################################################################################################################################
@@ -504,7 +523,8 @@ def resubmit(req:'any_') -> 'HttpResponse':
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        row = connection.execute(lookup_query).fetchone()
+        result = connection.execute(lookup_query)
+        row = result.fetchone()
 
     source, event_type = row
 
@@ -513,6 +533,7 @@ def resubmit(req:'any_') -> 'HttpResponse':
     action = actions[event_type]
 
     out = invoke_action_handler(req, action['service'], extra={'event_id': event_id})
+
     return out
 
 # ################################################################################################################################

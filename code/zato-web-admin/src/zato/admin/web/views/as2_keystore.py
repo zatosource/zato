@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from datetime import datetime, timezone
+from http.client import INTERNAL_SERVER_ERROR
 from traceback import format_exc
 
 # Django
@@ -62,10 +63,13 @@ def get_expiry_info(cert_chain:'str') -> 'anydict':
 
     try:
         certificates = load_certificates_pem(cert_chain.encode('utf8'))
-    except Exception:
+
+    # The chain is user-pasted text - anything that is not PEM is simply not displayed.
+    except ValueError:
         return out
 
-    not_after = certificates[0].not_valid_after_utc
+    first_certificate = certificates[0]
+    not_after = first_certificate.not_valid_after_utc
     now = datetime.now(timezone.utc)
 
     days_left = (not_after - now).days
@@ -105,7 +109,9 @@ def index(req:'any_') -> 'TemplateResponse':
         'zato_template_name': 'zato/as2-keystore.html',
     }
 
-    return TemplateResponse(req, 'zato/as2-keystore.html', return_data)
+    out = TemplateResponse(req, 'zato/as2-keystore.html', return_data)
+
+    return out
 
 # ################################################################################################################################
 
@@ -121,15 +127,24 @@ def save(req:'any_') -> 'JsonResponse':
 
     try:
         response = req.zato.client.invoke(_service_edit, request)
+
+    # A genuinely broad boundary - whatever went wrong with the invocation,
+    # the page must get a response it can display.
     except Exception:
-        msg = 'Keystore could not be saved, e:`{}`'.format(format_exc())
+        exception_info = format_exc()
+        msg = f'Keystore could not be saved, e:`{exception_info}`'
         logger.error(msg)
-        return JsonResponse({'is_ok': False, 'message': msg}, status=500)
+
+        out = JsonResponse({'is_ok': False, 'message': msg}, status=INTERNAL_SERVER_ERROR)
+        return out
 
     if not response.ok:
-        return JsonResponse({'is_ok': False, 'message': response.details}, status=500)
+        out = JsonResponse({'is_ok': False, 'message': response.details}, status=INTERNAL_SERVER_ERROR)
+        return out
 
-    return JsonResponse({'is_ok': True, 'message': 'Keystore saved'})
+    out = JsonResponse({'is_ok': True, 'message': 'Keystore saved'})
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -37,9 +37,6 @@ profile_presets = {
     'ics2':       new_ics2_pmode,
 }
 
-# P-Mode fields settable directly from configuration.
-pmode_string_fields = ('service', 'action', 'agreement', 'mpc', 'original_sender', 'final_recipient')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -62,23 +59,30 @@ def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
         raise AS4Exception('No signing certificate chain is configured for this AS4 connection')
 
     signing_key = decrypt_func(signing_key)
-    out.signing_key = load_private_key_pem(signing_key.encode('utf8'))
-    out.signing_certificate_chain = load_certificates_pem(signing_cert_chain.encode('utf8'))
+    signing_key = signing_key.encode('utf8')
+    out.signing_key = load_private_key_pem(signing_key)
+
+    signing_cert_chain = signing_cert_chain.encode('utf8')
+    out.signing_certificate_chain = load_certificates_pem(signing_cert_chain)
 
     if value := config['as4_decryption_key']:
         value = decrypt_func(value)
-        out.decryption_key = load_private_key_pem(value.encode('utf8'))
+        value = value.encode('utf8')
+        out.decryption_key = load_private_key_pem(value)
 
     if value := config['as4_peer_signing_cert']:
-        certificates = load_certificates_pem(value.encode('utf8'))
+        value = value.encode('utf8')
+        certificates = load_certificates_pem(value)
         out.peer_signing_certificate = certificates[0]
 
     if value := config['as4_peer_encryption_cert']:
-        certificates = load_certificates_pem(value.encode('utf8'))
+        value = value.encode('utf8')
+        certificates = load_certificates_pem(value)
         out.peer_encryption_certificate = certificates[0]
 
     if value := config['as4_trust_anchors']:
-        out.trust_anchors = load_certificates_pem(value.encode('utf8'))
+        value = value.encode('utf8')
+        out.trust_anchors = load_certificates_pem(value)
 
     return out
 
@@ -88,14 +92,29 @@ def build_pmode(config:'stranydict') -> 'PMode':
     """ Builds one P-Mode out of flat configuration, starting from the preset
     matching the configured profile.
     """
-    preset = profile_presets[config['as4_profile']]
+    profile = config['as4_profile']
+    preset = profile_presets[profile]
 
     # Our response to produce
     out = preset()
 
-    for name in pmode_string_fields:
-        if value := config['as4_' + name]:
-            setattr(out, name, value)
+    if value := config['as4_service']:
+        out.service = value
+
+    if value := config['as4_action']:
+        out.action = value
+
+    if value := config['as4_agreement']:
+        out.agreement = value
+
+    if value := config['as4_mpc']:
+        out.mpc = value
+
+    if value := config['as4_original_sender']:
+        out.original_sender = value
+
+    if value := config['as4_final_recipient']:
+        out.final_recipient = value
 
     if value := config['as4_from_party']:
         out.initiator.party_id = value

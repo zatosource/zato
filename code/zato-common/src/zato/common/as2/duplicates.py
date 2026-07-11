@@ -91,7 +91,7 @@ class DuplicateStore:
         if engine is None:
             engine = get_audit_engine()
 
-        self.engine = engine
+        self.engine:'Engine' = engine
 
         # The schema creation is idempotent, the same way the audit log's is.
         metadata.create_all(self.engine)

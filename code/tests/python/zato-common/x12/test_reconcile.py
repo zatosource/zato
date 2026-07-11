@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from datetime import timedelta
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource, ModuleCtx as AuditLogCtx, event_table
 from zato.common.util.api import utcnow
@@ -21,10 +24,10 @@ from zato.edi.reconcile import Reconciler
 def _make_reconciler(tmp_path:'os.PathLike') -> 'Reconciler':
     """ Points the audit log at a per-test SQLite file and builds a reconciler on it.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
     out = Reconciler('test-server')
     return out
@@ -32,8 +35,8 @@ def _make_reconciler(tmp_path:'os.PathLike') -> 'Reconciler':
 # ################################################################################################################################
 
 def _cleanup_env() -> 'None':
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,15 +134,18 @@ def test_inbound_events_are_recorded(tmp_path:'os.PathLike') -> 'None':
         assert outstanding == []
 
         # Both events landed in the shared audit table under the X12 source
-        from sqlalchemy import select
-
-        stmt = select(event_table.c.event_type).where(
-            event_table.c.source == AuditSource.X12).order_by(event_table.c.id)
+        statement = select(event_table.c.event_type)
+        statement = statement.where(event_table.c.source == AuditSource.X12)
+        statement = statement.order_by(event_table.c.id)
 
         with reconciler.engine.connect() as connection:
-            rows = connection.execute(stmt).fetchall()
+            result = connection.execute(statement)
+            rows = result.fetchall()
 
-        event_types = [row[0] for row in rows]
+        event_types = []
+        for row in rows:
+            event_types.append(row[0])
+
         assert event_types == [AuditEvent.Interchange_Received, AuditEvent.Ack_Sent]
 
     finally:

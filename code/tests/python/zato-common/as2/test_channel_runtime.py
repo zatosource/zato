@@ -15,6 +15,7 @@ from http.client import OK
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.common.api import AS2
 from zato.common.as2.common import AS2Error
 from zato.common.as2.outbound import build_message
@@ -22,6 +23,16 @@ from zato.common.as2.partnership import new_partnership
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.util.xml_.keystore import new_keystore
 from zato.server.connection.as2 import AS2ChannelRuntime
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    from zato.server.base.parallel import ParallelServer
+    from .conftest import TestParties
+    ParallelServer = ParallelServer
+    TestParties = TestParties
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,13 +49,13 @@ _payload = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _key_to_pem(key):
+def _key_to_pem(key:'any_') -> 'any_':
     out = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _certificate_to_pem(certificate):
+def _certificate_to_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
     return out
 
@@ -52,7 +63,7 @@ def _certificate_to_pem(certificate):
 # ################################################################################################################################
 
 class _FakeConfigManager:
-    def __init__(self):
+    def __init__(self) -> 'None':
 
         # The live per-type dict of AS2 outgoing connection configs, keyed by name
         self.outconn_as2 = {}
@@ -60,10 +71,12 @@ class _FakeConfigManager:
 # ################################################################################################################################
 
 class _FakePubSub:
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.published = []
 
-    def publish(self, topic, message, cid='', correl_id=''):
+# ################################################################################################################################
+
+    def publish(self, topic:'any_', message:'any_', cid:'any_'='', correl_id:'any_'='') -> 'None':
         self.published.append((topic, message))
 
 # ################################################################################################################################
@@ -74,21 +87,31 @@ class _FakeServer:
     """
     name = 'test-server'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.invoked = []
         self.config_manager = _FakeConfigManager()
         self.pubsub_redis = _FakePubSub()
 
-    def decrypt(self, value):
+# ################################################################################################################################
+
+    def decrypt(self, value:'any_') -> 'any_':
         return value
 
-    def invoke(self, service_name, message):
+# ################################################################################################################################
+
+    def invoke(self, service_name:'any_', message:'any_') -> 'None':
         self.invoked.append((service_name, message))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _partnership_config(inbound_topic='', inbound_service='', partner_cert='', next_cert='', next_cert_from=''):
+def _partnership_config(
+    inbound_topic:'any_'='',
+    inbound_service:'any_'='',
+    partner_certificate:'any_'='',
+    next_certificate:'any_'='',
+    next_certificate_from:'any_'='',
+) -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     as the receiving side sees the relationship.
     """
@@ -133,16 +156,16 @@ def _partnership_config(inbound_topic='', inbound_service='', partner_cert='', n
         'ack_overdue_after': 0,
         'resend_max_retries': 0,
 
-        'as2_partner_cert': partner_cert,
-        'as2_partner_next_cert': next_cert,
-        'as2_partner_next_cert_from': next_cert_from,
+        'as2_partner_cert': partner_certificate,
+        'as2_partner_next_cert': next_certificate,
+        'as2_partner_next_cert_from': next_certificate_from,
     }
 
     return out
 
 # ################################################################################################################################
 
-def _channel_config(parties, service_name=None, inbound_topic=None):
+def _channel_config(parties:'TestParties', service_name:'any_'=None, inbound_topic:'any_'=None) -> 'any_':
     """ The channel item of one AS2 channel, with the receiver's keys pasted in as PEMs.
     """
     receiver_key_pem = _key_to_pem(parties.receiver.signing_key)
@@ -169,23 +192,23 @@ def _channel_config(parties, service_name=None, inbound_topic=None):
 # ################################################################################################################################
 
 def _make_runtime(
-    tmp_path,
-    parties,
-    service_name=None,
-    channel_topic=None,
-    with_partnership=True,
-    partner_topic='',
-    partner_service='',
-    partner_cert='',
-    next_cert='',
-    next_cert_from='',
-    ):
+    tmp_path:'os.PathLike',
+    parties:'TestParties',
+    service_name:'any_'=None,
+    channel_topic:'any_'=None,
+    with_partnership:'any_'=True,
+    partner_topic:'any_'='',
+    partner_service:'any_'='',
+    partner_certificate:'any_'='',
+    next_certificate:'any_'='',
+    next_certificate_from:'any_'='',
+    ) -> 'any_':
     """ Builds a channel runtime on a fake server with a per-test SQLite audit database.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
     server = _FakeServer()
 
@@ -193,13 +216,14 @@ def _make_runtime(
         config = _partnership_config(
             inbound_topic=partner_topic,
             inbound_service=partner_service,
-            partner_cert=partner_cert,
-            next_cert=next_cert,
-            next_cert_from=next_cert_from,
+            partner_certificate=partner_certificate,
+            next_certificate=next_certificate,
+            next_certificate_from=next_certificate_from,
         )
         server.config_manager.outconn_as2['PartnerCorp AS2'] = config
 
-    runtime = AS2ChannelRuntime(server, _channel_config(parties, service_name, channel_topic))
+    channel_config = _channel_config(parties, service_name, channel_topic)
+    runtime = AS2ChannelRuntime(cast_('ParallelServer', server), channel_config)
 
     out = server, runtime
     return out
@@ -207,12 +231,12 @@ def _make_runtime(
 # ################################################################################################################################
 
 def _cleanup_env() -> 'None':
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 
-def _build_wire_message(parties, message_id=None, sender_keystore=None):
+def _build_wire_message(parties:'TestParties', message_id:'any_'=None, sender_keystore:'any_'=None) -> 'any_':
     """ Builds one real AS2 message the way the sending side would.
     """
     partnership = new_partnership()
@@ -229,7 +253,7 @@ def _build_wire_message(parties, message_id=None, sender_keystore=None):
 
 # ################################################################################################################################
 
-def _rotated_sender_keystore(parties, rotated):
+def _rotated_sender_keystore(parties:'TestParties', rotated:'any_') -> 'any_':
     """ The sending side's keystore after it rotated its signing pair -
     encryption still targets the receiver's current certificate.
     """
@@ -246,11 +270,11 @@ def _rotated_sender_keystore(parties, rotated):
 
 class TestRouting:
 
-    def test_default_topic_when_nothing_else_is_configured(self, parties, tmp_path):
+    def test_default_topic_when_nothing_else_is_configured(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties)
 
-            body, headers, message_id, _ = _build_wire_message(parties)
+            body, headers, _, _ = _build_wire_message(parties)
             result = runtime.handle('cid-1', body, headers)
 
             assert not result.is_error
@@ -271,14 +295,16 @@ class TestRouting:
 
             # .. plus the EDI envelope identifiers routing and reporting key on.
             assert message['edi']['format'] == 'x12'
-            assert message['edi']['doc_type'] == '850'
+            assert message['edi']['document_type'] == '850'
             assert message['edi']['sender_id'] == 'ZATORETAIL'
             assert message['edi']['interchange_control_number'] == '000000001'
 
         finally:
             _cleanup_env()
 
-    def test_channel_topic_overrides_the_default(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_channel_topic_overrides_the_default(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties, channel_topic='orders.custom')
 
@@ -293,7 +319,9 @@ class TestRouting:
         finally:
             _cleanup_env()
 
-    def test_channel_service_overrides_the_topic(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_channel_service_overrides_the_topic(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties, service_name='orders.channel-service')
 
@@ -307,12 +335,14 @@ class TestRouting:
 
             service_name, message = server.invoked[0]
             assert service_name == 'orders.channel-service'
-            assert message['edi']['doc_type'] == '850'
+            assert message['edi']['document_type'] == '850'
 
         finally:
             _cleanup_env()
 
-    def test_partner_topic_overrides_the_channel(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_partner_topic_overrides_the_channel(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(
                 tmp_path, parties, service_name='orders.channel-service', partner_topic='orders.partner')
@@ -331,7 +361,9 @@ class TestRouting:
         finally:
             _cleanup_env()
 
-    def test_partner_service_overrides_everything(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_partner_service_overrides_everything(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(
                 tmp_path, parties,
@@ -352,7 +384,9 @@ class TestRouting:
         finally:
             _cleanup_env()
 
-    def test_partnership_edits_take_effect_without_a_restart(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_partnership_edits_take_effect_without_a_restart(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties)
 
@@ -382,7 +416,7 @@ class TestRouting:
 
 class TestDuplicates:
 
-    def test_replay_gets_the_stored_mdn_and_is_not_routed_again(self, parties, tmp_path):
+    def test_replay_gets_the_stored_mdn_and_is_not_routed_again(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties)
 
@@ -406,7 +440,9 @@ class TestDuplicates:
         finally:
             _cleanup_env()
 
-    def test_fresh_message_ids_are_not_duplicates(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_fresh_message_ids_are_not_duplicates(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties)
 
@@ -429,7 +465,12 @@ class TestDuplicates:
 
 class TestCertificateRotation:
 
-    def test_message_signed_with_the_activated_next_certificate_is_accepted(self, parties, tmp_path, make_rotated_pair):
+    def test_message_signed_with_the_activated_next_certificate_is_accepted(
+        self,
+        parties:'TestParties',
+        tmp_path:'os.PathLike',
+        make_rotated_pair:'any_',
+    ) -> 'None':
         try:
             # The partner rotated its signing pair and the next certificate activated yesterday.
             rotated = make_rotated_pair('as2-sender-next')
@@ -439,9 +480,9 @@ class TestCertificateRotation:
 
             server, runtime = _make_runtime(
                 tmp_path, parties,
-                partner_cert=sender_certificate_pem,
-                next_cert=_certificate_to_pem(rotated.certificate),
-                next_cert_from=activated.isoformat(),
+                partner_certificate=sender_certificate_pem,
+                next_certificate=_certificate_to_pem(rotated.certificate),
+                next_certificate_from=activated.isoformat(),
             )
 
             sender_keystore = _rotated_sender_keystore(parties, rotated)
@@ -456,7 +497,14 @@ class TestCertificateRotation:
         finally:
             _cleanup_env()
 
-    def test_message_signed_with_a_not_yet_activated_certificate_is_rejected(self, parties, tmp_path, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_message_signed_with_a_not_yet_activated_certificate_is_rejected(
+        self,
+        parties:'TestParties',
+        tmp_path:'os.PathLike',
+        make_rotated_pair:'any_',
+    ) -> 'None':
         try:
             # The same rotation, except the next certificate only activates a month from now.
             rotated = make_rotated_pair('as2-sender-next')
@@ -466,9 +514,9 @@ class TestCertificateRotation:
 
             server, runtime = _make_runtime(
                 tmp_path, parties,
-                partner_cert=sender_certificate_pem,
-                next_cert=_certificate_to_pem(rotated.certificate),
-                next_cert_from=activation.isoformat(),
+                partner_certificate=sender_certificate_pem,
+                next_certificate=_certificate_to_pem(rotated.certificate),
+                next_certificate_from=activation.isoformat(),
             )
 
             sender_keystore = _rotated_sender_keystore(parties, rotated)
@@ -489,7 +537,7 @@ class TestCertificateRotation:
 
 class TestRejections:
 
-    def test_unknown_partner_is_rejected_and_nothing_is_routed(self, parties, tmp_path):
+    def test_unknown_partner_is_rejected_and_nothing_is_routed(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties, with_partnership=False)
 
@@ -505,7 +553,9 @@ class TestRejections:
         finally:
             _cleanup_env()
 
-    def test_rejected_message_is_not_remembered_as_a_duplicate(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_rejected_message_is_not_remembered_as_a_duplicate(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
         try:
             server, runtime = _make_runtime(tmp_path, parties, with_partnership=False)
 

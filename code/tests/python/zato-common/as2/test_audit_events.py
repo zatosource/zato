@@ -29,9 +29,20 @@ from zato.common.as2.resubmit import load_event, resend
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_table, get_audit_engine
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import loads
+from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.generic.api.outconn_as2 import _AS2Connection
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    from zato.server.base.parallel import ParallelServer
+    from .conftest import TestParties
+    ParallelServer = ParallelServer
+    TestParties = TestParties
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,22 +59,22 @@ _payload = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _key_to_pem(key):
+def _key_to_pem(key:'any_') -> 'any_':
     out = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _certificate_to_pem(certificate):
+def _certificate_to_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _load_events(event_type=None):
+def _load_events(event_type:'any_'=None) -> 'any_':
     """ Reads all the AS2 audit events back from the per-test database, oldest first.
     """
-    stmt = select(
+    statement = select(
         event_table.c.event_type,
         event_table.c.object_name,
         event_table.c.msg_id,
@@ -76,7 +87,8 @@ def _load_events(event_type=None):
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        rows = connection.execute(stmt).fetchall()
+        result = connection.execute(statement)
+        rows = result.fetchall()
 
     out = []
 
@@ -107,12 +119,12 @@ class _FakeOutconnServer:
     """
     name = 'test-server'
 
-    def decrypt(self, value):
+    def decrypt(self, value:'any_') -> 'any_':
         return value
 
 # ################################################################################################################################
 
-def _connection_config(parties, **overrides):
+def _connection_config(parties:'TestParties', **overrides:'any_') -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection.
     """
     sender_key_pem = _key_to_pem(parties.sender.signing_key)
@@ -186,14 +198,14 @@ def _connection_config(parties, **overrides):
 
 # ################################################################################################################################
 
-def _new_mock_client(parties):
+def _new_mock_client(parties:'TestParties') -> 'any_':
     """ Wires the receiving side's real inbound pipeline behind an HTTP mock transport.
     """
     receiver_partnership = new_partnership()
     receiver_partnership.as2_from = _receiver_identifier
     receiver_partnership.as2_to = _sender_identifier
 
-    def _handler(request):
+    def _handler(request:'httpx.Request') -> 'any_':
 
         body = request.read()
 
@@ -209,7 +221,7 @@ def _new_mock_client(parties):
 
 # ################################################################################################################################
 
-def _make_connection(parties, **overrides):
+def _make_connection(parties:'TestParties', **overrides:'any_') -> 'any_':
     """ Builds one AS2 connection over a mock wire.
     """
     server = _FakeOutconnServer()
@@ -228,7 +240,7 @@ def _make_connection(parties, **overrides):
 
 class TestOutboundEvidence:
 
-    def test_send_records_the_full_evidence_tuple(self, parties):
+    def test_send_records_the_full_evidence_tuple(self, parties:'TestParties') -> 'None':
 
         connection = _make_connection(parties)
         result = connection.send('cid-1', _payload, 'orders-850.edi')
@@ -258,7 +270,9 @@ class TestOutboundEvidence:
         assert event.details['payload'] == _payload.decode('utf8')
         assert event.details['filename'] == 'orders-850.edi'
 
-    def test_the_sync_mdn_is_recorded_and_closes_the_exchange(self, parties):
+# ################################################################################################################################
+
+    def test_the_sync_mdn_is_recorded_and_closes_the_exchange(self, parties:'TestParties') -> 'None':
 
         connection = _make_connection(parties)
         result = connection.send('cid-1', _payload)
@@ -284,7 +298,9 @@ class TestOutboundEvidence:
 
         assert reconciler.outstanding(cutoff) == []
 
-    def test_an_unconfirmed_delivery_records_an_error_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_an_unconfirmed_delivery_records_an_error_mdn(self, parties:'TestParties') -> 'None':
 
         # The receiver does not know this sender, so its MDN reports an error disposition.
         connection = _make_connection(parties, as2_from='UnknownSender')
@@ -300,7 +316,9 @@ class TestOutboundEvidence:
         assert event.outcome == AuditOutcome.Error
         assert event.details['modifier_kind'] == 'error'
 
-    def test_needs_audit_off_records_nothing(self, parties):
+# ################################################################################################################################
+
+    def test_needs_audit_off_records_nothing(self, parties:'TestParties') -> 'None':
 
         connection = _make_connection(parties)
         result = connection.send('cid-1', _payload, needs_audit=False)
@@ -313,7 +331,7 @@ class TestOutboundEvidence:
 
 class TestResendEvidence:
 
-    def test_resend_records_one_linked_attempt_without_duplicates(self, parties):
+    def test_resend_records_one_linked_attempt_without_duplicates(self, parties:'TestParties') -> 'None':
 
         connection = _make_connection(parties)
 
@@ -328,13 +346,14 @@ class TestResendEvidence:
         engine = get_audit_engine()
 
         with engine.connect() as db_connection:
-            stmt = select(event_table.c.id).where(event_table.c.event_type == AuditEvent.Message_Sent)
-            event_id = db_connection.execute(stmt).scalar()
+            statement = select(event_table.c.id).where(event_table.c.event_type == AuditEvent.Message_Sent)
+            db_result = db_connection.execute(statement)
+            event_id = db_result.scalar()
 
         event = load_event(event_id)
 
         # .. the resend turns the connection's own recording off, the way the resend service does.
-        def send(payload, filename):
+        def send(payload:'any_', filename:'any_') -> 'any_':
             out = connection.send('cid-resend', payload, filename, needs_audit=False)
             return out
 
@@ -363,7 +382,7 @@ class TestResendEvidence:
 # ################################################################################################################################
 
 class _FakeConfigManager:
-    def __init__(self):
+    def __init__(self) -> 'None':
 
         # The live per-type dict of AS2 outgoing connection configs, keyed by name
         self.outconn_as2 = {}
@@ -371,10 +390,12 @@ class _FakeConfigManager:
 # ################################################################################################################################
 
 class _FakePubSub:
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.published = []
 
-    def publish(self, topic, message, cid='', correl_id=''):
+# ################################################################################################################################
+
+    def publish(self, topic:'any_', message:'any_', cid:'any_'='', correl_id:'any_'='') -> 'None':
         self.published.append((topic, message))
 
 # ################################################################################################################################
@@ -384,20 +405,24 @@ class _FakeChannelServer:
     """
     name = 'test-server'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.invoked = []
         self.config_manager = _FakeConfigManager()
         self.pubsub_redis = _FakePubSub()
 
-    def decrypt(self, value):
+# ################################################################################################################################
+
+    def decrypt(self, value:'any_') -> 'any_':
         return value
 
-    def invoke(self, service_name, message):
+# ################################################################################################################################
+
+    def invoke(self, service_name:'any_', message:'any_') -> 'None':
         self.invoked.append((service_name, message))
 
 # ################################################################################################################################
 
-def _partnership_config():
+def _partnership_config() -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     as the receiving side sees the relationship.
     """
@@ -451,7 +476,7 @@ def _partnership_config():
 
 # ################################################################################################################################
 
-def _channel_config(parties):
+def _channel_config(parties:'TestParties') -> 'any_':
     """ The channel item of one AS2 channel, with the receiver's keys pasted in as PEMs.
     """
     receiver_key_pem = _key_to_pem(parties.receiver.signing_key)
@@ -477,10 +502,10 @@ def _channel_config(parties):
 
 # ################################################################################################################################
 
-def _make_runtime(parties, with_partnership=True):
+def _make_runtime(parties:'TestParties', with_partnership:'any_'=True) -> 'any_':
     """ Builds a channel runtime on a fake server.
     """
-    server = _FakeChannelServer()
+    server = cast_('ParallelServer', _FakeChannelServer())
 
     if with_partnership:
         server.config_manager.outconn_as2['PartnerCorp AS2'] = _partnership_config()
@@ -490,7 +515,7 @@ def _make_runtime(parties, with_partnership=True):
 
 # ################################################################################################################################
 
-def _build_wire_message(parties):
+def _build_wire_message(parties:'TestParties') -> 'any_':
     """ Builds one real AS2 message the way the sending side would.
     """
     partnership = new_partnership()
@@ -507,7 +532,7 @@ def _build_wire_message(parties):
 
 class TestInboundEvidence:
 
-    def test_an_accepted_message_records_message_received_and_mdn_sent(self, parties):
+    def test_an_accepted_message_records_message_received_and_mdn_sent(self, parties:'TestParties') -> 'None':
 
         runtime = _make_runtime(parties)
 
@@ -550,7 +575,9 @@ class TestInboundEvidence:
         mdn_raw_mime = decode_raw_mime(mdn_event.details['raw_mime'])
         assert mdn_raw_mime == result.body
 
-    def test_a_rejected_message_records_the_error_disposition(self, parties):
+# ################################################################################################################################
+
+    def test_a_rejected_message_records_the_error_disposition(self, parties:'TestParties') -> 'None':
 
         # No partnership is configured, so the message is rejected.
         runtime = _make_runtime(parties, with_partnership=False)
@@ -579,7 +606,9 @@ class TestInboundEvidence:
         assert mdn_event.details['modifier_kind'] == 'error'
         assert mdn_event.details['modifier'] == 'unknown-trading-relationship'
 
-    def test_a_replay_records_no_new_events(self, parties):
+# ################################################################################################################################
+
+    def test_a_replay_records_no_new_events(self, parties:'TestParties') -> 'None':
 
         runtime = _make_runtime(parties)
 

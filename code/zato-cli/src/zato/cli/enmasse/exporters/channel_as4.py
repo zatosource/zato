@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
@@ -34,13 +35,18 @@ logger = logging.getLogger(__name__)
 
 class ChannelAS4Exporter:
 
-    def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
+    def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'channel_as4_def_list':
+# ################################################################################################################################
+
+    def export(self, session:'SASession', cluster_id:'int') -> 'channel_as4_def_list':
         """ Exports AS4 channel definitions.
         """
         logger.info('Exporting AS4 channel definitions')
+
+        # Our response to produce
+        out:'channel_as4_def_list' = []
 
         # Get AS4 channels from database
         db_channels = http_soap_list(
@@ -54,15 +60,14 @@ class ChannelAS4Exporter:
 
         if not db_channels:
             logger.info('No AS4 channel definitions found in DB')
-            return []
+            return out
 
-        exported_channels: 'channel_as4_def_list' = []
         logger.info('Processing %d AS4 channel definitions', len(db_channels))
 
         for channel_row in db_channels:
             logger.debug('Processing AS4 channel row %s', channel_row)
 
-            exported_channel: 'anydict' = {
+            exported_channel:'anydict' = {
                 'name': channel_row['name'],
                 'url_path': channel_row['url_path'],
             }
@@ -74,20 +79,25 @@ class ChannelAS4Exporter:
             if security_name := channel_row.get('security_name'):
                 exported_channel['security'] = security_name
 
-            # Unpack the opaque attributes carrying the AS4 fields.
+            # Unpack the opaque attributes carrying the AS4 fields - the column
+            # genuinely stores a null when the channel was saved without one.
             opaque = {}
+
             if opaque1 := channel_row.get('opaque1'):
-                opaque = loads(opaque1) or {}
+                opaque = loads(opaque1)
+                if opaque is None:
+                    opaque = {}
 
             # Every AS4 field with a value is exported under its own name.
             for name in AS4.Common_Fields + AS4.Channel_Fields:
                 if value := opaque.get(name):
                     exported_channel[name] = value
 
-            exported_channels.append(exported_channel)
+            out.append(exported_channel)
 
-        logger.info('Successfully prepared %d AS4 channel definitions for export', len(exported_channels))
-        return exported_channels
+        logger.info('Successfully prepared %d AS4 channel definitions for export', len(out))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

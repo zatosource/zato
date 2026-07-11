@@ -24,6 +24,7 @@ from zato.common.as2.config import build_keystore, build_partnerships
 from zato.common.as2.duplicates import DuplicateStore
 from zato.common.as2.inbound import handle as inbound_handle
 from zato.common.audit_log.api import AuditLog
+from zato.common.typing_ import optional
 from zato.edi.envelope import read_envelope
 
 # ################################################################################################################################
@@ -39,6 +40,13 @@ if 0:
     InboundResult = InboundResult
     Partnership = Partnership
     PendingAsyncMDN = PendingAsyncMDN
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+keystorenone = optional['Keystore']
+auditlognone = optional[AuditLog]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,11 +71,11 @@ class AS2ChannelRuntime:
         # The runtime keystore is built lazily, on first use,
         # so that incomplete configuration does not break config propagation.
         self._lock = RLock()
-        self._keystore:'Keystore | None' = None
+        self._keystore:'keystorenone' = None
 
         # The audit log is built lazily too - opening the shared database can wait
         # until the first message actually arrives.
-        self._audit_log:'AuditLog | None' = None
+        self._audit_log:'auditlognone' = None
 
         # For how many days an already-processed message and its stored MDN are remembered.
         # The opaque column genuinely stores a null when the channel was saved without one.
@@ -75,10 +83,6 @@ class AS2ChannelRuntime:
 
         if not window_days:
             window_days = AS2.Default.Duplicate_Window_Days
-
-        # A config event published by an edit in the Dashboard carries the raw form value, which is a string.
-        if isinstance(window_days, str):
-            window_days = int(window_days)
 
         self.duplicates = DuplicateStore(window_days)
 
@@ -146,6 +150,9 @@ class AS2ChannelRuntime:
         # The envelope identifiers of an EDI document - a payload that is not EDI
         # comes back with all of them empty, which subscribers can tell by the format field.
         envelope = read_envelope(payload.data)
+        envelope_dict = envelope.to_dict()
+
+        data = payload.data.decode('utf8', 'replace')
 
         out = {
             'message_id': result.message_id,
@@ -153,8 +160,8 @@ class AS2ChannelRuntime:
             'as2_to': result.as2_to,
             'filename': payload.filename,
             'content_type': payload.content_type,
-            'data': payload.data.decode('utf8', 'replace'),
-            'edi': envelope.to_dict(),
+            'data': data,
+            'edi': envelope_dict,
         }
 
         return out
@@ -213,11 +220,14 @@ class AS2ChannelRuntime:
         routes whatever documents it accepted and remembers the message
         so a replay gets the same MDN back without being delivered twice.
         """
+        partnerships = self._get_partnerships()
+        keystore = self._get_keystore()
+
         out = inbound_handle(
             body,
             headers,
-            self._get_partnerships(),
-            self._get_keystore(),
+            partnerships,
+            keystore,
             is_duplicate=self.duplicates.get,
         )
 
@@ -249,8 +259,11 @@ class AS2ChannelRuntime:
         if out.pending_async_mdn:
             _ = spawn(self._deliver_async_mdn, cid, out.pending_async_mdn)
 
-        logger.info('AS2 message `%s` accepted on channel `%s`, %d payload(s) routed',
-            out.message_id, self.name, len(out.payloads))
+        payload_count = len(out.payloads)
+        suffix = 'payload' if payload_count == 1 else 'payloads'
+
+        logger.info('AS2 message `%s` accepted on channel `%s`, %d %s routed',
+            out.message_id, self.name, payload_count, suffix)
 
         return out
 

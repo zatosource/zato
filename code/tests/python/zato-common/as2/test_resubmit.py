@@ -41,27 +41,28 @@ _Default_Topic = 'zato.as2.inbound'
 def _use_tmp_audit_db(tmp_path:'os.PathLike') -> 'None':
     """ Points the audit database at a per-test SQLite file.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
 # ################################################################################################################################
 
 def _cleanup_env() -> 'None':
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 
 def _get_last_event_id() -> 'int':
     """ Returns the id of the most recently written audit event.
     """
-    stmt = select(event_table.c.id).order_by(event_table.c.id.desc()).limit(1)
+    statement = select(event_table.c.id).order_by(event_table.c.id.desc()).limit(1)
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        row = connection.execute(stmt).first()
+        result = connection.execute(statement)
+        row = result.first()
 
     out = row[0]
     return out
@@ -71,7 +72,7 @@ def _get_last_event_id() -> 'int':
 def _get_events(event_type:'str') -> 'dictlist':
     """ Returns all events of one type, oldest first, each as a dict.
     """
-    stmt = select(
+    statement = select(
         event_table.c.cid,
         event_table.c.correl_id,
         event_table.c.object_name,
@@ -82,7 +83,8 @@ def _get_events(event_type:'str') -> 'dictlist':
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        rows = connection.execute(stmt).fetchall()
+        result = connection.execute(statement)
+        rows = result.fetchall()
 
     out:'dictlist' = []
 
@@ -102,6 +104,8 @@ class _SendRecorder:
     def __init__(self) -> 'None':
         self.payload = None
         self.filename = None
+
+# ################################################################################################################################
 
     def __call__(self, payload:'str', filename:'str | None') -> 'SendResult':
         self.payload = payload
@@ -124,6 +128,8 @@ class _RouteRecorder:
         self.target_name = None
         self.message = None
 
+# ################################################################################################################################
+
     def __call__(self, target_name:'str', message:'stranydict') -> 'None':
         self.target_name = target_name
         self.message = message
@@ -133,7 +139,7 @@ class _RouteRecorder:
 
 class TestLoadEvent:
 
-    def test_load_event_returns_the_stored_details(self, tmp_path):
+    def test_load_event_returns_the_stored_details(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -162,7 +168,9 @@ class TestLoadEvent:
         finally:
             _cleanup_env()
 
-    def test_load_event_rejects_an_unknown_id(self, tmp_path):
+# ################################################################################################################################
+
+    def test_load_event_rejects_an_unknown_id(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             _ = AuditLog('test-server')
@@ -173,7 +181,9 @@ class TestLoadEvent:
         finally:
             _cleanup_env()
 
-    def test_load_event_rejects_an_event_without_json_data(self, tmp_path):
+# ################################################################################################################################
+
+    def test_load_event_rejects_an_event_without_json_data(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = AuditLog('test-server')
@@ -195,7 +205,7 @@ class TestLoadEvent:
 
 class TestFindConnectionName:
 
-    def test_the_matching_pair_names_its_connection(self):
+    def test_the_matching_pair_names_its_connection(self) -> 'None':
         configs = [
             {'name': 'AS2 to PartnerCorp', 'as2_from': 'ZatoRetail', 'as2_to': 'PartnerCorp'},
             {'name': 'AS2 to PartnerCorpEU', 'as2_from': 'ZatoRetail', 'as2_to': 'PartnerCorpEU'},
@@ -204,7 +214,9 @@ class TestFindConnectionName:
         out = find_connection_name(configs, 'ZatoRetail', 'PartnerCorpEU')
         assert out == 'AS2 to PartnerCorpEU'
 
-    def test_an_unknown_pair_is_rejected(self):
+# ################################################################################################################################
+
+    def test_an_unknown_pair_is_rejected(self) -> 'None':
         configs = [
             {'name': 'AS2 to PartnerCorp', 'as2_from': 'ZatoRetail', 'as2_to': 'PartnerCorp'},
         ]
@@ -217,7 +229,7 @@ class TestFindConnectionName:
 
 class TestResend:
 
-    def test_resend_delivers_the_stored_payload_again(self, tmp_path):
+    def test_resend_delivers_the_stored_payload_again(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -260,7 +272,9 @@ class TestResend:
         finally:
             _cleanup_env()
 
-    def test_resend_is_a_fresh_open_item(self, tmp_path):
+# ################################################################################################################################
+
+    def test_resend_is_a_fresh_open_item(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -289,7 +303,9 @@ class TestResend:
         finally:
             _cleanup_env()
 
-    def test_resend_rejects_other_event_types(self, tmp_path):
+# ################################################################################################################################
+
+    def test_resend_rejects_other_event_types(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -310,7 +326,9 @@ class TestResend:
         finally:
             _cleanup_env()
 
-    def test_resend_rejects_an_event_without_a_payload(self, tmp_path):
+# ################################################################################################################################
+
+    def test_resend_rejects_an_event_without_a_payload(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -348,6 +366,8 @@ class TestReprocess:
 
         return audit_log
 
+# ################################################################################################################################
+
     def _new_reversed_partnership(self) -> 'Partnership':
         """ Builds the partnership matching messages that arrive from PartnerCorp -
         the fields compare crosswise, the way inbound matching works.
@@ -358,7 +378,9 @@ class TestReprocess:
 
         return out
 
-    def test_reprocess_routes_to_the_partner_service(self, tmp_path):
+# ################################################################################################################################
+
+    def test_reprocess_routes_to_the_partner_service(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = self._seed_received_message()
@@ -393,7 +415,9 @@ class TestReprocess:
         finally:
             _cleanup_env()
 
-    def test_reprocess_routes_to_the_partner_topic(self, tmp_path):
+# ################################################################################################################################
+
+    def test_reprocess_routes_to_the_partner_topic(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = self._seed_received_message()
@@ -416,7 +440,9 @@ class TestReprocess:
         finally:
             _cleanup_env()
 
-    def test_reprocess_defaults_to_the_shared_topic(self, tmp_path):
+# ################################################################################################################################
+
+    def test_reprocess_defaults_to_the_shared_topic(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = self._seed_received_message()
@@ -436,7 +462,9 @@ class TestReprocess:
         finally:
             _cleanup_env()
 
-    def test_reprocess_records_the_new_attempt(self, tmp_path):
+# ################################################################################################################################
+
+    def test_reprocess_records_the_new_attempt(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = self._seed_received_message()
@@ -468,7 +496,9 @@ class TestReprocess:
         finally:
             _cleanup_env()
 
-    def test_reprocess_rejects_other_event_types(self, tmp_path):
+# ################################################################################################################################
+
+    def test_reprocess_rejects_other_event_types(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             audit_log = AuditLog('test-server')

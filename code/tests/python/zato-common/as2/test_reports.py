@@ -78,7 +78,7 @@ def _rows_for_partner(rows:'anylist', partner:'str') -> 'anylist':
 
 class TestVolume:
 
-    def test_counts_per_partner_and_document_type(self):
+    def test_counts_per_partner_and_document_type(self) -> 'None':
 
         # Two AS2 messages left and one arrived, all for the same partner ..
         mdn_reconciler = MDNReconciler(_server_name)
@@ -90,9 +90,9 @@ class TestVolume:
 
         # .. two orders left as X12 interchanges and one invoice arrived.
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', doc_type='850')
-        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000101', doc_type='810')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', document_type='850')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000101', document_type='810')
 
         rows = get_volume(utcnow(), Range_Week)
 
@@ -103,7 +103,7 @@ class TestVolume:
 
         as2_row = as2_rows[0]
         assert as2_row.source == AuditSource.AS2
-        assert as2_row.doc_type == ''
+        assert as2_row.document_type == ''
         assert as2_row.sent == 2
         assert as2_row.received == 1
 
@@ -112,7 +112,7 @@ class TestVolume:
 
         order_row = order_rows[0]
         assert order_row.source == AuditSource.X12
-        assert order_row.doc_type == '850'
+        assert order_row.document_type == '850'
         assert order_row.sent == 2
         assert order_row.received == 0
 
@@ -120,14 +120,16 @@ class TestVolume:
         assert len(invoice_rows) == 1
 
         invoice_row = invoice_rows[0]
-        assert invoice_row.doc_type == '810'
+        assert invoice_row.document_type == '810'
         assert invoice_row.sent == 0
         assert invoice_row.received == 1
 
-    def test_the_day_range_buckets_by_hour_and_the_week_range_by_day(self):
+# ################################################################################################################################
+
+    def test_the_day_range_buckets_by_hour_and_the_week_range_by_day(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
         now = utcnow()
 
@@ -144,11 +146,13 @@ class TestVolume:
         assert len(week_rows) == 1
         assert len(week_rows[0].period) == 10
 
-    def test_the_partner_filter_narrows_the_rows(self):
+# ################################################################################################################################
+
+    def test_the_partner_filter_narrows_the_rows(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
-        reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', document_type='850')
 
         # The filter matches anywhere inside the identity pair.
         rows = get_volume(utcnow(), Range_Week, partner=_partner_isa_id)
@@ -156,10 +160,12 @@ class TestVolume:
         assert len(rows) == 1
         assert rows[0].partner == _x12_pair
 
-    def test_the_range_cutoff_excludes_older_events(self):
+# ################################################################################################################################
+
+    def test_the_range_cutoff_excludes_older_events(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
         # A report run more than a week later no longer sees the event.
         now = utcnow() + timedelta(days=8)
@@ -167,10 +173,12 @@ class TestVolume:
 
         assert rows == []
 
-    def test_each_row_links_to_the_filtered_audit_log(self):
+# ################################################################################################################################
+
+    def test_each_row_links_to_the_filtered_audit_log(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
         rows = get_volume(utcnow(), Range_Week)
 
@@ -184,7 +192,7 @@ class TestVolume:
 
 class TestOutcomes:
 
-    def test_delivered_and_failed_mdns_count_per_partner(self):
+    def test_delivered_and_failed_mdns_count_per_partner(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
 
@@ -204,12 +212,14 @@ class TestOutcomes:
 
         assert row.source == AuditSource.AS2
         assert row.partner == _pair
-        assert row.doc_type == ''
+        assert row.document_type == ''
         assert row.delivered == 1
         assert row.failed == 1
         assert row.failure_breakdown == 'integrity-check-failed: 1'
 
-    def test_inbound_failures_report_their_error(self):
+# ################################################################################################################################
+
+    def test_inbound_failures_report_their_error(self) -> 'None':
 
         audit_log = AuditLog(_server_name)
 
@@ -228,15 +238,17 @@ class TestOutcomes:
         assert row.failed == 1
         assert row.failure_breakdown == 'decryption-failed: 1'
 
-    def test_acknowledgments_inherit_the_document_type_of_their_interchange(self):
+# ################################################################################################################################
+
+    def test_acknowledgments_inherit_the_document_type_of_their_interchange(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
         # An order was accepted and an invoice was rejected.
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000001')
 
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', doc_type='810')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', document_type='810')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000002', outcome=AuditOutcome.Error,
             data=dumps({'modifier': 'transaction-set-rejected'}))
 
@@ -248,17 +260,19 @@ class TestOutcomes:
         invoice_row = rows[0]
         order_row = rows[1]
 
-        assert invoice_row.doc_type == '810'
+        assert invoice_row.document_type == '810'
         assert invoice_row.delivered == 0
         assert invoice_row.failed == 1
         assert invoice_row.failure_breakdown == 'transaction-set-rejected: 1'
 
-        assert order_row.doc_type == '850'
+        assert order_row.document_type == '850'
         assert order_row.delivered == 1
         assert order_row.failed == 0
         assert order_row.failure_breakdown == ''
 
-    def test_failures_without_a_modifier_report_unspecified(self):
+# ################################################################################################################################
+
+    def test_failures_without_a_modifier_report_unspecified(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
 
@@ -275,19 +289,19 @@ class TestOutcomes:
 
 class TestAckDiscipline:
 
-    def test_turnaround_outstanding_and_rejected_count_per_partner(self):
+    def test_turnaround_outstanding_and_rejected_count_per_partner(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
         # One interchange was acknowledged cleanly ..
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000001')
 
         # .. another one is still waiting ..
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', document_type='850')
 
         # .. and a third one was rejected.
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000003', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000003', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000003', outcome=AuditOutcome.Error)
 
         rows = get_ack_discipline(utcnow(), Range_Week)
@@ -303,12 +317,14 @@ class TestAckDiscipline:
         assert row.outstanding == 1
         assert row.rejected == 1
 
-    def test_each_partner_gets_its_own_row(self):
+# ################################################################################################################################
+
+    def test_each_partner_gets_its_own_row(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
-        reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', document_type='850')
 
         rows = get_ack_discipline(utcnow(), Range_Week)
 
@@ -318,10 +334,12 @@ class TestAckDiscipline:
         assert rows[0].partner == f'{_our_isa_id}:OTHERPARTNER'
         assert rows[1].partner == _x12_pair
 
-    def test_the_row_links_to_the_audit_log_and_its_outstanding_view(self):
+# ################################################################################################################################
+
+    def test_the_row_links_to_the_audit_log_and_its_outstanding_view(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
         rows = get_ack_discipline(utcnow(), Range_Week)
 
@@ -339,22 +357,24 @@ class TestAckDiscipline:
 
 class TestCSVExport:
 
-    def test_the_volume_table_renders_as_csv(self):
+    def test_the_volume_table_renders_as_csv(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
         rows = get_volume(utcnow(), Range_Week)
         content = volume_csv(rows)
 
         lines = content.strip().splitlines()
 
-        assert lines[0] == 'period,source,partner,doc_type,sent,received'
+        assert lines[0] == 'period,source,partner,document_type,sent,received'
         assert len(lines) == 2
         assert _x12_pair in lines[1]
         assert lines[1].endswith('850,1,0')
 
-    def test_the_outcomes_table_renders_as_csv(self):
+# ################################################################################################################################
+
+    def test_the_outcomes_table_renders_as_csv(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
 
@@ -366,16 +386,18 @@ class TestCSVExport:
 
         lines = content.strip().splitlines()
 
-        assert lines[0] == 'source,partner,doc_type,delivered,failed,failure_breakdown'
+        assert lines[0] == 'source,partner,document_type,delivered,failed,failure_breakdown'
         assert len(lines) == 2
         assert _pair in lines[1]
         assert 'integrity-check-failed: 1' in lines[1]
 
-    def test_the_ack_discipline_table_renders_as_csv(self):
+# ################################################################################################################################
+
+    def test_the_ack_discipline_table_renders_as_csv(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', doc_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000001')
 
         rows = get_ack_discipline(utcnow(), Range_Week)

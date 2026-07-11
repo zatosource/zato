@@ -11,11 +11,13 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 # cryptography
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Zato
 from zato.common.as4.common import AS4SecurityException, EbMSError, NS
 from zato.common.as4.security.encrypt import HKDF_Info
+from zato.common.typing_ import optional
 from zato.common.util.xml_.core import qname, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
 from zato.common.util.xml_.keystore import certificate_list
 from zato.common.util.xml_.mime_ import part_list
@@ -31,6 +33,13 @@ if 0:
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     anylist = anylist
+    Certificate = Certificate
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+certificatenone = optional['Certificate']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +55,7 @@ class VerifyResult:
     """
     # The certificate the message was signed with, plus any further chain certificates
     # if they travelled inside the message as a PKIPath.
-    signer_certificate: 'Certificate | None' = None
+    signer_certificate: 'certificatenone' = None
     signer_chain: 'certificate_list'
 
     # Deep copies of the verified ds:Reference elements - receipts echo these back
@@ -60,17 +69,22 @@ def verify_envelope(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 
     """ Verifies the WS-Security signature of an incoming message: every reference digest,
     the signature value itself and the trust in the signing certificate.
     """
+    # Our response to produce
     out = VerifyResult()
     out.signer_chain = []
     out.signed_references = []
 
-    header = envelope.find(qname(NS.SOAP, 'Header'))
-    security = header.find(qname(NS.WSSE, 'Security'))
+    header_name = qname(NS.SOAP, 'Header')
+    security_name = qname(NS.WSSE, 'Security')
+    signature_name = qname(NS.DS, 'Signature')
+
+    header = envelope.find(header_name)
+    security = header.find(security_name)
 
     if security is None:
         raise AS4SecurityException(EbMSError.Policy_Noncompliance, 'Message has no wsse:Security header')
 
-    signature = security.find(qname(NS.DS, 'Signature'))
+    signature = security.find(signature_name)
 
     if signature is None:
         raise AS4SecurityException(EbMSError.Policy_Noncompliance, 'Message is not signed')
@@ -84,11 +98,16 @@ def verify_envelope(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 
         validate_certificate_chain(chain, keystore)
 
         # .. then check that nothing signed was tampered with ..
-        signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
+        signed_info_name = qname(NS.DS, 'SignedInfo')
+        reference_name = qname(NS.DS, 'Reference')
 
-        for reference in signed_info.findall(qname(NS.DS, 'Reference')):
+        signed_info = signature.find(signed_info_name)
+        references = signed_info.findall(reference_name)
+
+        for reference in references:
             verify_one_reference(reference, envelope, parts)
-            out.signed_references.append(deepcopy(reference))
+            reference_copy = deepcopy(reference)
+            out.signed_references.append(reference_copy)
 
         # .. and finally that the signature value itself is genuine.
         verify_signature_value(signature, chain)
@@ -111,13 +130,17 @@ def decrypt_parts(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 'N
     """ Decrypts the attachments of an incoming message in place. Messages
     without an xenc:EncryptedKey are passed through untouched.
     """
-    header = envelope.find(qname(NS.SOAP, 'Header'))
-    security = header.find(qname(NS.WSSE, 'Security'))
+    header_name = qname(NS.SOAP, 'Header')
+    security_name = qname(NS.WSSE, 'Security')
+    encrypted_key_name = qname(NS.XENC, 'EncryptedKey')
+
+    header = envelope.find(header_name)
+    security = header.find(security_name)
 
     if security is None:
         return
 
-    encrypted_key = security.find(qname(NS.XENC, 'EncryptedKey'))
+    encrypted_key = security.find(encrypted_key_name)
 
     if encrypted_key is None:
         return
@@ -128,11 +151,25 @@ def decrypt_parts(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 'N
     except XMLSecurityException as e:
         raise AS4SecurityException(EbMSError.Failed_Decryption, e.args[0])
 
+    encrypted_data_name = qname(NS.XENC, 'EncryptedData')
+    cipher_data_name = qname(NS.XENC, 'CipherData')
+    cipher_reference_name = qname(NS.XENC, 'CipherReference')
+
+    # The same content key decrypts every attachment of the message.
+    cipher = AESGCM(content_key)
+
+    encrypted_data_list = security.findall(encrypted_data_name)
+
     # Each EncryptedData names the attachment its cipher bytes live in.
-    for encrypted_data in security.findall(qname(NS.XENC, 'EncryptedData')):
-        cipher_data = encrypted_data.find(qname(NS.XENC, 'CipherData'))
-        cipher_reference = cipher_data.find(qname(NS.XENC, 'CipherReference'))
-        uri = cipher_reference.get('URI') or ''
+    for encrypted_data in encrypted_data_list:
+        cipher_data = encrypted_data.find(cipher_data_name)
+        cipher_reference = cipher_data.find(cipher_reference_name)
+
+        # The URI can be genuinely absent from a malformed incoming message.
+        uri = cipher_reference.get('URI')
+        if uri is None:
+            uri = ''
+
         content_id = uri[4:]
 
         part = find_part(parts, content_id)
@@ -144,9 +181,10 @@ def decrypt_parts(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 'N
         nonce = part.data[:_gcm_nonce_size_bytes]
         ciphertext = part.data[_gcm_nonce_size_bytes:]
 
+        # A tampered or wrongly keyed ciphertext fails its authentication tag check.
         try:
-            part.data = AESGCM(content_key).decrypt(nonce, ciphertext, None)
-        except Exception:
+            part.data = cipher.decrypt(nonce, ciphertext, None)
+        except InvalidTag:
             raise AS4SecurityException(EbMSError.Failed_Decryption, f'Could not decrypt part `{content_id}`')
 
 # ################################################################################################################################

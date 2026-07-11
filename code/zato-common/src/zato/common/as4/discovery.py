@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from hashlib import sha256
 from urllib.parse import quote
 
+# dnspython
+from dns.resolver import resolve as dns_resolve
+
 # httpx
 import httpx
 
@@ -47,6 +50,11 @@ _ns_smp = 'http://busdox.org/serviceMetadata/publishing/1.0/'
 # The WS-Addressing namespace used for endpoint addresses inside SMP metadata.
 _ns_wsa = 'http://www.w3.org/2005/08/addressing'
 
+# The fully qualified names of the SMP metadata elements read below.
+_endpoint_element    = f'{{{_ns_smp}}}Endpoint'
+_certificate_element = f'{{{_ns_smp}}}Certificate'
+_address_element     = f'{{{_ns_wsa}}}Address'
+
 # The transport profile identifier of Peppol AS4.
 Transport_Profile_Peppol_AS4 = 'peppol-transport-as4-v2_0'
 
@@ -57,7 +65,7 @@ _http_timeout_seconds = 60
 # ################################################################################################################################
 
 @dataclass(init=False)
-class EndpointInfo:
+class EndpointDetails:
     """ Where and how to reach one participant for one document type.
     """
     url: str = ''
@@ -74,11 +82,17 @@ def participant_dns_name(participant_scheme:'str', participant_id:'str', sml_dom
     """ Returns the DNS name under which a participant's SMP is published,
     following the BDXL naming scheme - a base32 SHA-256 hash of the lowercase identifier.
     """
-    normalized = participant_id.lower().encode('utf-8')
-    digest = sha256(normalized).digest()
+    normalized = participant_id.lower()
+    normalized = normalized.encode('utf-8')
+
+    hasher = sha256(normalized)
+    digest = hasher.digest()
 
     # BDXL uses unpadded lowercase base32.
-    encoded = b32encode(digest).decode('ascii').rstrip('=').lower()
+    encoded_bytes = b32encode(digest)
+    encoded = encoded_bytes.decode('ascii')
+    encoded = encoded.rstrip('=')
+    encoded = encoded.lower()
 
     out = f'{encoded}.{participant_scheme}.{sml_domain}'
     return out
@@ -89,13 +103,11 @@ def _default_naptr_lookup(dns_name:'str') -> 'strlist':
     """ Resolves the NAPTR records of a DNS name into their replacement URIs,
     keeping only the SMP metadata records.
     """
-    # Imported here so that fully offline callers, such as tests,
-    # never need the resolver module at all.
-    from dns.resolver import resolve
 
+    # Our response to produce
     out:'strlist' = []
 
-    answer = resolve(dns_name, 'NAPTR')
+    answer = dns_resolve(dns_name, 'NAPTR')
 
     for record in answer:
         service = record.service.decode('ascii')
@@ -106,7 +118,8 @@ def _default_naptr_lookup(dns_name:'str') -> 'strlist':
             # is the middle part between the delimiter characters.
             regexp = record.regexp.decode('ascii')
             delimiter = regexp[0]
-            uri = regexp.split(delimiter)[2]
+            regexp_parts = regexp.split(delimiter)
+            uri = regexp_parts[2]
             out.append(uri)
 
     return out
@@ -127,32 +140,48 @@ def _default_http_get(url:'str') -> 'bytes':
 
 # ################################################################################################################################
 
-def _parse_smp_metadata(data:'bytes', transport_profile:'str') -> 'EndpointInfo':
+def _parse_smp_metadata(data:'bytes', transport_profile:'str') -> 'EndpointDetails':
     """ Extracts the endpoint matching a transport profile from SMP service metadata.
     """
     root = etree.fromstring(data)
 
     # The metadata may or may not be wrapped in SignedServiceMetadata.
-    for endpoint in root.iter(f'{{{_ns_smp}}}Endpoint'):
+    for endpoint in root.iter(_endpoint_element):
 
         if endpoint.get('transportProfile') != transport_profile:
             continue
 
-        out = EndpointInfo()
+        out = EndpointDetails()
         out.transport_profile = transport_profile
 
         # The address lives in a WS-Addressing EndpointReference.
-        for address in endpoint.iter(f'{{{_ns_wsa}}}Address'):
-            out.url = address.text or ''
+        for address in endpoint.iter(_address_element):
+
+            # An empty address element genuinely carries None.
+            url = address.text
+            if url is None:
+                url = ''
+
+            out.url = url
             break
 
-        certificate = endpoint.find(f'{{{_ns_smp}}}Certificate')
+        certificate = endpoint.find(_certificate_element)
         if certificate is not None:
-            out.certificate_der = decode_base64(certificate.text or '')
 
-        return out
+            # An empty certificate element genuinely carries None.
+            certificate_text = certificate.text
+            if certificate_text is None:
+                certificate_text = ''
 
-    raise AS4Exception(f'No endpoint with transport profile `{transport_profile}` found in SMP metadata')
+            out.certificate_der = decode_base64(certificate_text)
+
+        break
+
+    # No endpoint of this transport profile means the participant cannot receive these documents.
+    else:
+        raise AS4Exception(f'No endpoint with transport profile `{transport_profile}` found in SMP metadata')
+
+    return out
 
 # ################################################################################################################################
 
@@ -164,7 +193,7 @@ def lookup_endpoint(
     transport_profile:'str'=Transport_Profile_Peppol_AS4,
     naptr_lookup:'callnone'=None,
     http_get:'callnone'=None,
-    ) -> 'EndpointInfo':
+    ) -> 'EndpointDetails':
     """ Discovers where to send documents for a participant: an SML DNS lookup
     finds their SMP, and the SMP's service metadata names the AS4 endpoint
     and its certificate for the given document type.
@@ -186,10 +215,12 @@ def lookup_endpoint(
         raise AS4Exception(f'No SMP found in DNS for `{participant_scheme}::{participant_id}` under `{sml_domain}`')
 
     # .. then ask the SMP for the service metadata of this document type ..
-    participant_part = quote(f'{participant_scheme}::{participant_id}', safe='')
+    participant = f'{participant_scheme}::{participant_id}'
+    participant_part = quote(participant, safe='')
     document_part = quote(document_type, safe='')
 
-    metadata_url = f'{smp_uris[0]}/{participant_part}/services/{document_part}'
+    smp_uri = smp_uris[0]
+    metadata_url = f'{smp_uri}/{participant_part}/services/{document_part}'
     metadata = http_get(metadata_url)
 
     # .. and read the AS4 endpoint out of it.

@@ -129,11 +129,18 @@ def _read_x12(text:'str') -> 'EnvelopeInfo':
 
         # The ISA carries the interchange-level sender, receiver and control number ..
         if tag == X12_Interchange_Tag:
-            out.sender_qualifier = _element(parts, 5).strip()
-            out.sender_id = _element(parts, 6).strip()
-            out.receiver_qualifier = _element(parts, 7).strip()
-            out.receiver_id = _element(parts, 8).strip()
-            out.interchange_control_number = _element(parts, 13).strip()
+            sender_qualifier = _element(parts, 5)
+            sender_id = _element(parts, 6)
+            receiver_qualifier = _element(parts, 7)
+            receiver_id = _element(parts, 8)
+            interchange_control_number = _element(parts, 13)
+
+            # The fixed-width ISA pads its fields with spaces
+            out.sender_qualifier = sender_qualifier.strip()
+            out.sender_id = sender_id.strip()
+            out.receiver_qualifier = receiver_qualifier.strip()
+            out.receiver_id = receiver_id.strip()
+            out.interchange_control_number = interchange_control_number.strip()
 
         # .. the first GS carries the application ids and the functional code ..
         elif tag == X12_Group_Tag:

@@ -162,3 +162,12 @@ class AS2SecurityException(AS2ProtocolException):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class AS2MalformedCMSException(AS2Exception):
+    """ Raised when a CMS structure does not parse as valid DER at all. The call sites translate it
+    into the disposition matching their context - integrity-check-failed for signatures,
+    decryption-failed for envelopes, decompression-failed for compressed entities.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################

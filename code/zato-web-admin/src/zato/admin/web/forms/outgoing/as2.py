@@ -16,6 +16,12 @@ from zato.common.as2.common import Default, DigestAlgorithm, EncryptionAlgorithm
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _sign_algorithm_choices = [
     (DigestAlgorithm.SHA256, 'SHA-256'),
     (DigestAlgorithm.SHA384, 'SHA-384'),
@@ -142,7 +148,7 @@ class CreateForm(forms.Form):
     warn_on_duplicate_filename = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     pool_size = forms.CharField(initial=AS2.Default.Pool_Size, widget=forms.TextInput(attrs=_number_attrs))
 
-    def __init__(self, prefix=None, post_data=None, req=None):
+    def __init__(self, prefix:'any_'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         for name, choices in _select_choices.items():

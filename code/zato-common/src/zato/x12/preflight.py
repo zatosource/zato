@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
+from zato.common.typing_ import optional
 from zato.x12.base import X12Message, _element_value
 from zato.x12.syntax import RawSegment
 from zato.x12.validation import validate_snip_3
@@ -23,8 +24,11 @@ from zato.x12.validation import validate_snip_3
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import strlist, strstrdict
     from zato.x12.control import ControlNumberStore
     from zato.x12.envelope import X12Interchange
+    strlist = strlist
+    strstrdict = strstrdict
     ControlNumberStore = ControlNumberStore
     X12Interchange = X12Interchange
 
@@ -32,10 +36,9 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-strlist          = list[str]
 raw_segment_list = list[RawSegment]
-store_none       = 'ControlNumberStore | None'
-message_none     = 'X12Message | None'
+store_none       = optional['ControlNumberStore']
+message_none     = optional[X12Message]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +74,9 @@ allowed_hl_children = {
 # The product id qualifier element pairs of a PO1 or IT1 - (qualifier position, id position).
 product_id_positions = ((6, 7), (8, 9), (10, 11))
 
+# Levels absent from allowed_hl_children never carry children, e.g. the item level.
+No_Allowed_Children = ()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -100,12 +106,17 @@ def is_valid_sscc(value:'str') -> 'bool':
     if not value.isdigit():
         return False
 
-    if len(value) != SSCC_Length:
+    value_length = len(value)
+    if value_length != SSCC_Length:
         return False
 
-    expected = gs1_check_digit(value[:-1])
+    digits = value[:-1]
+    expected = gs1_check_digit(digits)
 
-    out = int(value[-1]) == expected
+    last_character = value[-1]
+    check_digit = int(last_character)
+
+    out = check_digit == expected
     return out
 
 # ################################################################################################################################
@@ -117,12 +128,17 @@ def is_valid_gtin(value:'str') -> 'bool':
     if not value.isdigit():
         return False
 
-    if len(value) not in GTIN_Lengths:
+    value_length = len(value)
+    if value_length not in GTIN_Lengths:
         return False
 
-    expected = gs1_check_digit(value[:-1])
+    digits = value[:-1]
+    expected = gs1_check_digit(digits)
 
-    out = int(value[-1]) == expected
+    last_character = value[-1]
+    check_digit = int(last_character)
+
+    out = check_digit == expected
     return out
 
 # ################################################################################################################################
@@ -134,8 +150,8 @@ def _check_hl_tree(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
     pair must be one the guides allow, whether standard-pack or pick-and-pack.
     """
     hl_ids:'strlist' = []
-    parent_by_id:'dict[str, str]' = {}
-    level_by_id:'dict[str, str]' = {}
+    parent_by_id:'strstrdict' = {}
+    level_by_id:'strstrdict' = {}
 
     for raw_segment in raw_segments:
         if raw_segment.tag != 'HL':
@@ -189,7 +205,7 @@ def _check_hl_tree(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
             parent_level = level_by_id[parent_id]
             child_level = level_by_id[hl_id]
 
-            allowed = allowed_hl_children.get(parent_level, ())
+            allowed = allowed_hl_children.get(parent_level, No_Allowed_Children)
 
             if child_level not in allowed:
                 out.append(f'HL `{hl_id}` level `{child_level}` cannot be a child of level `{parent_level}`')
@@ -271,7 +287,8 @@ def preflight_ship_notice(
             for position in (2, 4):
                 qualifier = _element_value(raw_segment, position)
                 if qualifier == GTIN_Qualifier:
-                    product_id = _element_value(raw_segment, position + 1)
+                    id_position = position + 1
+                    product_id = _element_value(raw_segment, id_position)
                     if not is_valid_gtin(product_id):
                         out.append(f'LIN product id `{product_id}` is not a valid GTIN/UPC')
 
@@ -279,12 +296,12 @@ def preflight_ship_notice(
 
 # ################################################################################################################################
 
-def _uom_by_product_id(raw_segments:'raw_segment_list', tag:'str') -> 'dict[str, str]':
+def _uom_by_product_id(raw_segments:'raw_segment_list', tag:'str') -> 'strstrdict':
     """ Maps each UP-qualified product id of the given line tag to its unit of measure.
     """
 
     # Our response to produce
-    out:'dict[str, str]' = {}
+    out:'strstrdict' = {}
 
     for raw_segment in raw_segments:
         if raw_segment.tag != tag:

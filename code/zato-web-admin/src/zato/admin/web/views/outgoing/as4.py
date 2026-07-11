@@ -18,6 +18,12 @@ from zato.common.util.xml_.keystore import load_certificates_pem
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _as4_field_names = AS4.Common_Fields + AS4.Outgoing_Fields
 
 # ################################################################################################################################
@@ -32,10 +38,14 @@ def get_cert_expiry(signing_cert_chain:'str') -> 'str':
 
     try:
         certificates = load_certificates_pem(signing_cert_chain.encode('utf8'))
-    except Exception:
+
+    # The chain is user-pasted text - anything that is not PEM is simply not displayed.
+    except ValueError:
         return ''
 
-    not_after = certificates[0].not_valid_after_utc
+    first_certificate = certificates[0]
+    not_after = first_certificate.not_valid_after_utc
+
     out = not_after.strftime('%Y-%m-%d')
     return out
 
@@ -57,13 +67,6 @@ class Index(_Index):
     output_class = OutgoingAS4ConfigObject
     paginate = True
 
-    def get_initial_input(self):
-
-        return {
-            'connection': CONNECTION.OUTGOING,
-            'transport': URL_TYPE.AS4,
-        }
-
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal'
     output_optional = ('host', 'url_path', 'validate_tls', 'timeout') + _as4_field_names
@@ -71,22 +74,41 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def on_before_append_item(self, item):
+    def get_initial_input(self) -> 'stranydict':
 
-        # The expiry of the pasted signing certificate is computed for display only.
-        signing_cert_chain = getattr(item, 'as4_signing_cert_chain', '')
+        out = {
+            'connection': CONNECTION.OUTGOING,
+            'transport': URL_TYPE.AS4,
+        }
+
+        return out
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item:'any_') -> 'any_':
+
+        # The expiry of the pasted signing certificate is computed for display only -
+        # the field is optional in the get-list response, so it may be missing entirely.
+        if hasattr(item, 'as4_signing_cert_chain'):
+            signing_cert_chain = item.as4_signing_cert_chain
+        else:
+            signing_cert_chain = ''
+
         item.as4_cert_expiry = get_cert_expiry(signing_cert_chain)
 
         return item
 
 # ################################################################################################################################
 
-    def handle(self):
-        return {
+    def handle(self) -> 'stranydict':
+
+        out = {
             'show_search_form': True,
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
         }
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,15 +122,16 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'anydict') -> 'None':
         initial_input_dict['connection'] = CONNECTION.OUTGOING
         initial_input_dict['transport'] = URL_TYPE.AS4
         initial_input_dict['is_internal'] = False
 
 # ################################################################################################################################
 
-    def pre_process_input_dict(self, input_dict):
+    def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
 
+        # The URL path is optional in the form - an empty one becomes the root path.
         if not input_dict.get('url_path'):
             input_dict['url_path'] = '/'
 
@@ -117,8 +140,9 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def success_message(self, item):
-        return 'Successfully {} outgoing AS4 connection `{}`'.format(self.verb, item.name)
+    def success_message(self, item:'any_') -> 'str':
+        out = f'Successfully {self.verb} outgoing AS4 connection `{item.name}`'
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,21 +171,25 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id): # type: ignore
+def ping(req:'any_', id:'str', cluster_id:'str') -> 'JsonResponse':
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
+    # A server-side failure arrives as an error response whose body is the error's text.
     if isinstance(response, HttpResponseServerError):
-        err = response.content.decode('utf-8', 'replace')
-        return JsonResponse({
+        error = response.content.decode('utf-8', 'replace')
+        out = JsonResponse({
             'is_success': False,
-            'info': err,
+            'info': error,
         })
+        return out
 
     data = response.data
-    return JsonResponse({
+    out = JsonResponse({
         'is_success': data.is_success,
         'info': data.info,
     })
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

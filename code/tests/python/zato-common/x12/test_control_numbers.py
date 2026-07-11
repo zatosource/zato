@@ -24,14 +24,18 @@ class TestControlNumberStore(unittest.TestCase):
 
     maxDiff = None
 
-    def setUp(self) -> None:
+    def setUp(self) -> 'None':
         self._directory = TemporaryDirectory()
         self.path = os.path.join(self._directory.name, 'control-numbers.db')
 
-    def tearDown(self) -> None:
+# ################################################################################################################################
+
+    def tearDown(self) -> 'None':
         self._directory.cleanup()
 
-    def test_sequence_starts_at_one_and_advances(self) -> None:
+# ################################################################################################################################
+
+    def test_sequence_starts_at_one_and_advances(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         numbers:'list[int]' = []
@@ -44,7 +48,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_sequences_are_independent_per_kind(self) -> None:
+# ################################################################################################################################
+
+    def test_sequences_are_independent_per_kind(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         interchange_number = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -58,7 +64,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_sequences_are_independent_per_pair(self) -> None:
+# ################################################################################################################################
+
+    def test_sequences_are_independent_per_pair(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         first = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -71,7 +79,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_sequence_survives_reopening(self) -> None:
+# ################################################################################################################################
+
+    def test_sequence_survives_reopening(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -87,7 +97,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_inbound_duplicate_detection(self) -> None:
+# ################################################################################################################################
+
+    def test_inbound_duplicate_detection(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         # The first time a number arrives it is not a duplicate ..
@@ -110,7 +122,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_inbound_duplicates_survive_reopening(self) -> None:
+# ################################################################################################################################
+
+    def test_inbound_duplicates_survive_reopening(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.observe_inbound('SENDERID', 'RECEIVERID', Kind_Interchange, 905)
@@ -123,7 +137,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_next_number_records_last_used(self) -> None:
+# ################################################################################################################################
+
+    def test_next_number_records_last_used(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -148,7 +164,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_get_sequences_is_ordered_and_complete(self) -> None:
+# ################################################################################################################################
+
+    def test_get_sequences_is_ordered_and_complete(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -171,7 +189,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_set_next_repositions_a_sequence(self) -> None:
+# ################################################################################################################################
+
+    def test_set_next_repositions_a_sequence(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -183,7 +203,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_set_next_keeps_last_used_untouched(self) -> None:
+# ################################################################################################################################
+
+    def test_set_next_keeps_last_used_untouched(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         _ = store.next_number('SENDERID', 'RECEIVERID', Kind_Interchange)
@@ -198,7 +220,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_set_next_starts_a_new_sequence(self) -> None:
+# ################################################################################################################################
+
+    def test_set_next_starts_a_new_sequence(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         store.set_next('SENDERID', 'RECEIVERID', Kind_Group, 77)
@@ -215,7 +239,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_set_next_survives_reopening(self) -> None:
+# ################################################################################################################################
+
+    def test_set_next_survives_reopening(self) -> 'None':
         store = ControlNumberStore(self.path)
 
         store.set_next('SENDERID', 'RECEIVERID', Kind_Interchange, 12345)
@@ -228,7 +254,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_old_schema_receives_last_used_columns(self) -> None:
+# ################################################################################################################################
+
+    def test_old_schema_receives_last_used_columns(self) -> 'None':
 
         # Build a database file the way the first release did, without the last-used columns.
         connection = sqlite3.connect(self.path)
@@ -269,7 +297,9 @@ class TestControlNumberStore(unittest.TestCase):
 
         store.close()
 
-    def test_control_db_path_env_override(self) -> None:
+# ################################################################################################################################
+
+    def test_control_db_path_env_override(self) -> 'None':
 
         previous = os.environ.get(Env_Control_DB_Path)
         os.environ[Env_Control_DB_Path] = self.path

@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
+from zato.common.typing_ import optional
 from zato.edi.base import EDIComponent, EDIElement, EDIGroupAttr, EDISegmentAttr, _composite_classes, \
      _declared_attr_descriptors
 from zato.x12 import hipaa as hipaa, retail as retail  # noqa: F401 - imported so the dictionaries register their classes
@@ -26,11 +27,13 @@ from zato.x12.syntax import ISA_Tag, X12SyntaxError, parse_isa
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import strlist
     from zato.x12.base import X12Message
     from zato.x12.envelope import X12Interchange
     from zato.x12.syntax import RawSegment, Separators
     RawSegment = RawSegment
     Separators = Separators
+    strlist = strlist
     X12Interchange = X12Interchange
     X12Message = X12Message
 
@@ -38,8 +41,7 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-strlist          = list[str]
-typenone         = 'type | None'
+typenone         = optional[type]
 raw_segment_list = list['RawSegment']
 
 element_by_position_dict   = dict[int, EDIElement]
@@ -49,6 +51,10 @@ group_info_by_leader_dict  = dict[str, '_GroupInfo']
 group_info_list            = list['_GroupInfo']
 depth_by_segment_dict      = dict[int, int]
 hierarchical_loop_list     = list[X12HierarchicalLoop]
+
+render_schema_by_class_dict = dict[type, '_RenderSchema']
+elements_by_class_dict      = dict[type, element_by_position_dict]
+components_by_class_dict    = dict[type, component_by_position_dict]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,9 +109,9 @@ class _RenderSchema:
 
 # ################################################################################################################################
 
-_render_schema_cache:'dict[type, _RenderSchema]' = {}
-_element_descriptor_cache:'dict[type, element_by_position_dict]' = {}
-_component_descriptor_cache:'dict[type, component_by_position_dict]' = {}
+_render_schema_cache:'render_schema_by_class_dict' = {}
+_element_descriptor_cache:'elements_by_class_dict' = {}
+_component_descriptor_cache:'components_by_class_dict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -223,9 +229,11 @@ def _assign_hierarchy_depths(out:'depth_by_segment_dict', loops:'hierarchical_lo
     for loop in loops:
 
         for raw_segment in loop.raw_segments:
-            out[id(raw_segment)] = depth
+            segment_id = id(raw_segment)
+            out[segment_id] = depth
 
-        _assign_hierarchy_depths(out, loop.children, depth + 1)
+        child_depth = depth + 1
+        _assign_hierarchy_depths(out, loop.children, child_depth)
 
 # ################################################################################################################################
 
@@ -239,7 +247,8 @@ def _hierarchy_depths(raw_segments:'raw_segment_list') -> 'depth_by_segment_dict
 
     # Everything starts outside any loop ..
     for raw_segment in raw_segments:
-        out[id(raw_segment)] = 0
+        segment_id = id(raw_segment)
+        out[segment_id] = 0
 
     # .. and the segments of each HL loop take the depth of their loop.
     loops = X12HierarchicalLoop.build(raw_segments)
@@ -291,7 +300,9 @@ def _group_depths(groups:'group_info_by_leader_dict', raw_segments:'raw_segment_
             if group := groups.get(tag):
                 stack.append(group)
 
-        out[id(raw_segment)] = len(stack)
+        segment_id = id(raw_segment)
+        stack_depth = len(stack)
+        out[segment_id] = stack_depth
 
     return out
 
@@ -321,11 +332,17 @@ def _has_value(components:'strlist') -> 'bool':
     """ Tells whether an element carries any value at all - fixed-width padding
     is whitespace and does not count.
     """
+    # Any non-whitespace component means the element carries a value ..
     for component_value in components:
         if component_value.strip():
-            return True
+            out = True
+            break
 
-    return False
+    # .. and an element of empty components carries none.
+    else:
+        out = False
+
+    return out
 
 # ################################################################################################################################
 
@@ -424,7 +441,8 @@ def _render_transaction_set(lines:'strlist', message:'X12Message', separators:'S
     if is_generic:
         schema = None
     else:
-        schema = _get_render_schema(type(message))
+        message_class = type(message)
+        schema = _get_render_schema(message_class)
 
     # Hierarchical sets indent by the depth of their HL loops ..
     has_hierarchy = False

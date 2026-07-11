@@ -32,22 +32,32 @@ from zato.common.as4.presets import get_document_type_preset
 from zato.common.as4.profiles import Peppol_Participant_ID_Type
 from zato.common.as4.sbdh import build_sbdh, parse_sbdh
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import optional
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.as4.ebms import UserMessageInfo
+    from zato.common.as4.ebms import UserMessageDetails
     from zato.common.as4.inbound import InboundResult, pmode_list
     from zato.common.as4.outbound import PullResult, SendResult
     from zato.common.as4.pmode import PMode
-    from zato.common.typing_ import any_, stranydict, strbytes, strnone
+    from zato.common.typing_ import any_, stranydict, strbytes, strlist, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     from zato.server.base.parallel import ParallelServer
+    strlist = strlist
     PullResult = PullResult
     SendResult = SendResult
-    UserMessageInfo = UserMessageInfo
+    UserMessageDetails = UserMessageDetails
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+pmodenone     = optional['PMode']
+pmodelistnone = optional['pmode_list']
+keystorenone  = optional['Keystore']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,10 +76,12 @@ _ping_payload = b'<?xml version="1.0" encoding="UTF-8"?><ping/>'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_routed_message(profile:'str', user_message:'UserMessageInfo', payload:'any_') -> 'stranydict':
+def build_routed_message(profile:'str', user_message:'UserMessageDetails', payload:'any_') -> 'stranydict':
     """ Builds the dictionary that one accepted payload is routed with - the ebMS metadata
     plus, for Peppol, the SBDH metadata, so subscribers route without re-parsing anything.
     """
+
+    data = payload.data.decode('utf8', 'replace')
 
     # All the keys are always present, no matter the profile.
     out = {
@@ -80,7 +92,7 @@ def build_routed_message(profile:'str', user_message:'UserMessageInfo', payload:
         'service': user_message.service,
         'action': user_message.action,
         'mime_type': payload.mime_type,
-        'data': payload.data.decode('utf8', 'replace'),
+        'data': data,
         'sbdh_sender': '',
         'sbdh_receiver': '',
         'sbdh_document_type': '',
@@ -90,12 +102,12 @@ def build_routed_message(profile:'str', user_message:'UserMessageInfo', payload:
 
     # Peppol payloads carry an SBDH whose identifiers subscribers route by.
     if profile == AS4.Profile.Peppol:
-        info, _ = parse_sbdh(payload.data)
-        out['sbdh_sender'] = info.sender_id
-        out['sbdh_receiver'] = info.receiver_id
-        out['sbdh_document_type'] = info.document_type
-        out['sbdh_process_id'] = info.process_id
-        out['sbdh_instance_identifier'] = info.instance_identifier
+        sbdh_details, _ = parse_sbdh(payload.data)
+        out['sbdh_sender'] = sbdh_details.sender_id
+        out['sbdh_receiver'] = sbdh_details.receiver_id
+        out['sbdh_document_type'] = sbdh_details.document_type
+        out['sbdh_process_id'] = sbdh_details.process_id
+        out['sbdh_instance_identifier'] = sbdh_details.instance_identifier
 
     return out
 
@@ -110,13 +122,16 @@ class AS4Wrapper:
     def __init__(self, server:'ParallelServer', config:'stranydict') -> 'None':
         self.server = server
         self.config = config
-        self.address = '{}{}'.format(config['address_host'], config['address_url_path'])
+
+        address_host = config['address_host']
+        address_url_path = config['address_url_path']
+        self.address = f'{address_host}{address_url_path}'
 
         # The runtime P-Mode and keystore are built lazily, on first use,
         # so that incomplete configuration does not break config propagation.
         self._lock = RLock()
-        self._pmode:'PMode | None' = None
-        self._keystore:'Keystore | None' = None
+        self._pmode:'pmodenone' = None
+        self._keystore:'keystorenone' = None
 
         # One HTTP client is shared by all exchanges over this connection.
         verify_tls = config['validate_tls']
@@ -174,7 +189,7 @@ class AS4Wrapper:
         name = self.config['name']
 
         # Collect all the error signals the responder returned ..
-        errors = []
+        errors:'strlist' = []
         for error in result.errors:
             errors.append(f'{error.error_code} {error.detail}')
 
@@ -205,7 +220,8 @@ class AS4Wrapper:
         pmode = self._get_pmode()
         keystore = self._get_keystore()
 
-        parts = [new_part(data, mime_type)]
+        part = new_part(data, mime_type)
+        parts = [part]
 
         logger.info('AS4 out -> %s; name:%s; cid:%s', pmode.endpoint_url, self.config['name'], cid)
 
@@ -244,13 +260,23 @@ class AS4Wrapper:
             raise AS4Exception(f'No sender participant id was given and none is configured on `{name}`')
 
         # Find where the receiver's documents of this type are to be delivered ..
-        sml_domain = self.config['as4_sml_domain'] or SML_Domain_Production
-        endpoint_info = lookup_endpoint(Peppol_Participant_ID_Type, participant_id, preset.document_type, sml_domain)
+        sml_domain = self.config['as4_sml_domain']
+        if not sml_domain:
+            sml_domain = SML_Domain_Production
+
+        endpoint_details = lookup_endpoint(Peppol_Participant_ID_Type, participant_id, preset.document_type, sml_domain)
 
         # .. the receiving access point's certificate names that access point ..
-        receiver_certificate = load_der_x509_certificate(endpoint_info.certificate_der)
-        receiver_common_names = receiver_certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-        receiver_party_id = receiver_common_names[0].value
+        receiver_certificate = load_der_x509_certificate(endpoint_details.certificate_der)
+        receiver_subject = receiver_certificate.subject
+        receiver_common_names = receiver_subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+
+        first_common_name = receiver_common_names[0]
+        receiver_party_id = first_common_name.value
+
+        # A CommonName is a string in practice but the certificate API types it as bytes too
+        if isinstance(receiver_party_id, bytes):
+            receiver_party_id = receiver_party_id.decode('utf8')
 
         # .. wrap the business document in an SBDH, the way the network requires ..
         business_document = etree.fromstring(data)
@@ -271,8 +297,9 @@ class AS4Wrapper:
         )
 
         # .. build a per-send P-Mode carrying everything discovery and the preset supplied ..
-        pmode = deepcopy(self._get_pmode())
-        pmode.endpoint_url = endpoint_info.url
+        base_pmode = self._get_pmode()
+        pmode = deepcopy(base_pmode)
+        pmode.endpoint_url = endpoint_details.url
         pmode.responder.party_id = receiver_party_id
         pmode.service = preset.process_id
         pmode.action = preset.document_type
@@ -287,7 +314,8 @@ class AS4Wrapper:
         send_keystore.peer_signing_certificate = receiver_certificate
         send_keystore.peer_encryption_certificate = receiver_certificate
 
-        parts = [new_part(sbdh)]
+        part = new_part(sbdh)
+        parts = [part]
 
         logger.info('AS4 out -> %s; name:%s; to:%s; document:%s; cid:%s',
             pmode.endpoint_url, self.config['name'], participant_id, document_type, cid)
@@ -309,14 +337,19 @@ class AS4Wrapper:
         pmode = self._get_pmode()
         keystore = self._get_keystore()
 
-        logger.info('AS4 pull -> %s; name:%s; mpc:%s; cid:%s', pmode.endpoint_url, self.config['name'], mpc or pmode.mpc, cid)
+        # The log shows the channel the pull actually goes to.
+        log_mpc = mpc
+        if log_mpc is None:
+            log_mpc = pmode.mpc
+
+        logger.info('AS4 pull -> %s; name:%s; mpc:%s; cid:%s', pmode.endpoint_url, self.config['name'], log_mpc, cid)
 
         out = outbound_pull(pmode, keystore, mpc, client=self.session)
 
         if not out.is_ok:
 
             # Collect all the error signals the responder returned ..
-            errors = []
+            errors:'strlist' = []
             for error in out.errors:
                 errors.append(f'{error.error_code} {error.detail}')
 
@@ -335,12 +368,15 @@ class AS4Wrapper:
         """
         _ = ping_path
 
-        pmode = deepcopy(self._get_pmode())
+        base_pmode = self._get_pmode()
+        pmode = deepcopy(base_pmode)
         pmode.service = Default.Test_Service
         pmode.action = Default.Test_Action
 
         keystore = self._get_keystore()
-        parts = [new_part(_ping_payload)]
+
+        part = new_part(_ping_payload)
+        parts = [part]
 
         result = outbound_send(pmode, keystore, parts, client=self.session)
         self._check_send_result(cid, result)
@@ -364,8 +400,8 @@ class AS4ChannelRuntime:
         # The runtime P-Modes and keystore are built lazily, on first use,
         # so that incomplete configuration does not break config propagation.
         self._lock = RLock()
-        self._pmodes:'pmode_list | None' = None
-        self._keystore:'Keystore | None' = None
+        self._pmodes:'pmodelistnone' = None
+        self._keystore:'keystorenone' = None
 
         # The participants this channel accepts documents for - one per line,
         # an empty list means every participant is accepted. The opaque column
@@ -439,7 +475,7 @@ class AS4ChannelRuntime:
 
 # ################################################################################################################################
 
-    def _validate(self, user_message:'UserMessageInfo', payloads:'part_list') -> 'None':
+    def _validate(self, user_message:'UserMessageDetails', payloads:'part_list') -> 'None':
         """ Rejects Peppol documents addressed to a participant this channel does not serve,
         the way the Peppol AS4 profile requires.
         """
@@ -454,19 +490,21 @@ class AS4ChannelRuntime:
             return
 
         for payload in payloads:
-            info, _ignored = parse_sbdh(payload.data)
+            sbdh_details, _ = parse_sbdh(payload.data)
 
             # A receiver outside the serviced list is answered with the error signal
             # and detail the Peppol profile defines for this case.
-            if info.receiver_id not in self.serviced_participants:
+            if sbdh_details.receiver_id not in self.serviced_participants:
                 raise AS4ProtocolException(EbMSError.Other, Peppol_Not_Serviced)
 
 # ################################################################################################################################
 
-    def _build_routed_message(self, user_message:'UserMessageInfo', payload:'any_') -> 'stranydict':
+    def _build_routed_message(self, user_message:'UserMessageDetails', payload:'any_') -> 'stranydict':
         """ Builds the dictionary that one accepted payload is routed with.
         """
-        out = build_routed_message(self.config['as4_profile'], user_message, payload)
+        profile = self.config['as4_profile']
+
+        out = build_routed_message(profile, user_message, payload)
         return out
 
 # ################################################################################################################################
@@ -495,11 +533,14 @@ class AS4ChannelRuntime:
         """ Runs one incoming request through the AS4 inbound pipeline
         and routes whatever payloads it accepted.
         """
+        pmodes = self._get_pmodes()
+        keystore = self._get_keystore()
+
         out = inbound_handle(
             body,
             content_type,
-            self._get_pmodes(),
-            self._get_keystore(),
+            pmodes,
+            keystore,
             is_duplicate=self._is_duplicate,
             validate=self._validate,
         )
@@ -508,8 +549,11 @@ class AS4ChannelRuntime:
         if out.user_message:
             self._route(cid, out)
 
-            logger.info('AS4 message `%s` accepted on channel `%s`, %d payload(s) routed',
-                out.user_message.message_id, self.name, len(out.payloads))
+            payload_count = len(out.payloads)
+            suffix = 'payload' if payload_count == 1 else 'payloads'
+
+            logger.info('AS4 message `%s` accepted on channel `%s`, %d %s routed',
+                out.user_message.message_id, self.name, payload_count, suffix)
 
         elif out.is_error:
             logger.warning('AS4 request rejected with `%s` on channel `%s`; cid:%s', out.error_code, self.name, cid)

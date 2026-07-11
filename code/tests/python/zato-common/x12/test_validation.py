@@ -12,7 +12,8 @@ import unittest
 # Zato
 from zato.x12.envelope import parse_x12
 from zato.x12.validation import Element_Mandatory_Missing, Element_Too_Long, Element_Too_Short, Segment_Mandatory_Missing, \
-     Segment_Unrecognized, X12ValidationError, extract_business_key, validate_snip_2, validate_transaction_set
+     Segment_Unrecognized, X12ValidationError, extract_business_key, parse_x12_strict, validate_snip_2, \
+     validate_transaction_set
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,11 +26,15 @@ _isa = 'ISA*00*          *00*          *ZZ*SENDERID       *ZZ*RECEIVERID     ' +
 _isa_hipaa = 'ISA*00*          *00*          *ZZ*SUBMITTERID    *ZZ*PAYERID        ' + \
              '*260709*1200*^*00501*000000101*1*P*:~'
 
+# The 1-based position of the nine-digit interchange control number, ISA13.
+_isa_control_number_position = 13
+
 
 def _in_group(functional_id:'str', version:'str', body:'str', set_count:'int'=1, isa:'str'=_isa) -> 'str':
     """ Wraps a transaction set body in a full interchange whose IEA echoes the ISA13.
     """
-    control_number = isa.split('*')[13]
+    isa_elements = isa.split('*')
+    control_number = isa_elements[_isa_control_number_position]
 
     out = isa + \
         f'GS*{functional_id}*SENDERGS*RECEIVERGS*20260709*1200*905*X*{version}~' + \
@@ -135,12 +140,16 @@ class TestStrictParsing(unittest.TestCase):
 
     maxDiff = None
 
-    def test_clean_interchange_parses_strictly(self) -> None:
-        interchange = parse_x12(_in_group('IN', '004010', _invoice_clean), strict=True)
+    def test_clean_interchange_parses_strictly(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_clean)
+        interchange = parse_x12_strict(wire)
         self.assertEqual(len(interchange.groups), 1)
 
-    def test_lenient_mode_never_raises_on_content(self) -> None:
-        interchange = parse_x12(_in_group('IN', '004010', _invoice_unknown_segment))
+# ################################################################################################################################
+
+    def test_lenient_mode_never_raises_on_content(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_unknown_segment)
+        interchange = parse_x12(wire)
         message = interchange.transaction_set
 
         # The unknown segment stays reachable positionally
@@ -148,9 +157,12 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(len(unknown), 1)
         self.assertEqual(unknown[0].e_1, '1')
 
-    def test_unknown_segment_is_rejected(self) -> None:
+# ################################################################################################################################
+
+    def test_unknown_segment_is_rejected(self) -> 'None':
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('IN', '004010', _invoice_unknown_segment), strict=True)
+            wire = _in_group('IN', '004010', _invoice_unknown_segment)
+            _ = parse_x12_strict(wire)
 
         results = ctx.exception.results
         self.assertEqual(len(results), 1)
@@ -163,9 +175,12 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.segment_position, 3)
         self.assertEqual(issue.segment_error_code, Segment_Unrecognized)
 
-    def test_missing_mandatory_element(self) -> None:
+# ################################################################################################################################
+
+    def test_missing_mandatory_element(self) -> 'None':
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('IN', '004010', _invoice_missing_element), strict=True)
+            wire = _in_group('IN', '004010', _invoice_missing_element)
+            _ = parse_x12_strict(wire)
 
         issues = ctx.exception.results[0].issues
         self.assertEqual(len(issues), 1)
@@ -176,9 +191,12 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.element_position, 2)
         self.assertEqual(issue.element_error_code, Element_Mandatory_Missing)
 
-    def test_missing_mandatory_segment(self) -> None:
+# ################################################################################################################################
+
+    def test_missing_mandatory_segment(self) -> 'None':
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('IN', '004010', _invoice_missing_segment), strict=True)
+            wire = _in_group('IN', '004010', _invoice_missing_segment)
+            _ = parse_x12_strict(wire)
 
         issues = ctx.exception.results[0].issues
         self.assertEqual(len(issues), 1)
@@ -187,9 +205,12 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.segment_tag, 'IT1')
         self.assertEqual(issue.segment_error_code, Segment_Mandatory_Missing)
 
-    def test_element_too_short(self) -> None:
+# ################################################################################################################################
+
+    def test_element_too_short(self) -> 'None':
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('PO', '004010', _order_short_element), strict=True)
+            wire = _in_group('PO', '004010', _order_short_element)
+            _ = parse_x12_strict(wire)
 
         issues = ctx.exception.results[0].issues
         self.assertEqual(len(issues), 1)
@@ -200,9 +221,12 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.element_error_code, Element_Too_Short)
         self.assertEqual(issue.value, '0')
 
-    def test_element_too_long(self) -> None:
+# ################################################################################################################################
+
+    def test_element_too_long(self) -> 'None':
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('PO', '004010', _order_long_element), strict=True)
+            wire = _in_group('PO', '004010', _order_long_element)
+            _ = parse_x12_strict(wire)
 
         issues = ctx.exception.results[0].issues
         self.assertEqual(len(issues), 1)
@@ -212,8 +236,11 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.element_position, 3)
         self.assertEqual(issue.element_error_code, Element_Too_Long)
 
-    def test_composite_component_missing(self) -> None:
-        interchange = parse_x12(_in_group('HC', '005010X222A1', _claim_bad_composite, isa=_isa_hipaa))
+# ################################################################################################################################
+
+    def test_composite_component_missing(self) -> 'None':
+        wire = _in_group('HC', '005010X222A1', _claim_bad_composite, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
         issues = validate_snip_2(interchange.transaction_set)
 
         self.assertEqual(len(issues), 1)
@@ -224,7 +251,9 @@ class TestStrictParsing(unittest.TestCase):
         self.assertEqual(issue.component_position, 2)
         self.assertEqual(issue.element_error_code, Element_Mandatory_Missing)
 
-    def test_all_issues_are_collected(self) -> None:
+# ################################################################################################################################
+
+    def test_all_issues_are_collected(self) -> 'None':
         # An unknown segment plus a missing element plus a missing IT1 - everything reported at once
         body = 'ST*810*0001~' + \
             'BIG*20260715~' + \
@@ -233,20 +262,27 @@ class TestStrictParsing(unittest.TestCase):
             'SE*5*0001~'
 
         with self.assertRaises(X12ValidationError) as ctx:
-            _ = parse_x12(_in_group('IN', '004010', body), strict=True)
+            wire = _in_group('IN', '004010', body)
+            _ = parse_x12_strict(wire)
 
         issues = ctx.exception.results[0].issues
         self.assertEqual(len(issues), 3)
 
-    def test_generic_message_is_always_clean(self) -> None:
-        interchange = parse_x12(_in_group('SC', '004010', _generic_set), strict=True)
+# ################################################################################################################################
+
+    def test_generic_message_is_always_clean(self) -> 'None':
+        wire = _in_group('SC', '004010', _generic_set)
+        interchange = parse_x12_strict(wire)
 
         message = interchange.transaction_set
         issues = validate_transaction_set(message)
         self.assertEqual(issues, [])
 
-    def test_clean_hipaa_interchange_parses_strictly(self) -> None:
-        interchange = parse_x12(_in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa), strict=True)
+# ################################################################################################################################
+
+    def test_clean_hipaa_interchange_parses_strictly(self) -> 'None':
+        wire = _in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa)
+        interchange = parse_x12_strict(wire)
         self.assertEqual(len(interchange.groups), 1)
 
 # ################################################################################################################################
@@ -256,30 +292,52 @@ class TestBusinessKeys(unittest.TestCase):
 
     maxDiff = None
 
-    def test_purchase_order_key(self) -> None:
+    def test_purchase_order_key(self) -> 'None':
         body = 'ST*850*0001~BEG*00*SA*PO-4529**20260709~PO1*1*10*EA*9.75~SE*4*0001~'
-        message = parse_x12(_in_group('PO', '004010', body)).transaction_set
+        wire = _in_group('PO', '004010', body)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         self.assertEqual(extract_business_key(message), 'PO-4529')
 
-    def test_invoice_key(self) -> None:
-        message = parse_x12(_in_group('IN', '004010', _invoice_clean)).transaction_set
+# ################################################################################################################################
+
+    def test_invoice_key(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_clean)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(extract_business_key(message), 'INV-9981')
 
-    def test_ship_notice_key(self) -> None:
-        message = parse_x12(_in_group('SH', '004010', _ship_notice_clean)).transaction_set
+# ################################################################################################################################
+
+    def test_ship_notice_key(self) -> 'None':
+        wire = _in_group('SH', '004010', _ship_notice_clean)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(extract_business_key(message), 'SHIP-88112')
 
-    def test_claim_key(self) -> None:
-        message = parse_x12(_in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_claim_key(self) -> 'None':
+        wire = _in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(extract_business_key(message), 'PATIENT-001')
 
-    def test_remittance_key(self) -> None:
-        message = parse_x12(_in_group('HP', '005010X221A1', _remittance_clean, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_remittance_key(self) -> 'None':
+        wire = _in_group('HP', '005010X221A1', _remittance_clean, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(extract_business_key(message), '12345')
 
-    def test_unknown_set_has_no_key(self) -> None:
-        message = parse_x12(_in_group('SC', '004010', _generic_set)).transaction_set
+# ################################################################################################################################
+
+    def test_unknown_set_has_no_key(self) -> 'None':
+        wire = _in_group('SC', '004010', _generic_set)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(extract_business_key(message), '')
 
 # ################################################################################################################################

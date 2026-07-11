@@ -32,22 +32,34 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What a YAML definition means when it does not say otherwise.
+_default_is_active = True
+_default_is_internal = False
+_default_url_path = '/'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OutgoingAS4Importer:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
-        self.connection_defs = {}
+        self.connection_defs:'anydict' = {}
 
 # ################################################################################################################################
 
     def get_outgoing_as4_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
-        out = {}
+
+        # Our response to produce
+        out:'anydict' = {}
+
         logger.info('Retrieving outgoing AS4 connections from database for cluster_id=%s', cluster_id)
 
-        query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
-            filter(HTTPSOAP.connection==CONNECTION.OUTGOING).\
-            filter(HTTPSOAP.transport==URL_TYPE.AS4) # type: ignore
+        query = session.query(HTTPSOAP)
+        query = query.filter(HTTPSOAP.cluster_id==cluster_id)
+        query = query.filter(HTTPSOAP.connection==CONNECTION.OUTGOING)
+        query = query.filter(HTTPSOAP.transport==URL_TYPE.AS4)
+
         connections = to_json(query, return_as_dict=True)
         logger.info('Processing %d outgoing AS4 connections', len(connections))
 
@@ -71,8 +83,8 @@ class OutgoingAS4Importer:
 # ################################################################################################################################
 
     def compare_outgoing_as4(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
-        to_create = []
-        to_update = []
+        to_create:'anylist' = []
+        to_update:'anylist' = []
 
         logger.info('Comparing %d YAML outgoing AS4 connections with %d DB outgoing AS4 connections', len(yaml_defs), len(db_defs))
 
@@ -115,7 +127,9 @@ class OutgoingAS4Importer:
                     logger.info('No update needed for %s', name)
 
         logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
-        return to_create, to_update
+
+        out = to_create, to_update
+        return out
 
 # ################################################################################################################################
 
@@ -126,12 +140,12 @@ class OutgoingAS4Importer:
         outgoing = HTTPSOAP()
 
         outgoing.name = name
-        outgoing.is_active = outgoing_def.get('is_active', True)
+        outgoing.is_active = outgoing_def.get('is_active', _default_is_active)
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.AS4
         outgoing.cluster = self.importer.get_cluster(session)
-        outgoing.is_internal = outgoing_def.get('is_internal', False)
-        outgoing.url_path = outgoing_def.get('url_path', '/')
+        outgoing.is_internal = outgoing_def.get('is_internal', _default_is_internal)
+        outgoing.url_path = outgoing_def.get('url_path', _default_url_path)
         outgoing.soap_action = ''
         outgoing.timeout = outgoing_def.get('timeout', MISC.DEFAULT_HTTP_TIMEOUT)
 
@@ -149,6 +163,7 @@ class OutgoingAS4Importer:
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
+
         return outgoing
 
 # ################################################################################################################################
@@ -169,6 +184,7 @@ class OutgoingAS4Importer:
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
+
         return outgoing
 
 # ################################################################################################################################
@@ -179,8 +195,8 @@ class OutgoingAS4Importer:
         db_outgoing = self.get_outgoing_as4_from_db(session, self.importer.cluster_id)
         to_create, to_update = self.compare_outgoing_as4(outgoing_list, db_outgoing)
 
-        out_created = []
-        out_updated = []
+        out_created:'anylist' = []
+        out_updated:'anylist' = []
 
         try:
             logger.info('Creating %d new outgoing AS4 connections', len(to_create))
@@ -201,13 +217,16 @@ class OutgoingAS4Importer:
             session.commit()
             logger.info('Successfully committed all changes')
 
+        # A genuinely broad boundary - whatever failed while syncing,
+        # the session must be rolled back before the error propagates.
         except Exception as e:
             logger.error('Error syncing outgoing AS4 connections: %s', e)
             logger.exception('Full exception details:')
             session.rollback()
             raise
 
-        return out_created, out_updated
+        out = out_created, out_updated
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

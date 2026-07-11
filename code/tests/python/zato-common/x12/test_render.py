@@ -116,7 +116,7 @@ class TestExtractX12(unittest.TestCase):
 
     maxDiff = None
 
-    def test_extract_plain(self) -> None:
+    def test_extract_plain(self) -> 'None':
 
         # A payload that is exactly one interchange comes back as-is.
         out = extract_x12(_purchase_order_850)
@@ -124,7 +124,7 @@ class TestExtractX12(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_extract_embedded(self) -> None:
+    def test_extract_embedded(self) -> 'None':
 
         # The interchange is lifted out of the surrounding MIME content.
         text = 'Content-Type: application/edi-x12\r\nContent-Disposition: attachment\r\n\r\n' + \
@@ -135,13 +135,13 @@ class TestExtractX12(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_extract_none_without_interchange(self) -> None:
+    def test_extract_none_without_interchange(self) -> 'None':
         out = extract_x12('{"mic": "T3JkZXJzTUlDVmFsdWU=, sha-256"}')
         self.assertEqual(out, '')
 
 # ################################################################################################################################
 
-    def test_extract_none_with_malformed_isa(self) -> None:
+    def test_extract_none_with_malformed_isa(self) -> 'None':
 
         # The tag alone is not an interchange - the fixed-width layout must hold.
         out = extract_x12('ISA is the tag every interchange starts with')
@@ -149,7 +149,7 @@ class TestExtractX12(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_extract_none_without_trailer(self) -> None:
+    def test_extract_none_without_trailer(self) -> 'None':
 
         # An interchange cut off before its IEA has no complete document to extract.
         truncated = _purchase_order_850.split('IEA')[0]
@@ -164,7 +164,7 @@ class TestRenderTypedSet(unittest.TestCase):
 
     maxDiff = None
 
-    def test_envelope_element_names(self) -> None:
+    def test_envelope_element_names(self) -> 'None':
         rendered = render_document(_purchase_order_850)
 
         self.assertIn('ISA - Interchange control header', rendered)
@@ -181,7 +181,7 @@ class TestRenderTypedSet(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_segment_element_names(self) -> None:
+    def test_segment_element_names(self) -> 'None':
         rendered = render_document(_purchase_order_850)
 
         # Message-level segments sit at the leftmost level, with their dictionary names ..
@@ -198,7 +198,7 @@ class TestRenderTypedSet(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_empty_elements_are_skipped(self) -> None:
+    def test_empty_elements_are_skipped(self) -> 'None':
         rendered = render_document(_purchase_order_850)
 
         # BEG04 is empty on the wire, so its release_number never shows.
@@ -209,7 +209,7 @@ class TestRenderTypedSet(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_loops_are_indented(self) -> None:
+    def test_loops_are_indented(self) -> 'None':
         rendered = render_document(_purchase_order_850)
 
         # The loop segments sit one level deeper than the message-level segments ..
@@ -240,7 +240,7 @@ class TestRenderHierarchy(unittest.TestCase):
 
     maxDiff = None
 
-    def test_hl_loops_are_indented_by_tree_depth(self) -> None:
+    def test_hl_loops_are_indented_by_tree_depth(self) -> 'None':
         rendered = render_document(_ship_notice_856)
 
         # The header area sits at the leftmost level ..
@@ -269,7 +269,7 @@ class TestRenderHierarchy(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_group_loops_nest_inside_hl_loops(self) -> None:
+    def test_group_loops_nest_inside_hl_loops(self) -> 'None':
         rendered = render_document(_ship_notice_856)
 
         # The party loop of the shipment level sits one level below its HL segments.
@@ -283,7 +283,7 @@ class TestRenderComposite(unittest.TestCase):
 
     maxDiff = None
 
-    def test_composite_components_have_their_own_names(self) -> None:
+    def test_composite_components_have_their_own_names(self) -> 'None':
         rendered = render_document(_claim_837p)
 
         # The HI diagnosis code is a composite - each component shows with its own name.
@@ -298,7 +298,7 @@ class TestRenderComposite(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_claim_loops_nest_inside_the_subscriber_level(self) -> None:
+    def test_claim_loops_nest_inside_the_subscriber_level(self) -> 'None':
         rendered = render_document(_claim_837p)
 
         # The subscriber HL loop sits below the billing provider one ..
@@ -317,7 +317,7 @@ class TestRenderGenericSet(unittest.TestCase):
 
     maxDiff = None
 
-    def test_generic_set_keeps_positional_names(self) -> None:
+    def test_generic_set_keeps_positional_names(self) -> 'None':
         rendered = render_document(_text_message_864)
 
         # A set without a dictionary shows its elements positionally ..
@@ -340,13 +340,13 @@ class TestRenderDocumentBoundary(unittest.TestCase):
 
     maxDiff = None
 
-    def test_no_document_renders_nothing(self) -> None:
+    def test_no_document_renders_nothing(self) -> 'None':
         self.assertEqual(render_document(''), '')
         self.assertEqual(render_document('{"disposition": "processed"}'), '')
 
 # ################################################################################################################################
 
-    def test_unparseable_document_renders_nothing(self) -> None:
+    def test_unparseable_document_renders_nothing(self) -> 'None':
 
         # The envelope numbers must agree - a wrong segment count means no parsed view.
         broken = _purchase_order_850.replace('SE*16*0001~', 'SE*99*0001~')
@@ -356,7 +356,7 @@ class TestRenderDocumentBoundary(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_document_embedded_in_mime_renders(self) -> None:
+    def test_document_embedded_in_mime_renders(self) -> 'None':
         text = 'Content-Type: application/edi-x12\r\n\r\n' + _purchase_order_850 + '\r\n--as2-boundary--\r\n'
 
         rendered = render_document(text)

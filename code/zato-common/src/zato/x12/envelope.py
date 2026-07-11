@@ -14,6 +14,7 @@ import json
 from datetime import datetime, timezone
 
 # Zato
+from zato.common.typing_ import optional
 from zato.x12.base import X12Message, _element_value
 from zato.x12.service import GE, GS, IEA, ISA, TA1
 from zato.x12.syntax import No_Repetition, RawSegment, Separators, default_separators, parse_isa, parse_segments
@@ -22,23 +23,24 @@ from zato.x12.syntax import No_Repetition, RawSegment, Separators, default_separ
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
+    from zato.common.typing_ import any_, anylist, intlist, intnone, stranydict, strlist
+    any_ = any_
+    anylist = anylist
+    intlist = intlist
+    intnone = intnone
+    stranydict = stranydict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases
-any_             = 'Any'
-intnone          = 'Optional[int]'
-strlist          = list[str]
-intlist          = list[int]
-anylist          = list['Any']
-stranydict       = dict[str, 'Any']
 raw_segment_list = list[RawSegment]
 message_list     = list[X12Message]
 group_list       = list['X12FunctionalGroup']
-group_none       = 'X12FunctionalGroup | None'
-raw_segment_list_none = 'raw_segment_list | None'
+
+group_none            = optional['X12FunctionalGroup']
+raw_segment_list_none = optional[raw_segment_list]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -385,8 +387,11 @@ def _validate_envelope(interchange:'X12Interchange') -> 'None':
     isa_control = interchange.isa.control_number
     iea_control = interchange.iea.control_number
 
+    isa_control_number = int(isa_control)
+    iea_control_number = int(iea_control)
+
     # The IEA must echo the interchange control number ..
-    if int(isa_control) != int(iea_control):
+    if isa_control_number != iea_control_number:
         raise X12EnvelopeError(f'ISA13 `{isa_control}` does not match IEA02 `{iea_control}`')
 
     # .. and carry the actual group count.
@@ -402,12 +407,14 @@ def _validate_envelope(interchange:'X12Interchange') -> 'None':
         gs_control = group.gs.control_number
         ge_control = group.ge.control_number
 
+        group_number = int(gs_control)
+        ge_group_number = int(ge_control)
+
         # The GE must echo the group control number ..
-        if int(gs_control) != int(ge_control):
+        if group_number != ge_group_number:
             raise X12EnvelopeError(f'GS06 `{gs_control}` does not match GE02 `{ge_control}`')
 
         # .. which must be unique within the interchange ..
-        group_number = int(gs_control)
         if group_number in seen_group_numbers:
             raise X12EnvelopeError(f'Duplicate group control number `{gs_control}`')
         seen_group_numbers.append(group_number)
@@ -441,23 +448,24 @@ def _validate_envelope(interchange:'X12Interchange') -> 'None':
 
             # .. and carry the actual segment count, ST and SE included.
             segment_count = len(raw_segments)
-            se_segment_count = int(_element_value(se_segment, 1))
+            se_count_value = _element_value(se_segment, 1)
+            se_segment_count = int(se_count_value)
 
             if se_segment_count != segment_count:
                 raise X12EnvelopeError(f'SE01 `{se_segment_count}` does not match the segment count {segment_count}')
 
 # ################################################################################################################################
 
-def parse_x12(raw:'str', strict:'bool'=False) -> 'X12Interchange':
+def parse_x12(raw:'str') -> 'X12Interchange':
     """ Parses wire text into an X12Interchange - the single public entry point.
     The separators come from the fixed-width ISA, each ST/SE slice resolves to its
     registered transaction set class by ST01 plus the GS08 version of its group,
     and the envelope control numbers and counts are validated on the way.
 
-    The default lenient mode keeps unknown segments and unmapped elements reachable
-    positionally - nothing is ever unparseable. Strict mode additionally applies
-    the implementation guide syntax checks (SNIP type 2) to every typed transaction
-    set and raises X12ValidationError with all the issues collected per set.
+    This lenient mode keeps unknown segments and unmapped elements reachable
+    positionally - nothing is ever unparseable. The strict mode of parse_x12_strict
+    in zato.x12.validation additionally applies the implementation guide syntax
+    checks (SNIP type 2) to every typed transaction set.
     """
 
     # Our response to produce
@@ -531,6 +539,12 @@ def parse_x12(raw:'str', strict:'bool'=False) -> 'X12Interchange':
 
         # An SE concludes the current set, which resolves to its registered class.
         if tag == 'SE':
+
+            # A GE is able to close the group while a set is still open, in which case
+            # the SE of that set has no group to file under.
+            if current_group is None:
+                raise X12EnvelopeError('SE found outside of a functional group')
+
             group_version = current_group.gs.version
             message_class = X12Message.resolve_class(current_set, group_version)
             message = message_class.from_raw(current_set, separators)
@@ -550,21 +564,6 @@ def parse_x12(raw:'str', strict:'bool'=False) -> 'X12Interchange':
 
     # The envelope is structurally complete - now its numbers must agree.
     _validate_envelope(out)
-
-    # Strict mode applies the dictionary-level checks on top of the envelope ones.
-    if strict:
-
-        # Imported here because zato.x12.validation itself imports this module
-        from zato.x12.validation import X12ValidationError, validate_interchange
-
-        results = validate_interchange(out)
-
-        issue_count = 0
-        for result in results:
-            issue_count += len(result.issues)
-
-        if issue_count:
-            raise X12ValidationError(f'Found {issue_count} validation issue(s)', results)
 
     return out
 

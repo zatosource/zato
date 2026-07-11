@@ -17,6 +17,12 @@ from zato.common.as4.discovery import lookup_endpoint, participant_dns_name, SML
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The SMP metadata for one participant and document type, as a Peppol SMP would return it.
 SMP_Metadata = b'''<?xml version="1.0" encoding="UTF-8"?>
 <smp:SignedServiceMetadata xmlns:smp="http://busdox.org/serviceMetadata/publishing/1.0/">
@@ -43,7 +49,7 @@ SMP_Metadata = b'''<?xml version="1.0" encoding="UTF-8"?>
 
 class TestParticipantDNSName:
 
-    def test_dns_name_shape(self):
+    def test_dns_name_shape(self) -> 'None':
         name = participant_dns_name('iso6523-actorid-upis', '0192:991825827', SML_Domain_Test)
 
         hash_part, scheme_part, rest = name.split('.', 2)
@@ -54,13 +60,17 @@ class TestParticipantDNSName:
         assert scheme_part == 'iso6523-actorid-upis'
         assert rest == SML_Domain_Test
 
-    def test_dns_name_is_case_insensitive(self):
+# ################################################################################################################################
+
+    def test_dns_name_is_case_insensitive(self) -> 'None':
         name_lower = participant_dns_name('iso6523-actorid-upis', '0192:abcdef', SML_Domain_Test)
         name_upper = participant_dns_name('iso6523-actorid-upis', '0192:ABCDEF', SML_Domain_Test)
 
         assert name_lower == name_upper
 
-    def test_dns_name_known_value(self):
+# ################################################################################################################################
+
+    def test_dns_name_known_value(self) -> 'None':
         # Computed independently: base32(sha256('0192:991825827')) without padding, lowercased.
         name = participant_dns_name('iso6523-actorid-upis', '0192:991825827', 'edelivery.tech.ec.europa.eu')
 
@@ -72,14 +82,14 @@ class TestParticipantDNSName:
 
 class TestLookupEndpoint:
 
-    def test_lookup_happy_path(self):
+    def test_lookup_happy_path(self) -> 'None':
         urls_requested = []
 
-        def naptr_lookup(dns_name):
+        def naptr_lookup(dns_name:'any_') -> 'any_':
             assert dns_name.endswith(SML_Domain_Test)
             return ['https://smp.example.com']
 
-        def http_get(url):
+        def http_get(url:'any_') -> 'any_':
             urls_requested.append(url)
             return SMP_Metadata
 
@@ -102,21 +112,28 @@ class TestLookupEndpoint:
         assert url.startswith('https://smp.example.com/iso6523-actorid-upis%3A%3A0192%3A991825827/services/')
         assert 'busdox-docid-qns%3A%3A' in url
 
-    def test_no_smp_in_dns_raises(self):
-        def naptr_lookup(dns_name):
+# ################################################################################################################################
+
+    def test_no_smp_in_dns_raises(self) -> 'None':
+        def naptr_lookup(dns_name:'any_') -> 'any_':
             return []
+
+        def http_get(url:'any_') -> 'any_':
+            return b''
 
         with pytest.raises(AS4Exception):
             _ = lookup_endpoint(
                 'iso6523-actorid-upis', '0192:991825827', 'doc-type',
-                naptr_lookup=naptr_lookup, http_get=lambda url: b'',
+                naptr_lookup=naptr_lookup, http_get=http_get,
             )
 
-    def test_no_matching_transport_profile_raises(self):
-        def naptr_lookup(dns_name):
+# ################################################################################################################################
+
+    def test_no_matching_transport_profile_raises(self) -> 'None':
+        def naptr_lookup(dns_name:'any_') -> 'any_':
             return ['https://smp.example.com']
 
-        def http_get(url):
+        def http_get(url:'any_') -> 'any_':
             return SMP_Metadata
 
         with pytest.raises(AS4Exception):

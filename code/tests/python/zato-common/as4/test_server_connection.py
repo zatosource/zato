@@ -20,6 +20,7 @@ import pytest
 
 # Zato
 import zato.server.connection.as4 as server_as4
+from zato.common.typing_ import cast_
 from zato.common.api import AS4
 from zato.common.as4.common import AS4Exception, Peppol_Not_Serviced
 from zato.common.as4.discovery import lookup_endpoint
@@ -27,6 +28,16 @@ from zato.common.as4.outbound import build_push_message, new_part
 from zato.common.as4.presets import get_document_type_preset
 from zato.common.as4.profiles import new_edelivery1_pmode
 from zato.server.connection.as4 import AS4ChannelRuntime, AS4Wrapper
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    from zato.server.base.parallel import ParallelServer
+    from .conftest import TestParties
+    ParallelServer = ParallelServer
+    TestParties = TestParties
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,13 +56,13 @@ Test_CID = 'test-cid-outgoing'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _key_pem(key):
+def _key_pem(key:'any_') -> 'any_':
     out = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode('utf8')
     return out
 
 # ################################################################################################################################
 
-def _cert_pem(certificate):
+def _cert_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('utf8')
     return out
 
@@ -62,14 +73,18 @@ class _FakeCache:
     """ A dict-backed stand-in for the server-wide cache the duplicate detection uses.
     """
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.data = {}
 
-    def exists(self, key):
+# ################################################################################################################################
+
+    def exists(self, key:'any_') -> 'any_':
         out = key in self.data
         return out
 
-    def set(self, key, value, expiry=None):
+# ################################################################################################################################
+
+    def set(self, key:'any_', value:'any_', expiry:'any_'=None) -> 'None':
         _ = expiry
         self.data[key] = value
 
@@ -79,17 +94,19 @@ class _FakePubSub:
     """ Records everything published to it.
     """
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.published = []
 
-    def publish(self, topic_name, message, cid=None, correl_id=None):
+# ################################################################################################################################
+
+    def publish(self, topic_name:'any_', message:'any_', cid:'any_'=None, correl_id:'any_'=None) -> 'None':
         self.published.append((topic_name, message, cid, correl_id))
 
 # ################################################################################################################################
 
 class _FakeConfigManager:
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.cache_api = _FakeCache()
 
 # ################################################################################################################################
@@ -98,21 +115,25 @@ class _FakeServer:
     """ Just enough of a server for the wrapper and the channel runtime to work offline.
     """
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.config_manager = _FakeConfigManager()
         self.pubsub_redis = _FakePubSub()
         self.invoked = []
 
-    def decrypt(self, value):
+# ################################################################################################################################
+
+    def decrypt(self, value:'any_') -> 'any_':
         return value
 
-    def invoke(self, service_name, message):
+# ################################################################################################################################
+
+    def invoke(self, service_name:'any_', message:'any_') -> 'None':
         self.invoked.append((service_name, message))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _keystore_config(own, peer):
+def _keystore_config(own:'any_', peer:'any_') -> 'any_':
     """ The pasted-PEM keystore fields of one party, trusting the other one.
     """
     out = {
@@ -127,7 +148,7 @@ def _keystore_config(own, peer):
 
 # ################################################################################################################################
 
-def _outgoing_config(parties, profile):
+def _outgoing_config(parties:'TestParties', profile:'any_') -> 'any_':
     """ The configuration of one outgoing AS4 connection, the way the wrapper receives it.
     """
     out = {
@@ -153,7 +174,7 @@ def _outgoing_config(parties, profile):
 
 # ################################################################################################################################
 
-def _channel_config(parties, profile, serviced_participants='', service_name=''):
+def _channel_config(parties:'TestParties', profile:'any_', serviced_participants:'any_'='', service_name:'any_'='') -> 'any_':
     """ The configuration of one AS4 channel, the way the runtime receives it.
     """
     out = {
@@ -177,27 +198,28 @@ def _channel_config(parties, profile, serviced_participants='', service_name='')
 
 # ################################################################################################################################
 
-def _make_wrapper(parties, profile):
-    server = _FakeServer()
+def _make_wrapper(parties:'TestParties', profile:'any_') -> 'any_':
+    server = cast_('ParallelServer', _FakeServer())
     out = AS4Wrapper(server, _outgoing_config(parties, profile))
     return out
 
 # ################################################################################################################################
 
-def _make_channel(parties, profile, serviced_participants='', service_name=''):
-    server = _FakeServer()
+def _make_channel(parties:'TestParties', profile:'any_', serviced_participants:'any_'='', service_name:'any_'='') -> 'any_':
+    server = cast_('ParallelServer', _FakeServer())
     out = AS4ChannelRuntime(server, _channel_config(parties, profile, serviced_participants, service_name))
     return out
 
 # ################################################################################################################################
 
-def _connect(wrapper, channel):
+def _connect(wrapper:'any_', channel:'any_') -> 'any_':
     """ Points the wrapper's HTTP client at the channel runtime - a loopback over a mocked transport.
     """
 
-    def responder(request):
+    def responder(request:'httpx.Request') -> 'any_':
         result = channel.handle('test-cid', request.content, request.headers['content-type'])
-        return httpx.Response(result.status_code, content=result.body, headers={'Content-Type': result.content_type})
+        out = httpx.Response(result.status_code, content=result.body, headers={'Content-Type': result.content_type})
+        return out
 
     wrapper.session = httpx.Client(transport=httpx.MockTransport(responder))
 
@@ -209,7 +231,7 @@ class TestWrapperSend:
     that runs the real channel runtime on the other side.
     """
 
-    def test_send_delivers_and_routes_to_topic(self, rsa_parties):
+    def test_send_delivers_and_routes_to_topic(self, rsa_parties:'TestParties') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'edelivery1')
         channel = _make_channel(rsa_parties, 'edelivery1')
         _connect(wrapper, channel)
@@ -233,7 +255,9 @@ class TestWrapperSend:
         assert message['action'] == 'SubmitInvoice'
         assert message['data'] == Payload.decode('utf8')
 
-    def test_send_routes_to_service_when_one_is_configured(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_send_routes_to_service_when_one_is_configured(self, rsa_parties:'TestParties') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'edelivery1')
         channel = _make_channel(rsa_parties, 'edelivery1', service_name='my.service')
         _connect(wrapper, channel)
@@ -249,23 +273,26 @@ class TestWrapperSend:
         assert service_name == 'my.service'
         assert message['data'] == Payload.decode('utf8')
 
-    def test_send_over_inactive_connection_is_rejected(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_send_over_inactive_connection_is_rejected(self, rsa_parties:'TestParties') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'edelivery1')
         wrapper.config['is_active'] = False
 
-        with pytest.raises(AS4Exception) as exc:
+        with pytest.raises(AS4Exception) as exception_info:
             _ = wrapper.send(Test_CID, Payload)
 
-        assert 'not active' in str(exc.value)
+        assert 'not active' in str(exception_info.value)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _smp_metadata(receiver_certificate):
+def _smp_metadata(receiver_certificate:'any_') -> 'bytes':
     """ The SMP metadata for the test participant, as a Peppol SMP would return it,
     naming the receiving access point's real certificate.
     """
-    certificate_b64 = b64encode(receiver_certificate.public_bytes(Encoding.DER)).decode('ascii')
+    certificate_b64_bytes = b64encode(receiver_certificate.public_bytes(Encoding.DER))
+    certificate_b64 = certificate_b64_bytes.decode('ascii')
 
     out = f'''<?xml version="1.0" encoding="UTF-8"?>
 <smp:SignedServiceMetadata xmlns:smp="http://busdox.org/serviceMetadata/publishing/1.0/">
@@ -292,19 +319,19 @@ def _smp_metadata(receiver_certificate):
 # ################################################################################################################################
 
 @pytest.fixture
-def recorded_discovery(rsa_parties, monkeypatch):
+def recorded_discovery(rsa_parties:'TestParties', monkeypatch:'any_') -> 'any_':
     """ Replaces live SML and SMP lookups with recorded fixtures - the real discovery
     code still runs, only DNS and HTTP are answered from the recordings.
     """
     smp_metadata = _smp_metadata(rsa_parties.receiver.signing_certificate_chain[0])
 
-    def naptr_lookup(dns_name):
+    def naptr_lookup(dns_name:'any_') -> 'any_':
         return ['https://smp.example.com']
 
-    def http_get(url):
+    def http_get(url:'any_') -> 'any_':
         return smp_metadata
 
-    def recorded_lookup(participant_type, participant_id, document_type, sml_domain):
+    def recorded_lookup(participant_type:'any_', participant_id:'any_', document_type:'any_', sml_domain:'any_') -> 'any_':
         out = lookup_endpoint(
             participant_type, participant_id, document_type,
             sml_domain=sml_domain, naptr_lookup=naptr_lookup, http_get=http_get)
@@ -320,7 +347,7 @@ class TestSendTo:
     the SBDH wrapping and the delivery to the discovered endpoint.
     """
 
-    def test_send_to_wraps_in_sbdh_and_delivers(self, rsa_parties, recorded_discovery):
+    def test_send_to_wraps_in_sbdh_and_delivers(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'peppol')
         channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Serviced_Participant)
         _connect(wrapper, channel)
@@ -349,15 +376,18 @@ class TestSendTo:
         assert 'urn:test' in message['data']
         assert '<Total>100</Total>' in message['data']
 
-    def test_send_to_uses_the_smp_supplied_endpoint(self, rsa_parties, recorded_discovery):
+# ################################################################################################################################
+
+    def test_send_to_uses_the_smp_supplied_endpoint(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'peppol')
         urls_requested = []
 
-        def responder(request):
+        def responder(request:'httpx.Request') -> 'any_':
             urls_requested.append(str(request.url))
             channel = _make_channel(rsa_parties, 'peppol')
             result = channel.handle('test-cid', request.content, request.headers['content-type'])
-            return httpx.Response(result.status_code, content=result.body, headers={'Content-Type': result.content_type})
+            out = httpx.Response(result.status_code, content=result.body, headers={'Content-Type': result.content_type})
+            return out
 
         wrapper.session = httpx.Client(transport=httpx.MockTransport(responder))
 
@@ -374,25 +404,27 @@ class TestNotServiced:
     the receiving access point does not serve.
     """
 
-    def test_unserviced_receiver_is_rejected(self, rsa_parties, recorded_discovery):
+    def test_unserviced_receiver_is_rejected(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'peppol')
 
         # The channel serves one participant only - and it is not the receiver.
         channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Other_Participant)
         _connect(wrapper, channel)
 
-        with pytest.raises(AS4Exception) as exc:
+        with pytest.raises(AS4Exception) as exception_info:
             _ = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         # The error signal carries the code and detail the Peppol profile defines.
-        assert 'EBMS:0004' in str(exc.value)
-        assert Peppol_Not_Serviced in str(exc.value)
+        assert 'EBMS:0004' in str(exception_info.value)
+        assert Peppol_Not_Serviced in str(exception_info.value)
 
         # Nothing was routed anywhere.
         assert channel.server.pubsub_redis.published == []
         assert channel.server.invoked == []
 
-    def test_empty_participant_list_accepts_everyone(self, rsa_parties, recorded_discovery):
+# ################################################################################################################################
+
+    def test_empty_participant_list_accepts_everyone(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
         wrapper = _make_wrapper(rsa_parties, 'peppol')
         channel = _make_channel(rsa_parties, 'peppol')
         _connect(wrapper, channel)
@@ -409,7 +441,7 @@ class TestDuplicateSuppression:
     """ The cache-backed duplicate detection keyed on eb:MessageId.
     """
 
-    def _wire_message(self, rsa_parties):
+    def _wire_message(self, rsa_parties:'TestParties') -> 'any_':
         """ One signed message, byte-identical however many times it is replayed.
         """
         pmode = new_edelivery1_pmode()
@@ -423,7 +455,9 @@ class TestDuplicateSuppression:
         out = (body, content_type, message_id)
         return out
 
-    def test_replay_gets_receipt_but_is_not_routed_again(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_replay_gets_receipt_but_is_not_routed_again(self, rsa_parties:'TestParties') -> 'None':
         channel = _make_channel(rsa_parties, 'edelivery1')
         body, content_type, message_id = self._wire_message(rsa_parties)
 
@@ -443,7 +477,9 @@ class TestDuplicateSuppression:
         # The receipt for the replay references the original message.
         assert message_id.encode('utf8') in second.body
 
-    def test_duplicate_window_is_cache_backed(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_duplicate_window_is_cache_backed(self, rsa_parties:'TestParties') -> 'None':
         channel = _make_channel(rsa_parties, 'edelivery1')
         body, content_type, message_id = self._wire_message(rsa_parties)
 
@@ -454,7 +490,9 @@ class TestDuplicateSuppression:
         key = AS4.Default.Duplicate_Cache_Prefix + message_id
         assert cache.exists(key)
 
-    def test_distinct_messages_are_both_routed(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_distinct_messages_are_both_routed(self, rsa_parties:'TestParties') -> 'None':
         channel = _make_channel(rsa_parties, 'edelivery1')
 
         body_first, content_type_first, _ = self._wire_message(rsa_parties)
@@ -472,7 +510,7 @@ class TestRoutedMessageMetadata:
     """ The shape of what subscribers receive - every key always present, no matter the profile.
     """
 
-    def test_all_keys_are_always_present(self, rsa_parties):
+    def test_all_keys_are_always_present(self, rsa_parties:'TestParties') -> 'None':
         channel = _make_channel(rsa_parties, 'edelivery1')
 
         pmode = new_edelivery1_pmode()

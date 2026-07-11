@@ -18,6 +18,12 @@ from zato.common.as2.rotation import complete_rotation, needs_rotation_completio
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # A fixed moment all the checks run against, so the tests never depend on the clock.
 _now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -29,19 +35,19 @@ _date_future       = '2026-08-01'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _certificate_to_pem(certificate):
+def _certificate_to_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _rotation_config(current_cert='', next_cert='', next_cert_from=''):
+def _rotation_config(current_certificate:'any_'='', next_certificate:'any_'='', next_certificate_from:'any_'='') -> 'any_':
     """ The certificate rotation fields of one Dashboard-managed AS2 connection.
     """
     out = {
-        'as2_partner_cert': current_cert,
-        'as2_partner_next_cert': next_cert,
-        'as2_partner_next_cert_from': next_cert_from,
+        'as2_partner_cert': current_certificate,
+        'as2_partner_next_cert': next_certificate,
+        'as2_partner_next_cert_from': next_certificate_from,
     }
 
     return out
@@ -51,41 +57,49 @@ def _rotation_config(current_cert='', next_cert='', next_cert_from=''):
 
 class TestNeedsRotationCompletion:
 
-    def test_date_past_the_grace_window_completes(self, make_rotated_pair):
+    def test_date_past_the_grace_window_completes(self, make_rotated_pair:'any_') -> 'None':
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(next_cert=next_pem, next_cert_from=_date_past_grace)
+        config = _rotation_config(next_certificate=next_pem, next_certificate_from=_date_past_grace)
 
         assert needs_rotation_completion(config, _now)
 
-    def test_date_passed_but_within_the_grace_window_does_not_complete(self, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_date_passed_but_within_the_grace_window_does_not_complete(self, make_rotated_pair:'any_') -> 'None':
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(next_cert=next_pem, next_cert_from=_date_within_grace)
+        config = _rotation_config(next_certificate=next_pem, next_certificate_from=_date_within_grace)
 
         assert not needs_rotation_completion(config, _now)
 
-    def test_future_date_does_not_complete(self, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_future_date_does_not_complete(self, make_rotated_pair:'any_') -> 'None':
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(next_cert=next_pem, next_cert_from=_date_future)
+        config = _rotation_config(next_certificate=next_pem, next_certificate_from=_date_future)
 
         assert not needs_rotation_completion(config, _now)
 
-    def test_next_certificate_without_a_date_never_completes(self, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_next_certificate_without_a_date_never_completes(self, make_rotated_pair:'any_') -> 'None':
         """ A next certificate with no date is an extra accepted certificate,
         not a scheduled cutover, so it is never promoted automatically.
         """
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(next_cert=next_pem)
+        config = _rotation_config(next_certificate=next_pem)
 
         assert not needs_rotation_completion(config, _now)
 
-    def test_no_next_certificate_never_completes(self, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_no_next_certificate_never_completes(self, make_rotated_pair:'any_') -> 'None':
         current_pem = _certificate_to_pem(make_rotated_pair('partnercorp-current').certificate)
 
-        config = _rotation_config(current_cert=current_pem, next_cert_from=_date_past_grace)
+        config = _rotation_config(current_certificate=current_pem, next_certificate_from=_date_past_grace)
 
         assert not needs_rotation_completion(config, _now)
 
@@ -94,11 +108,11 @@ class TestNeedsRotationCompletion:
 
 class TestCompleteRotation:
 
-    def test_next_certificate_becomes_the_current_one_verbatim(self, make_rotated_pair):
+    def test_next_certificate_becomes_the_current_one_verbatim(self, make_rotated_pair:'any_') -> 'None':
         current_pem = _certificate_to_pem(make_rotated_pair('partnercorp-current').certificate)
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(current_cert=current_pem, next_cert=next_pem, next_cert_from=_date_past_grace)
+        config = _rotation_config(current_certificate=current_pem, next_certificate=next_pem, next_certificate_from=_date_past_grace)
 
         complete_rotation(config)
 
@@ -106,7 +120,9 @@ class TestCompleteRotation:
         assert config['as2_partner_next_cert'] == ''
         assert config['as2_partner_next_cert_from'] == ''
 
-    def test_a_multi_certificate_pem_moves_verbatim(self, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_a_multi_certificate_pem_moves_verbatim(self, make_rotated_pair:'any_') -> 'None':
         """ A next field holding several certificates, e.g. a chain, is promoted as one string,
         with nothing reordered, reformatted or dropped.
         """
@@ -116,7 +132,7 @@ class TestCompleteRotation:
         second_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next-issuer').certificate)
         next_pem = first_pem + second_pem
 
-        config = _rotation_config(current_cert=current_pem, next_cert=next_pem, next_cert_from=_date_past_grace)
+        config = _rotation_config(current_certificate=current_pem, next_certificate=next_pem, next_certificate_from=_date_past_grace)
 
         complete_rotation(config)
 

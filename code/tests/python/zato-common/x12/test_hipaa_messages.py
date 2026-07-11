@@ -129,7 +129,7 @@ class TestClaim837P(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('Claim837P', parse_x12(_claim_837p).transaction_set)
         self.assertIsInstance(message, Claim837P)
 
@@ -155,7 +155,9 @@ class TestClaim837P(unittest.TestCase):
         self.assertEqual(service_line.service.charge_amount, '150')
         self.assertEqual(service_line.dates[0].date, '20260701')
 
-    def test_hierarchy(self) -> None:
+# ################################################################################################################################
+
+    def test_hierarchy(self) -> 'None':
         message = parse_x12(_claim_837p).transaction_set
 
         # The 2000A billing provider loop with the 2000B subscriber loop under it.
@@ -171,7 +173,9 @@ class TestClaim837P(unittest.TestCase):
         self.assertEqual(subscriber.level_code, '22')
         self.assertEqual(subscriber.segments('SBR')[0].e_1, 'P')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_claim_837p)
         serialized = interchange.serialize()
 
@@ -184,7 +188,7 @@ class TestClaim837I(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('Claim837I', parse_x12(_claim_837i).transaction_set)
         self.assertIsInstance(message, Claim837I)
 
@@ -200,7 +204,9 @@ class TestClaim837I(unittest.TestCase):
         self.assertEqual(service_line.service.procedure.code, '99284')
         self.assertEqual(service_line.service.charge_amount, '2400')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_claim_837i)
         serialized = interchange.serialize()
 
@@ -213,7 +219,7 @@ class TestRemittance835(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('Remittance835', parse_x12(_remittance_835).transaction_set)
         self.assertIsInstance(message, Remittance835)
 
@@ -250,7 +256,9 @@ class TestRemittance835(unittest.TestCase):
         self.assertEqual(message.adjustments[0].adjustment_id.reason_code, 'WO')
         self.assertEqual(message.adjustments[0].adjustment_id.reference, 'PATIENT-002')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_remittance_835)
         serialized = interchange.serialize()
 
@@ -263,7 +271,7 @@ class TestEligibility270And271(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate_270(self) -> None:
+    def test_navigate_270(self) -> 'None':
         message = cast_('EligibilityInquiry270', parse_x12(_inquiry_270).transaction_set)
         self.assertIsInstance(message, EligibilityInquiry270)
 
@@ -272,7 +280,9 @@ class TestEligibility270And271(unittest.TestCase):
         self.assertEqual(message.dates[0].qualifier, '291')
         self.assertEqual(message.inquiries[0].service_type, '30')
 
-    def test_hierarchy_270(self) -> None:
+# ################################################################################################################################
+
+    def test_hierarchy_270(self) -> 'None':
         message = parse_x12(_inquiry_270).transaction_set
 
         # Information source, receiver and subscriber chain into one branch.
@@ -292,7 +302,9 @@ class TestEligibility270And271(unittest.TestCase):
         self.assertEqual(subscriber.segments('NM1')[0].e_9, 'MEMBER123')
         self.assertEqual(subscriber.segments('EQ')[0].e_1, '30')
 
-    def test_navigate_271(self) -> None:
+# ################################################################################################################################
+
+    def test_navigate_271(self) -> 'None':
         message = cast_('EligibilityResponse271', parse_x12(_response_271).transaction_set)
         self.assertIsInstance(message, EligibilityResponse271)
 
@@ -305,7 +317,9 @@ class TestEligibility270And271(unittest.TestCase):
         self.assertEqual(message.rejections[0].reject_reason, '72')
         self.assertEqual(message.rejections[0].follow_up_action, 'C')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         for raw in (_inquiry_270, _response_271):
             interchange = parse_x12(raw)
             serialized = interchange.serialize()
