@@ -14,8 +14,10 @@ from unittest import TestCase, main
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
+from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
+from zato.common.api import SCHEDULER, SchedulerLink
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
@@ -112,6 +114,61 @@ class TestEnmasseSchedulerExporter(TestCase):
             for attr in ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']:
                 if attr in yaml_def and yaml_def[attr] is not None:
                     self.assertEqual(exported_def.get(attr), yaml_def.get(attr), f'Mismatch for interval attribute "{attr}" in scheduler job "{name}"')
+
+# ################################################################################################################################
+
+    def test_scheduler_export_skips_connection_linked_jobs(self):
+        """ Jobs auto-created for connections - whether through the generic link attributes
+        or the IMAP-specific one - are not exported on their own, while regular jobs are.
+        """
+        self._setup_test_environment()
+        _ = self.importer.get_cluster(self.session)
+
+        # A job linked to a connection through the generic link attributes ..
+        linked_job_def = {
+            'name': 'enmasse.job.linked.connection',
+            'service': 'demo.ping',
+            'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+            'is_active': True,
+            'minutes': 15,
+            SchedulerLink.Conn_Type: SchedulerLink.ConnType.REST_Outgoing,
+            SchedulerLink.Conn_ID: 12345,
+            SchedulerLink.Kind: SchedulerLink.KindType.Scheduler,
+        }
+
+        # .. a job linked to an IMAP connection ..
+        imap_job_def = {
+            'name': 'enmasse.job.linked.imap',
+            'service': 'demo.ping',
+            'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+            'is_active': True,
+            'minutes': 15,
+            'imap_conn_id': 23456,
+        }
+
+        # .. and a regular job with no link to any connection.
+        plain_job_def = {
+            'name': 'enmasse.job.plain',
+            'service': 'demo.ping',
+            'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+            'is_active': True,
+            'minutes': 15,
+        }
+
+        for job_def in (linked_job_def, imap_job_def, plain_job_def):
+            _ = self.scheduler_importer.create_job_definition(job_def, self.session)
+
+        self.session.commit()
+
+        # Export the jobs and index them by name
+        scheduler_exporter = SchedulerExporter(EnmasseYAMLExporter())
+        exported_jobs = scheduler_exporter.export(self.session, self.importer.cluster_id)
+        exported_names = {item['name'] for item in exported_jobs}
+
+        # Both connection-linked jobs are skipped, the regular one is exported
+        self.assertNotIn('enmasse.job.linked.connection', exported_names)
+        self.assertNotIn('enmasse.job.linked.imap', exported_names)
+        self.assertIn('enmasse.job.plain', exported_names)
 
 # ################################################################################################################################
 # ################################################################################################################################

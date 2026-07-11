@@ -198,6 +198,21 @@ $.fn.zato.post = function(url, callback, data, data_type, context) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.user_message = function(is_success, msg) {
+
+    // Style the message according to its outcome ..
+    var messageContainer = $('#user-message');
+    var cssClass = is_success ? 'user-message-success' : 'user-message-failure';
+
+    messageContainer.removeClass('user-message-success user-message-failure').addClass(cssClass);
+    messageContainer.text(msg);
+
+    // .. and make it visible on the page.
+    $('#user-message-div').show();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table._submitting = false;
 
 $.fn.zato.show_action_overlay = function(label) {
@@ -465,9 +480,11 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
     if(success) {
         var response = $.parseJSON(data.responseText);
         msg = response.message || response.msg;
+        $('#user-message-div').hide();
     }
     else {
         msg = data.responseText;
+        $.fn.zato.user_message(false, msg);
     }
 
     $.fn.zato.hide_action_overlay();

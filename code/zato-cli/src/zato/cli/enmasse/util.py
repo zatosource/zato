@@ -102,6 +102,28 @@ Invocation_Fields_SOAP = (
 
 # ################################################################################################################################
 
+def _as_order_fields(field_names:'any_') -> 'any_':
+    """ Turns a tuple of invocation field names into FileWriter order notation,
+    marking row-based fields with the :list suffix so they render as YAML lists.
+    """
+
+    # Our response to produce
+    out = []
+
+    for field_name in field_names:
+        if field_name in Invocation_Row_Fields:
+            out.append(field_name + ':list')
+        else:
+            out.append(field_name)
+
+    return tuple(out)
+
+# The same field lists in the notation the file writer's order tuples use
+Invocation_Order_Fields_REST = _as_order_fields(Invocation_Fields_REST)
+Invocation_Order_Fields_SOAP = _as_order_fields(Invocation_Fields_SOAP)
+
+# ################################################################################################################################
+
 def as_row_list(value:'any_') -> 'any_':
     """ Normalizes a row-based invocation field to a list of rows - the Dashboard stores them
     in the database as JSON strings while YAML files carry them as lists of mappings.
@@ -484,13 +506,15 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',
     order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \
         'groups:list', 'rate_limiting:list',
-    order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
+    order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', \
+        'tls_verify') + Invocation_Order_Fields_REST
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
     order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_type', 'username', 'token_url', 'tenant_id', \
         'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
-    order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
+    order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
+        'timeout', 'tls_verify') + Invocation_Order_Fields_SOAP
     order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
         'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
         'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \
@@ -548,6 +572,28 @@ def get_object_order(object_type:'str') -> 'strlist':
 
 _yaml_unsafe_chars = frozenset(',:[]{}&*#?|->!%@`')
 
+# Unquoted, these would be read back by a YAML parser as booleans or nulls instead of strings
+_yaml_keyword_scalars = frozenset(('true', 'false', 'yes', 'no', 'on', 'off', 'null', '~'))
+
+def _is_ambiguous_scalar(text:'str') -> 'bool':
+    """ Returns True if unquoted text would be read back by a YAML parser
+    as a number, boolean or null instead of a string.
+    """
+    text_lower = text.lower()
+
+    if text_lower in _yaml_keyword_scalars:
+        return True
+
+    # Anything that parses as a number would lose its string type on a round trip
+    try:
+        _ = float(text)
+    except ValueError:
+        out = False
+    else:
+        out = True
+
+    return out
+
 def _yaml_quote(value:'any_') -> 'str':
     """ Wraps a scalar value in single quotes if it contains characters
     that would make the YAML parser misinterpret it.
@@ -565,6 +611,12 @@ def _yaml_quote(value:'any_') -> 'str':
             if character in _yaml_unsafe_chars:
                 needs_quoting = True
                 break
+
+    # A string that reads back as a number or boolean must keep its string type
+    if not needs_quoting:
+        if isinstance(value, str):
+            if _is_ambiguous_scalar(text):
+                needs_quoting = True
 
     if needs_quoting:
         escaped = text.replace("'", "''")

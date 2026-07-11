@@ -113,8 +113,6 @@ $(document).ready(function() {
 
         var elem = $(String.format('#id_{0}serialization_type', suffix));
         elem.ready(function() {
-            console.log(elem);
-            console.log(elem.val());
             $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
             elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
         });
