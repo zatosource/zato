@@ -120,19 +120,6 @@ class ConfigLoader:
         server:'ServerModel'
     ) -> 'None':
 
-        #
-        # Search - start
-        #
-
-        query = self.odb.get_search_es_list(server.cluster.id, True)
-        self.config.search_es = ConfigDict.from_query('search_es', query, decrypt_func=self.decrypt)
-
-        #
-        # Search - end
-        #
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
         # Services
         query = self.odb.get_service_list(server.cluster.id, True)
         self.config.service = ConfigDict.from_query('service_list', query, decrypt_func=self.decrypt)

@@ -1,0 +1,380 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}ElasticSearch outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} Elasticsearch {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/es.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            '_address_list',
+
+            {% comment %} 2 {% endcomment %}
+            '_edit',
+            '_delete',
+            '_ping',
+
+            {% comment %} 3 {% endcomment %}
+            'id',
+            'is_active',
+            'address_list',
+
+            {% comment %} 4 {% endcomment %}
+            'username',
+            'timeout',
+
+            {% comment %} 5 {% endcomment %}
+            'is_tls_validation_enabled',
+            'tls_ca_certs_file',
+            'tls_cert_key_file',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">Outgoing ElasticSearch connections</h2>
+
+{% with has_generic="1" generic_type="outconn-es" %}
+    {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.es.create()">Create a new outgoing ElasticSearch connection</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Addresses</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address_list|linebreaksbr }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.outgoing.es.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.es.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.address_list }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.username|default:'' }}</td>
+                        <td class='ignore'>{{ item.timeout|default:'' }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.is_tls_validation_enabled }}</td>
+                        <td class='ignore'>{{ item.tls_ca_certs_file|default:'' }}</td>
+                        <td class='ignore'>{{ item.tls_cert_key_file|default:'' }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-es-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                                <label for="{{ create_form.is_active.id_for_label }}">
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.address_list.id_for_label }}">Addresses</label>
+                            </td>
+                            <td>
+                                {{ create_form.address_list }}
+                                <br/>
+                                <span class="form_hint">One http(s)://host:port address per line</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.username.id_for_label }}">Username</label>
+                            </td>
+                            <td>
+                                {{ create_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.secret.id_for_label }}">Password</label>
+                            </td>
+                            <td>
+                                {{ create_form.secret }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.timeout.id_for_label }}">Timeout (s.)</label>
+                            </td>
+                            <td>
+                                {{ create_form.timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS</td>
+                            <td>
+
+                                <label for="{{ create_form.is_tls_validation_enabled.id_for_label }}">
+                                Validate certificates
+                                {{ create_form.is_tls_validation_enabled }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
+                            </td>
+                            <td>
+                                {{ create_form.tls_ca_certs_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ create_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
+                            </td>
+                            <td>
+                                {{ create_form.tls_cert_key_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-es-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                                <label for="{{ edit_form.is_active.id_for_label }}">
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.address_list.id_for_label }}">Addresses</label>
+                            </td>
+                            <td>
+                                {{ edit_form.address_list }}
+                                <br/>
+                                <span class="form_hint">One http(s)://host:port address per line</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.username.id_for_label }}">Username</label>
+                            </td>
+                            <td>
+                                {{ edit_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.secret.id_for_label }}">Password</label>
+                            </td>
+                            <td>
+                                {{ edit_form.secret }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.timeout.id_for_label }}">Timeout (s.)</label>
+                            </td>
+                            <td>
+                                {{ edit_form.timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS</td>
+                            <td>
+
+                                <label for="{{ edit_form.is_tls_validation_enabled.id_for_label }}">
+                                Validate certificates
+                                {{ edit_form.is_tls_validation_enabled }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.tls_ca_certs_file.id_for_label }}">TLS CA certs file</label>
+                            </td>
+                            <td>
+                                {{ edit_form.tls_ca_certs_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="{{ edit_form.tls_cert_key_file.id_for_label }}">TLS cert/key file</label>
+                            </td>
+                            <td>
+                                {{ edit_form.tls_cert_key_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

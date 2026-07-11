@@ -613,9 +613,9 @@ elastic_search:
 
   - name: enmasse.elastic.1
     is_active: true
-    hosts: http://elasticsearch:9200
+    address_list:
+      - http://elasticsearch:9200
     timeout: 60
-    body_as: json
 
 pubsub_topic:
 

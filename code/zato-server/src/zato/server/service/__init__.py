@@ -45,9 +45,8 @@ from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import AS2Facade, AS4Facade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
+from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
-from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
@@ -381,7 +380,6 @@ class Service:
     static_config:'Bunch'
 
     email:'EMailAPI | None' = None
-    search:'SearchAPI | None' = None
     patterns: 'PatternsFacade | None' = None
 
     amqp = AMQPFacade()
@@ -434,7 +432,6 @@ class Service:
 
     component_enabled_odoo: 'bool'
     component_enabled_email: 'bool'
-    component_enabled_search: 'bool'
 
     cache: 'CacheAPI'
 
@@ -512,6 +509,9 @@ class Service:
 
         # MongoDB facade for outgoing connections
         self.mongodb = MongoDBFacade()
+
+        # Elasticsearch facade for outgoing connections
+        self.es = ESFacade()
 
 # ################################################################################################################################
 
@@ -604,10 +604,6 @@ class Service:
             if Service.email is None or Service.email.imap is not self._config_manager.email_imap_api:
                 Service.email = EMailAPI(self._config_manager.email_smtp_api, self._config_manager.email_imap_api)
 
-        if self.component_enabled_search:
-            if Service.search is None or Service.search.es is not self._config_manager.search_es_api:
-                Service.search = SearchAPI(self._config_manager.search_es_api)
-
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
@@ -657,6 +653,9 @@ class Service:
 
         # MongoDB facade
         self.mongodb.init(self.cid, self._config_manager)
+
+        # Elasticsearch facade
+        self.es.init(self.cid, self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()

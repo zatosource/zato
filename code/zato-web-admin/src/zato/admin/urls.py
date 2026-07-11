@@ -43,6 +43,7 @@ from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
+from zato.admin.web.views.outgoing import es as out_es
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
@@ -52,7 +53,6 @@ from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
-from zato.admin.web.views.search import es
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, ntlm, wss
 from zato.admin.web.views.security import posture as security_posture
@@ -621,6 +621,24 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. Elasticsearch
+
+    url(r'^zato/outgoing/es/$',
+        login_required(out_es.Index()), name=out_es.Index.url_name),
+    url(r'^zato/outgoing/es/create/$',
+        login_required(out_es.Create()), name=out_es.Create.url_name),
+    url(r'^zato/outgoing/es/edit/$',
+        login_required(out_es.Edit()), name=out_es.Edit.url_name),
+    url(r'^zato/outgoing/es/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_es.Delete()), name=out_es.Delete.url_name),
+    url(r'^zato/outgoing/es/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_es.ping), name='out-es-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
     # .. MongoDB
 
     url(r'^zato/outgoing/mongodb/$',
@@ -892,29 +910,6 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
-    ]
-
-# ################################################################################################################################
-# ################################################################################################################################
-# #
-# #   Search
-# #
-# ################################################################################################################################
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. ElasticSearch
-
-    url(r'^zato/search/es/$',
-        login_required(es.Index()), name=es.Index.url_name),
-    url(r'^zato/search/es/create/$',
-        login_required(es.Create()), name=es.Create.url_name),
-    url(r'^zato/search/es/edit/$',
-        login_required(es.Edit()), name=es.Edit.url_name),
-    url(r'^zato/search/es/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(es.Delete()), name=es.Delete.url_name),
-
     ]
 
 # ################################################################################################################################

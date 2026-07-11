@@ -22,7 +22,7 @@ from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GE
      PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
-    DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
+    DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
     PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
@@ -672,22 +672,6 @@ def service_deployment_list(session, service_id=None, include_internal=None):
         )
 
     return query.all()
-
-# ################################################################################################################################
-
-def _search_es(session, cluster_id):
-    """ ElasticSearch connections.
-    """
-    return session.query(ElasticSearch).\
-        filter(Cluster.id==ElasticSearch.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(ElasticSearch.name)
-
-@query_wrapper
-def search_es_list(session, cluster_id, needs_columns=False):
-    """ All the ElasticSearch connections.
-    """
-    return _search_es(session, cluster_id)
 
 # ################################################################################################################################
 

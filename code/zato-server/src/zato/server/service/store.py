@@ -113,11 +113,11 @@ data_class_model_class_name = 'zato.server.service.Model'
 
 class _TestingConfigManager:
     sql_pool_store = None
+    outconn_es = None
     outconn_ldap = None
     outconn_mongodb = None
     email_smtp_api = None
     email_imap_api = None
-    search_es_api = None
     cache_api = None
 
     def __init__(self):
@@ -562,7 +562,6 @@ class ServiceStore:
                 class_._config_manager = self._testing_config_manager
                 class_._config_store = self._testing_config_manager.config_store
                 class_.component_enabled_email = True
-                class_.component_enabled_search = True
                 class_.component_enabled_odoo = True
 
             else:
@@ -589,7 +588,6 @@ class ServiceStore:
                 class_.rules = service_store.server.rules
 
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
-                class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
 
             # Crypto operations

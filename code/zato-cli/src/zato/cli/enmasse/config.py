@@ -62,6 +62,7 @@ _object_alias[_object_type.OData] = 'outgoing_odata'
 _object_alias[_object_type.Microsoft_Cloud] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
+_object_alias[_object_type.Search_ElasticSearch] = 'outgoing_elastic_search'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']
 _object_alias[_object_type.SFTP] = 'outgoing_sftp'
 _object_alias[_object_type.SMB] = 'outgoing_smb'
@@ -117,6 +118,12 @@ _attr_default[_object_type.MongoDB] = {
     'pool_size_max': 10,
     'connect_timeout': 10,
     'server_select_timeout': 5
+}
+
+_attr_default[_object_type.Search_ElasticSearch] = {
+    'is_active': True,
+    'address_list': 'http://127.0.0.1:9200',
+    'timeout': 90
 }
 
 _attr_default[_object_type.Odoo] = {

@@ -156,17 +156,6 @@ class HOT_DEPLOY(Constants):
     UPDATE_ENMASSE = ValueConstant('')
     AFTER_DEPLOY = ValueConstant('')
 
-class SEARCH(Constants):
-
-    CREATE = ValueConstant('')
-    EDIT = ValueConstant('')
-    DELETE = ValueConstant('')
-
-    ES_CREATE = ValueConstant('')
-    ES_EDIT = ValueConstant('')
-    ES_DELETE = ValueConstant('')
-    ES_CHANGE_PASSWORD = ValueConstant('')
-
 class EMAIL(Constants):
 
     SMTP_CREATE = ValueConstant('')
