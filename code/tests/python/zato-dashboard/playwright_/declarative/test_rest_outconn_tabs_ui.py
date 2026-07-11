@@ -54,8 +54,16 @@ def _add_query_row_as_user(page:'Page', key:'str', value:'str') -> 'None':
     """
 
     # The query string cell has the first of the request tab's add links ..
+    row_count_before = len(page.query_selector_all(_Query_Rows_Selector))
+
     add_link = page.locator('#http-soap-create-tab-panel-request a:has-text("Add a parameter")').first
     add_link.click()
+
+    # .. the link is a javascript: URL whose handler runs asynchronously after the click,
+    # so wait until the new row has actually been appended ..
+    _ = page.wait_for_function(
+        f'() => document.querySelectorAll("{_Query_Rows_Selector}").length === {row_count_before + 1}',
+        timeout=5000)
 
     # .. and the new row is the last one, ready to be typed into.
     new_row = page.locator(_Query_Rows_Selector).last

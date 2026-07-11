@@ -16,6 +16,7 @@ import pytest
 
 # Zato
 from zato.common.api import AS2
+from zato.common.as2.mdn import normalize_message_id
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resubmit import record_message_received
 from zato.common.audit_log.api import AuditLog
@@ -304,10 +305,12 @@ class TestAuditLogResubmit:
             # .. the original row shows the resubmitted marker once the table refreshes ..
             _wait_for_marker(page, original_id)
 
-            # .. and the new attempt is its own row, under a fresh Message-ID.
-            rows = _get_rows(page)
-            row_count = len(rows)
-            assert row_count == 2, f'Expected 2 audit log rows, got {row_count}'
+            # .. and the new attempt is its own row, under a fresh Message-ID - the resend
+            # went through this server's own inbound channel, so the pair also collected
+            # the inbound and MDN evidence of the exchange, each as its own row.
+            resent_id = normalize_message_id(report['message_id'])
+            resent_row = page.query_selector(_row_selector(resent_id))
+            assert resent_row, f'Expected a row for the resent message `{resent_id}`'
 
         finally:
             delete_as2_outconn(page, sender_id)
