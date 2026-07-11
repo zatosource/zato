@@ -8,15 +8,23 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sys
 import time
+from importlib import util as importlib_util
 
-# The directory with the shared MongoDB container helpers used by the live server tests
-_mongodb_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-server', 'mongodb'))
-sys.path.insert(0, _mongodb_tests_dir)
+# The shared MongoDB container helpers live in the server test suite - the module is loaded
+# by path under its own name because the IBM MQ suite has a containers module of the same name,
+# and whichever of the two is imported first would otherwise shadow the other one.
+_mongodb_containers_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..', 'zato-server', 'mongodb', 'containers.py'))
+
+_spec = importlib_util.spec_from_file_location('mongodb_containers', _mongodb_containers_path)
+_mongodb_containers = importlib_util.module_from_spec(_spec)
+_spec.loader.exec_module(_mongodb_containers)
+
+start_mongodb = _mongodb_containers.start_mongodb
+stop_container = _mongodb_containers.stop_container
 
 # Zato
-from containers import start_mongodb, stop_container
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
