@@ -15,17 +15,16 @@ from os import urandom
 from typing import NamedTuple
 
 # cryptography
-from cryptography.exceptions import InvalidSignature, InvalidTag, UnsupportedAlgorithm
+from cryptography.exceptions import InvalidSignature, InvalidTag
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.ciphers.algorithms import AES128, AES256
+from cryptography.hazmat.primitives.ciphers.algorithms import AES, AES128, AES256
 from cryptography.hazmat.primitives.ciphers.modes import CBC
 from cryptography.hazmat.primitives.hashes import Hash, SHA1, SHA256, SHA384, SHA512
 from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.hazmat.primitives.serialization.pkcs7 import pkcs7_decrypt_der, PKCS7EnvelopeBuilder, PKCS7Options, \
-    PKCS7SignatureBuilder
+from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7EnvelopeBuilder, PKCS7Options, PKCS7SignatureBuilder
 from cryptography.x509 import load_der_x509_certificate
 
 # Zato
@@ -45,9 +44,10 @@ if 0:
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
     from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7HashTypes
     from cryptography.x509 import Certificate
-    from zato.common.typing_ import anytuple, dtnone, strlist
+    from zato.common.typing_ import anytuple, byteslist, dtnone, strlist
     from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
+    byteslist = byteslist
     certificate_list = certificate_list
     dtnone = dtnone
     strlist = strlist
@@ -79,8 +79,9 @@ _base64_line_length = 76
 _gcm_nonce_size = 12
 _gcm_tag_size = 16
 
-# The block size of 3DES in CBC mode, which its PKCS#7 padding is based on.
+# The block sizes of 3DES and AES in CBC mode, which their PKCS#7 padding is based on.
 _des_block_size = 8
+_aes_block_size = 16
 
 # The key and IV sizes of three-key 3DES in CBC mode.
 _des_key_size = 24
@@ -94,19 +95,27 @@ _des_key_bits_mask = 0xFE
 # ################################################################################################################################
 
 # DER tags of the ASN.1 constructs that CMS structures are made of.
-_tag_integer            = 0x02
-_tag_octet_string       = 0x04
-_tag_oid                = 0x06
-_tag_utc_time           = 0x17
-_tag_generalized_time   = 0x18
-_tag_sequence           = 0x30
-_tag_set                = 0x31
-_tag_context_0_implicit = 0x80
-_tag_context_0          = 0xA0
-_tag_context_1          = 0xA1
+_tag_integer                  = 0x02
+_tag_octet_string             = 0x04
+_tag_oid                      = 0x06
+_tag_utc_time                 = 0x17
+_tag_generalized_time         = 0x18
+_tag_octet_string_constructed = 0x24
+_tag_sequence                 = 0x30
+_tag_set                      = 0x31
+_tag_context_0_implicit       = 0x80
+_tag_context_0                = 0xA0
+_tag_context_1                = 0xA1
 
 # DER length bytes with the high bit set announce a multi-byte length field.
 _der_long_form_marker = 0x80
+
+# The constructed bit of a BER tag - set on sequences, sets and chunked string encodings.
+_tag_constructed_bit = 0x20
+
+# The BER indefinite-length marker and the end-of-contents octets that conclude such an element.
+_ber_indefinite_length = 0x80
+_ber_end_of_contents = b'\x00\x00'
 
 # ASN.1 object identifiers use base-128 arcs with a continuation bit,
 # and the first two arcs share one byte through this multiplier.
@@ -202,6 +211,67 @@ def _element_content(data:'bytes', element:'DERElement') -> 'bytes':
     return out
 
 # ################################################################################################################################
+
+def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
+    """ Re-encodes one BER element into its definite-length form, returning the re-encoded
+    bytes along with the offset just past the element - end-of-contents octets included.
+    """
+    tag = data[offset]
+    length = data[offset + 1]
+
+    # An indefinite-length element runs until its end-of-contents octets -
+    # re-encoding its children makes the actual length explicit ..
+    if length == _ber_indefinite_length:
+        chunks:'byteslist' = []
+        child_offset = offset + 2
+
+        while data[child_offset:child_offset + 2] != _ber_end_of_contents:
+            child, child_offset = _normalize_ber_element(data, child_offset)
+            chunks.append(child)
+
+        content = b''.join(chunks)
+
+        out = bytes([tag]) + _encode_der_length(len(content)) + content
+        return (out, child_offset + 2)
+
+    element = _read_der_element(data, offset)
+    end_offset = element.content_offset + element.length
+
+    # .. a definite-length primitive element stays exactly as it is ..
+    if not (tag & _tag_constructed_bit):
+        out = data[offset:end_offset]
+        return (out, end_offset)
+
+    # .. and a definite-length constructed one may still hide indefinite lengths further down.
+    chunks:'byteslist' = []
+    child_offset = element.content_offset
+
+    while child_offset < end_offset:
+        child, child_offset = _normalize_ber_element(data, child_offset)
+        chunks.append(child)
+
+    content = b''.join(chunks)
+
+    out = bytes([tag]) + _encode_der_length(len(content)) + content
+    return (out, child_offset)
+
+# ################################################################################################################################
+
+def _to_definite_der(der:'bytes') -> 'bytes':
+    """ Returns the buffer re-encoded with definite lengths when it arrived in the BER
+    indefinite-length form that streaming CMS producers emit - RFC 5652 allows it and
+    the Java stacks behind most AS2 peers write it. A producer that streams must use
+    the indefinite form at the top level, because a definite outer length would require
+    buffering the whole structure first - so a definite top level means a definite
+    encoding throughout and the buffer is returned as it is.
+    """
+    if der[1:2] != bytes([_ber_indefinite_length]):
+        return der
+
+    out, _ = _normalize_ber_element(der, 0)
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _encode_der_length(length:'int') -> 'bytes':
@@ -291,6 +361,9 @@ _oid_auth_enveloped_data = _encode_oid('1.2.840.113549.1.9.16.1.23')
 _oid_zlib                = _encode_oid('1.2.840.113549.1.9.16.3.8')
 _oid_rsa_encryption      = _encode_oid('1.2.840.113549.1.1.1')
 _oid_des_ede3_cbc        = _encode_oid('1.2.840.113549.3.7')
+_oid_aes_128_cbc         = _encode_oid('2.16.840.1.101.3.4.1.2')
+_oid_aes_192_cbc         = _encode_oid('2.16.840.1.101.3.4.1.22')
+_oid_aes_256_cbc         = _encode_oid('2.16.840.1.101.3.4.1.42')
 _oid_aes_128_gcm         = _encode_oid('2.16.840.1.101.3.4.1.6')
 _oid_aes_256_gcm         = _encode_oid('2.16.840.1.101.3.4.1.46')
 _oid_sha1                = _encode_oid('1.3.14.3.2.26')
@@ -333,6 +406,22 @@ _micalg_spelling = {
 _cbc_class_by_name = {
     EncryptionAlgorithm.AES_128_CBC: AES128,
     EncryptionAlgorithm.AES_256_CBC: AES256,
+}
+
+# Maps inbound CBC algorithm identifiers to their cipher classes and block sizes -
+# AES-192 has no size-specific class, so the size-checking is left to the generic one.
+_cbc_class_by_oid = {
+    _oid_des_ede3_cbc: TripleDES,
+    _oid_aes_128_cbc:  AES128,
+    _oid_aes_192_cbc:  AES,
+    _oid_aes_256_cbc:  AES256,
+}
+
+_cbc_block_size_by_oid = {
+    _oid_des_ede3_cbc: _des_block_size,
+    _oid_aes_128_cbc:  _aes_block_size,
+    _oid_aes_192_cbc:  _aes_block_size,
+    _oid_aes_256_cbc:  _aes_block_size,
 }
 
 # Key sizes in bytes for the AES-GCM algorithms built in-house through AuthEnvelopedData.
@@ -908,14 +997,26 @@ def _verify_signed_data(
     serial_content = _element_content(der, sid_children[1])
     serial_number = int.from_bytes(serial_content, 'big')
 
-    for certificate in certificates:
+    # The certificates field is optional (RFC 5652 section 5.1) - some peers attach nothing
+    # and count on the verifier holding their certificate already, so the attached ones
+    # are searched first and the configured trust material after them.
+    candidates:'certificate_list' = list(certificates)
+
+    if accepted_certificates:
+        candidates.extend(accepted_certificates)
+
+    if keystore.peer_signing_certificate:
+        candidates.append(keystore.peer_signing_certificate)
+
+    for certificate in candidates:
         issuer_bytes = certificate.issuer.public_bytes()
         if issuer_bytes == issuer_raw:
             if certificate.serial_number == serial_number:
                 signer_certificate = certificate
                 break
     else:
-        raise AS2SecurityException(AS2Error.Authentication_Failed, 'Signer certificate is not attached to the signature')
+        raise AS2SecurityException(
+            AS2Error.Authentication_Failed, 'Signer certificate is neither attached to the signature nor configured')
 
     # The digest of the content as it actually arrived.
     digest = Hash(hash_class())
@@ -1000,6 +1101,9 @@ def verify(
     content, signature_der = _split_signed(part.data, boundary)
 
     try:
+        # Streaming producers encode the signature with BER indefinite lengths.
+        signature_der = _to_definite_der(signature_der)
+
         signer_certificate, digest_name, signing_time = _verify_signed_data(
             content, signature_der, keystore, accepted_certificates)
     except AS2Exception:
@@ -1113,7 +1217,7 @@ def _add_cbc_padding(content:'bytes') -> 'bytes':
 def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
     """ Builds a CMS EnvelopedData structure with 3DES-CBC content encryption per RFC 5652 -
     the outbound path for partners that cannot decrypt AES, the exact structure
-    _decrypt_3des parses on the way in.
+    _decrypt_enveloped parses on the way in.
     """
     # A fresh content encryption key and IV for every message.
     content_key = _new_3des_key()
@@ -1215,6 +1319,29 @@ def _collect_encrypted_content(der:'bytes', element:'DERElement') -> 'bytes':
 
 # ################################################################################################################################
 
+def _collect_compressed_content(der:'bytes', element:'DERElement') -> 'bytes':
+    """ Returns the compressed content octets, joining the chunks of a constructed encoding if needed.
+    """
+    # The primitive form carries the octets directly ..
+    if element.tag == _tag_octet_string:
+        out = _element_content(der, element)
+        return out
+
+    # .. the constructed BER form some producers emit splits them into octet string chunks.
+    if element.tag == _tag_octet_string_constructed:
+        chunks:'list[bytes]' = []
+
+        for chunk in _der_children(der, element):
+            chunks.append(_element_content(der, chunk))
+
+        out = b''.join(chunks)
+        return out
+
+    # .. any other tag means the structure is not what CMS says it should be.
+    raise AS2ProtocolException(AS2Error.Decompression_Failed, 'Unexpected encoding of the compressed content')
+
+# ################################################################################################################################
+
 def _decryption_candidates(keystore:'Keystore') -> 'decryption_candidate_list':
     """ Returns every certificate-and-key pair an incoming message may be encrypted to -
     the primary pair plus each currently active rotation entry.
@@ -1302,7 +1429,7 @@ def _recover_content_key(der:'bytes', recipient_infos:'DERElement', keystore:'Ke
 
 # ################################################################################################################################
 
-def _strip_cbc_padding(padded:'bytes') -> 'bytes':
+def _strip_cbc_padding(padded:'bytes', block_size:'int') -> 'bytes':
     """ Removes the PKCS#7 block padding of a CBC plaintext, verifying that it is well-formed.
     """
     if not padded:
@@ -1313,7 +1440,7 @@ def _strip_cbc_padding(padded:'bytes') -> 'bytes':
     if pad_length == 0:
         raise AS2SecurityException(AS2Error.Decryption_Failed, 'Invalid block padding')
 
-    if pad_length > _des_block_size:
+    if pad_length > block_size:
         raise AS2SecurityException(AS2Error.Decryption_Failed, 'Invalid block padding')
 
     expected = bytes([pad_length]) * pad_length
@@ -1327,14 +1454,16 @@ def _strip_cbc_padding(padded:'bytes') -> 'bytes':
 
 # ################################################################################################################################
 
-def _decrypt_3des(der:'bytes', explicit_content:'DERElement', keystore:'Keystore') -> 'bytes':
-    """ Decrypts a 3DES-CBC EnvelopedData in-house - the counterpart of _encrypt_3des,
-    accepted from partners that send 3DES.
+def _decrypt_enveloped(der:'bytes', explicit_content:'DERElement', keystore:'Keystore') -> 'bytes':
+    """ Decrypts a CBC EnvelopedData structure per RFC 5652 - AES or 3DES, whichever
+    the algorithm identifier names.
     """
     enveloped = _read_der_element(der, explicit_content.content_offset)
     children = _der_children(der, enveloped)
 
-    # Skip past the version and the optional originator info to the recipient set.
+    # Skip past the version and the optional originator info to the recipient set,
+    # so that whichever of our certificate-and-key pairs the message was encrypted to
+    # is the one that decrypts it.
     next_index = 1
     if children[next_index].tag == _tag_context_0:
         next_index += 1
@@ -1352,47 +1481,19 @@ def _decrypt_3des(der:'bytes', explicit_content:'DERElement', keystore:'Keystore
     algorithm_children = _der_children(der, algorithm_identifier)
     algorithm_oid = _element_raw(der, algorithm_children[0])
 
-    if algorithm_oid != _oid_des_ede3_cbc:
+    if not (cipher_class := _cbc_class_by_oid.get(algorithm_oid)):
         raise AS2SecurityException(AS2Error.Decryption_Failed, 'Unsupported content encryption algorithm')
+
+    block_size = _cbc_block_size_by_oid[algorithm_oid]
 
     initialization_vector = _element_content(der, algorithm_children[1])
     ciphertext = _collect_encrypted_content(der, encrypted_content)
 
-    cipher = Cipher(TripleDES(content_key), CBC(initialization_vector))
+    cipher = Cipher(cipher_class(content_key), CBC(initialization_vector))
     decryptor = cipher.decryptor()
     padded = decryptor.update(ciphertext) + decryptor.finalize()
 
-    out = _strip_cbc_padding(padded)
-    return out
-
-# ################################################################################################################################
-
-def _decrypt_enveloped(der:'bytes', explicit_content:'DERElement', keystore:'Keystore') -> 'bytes':
-    """ Decrypts an EnvelopedData structure - AES-CBC through the library, 3DES in-house.
-    """
-    # Locate the recipient set so that whichever of our certificate-and-key pairs
-    # the message was encrypted to is the one that decrypts it.
-    enveloped = _read_der_element(der, explicit_content.content_offset)
-    children = _der_children(der, enveloped)
-
-    # Skip past the version and the optional originator info to the recipient set.
-    next_index = 1
-    if children[next_index].tag == _tag_context_0:
-        next_index += 1
-
-    recipient_infos = children[next_index]
-    match = _match_recipient(der, recipient_infos, keystore)
-
-    try:
-        out = pkcs7_decrypt_der(der, match.certificate, match.key, [])
-
-    # The library only does AES-CBC - 3DES from partners that send it is decrypted in-house.
-    except UnsupportedAlgorithm:
-        out = _decrypt_3des(der, explicit_content, keystore)
-
-    except ValueError as e:
-        raise AS2SecurityException(AS2Error.Decryption_Failed, f'Decryption failed ({e})') from None
-
+    out = _strip_cbc_padding(padded, block_size)
     return out
 
 # ################################################################################################################################
@@ -1464,6 +1565,9 @@ def decrypt(part:'SMIMEPart', keystore:'Keystore') -> 'SMIMEPart':
     der = _transfer_decode(part)
 
     try:
+        # Streaming producers encode their envelopes with BER indefinite lengths.
+        der = _to_definite_der(der)
+
         content_type_oid, explicit_content = _read_content_info(der)
 
         if content_type_oid == _oid_enveloped_data:
@@ -1520,6 +1624,9 @@ def decompress(part:'SMIMEPart') -> 'SMIMEPart':
     der = _transfer_decode(part)
 
     try:
+        # Streaming producers encode their compressed structures with BER indefinite lengths.
+        der = _to_definite_der(der)
+
         content_type_oid, explicit_content = _read_content_info(der)
 
         if content_type_oid != _oid_compressed_data:
@@ -1541,7 +1648,7 @@ def decompress(part:'SMIMEPart') -> 'SMIMEPart':
         encapsulated_children = _der_children(der, encapsulated)
         explicit_octets = encapsulated_children[1]
         octets = _read_der_element(der, explicit_octets.content_offset)
-        compressed = _element_content(der, octets)
+        compressed = _collect_compressed_content(der, octets)
 
     except AS2Exception:
         raise

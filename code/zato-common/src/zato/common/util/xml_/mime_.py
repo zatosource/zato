@@ -95,7 +95,9 @@ def parse_header_parameters(value:'str') -> 'strstrdict':
 # ################################################################################################################################
 
 def parse_mime_part(raw:'bytes') -> 'anytuple':
-    """ Splits one raw MIME part into its headers and body. Header names are lowercased.
+    """ Splits one raw MIME part into its headers and body. Header names are lowercased
+    and folded headers are unfolded - producers wrap long values such as Content-Type
+    across lines that continue with leading whitespace (RFC 5322 section 2.2.3).
     """
     headers:'strstrdict' = {}
 
@@ -105,9 +107,22 @@ def parse_mime_part(raw:'bytes') -> 'anytuple':
 
     header_block, _, body = raw.partition(_crlf + _crlf)
 
+    # The name the most recent header line carried - continuation lines extend its value.
+    last_name = ''
+
     for line in header_block.split(_crlf):
-        name, _, value = line.decode('utf-8').partition(':')
-        headers[name.strip().lower()] = value.strip()
+        line = line.decode('utf-8')
+
+        # A line starting with whitespace continues the previous header's value ..
+        if line[:1] in (' ', '\t'):
+            if last_name:
+                headers[last_name] = headers[last_name] + ' ' + line.strip()
+            continue
+
+        # .. any other line starts a new header.
+        name, _, value = line.partition(':')
+        last_name = name.strip().lower()
+        headers[last_name] = value.strip()
 
     out = (headers, body)
     return out
