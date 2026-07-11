@@ -983,24 +983,24 @@ class EnmasseYAMLImporter:
 # ################################################################################################################################
 
     def sync_es(self, es_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes ElasticSearch connection definitions from a YAML configuration with the database.
+        """ Synchronizes Elasticsearch connection definitions from a YAML configuration with the database.
         """
         if not es_list:
             return [], []
 
         count = len(es_list)
         noun = 'definition' if count == 1 else 'definitions'
-        logger.info(f'Processing {count} ElasticSearch connection {noun}')
+        logger.info(f'Processing {count} Elasticsearch connection {noun}')
 
-        # Examine each ElasticSearch connection item
+        # Examine each Elasticsearch connection item
         for idx, item in enumerate(es_list):
-            logger.info('ElasticSearch connection item %d: %s', idx, item)
+            logger.info('Elasticsearch connection item %d: %s', idx, item)
 
-        es_created, es_updated = self.es_importer.sync_es_definitions(es_list, session)
+        es_created, es_updated = self.es_importer.sync_definitions(es_list, session)
 
-        # Get ElasticSearch definitions from the ElasticSearch importer
-        self.es_defs = self.es_importer.es_defs
-        logger.info('Processed ElasticSearch connection definitions: created=%d updated=%d', len(es_created), len(es_updated))
+        # Get Elasticsearch definitions from the Elasticsearch importer
+        self.es_defs = self.es_importer.connection_defs
+        logger.info('Processed Elasticsearch connection definitions: created=%d updated=%d', len(es_created), len(es_updated))
 
         return es_created, es_updated
 

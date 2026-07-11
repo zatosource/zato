@@ -144,7 +144,6 @@ user=./user.conf
 
 [component_enabled]
 email=True
-search=True
 odoo=True
 
 [content_type]

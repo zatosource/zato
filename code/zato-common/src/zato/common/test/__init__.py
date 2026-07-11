@@ -30,9 +30,9 @@ from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secr
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb import model
-from zato.common.odb.model import Cluster, ElasticSearch
+from zato.common.odb.model import Cluster, SMTP
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
-from zato.common.odb.query import search_es_list
+from zato.common.odb.query import email_smtp_list
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
@@ -67,9 +67,12 @@ class test_odb_data:
     cluster_id = 1
     name = 'my.name'
     is_active = True
-    es_hosts = 'my.hosts'
-    es_timeout = 111
-    es_body_as = 'my.body_as'
+    smtp_host = 'my.host'
+    smtp_port = 25
+    smtp_timeout = 111
+    smtp_is_debug = False
+    smtp_mode = 'starttls'
+    smtp_ping_address = 'my.address@example.com'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -235,7 +238,7 @@ def enrich_with_static_config(object_):
 
     object_._config_store = Bunch(out_odoo=None, out_soap=None)
     object_._config_manager = Bunch(
-        sql_pool_store=None, cassandra_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None)
+        sql_pool_store=None, cassandra_api=None, email_smtp_api=None, email_imap_api=None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -459,7 +462,6 @@ class ServiceTestCase(TestCase):
 
         mock_data = mock_data or {}
         class_.component_enabled_email = True
-        class_.component_enabled_search = True
         class_.component_enabled_msg_path = True
         class_.has_io = getattr(class_, 'IO', False)
 
@@ -601,7 +603,7 @@ class ODBTestCase(TestCase):
         model.Base.metadata.create_all(self.session_wrapper.pool.engine)
 
         # Unrelated to the above, used in individual tests
-        self.ODBTestModelClass = ElasticSearch
+        self.ODBTestModelClass = SMTP
 
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
@@ -620,26 +622,29 @@ class ODBTestCase(TestCase):
         cluster.broker_host = 'my.broker.host'
         cluster.broker_port = 1234
 
-        es = self.ODBTestModelClass()
-        es.name = test_odb_data.name
-        es.is_active = test_odb_data.is_active
-        es.hosts = test_odb_data.es_hosts
-        es.timeout = test_odb_data.es_timeout
-        es.body_as = test_odb_data.es_body_as
-        es.cluster_id = test_odb_data.cluster_id
+        item = self.ODBTestModelClass()
+        item.name = test_odb_data.name
+        item.is_active = test_odb_data.is_active
+        item.host = test_odb_data.smtp_host
+        item.port = test_odb_data.smtp_port
+        item.timeout = test_odb_data.smtp_timeout
+        item.is_debug = test_odb_data.smtp_is_debug
+        item.mode = test_odb_data.smtp_mode
+        item.ping_address = test_odb_data.smtp_ping_address
+        item.cluster_id = test_odb_data.cluster_id
 
         session = self.session_wrapper._session
 
         session.add(cluster)
-        session.add(es)
+        session.add(item)
         session.commit()
 
         session = self.session_wrapper._session
 
-        result = search_es_list(session, test_odb_data.cluster_id) # type: tuple
+        result = email_smtp_list(session, test_odb_data.cluster_id) # type: tuple
         result = result[0] # type: SearchResults
 
-        # This is a one-element tuple of ElasticSearch ORM objects
+        # This is a one-element tuple of SMTP ORM objects
         result = result.result # type: tuple
 
         return result if is_list else result[0]

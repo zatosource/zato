@@ -339,6 +339,7 @@
                                                 </ul>
                                             </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">AS4</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
@@ -366,12 +367,6 @@
                                             <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-soap" %}?cluster={{ cluster_id|default:"1" }}">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">Search &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "search-es" %}?cluster={{ cluster_id|default:"1" }}">ElasticSearch</a></li>
                                         </ul>
                                     </li>
                                     <li class="child">

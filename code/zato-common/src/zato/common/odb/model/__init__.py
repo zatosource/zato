@@ -970,26 +970,6 @@ class DeploymentStatus(Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ElasticSearch(Base):
-    __tablename__ = 'search_es'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('search_es_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False, default=True)
-    hosts = Column(String(400), nullable=False)
-    timeout = Column(Integer(), nullable=False)
-    body_as = Column(String(45), nullable=False)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('search_es_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SMTP(Base):
     __tablename__ = 'email_smtp'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})

@@ -411,10 +411,10 @@ class EnmasseYAMLExporter:
 # ################################################################################################################################
 
     def export_elastic_search(self, session:'SASession') -> 'list':
-        """ Exports ElasticSearch connection definitions.
+        """ Exports Elasticsearch connection definitions.
         """
         _ = self.get_cluster(session) # Ensure cluster info is loaded
-        elastic_search_list = self.elastic_search_exporter.export_es(session)
+        elastic_search_list = self.elastic_search_exporter.export(session, self.cluster_id)
         return elastic_search_list
 
 # ################################################################################################################################
