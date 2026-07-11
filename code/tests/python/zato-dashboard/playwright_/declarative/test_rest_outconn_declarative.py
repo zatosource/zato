@@ -30,8 +30,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-from declarative import activate_rest_tab, Callback_Store_Service, fill_rest_invocation_tabs, \
-    invoke_rest_declarative_from_service, job_row_exists, wait_for_callback_entry, wait_for_rest_declarative_invoker
+from declarative import activate_rest_tab, Callback_Store_Service, edit_job_interval_minutes, fill_rest_invocation_tabs, \
+    get_job_row_id, invoke_rest_declarative_from_service, job_row_exists, wait_for_callback_entry, \
+    wait_for_rest_declarative_invoker
 from http_test_server import HTTPTestServer
 from rest_outconn import delete_outconn, fill_outconn_form, get_outconn_id, open_edit_dialog, open_outconn_page, \
     ping_outconn_until_success, wait_for_outconn_row
@@ -398,6 +399,71 @@ class TestRESTOutconnDeclarative:
         assert entry == {'marker': marker, 'source': 'scheduler'}, f'Expected the mapped payload, got: {entry}'
 
         # Clean up - the connection would otherwise keep firing every second
+        delete_outconn(page, outconn_id)
+
+# ################################################################################################################################
+
+    def test_scheduler_edit_writes_back_and_clear_deletes_job(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        http_test_server:'HTTPTestServer',
+        ) -> 'None':
+        """ An interval change made in the scheduler UI is written back to the connection's
+        edit form, and clearing the scheduler fields on the connection deletes the linked job.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        name = _Test_Name_Prefix + 'write-back'
+        job_name = 'rest.' + name
+        url_path = '/test/declarative/write-back/' + rand_string()
+
+        # Create the connection with a 30-minute schedule that never fires during the test ..
+        outconn_id = create_declarative_outconn(
+            page, base_url, name, http_test_server.address,
+            {'url_path': url_path},
+            {
+                'scheduler_run_every': '30',
+                'scheduler_run_unit': 'minutes',
+                'scheduler_start_date': _Future_Start_Date,
+                'request_method': 'POST',
+            })
+
+        # .. edit the auto-created job directly in the scheduler UI, changing its interval to 7 minutes ..
+        job_id = get_job_row_id(page, base_url, job_name)
+        edit_job_interval_minutes(page, job_id, '7')
+
+        # .. the new interval is written back to the connection's edit form ..
+        open_outconn_page(page, base_url)
+        open_edit_dialog(page, outconn_id)
+
+        assert page.input_value('#id_edit-scheduler_run_every') == '7', \
+            'Expected the interval from the scheduler UI to be written back to the connection'
+        assert page.input_value('#id_edit-scheduler_run_unit') == 'minutes'
+
+        # .. now clear the scheduler fields on the connection and save ..
+        fill_rest_invocation_tabs(page, {
+            'scheduler_run_every': '',
+            'scheduler_start_date': '',
+        }, 'edit')
+        submit_edit_form(page)
+
+        # .. which deletes the linked job ..
+        assert not job_row_exists(page, base_url, job_name), f'Job "{job_name}" should be gone after the fields were cleared'
+
+        # .. and the connection itself no longer describes any job.
+        open_outconn_page(page, base_url)
+        open_edit_dialog(page, outconn_id)
+
+        assert page.input_value('#id_edit-scheduler_run_every') == '', \
+            'Expected no interval on the connection after the fields were cleared'
+
+        page.click('#edit-div button:has-text("Cancel")')
+        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+
+        # Clean up
         delete_outconn(page, outconn_id)
 
 # ################################################################################################################################

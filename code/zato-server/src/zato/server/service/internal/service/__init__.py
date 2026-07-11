@@ -17,7 +17,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import query_parameters
+from zato.common.api import EMAIL, HTTP_SOAP, query_parameters
 from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
@@ -40,6 +40,17 @@ from zato.server.service.internal import AdminService
 
 # For pyflakes
 Service = Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The internal services that scheduler jobs auto-created for connections invoke. They must be offered
+# by the scheduler's own UI so a linked job can be edited there, even though they are internal.
+_linked_job_services = [
+    EMAIL.IMAP.Scheduler.Dispatch_Service,
+    HTTP_SOAP.HealthCheck.Dispatch_Service,
+    HTTP_SOAP.Invocation.Dispatch_Service,
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,9 +104,10 @@ class GetList(AdminService):
         # We issue one or two queries to populate this list - the latter case only if we are to return scheduler's jobs.
         out = []
 
-        # Confirm if we are to return services for the scheduler
+        # Confirm if we are to return services for the scheduler - the list combines the startup jobs
+        # with the dispatch services that connection-linked jobs invoke.
         if self.request.input.should_include_scheduler:
-            scheduler_service_list = get_startup_job_services()
+            scheduler_service_list = get_startup_job_services() + _linked_job_services
         else:
             scheduler_service_list = []
 
