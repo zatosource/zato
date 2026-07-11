@@ -22,9 +22,10 @@ from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 
 if 0:
     from cryptography.x509 import Certificate
-    from zato.common.typing_ import anytuple, strlist, strstrdict
+    from zato.common.typing_ import anytuple, byteslist, strlist, strstrdict
     from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
+    byteslist = byteslist
     Certificate = Certificate
     certificate_list = certificate_list
     Keystore = Keystore
@@ -34,9 +35,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-certificatenone   = optional['Certificate']
-keystorenone      = optional['Keystore']
-signingconfignone = optional['MDNSigningConfig']
+certificatenone     = optional['Certificate']
+certificatelistnone = optional['certificate_list']
+keystorenone        = optional['Keystore']
+signingconfignone   = optional['MDNSigningConfig']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,7 +167,7 @@ class MDNSigningConfig:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class MDNInfo:
+class MDNDetails:
     """ What parsing an MDN yields.
     """
     # The Original-Message-ID field - which message this MDN answers.
@@ -351,7 +353,8 @@ def parse_disposition(value:'str') -> 'Disposition':
 
     # The modifier follows the disposition type after a slash, when there is one.
     disposition_type, _, modifier_part = rest.partition('/')
-    out.disposition_type = disposition_type.strip().lower()
+    disposition_type = disposition_type.strip()
+    out.disposition_type = disposition_type.lower()
 
     modifier_part = modifier_part.strip()
 
@@ -360,7 +363,8 @@ def parse_disposition(value:'str') -> 'Disposition':
         # The historic construction spells out the kind and its text, e.g. error: decryption-failed ..
         if ':' in modifier_part:
             kind, _, text = modifier_part.partition(':')
-            out.modifier_kind = kind.strip().lower()
+            kind = kind.strip()
+            out.modifier_kind = kind.lower()
             out.modifier = text.strip()
 
         # .. the RFC 8098 form may carry the bare kind alone, with the details in separate fields.
@@ -412,19 +416,23 @@ def parse_mdn_request(headers:'strstrdict') -> 'MDNRequest':
 
         for option in options.split(';'):
             name, _, values_part = option.partition('=')
-            name = name.strip().lower()
+            name = name.strip()
+            name = name.lower()
 
             values:'strlist' = []
 
             # The first comma-separated piece is the importance token, the rest are the values.
-            for piece in values_part.split(',')[1:]:
+            value_pieces = values_part.split(',')
+
+            for piece in value_pieces[1:]:
                 piece = piece.strip()
                 if piece:
                     values.append(piece)
 
             if name == 'signed-receipt-protocol':
                 if values:
-                    out.signed_receipt_protocol = values[0].lower()
+                    first_value = values[0]
+                    out.signed_receipt_protocol = first_value.lower()
                     out.requests_signed_mdn = True
 
             elif name == 'signed-receipt-micalg':
@@ -471,7 +479,7 @@ def _build_report(request:'MDNRequest', disposition:'Disposition', mic:'str') ->
     # Both parts ride in a multipart/report with the disposition-notification report type.
     boundary = _new_boundary()
 
-    chunks:'list[bytes]' = []
+    chunks:'byteslist' = []
     chunks.append(f'--{boundary}'.encode('ascii'))
     chunks.append(b'Content-Type: text/plain')
     chunks.append(b'Content-Transfer-Encoding: 7bit')
@@ -543,44 +551,47 @@ def build_mdn(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _parse_notification_fields(info:'MDNInfo', notification:'bytes') -> 'None':
+def _parse_notification_fields(details:'MDNDetails', notification:'bytes') -> 'None':
     """ Reads the fields of a message/disposition-notification part into the result.
     """
     for line in notification.split(_crlf):
 
-        name, _, value = line.decode('utf-8').partition(':')
-        name = name.strip().lower()
+        decoded = line.decode('utf-8')
+        name, _, value = decoded.partition(':')
+        name = name.strip()
+        name = name.lower()
         value = value.strip()
 
         if name == 'original-message-id':
-            info.original_message_id = value
+            details.original_message_id = value
 
         elif name == 'disposition':
             disposition = parse_disposition(value)
-            info.mode = disposition.mode
-            info.disposition = disposition.disposition_type
-            info.modifier_kind = disposition.modifier_kind
-            info.modifier = disposition.modifier
+            details.mode = disposition.mode
+            details.disposition = disposition.disposition_type
+            details.modifier_kind = disposition.modifier_kind
+            details.modifier = disposition.modifier
 
         elif name == 'received-content-mic':
 
             # The MIC value is the base64 digest with the algorithm name appended after a comma -
             # base64 contains no commas, so the split from the right is unambiguous.
             digest, _, algorithm = value.rpartition(',')
-            info.mic = digest.strip()
+            details.mic = digest.strip()
 
             # Any known spelling of the algorithm name is normalized on the way in,
             # an unknown one is kept as it arrived for the caller to reconcile against.
-            algorithm = algorithm.strip().lower()
+            algorithm = algorithm.strip()
+            algorithm = algorithm.lower()
 
             try:
-                info.mic_algorithm = normalize_micalg(algorithm)
+                details.mic_algorithm = normalize_micalg(algorithm)
             except AS2ProtocolException:
-                info.mic_algorithm = algorithm
+                details.mic_algorithm = algorithm
 
 # ################################################################################################################################
 
-def _parse_report(info:'MDNInfo', body:'bytes', parameters:'strstrdict') -> 'None':
+def _parse_report(details:'MDNDetails', body:'bytes', parameters:'strstrdict') -> 'None':
     """ Splits a multipart/report body into its parts and reads the disposition notification
     and the human-readable text out of them.
     """
@@ -607,11 +618,11 @@ def _parse_report(info:'MDNInfo', body:'bytes', parameters:'strstrdict') -> 'Non
 
         # The machine-readable part carries the disposition fields ..
         if media_type == 'message/disposition-notification':
-            _parse_notification_fields(info, part_body)
+            _parse_notification_fields(details, part_body)
 
         # .. and the text part carries the human-readable explanation.
         elif media_type == 'text/plain':
-            info.text = part_body.decode('utf-8')
+            details.text = part_body.decode('utf-8')
 
 # ################################################################################################################################
 
@@ -619,8 +630,8 @@ def parse_mdn(
     body:'bytes',
     content_type:'str',
     keystore:'keystorenone'=None,
-    accepted_certificates:'certificate_list | None'=None,
-    ) -> 'MDNInfo':
+    accepted_certificates:'certificatelistnone'=None,
+    ) -> 'MDNDetails':
     """ Parses an MDN - signed or unsigned, synchronous or delivered asynchronously - into its pieces.
     A signed MDN is verified against the keystore, so its signer certificate comes out along
     with the disposition and the Received-Content-MIC. A non-empty accepted_certificates list
@@ -629,7 +640,7 @@ def parse_mdn(
     """
 
     # Our response to produce
-    out = MDNInfo()
+    out = MDNDetails()
 
     parameters = parse_header_parameters(content_type)
     media_type = parameters['']

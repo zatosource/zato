@@ -85,7 +85,7 @@ $(document).ready(function() {
                     <td>{{ row.period }}</td>
                     <td>{{ row.source }}</td>
                     <td><a href="{{ row.link }}">{{ row.partner }}</a></td>
-                    <td>{% if row.doc_type %}{{ row.doc_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                    <td>{% if row.document_type %}{{ row.document_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
                     <td class="b2b-report-count">{{ row.sent }}</td>
                     <td class="b2b-report-count">{{ row.received }}</td>
                 </tr>
@@ -119,7 +119,7 @@ $(document).ready(function() {
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td>{{ row.source }}</td>
                     <td><a href="{{ row.link }}">{{ row.partner }}</a></td>
-                    <td>{% if row.doc_type %}{{ row.doc_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
+                    <td>{% if row.document_type %}{{ row.document_type }}{% else %}<span class="form_hint">---</span>{% endif %}</td>
                     <td class="b2b-report-count">{{ row.delivered }}</td>
                     <td class="b2b-report-count">{{ row.failed }}</td>
                     <td>{% if row.failure_breakdown %}{{ row.failure_breakdown }}{% else %}<span class="form_hint">---</span>{% endif %}</td>

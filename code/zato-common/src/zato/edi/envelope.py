@@ -26,8 +26,10 @@ from zato.x12.syntax import X12SyntaxError, parse_isa, split_segments as split_x
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strbytes, strlist
     stranydict = stranydict
+    strbytes = strbytes
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,7 +74,7 @@ class EnvelopeInfo:
     functional_id:     str = ''
 
     # The document type routing keys on - ST01 for X12 (an 850, an 810), UNH02.1 for EDIFACT (ORDERS, INVOIC).
-    doc_type: str = ''
+    document_type: str = ''
 
     # The control numbers of each envelope level - ISA13, GS06 and ST02 for X12,
     # UNB05 and UNH01 for EDIFACT, whose group level stays empty.
@@ -92,11 +94,13 @@ class EnvelopeInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _element(parts:'list[str]', index:'int') -> 'str':
+def _element(parts:'strlist', index:'int') -> 'str':
     """ Returns one element of a separator-split segment, or an empty string
     when the segment is shorter than that.
     """
-    if index >= len(parts):
+    part_count = len(parts)
+
+    if index >= part_count:
         return ''
 
     out = parts[index]
@@ -119,7 +123,8 @@ def _read_x12(text:'str') -> 'EnvelopeInfo':
     segments = split_x12_segments(text, separators)
 
     for segment_text in segments:
-        parts = segment_text.rstrip(separators.terminator).split(separators.element)
+        without_terminator = segment_text.rstrip(separators.terminator)
+        parts = without_terminator.split(separators.element)
         tag = parts[0]
 
         # The ISA carries the interchange-level sender, receiver and control number ..
@@ -140,7 +145,7 @@ def _read_x12(text:'str') -> 'EnvelopeInfo':
 
         # .. and the first ST names the document type - after that, routing has everything it needs.
         elif tag == X12_Set_Tag:
-            out.doc_type = _element(parts, 1)
+            out.document_type = _element(parts, 1)
             out.set_control_number = _element(parts, 2)
             break
 
@@ -167,34 +172,39 @@ def _read_edifact(text:'str') -> 'EnvelopeInfo':
         # The UNB carries the interchange-level sender, recipient and control reference ..
         if raw_segment.tag == EDIFACT_Interchange_Tag:
             elements = raw_segment.elements
+            element_count = len(elements)
 
             # UNB02 is the sender composite - the id, then the qualifier ..
-            if len(elements) > 1:
+            if element_count > 1:
                 sender = elements[1]
                 out.sender_id = _element(sender, 0)
                 out.sender_qualifier = _element(sender, 1)
 
             # .. UNB03 is the recipient composite of the same shape ..
-            if len(elements) > 2:
+            if element_count > 2:
                 recipient = elements[2]
                 out.receiver_id = _element(recipient, 0)
                 out.receiver_qualifier = _element(recipient, 1)
 
             # .. and UNB05 is the interchange control reference.
-            if len(elements) > 4:
-                out.interchange_control_number = _element(elements[4], 0)
+            if element_count > 4:
+                control_reference = elements[4]
+                out.interchange_control_number = _element(control_reference, 0)
 
         # .. and the first UNH names the message type - after that, routing has everything it needs.
         elif raw_segment.tag == EDIFACT_Message_Tag:
             elements = raw_segment.elements
+            element_count = len(elements)
 
             # UNH01 is the message reference number ..
-            if len(elements) > 0:
-                out.set_control_number = _element(elements[0], 0)
+            if element_count > 0:
+                reference_composite = elements[0]
+                out.set_control_number = _element(reference_composite, 0)
 
             # .. and UNH02.1 is the message type, e.g. ORDERS.
-            if len(elements) > 1:
-                out.doc_type = _element(elements[1], 0)
+            if element_count > 1:
+                message_type_composite = elements[1]
+                out.document_type = _element(message_type_composite, 0)
 
             break
 
@@ -202,7 +212,7 @@ def _read_edifact(text:'str') -> 'EnvelopeInfo':
 
 # ################################################################################################################################
 
-def read_envelope(data:'bytes | str') -> 'EnvelopeInfo':
+def read_envelope(data:'strbytes') -> 'EnvelopeInfo':
     """ Extracts the envelope identifiers of an EDI payload without a full parse.
     Never raises - a payload that is not EDI, or whose envelope is malformed,
     comes back with an empty format, because envelope reading exists to inform routing,

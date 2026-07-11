@@ -31,7 +31,7 @@ from cryptography.x509 import load_der_x509_certificate
 from zato.common.as2.common import AS2Error, AS2Exception, AS2ProtocolException, AS2SecurityException, Default, \
     DigestAlgorithm, EncryptionAlgorithm, Failure
 from zato.common.crypto.api import CryptoManager
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, optional
 from zato.common.util.xml_.core import XMLSecurityException
 from zato.common.util.xml_.keystore import active_decryption_entries
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
@@ -60,6 +60,10 @@ if 0:
 
 der_element_list = list['DERElement']
 decryption_candidate_list = list['DecryptionCandidate']
+
+certificatelistnone = optional['certificate_list']
+derelementnone      = optional['DERElement']
+recipientmatchnone  = optional['RecipientMatch']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,8 +234,10 @@ def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
             chunks.append(child)
 
         content = b''.join(chunks)
+        content_length = len(content)
+        length_bytes = _encode_der_length(content_length)
 
-        out = bytes([tag]) + _encode_der_length(len(content)) + content
+        out = bytes([tag]) + length_bytes + content
         return (out, child_offset + 2)
 
     element = _read_der_element(data, offset)
@@ -251,8 +257,10 @@ def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
         chunks.append(child)
 
     content = b''.join(chunks)
+    content_length = len(content)
+    length_bytes = _encode_der_length(content_length)
 
-    out = bytes([tag]) + _encode_der_length(len(content)) + content
+    out = bytes([tag]) + length_bytes + content
     return (out, child_offset)
 
 # ################################################################################################################################
@@ -293,7 +301,8 @@ def _encode_der_length(length:'int') -> 'bytes':
 def _der(tag:'int', content:'bytes') -> 'bytes':
     """ Encodes one complete DER element from its tag and content.
     """
-    length = _encode_der_length(len(content))
+    content_length = len(content)
+    length = _encode_der_length(content_length)
 
     out = bytes([tag]) + length + content
     return out
@@ -578,7 +587,8 @@ def normalize_micalg(value:'str') -> 'str':
     """ Accepts any known spelling of a MIC algorithm name, case-insensitively,
     and returns the RFC 5751 spelling always used on output.
     """
-    lowered = value.strip().lower()
+    stripped = value.strip()
+    lowered = stripped.lower()
 
     if spelling := _micalg_spelling.get(lowered):
         out = spelling
@@ -595,7 +605,8 @@ def select_mic_algorithm(requested:'strlist') -> 'str':
     honoring the sender's order of preference left to right.
     """
     for value in requested:
-        lowered = value.strip().lower()
+        stripped = value.strip()
+        lowered = stripped.lower()
         if spelling := _micalg_spelling.get(lowered):
             out = spelling
             break
@@ -613,12 +624,14 @@ def compute_mic_over(covered:'bytes', algorithm:'str'=Default.Digest_Algorithm) 
     """
     normalized = normalize_micalg(algorithm)
     hash_class = _digest_by_name[normalized]
+    hash_algorithm = hash_class()
 
-    digest = Hash(hash_class())
+    digest = Hash(hash_algorithm)
     digest.update(covered)
     digest_bytes = digest.finalize()
 
-    encoded = b64encode(digest_bytes).decode('ascii')
+    encoded_bytes = b64encode(digest_bytes)
+    encoded = encoded_bytes.decode('ascii')
 
     out = f'{encoded}, {normalized}'
     return out
@@ -671,7 +684,7 @@ def encode_base64_lines(data:'bytes') -> 'bytes':
     """
     encoded = b64encode(data)
 
-    lines:'list[bytes]' = []
+    lines:'byteslist' = []
 
     for offset in range(0, len(encoded), _base64_line_length):
         lines.append(encoded[offset:offset + _base64_line_length])
@@ -688,7 +701,7 @@ def _read_content_info(der:'bytes') -> 'anytuple':
     content_info = _read_der_element(der, 0)
 
     if content_info.tag != _tag_sequence:
-        raise ValueError('ContentInfo is not a DER sequence')
+        raise AS2Exception('ContentInfo is not a DER sequence')
 
     info_children = _der_children(der, content_info)
 
@@ -724,7 +737,8 @@ def _build_sha1_signed_data(content:'bytes', keystore:'Keystore') -> 'bytes':
     signing_certificate = keystore.signing_certificate
 
     # The message-digest attribute carries the SHA-1 digest of the content.
-    digest = Hash(SHA1())
+    hash_algorithm = SHA1()
+    digest = Hash(hash_algorithm)
     digest.update(content)
     content_digest = digest.finalize()
 
@@ -822,7 +836,7 @@ def sign(
     # the signature into the second, base64-encoded.
     boundary = _new_boundary()
 
-    chunks:'list[bytes]' = []
+    chunks:'byteslist' = []
     chunks.append(f'--{boundary}'.encode('ascii'))
     chunks.append(content)
     chunks.append(f'--{boundary}'.encode('ascii'))
@@ -876,7 +890,7 @@ def _split_signed(body:'bytes', boundary:'str') -> 'anytuple':
 
 # ################################################################################################################################
 
-def _read_attribute_value(der:'bytes', signed_attributes:'DERElement', type_oid:'bytes') -> 'DERElement | None':
+def _read_attribute_value(der:'bytes', signed_attributes:'DERElement', type_oid:'bytes') -> 'derelementnone':
     """ Finds the first value of the given attribute among the signed attributes, when it is present.
     """
     for attribute in _der_children(der, signed_attributes):
@@ -938,7 +952,7 @@ def _verify_signed_data(
     content:'bytes',
     der:'bytes',
     keystore:'Keystore',
-    accepted_certificates:'certificate_list | None'=None,
+    accepted_certificates:'certificatelistnone'=None,
     ) -> 'anytuple':
     """ Walks a CMS SignedData structure per RFC 5652: extracts the signer's certificate
     and signed attributes, checks the content digest and verifies the signature value.
@@ -1019,7 +1033,8 @@ def _verify_signed_data(
             AS2Error.Authentication_Failed, 'Signer certificate is neither attached to the signature nor configured')
 
     # The digest of the content as it actually arrived.
-    digest = Hash(hash_class())
+    hash_algorithm = hash_class()
+    digest = Hash(hash_algorithm)
     digest.update(content)
     content_digest = digest.finalize()
 
@@ -1081,7 +1096,7 @@ def _verify_signed_data(
 def verify(
     part:'SMIMEPart',
     keystore:'Keystore',
-    accepted_certificates:'certificate_list | None'=None,
+    accepted_certificates:'certificatelistnone'=None,
     ) -> 'VerifyResult':
     """ Verifies a detached multipart/signed entity and returns what was signed, by whom
     and with which digest algorithm. Raises AS2SecurityException with integrity-check-failed
@@ -1226,7 +1241,10 @@ def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
     # CBC needs the plaintext padded to whole blocks before encryption.
     padded = _add_cbc_padding(content)
 
-    cipher = Cipher(TripleDES(content_key), CBC(initialization_vector))
+    cipher_algorithm = TripleDES(content_key)
+    cipher_mode = CBC(initialization_vector)
+
+    cipher = Cipher(cipher_algorithm, cipher_mode)
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded) + encryptor.finalize()
 
@@ -1306,10 +1324,11 @@ def _collect_encrypted_content(der:'bytes', element:'DERElement') -> 'bytes':
 
     # .. the constructed BER form some producers emit splits them into octet string chunks.
     if element.tag == _tag_context_0:
-        chunks:'list[bytes]' = []
+        chunks:'byteslist' = []
 
         for chunk in _der_children(der, element):
-            chunks.append(_element_content(der, chunk))
+            chunk_content = _element_content(der, chunk)
+            chunks.append(chunk_content)
 
         out = b''.join(chunks)
         return out
@@ -1329,10 +1348,11 @@ def _collect_compressed_content(der:'bytes', element:'DERElement') -> 'bytes':
 
     # .. the constructed BER form some producers emit splits them into octet string chunks.
     if element.tag == _tag_octet_string_constructed:
-        chunks:'list[bytes]' = []
+        chunks:'byteslist' = []
 
         for chunk in _der_children(der, element):
-            chunks.append(_element_content(der, chunk))
+            chunk_content = _element_content(der, chunk)
+            chunks.append(chunk_content)
 
         out = b''.join(chunks)
         return out
@@ -1374,7 +1394,7 @@ def _match_recipient(der:'bytes', recipient_infos:'DERElement', keystore:'Keysto
     candidates = _decryption_candidates(keystore)
 
     # Our response to produce
-    out:'RecipientMatch | None' = None
+    out:'recipientmatchnone' = None
 
     for recipient in _der_children(der, recipient_infos):
         fields = _der_children(der, recipient)

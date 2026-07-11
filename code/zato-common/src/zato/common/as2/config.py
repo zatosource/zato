@@ -64,7 +64,8 @@ def _add_certificate_entries(partnership:'Partnership', pem:'str', valid_from:'d
     """ Adds each certificate of a PEM string to the partner's rotation lists. The same partner
     certificate serves both signature verification and encryption, so each entry joins both lists.
     """
-    certificates = load_certificates_pem(pem.encode('utf8'))
+    pem_bytes = pem.encode('utf8')
+    certificates = load_certificates_pem(pem_bytes)
 
     for certificate in certificates:
 
@@ -97,12 +98,16 @@ def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
         raise AS2Exception('No signing certificate chain is configured for this AS2 channel or connection')
 
     signing_key = decrypt_func(signing_key)
-    out.signing_key = load_private_key_pem(signing_key.encode('utf8'))
-    out.signing_certificate_chain = load_certificates_pem(signing_cert_chain.encode('utf8'))
+    signing_key_bytes = signing_key.encode('utf8')
+    signing_cert_chain_bytes = signing_cert_chain.encode('utf8')
+
+    out.signing_key = load_private_key_pem(signing_key_bytes)
+    out.signing_certificate_chain = load_certificates_pem(signing_cert_chain_bytes)
 
     if value := config['as2_decryption_key']:
         value = decrypt_func(value)
-        out.decryption_key = load_private_key_pem(value.encode('utf8'))
+        value_bytes = value.encode('utf8')
+        out.decryption_key = load_private_key_pem(value_bytes)
 
     # The next-decryption pair joins the rotation entries with no window - during a rotation
     # of our own key, messages encrypted to either the old or the new certificate must decrypt.
@@ -114,24 +119,30 @@ def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
             raise AS2Exception('A next decryption key requires its certificate for recipient matching')
 
         value = decrypt_func(value)
-        certificates = load_certificates_pem(certificate_pem.encode('utf8'))
+        certificate_pem_bytes = certificate_pem.encode('utf8')
+        certificates = load_certificates_pem(certificate_pem_bytes)
+
+        value_bytes = value.encode('utf8')
 
         entry = DecryptionEntry()
-        entry.key = load_private_key_pem(value.encode('utf8'))
+        entry.key = load_private_key_pem(value_bytes)
         entry.certificate = certificates[0]
 
         out.decryption_entries.append(entry)
 
     if value := config['as2_peer_signing_cert']:
-        certificates = load_certificates_pem(value.encode('utf8'))
+        value_bytes = value.encode('utf8')
+        certificates = load_certificates_pem(value_bytes)
         out.peer_signing_certificate = certificates[0]
 
     if value := config['as2_peer_encryption_cert']:
-        certificates = load_certificates_pem(value.encode('utf8'))
+        value_bytes = value.encode('utf8')
+        certificates = load_certificates_pem(value_bytes)
         out.peer_encryption_certificate = certificates[0]
 
     if value := config['as2_trust_anchors']:
-        out.trust_anchors = load_certificates_pem(value.encode('utf8'))
+        value_bytes = value.encode('utf8')
+        out.trust_anchors = load_certificates_pem(value_bytes)
 
     return out
 

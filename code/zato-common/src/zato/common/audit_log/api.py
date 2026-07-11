@@ -13,7 +13,7 @@ from datetime import timedelta
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import create_engine, Column, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import Column, create_engine, Index, Integer, MetaData, String, Table, Text
 from sqlalchemy import event as sa_event
 
 # Zato
@@ -424,7 +424,8 @@ class AuditLog:
         event_time_iso = now.isoformat()
 
         # .. write the event ..
-        insert_stmt = event_table.insert().values(
+        insert = event_table.insert()
+        insert_statement = insert.values(
             cid=cid,
             source=source,
             event_type=event_type,
@@ -444,7 +445,7 @@ class AuditLog:
         )
 
         with self.engine.begin() as connection:
-            _ = connection.execute(insert_stmt)
+            _ = connection.execute(insert_statement)
 
         # .. and periodically delete rows older than the retention window.
         self._insert_count += 1
@@ -460,13 +461,15 @@ class AuditLog:
         cutoff = now - timedelta(days=Retention_Days)
         cutoff_iso = cutoff.isoformat()
 
-        delete_stmt = event_table.delete().where(event_table.c.event_time_iso < cutoff_iso)
+        delete = event_table.delete()
+        delete_statement = delete.where(event_table.c.event_time_iso < cutoff_iso)
 
         with self.engine.begin() as connection:
-            result = connection.execute(delete_stmt)
+            result = connection.execute(delete_statement)
 
         if result.rowcount:
-            logger.info('Audit log retention deleted %d event(s) older than %s', result.rowcount, cutoff_iso)
+            suffix = 'event' if result.rowcount == 1 else 'events'
+            logger.info('Audit log retention deleted %d %s older than %s', result.rowcount, suffix, cutoff_iso)
 
 # ################################################################################################################################
 # ################################################################################################################################

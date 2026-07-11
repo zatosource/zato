@@ -26,6 +26,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_table, get_audit_engine, Retention_Days
+from zato.common.defaults import default_cluster_id
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
@@ -114,8 +115,8 @@ _modifier_unspecified = 'unspecified'
 # ################################################################################################################################
 
 # The CSV headers of each table, matching the columns the page renders
-Volume_Headers  = ('period', 'source', 'partner', 'doc_type', 'sent', 'received')
-Outcome_Headers = ('source', 'partner', 'doc_type', 'delivered', 'failed', 'failure_breakdown')
+Volume_Headers  = ('period', 'source', 'partner', 'document_type', 'sent', 'received')
+Outcome_Headers = ('source', 'partner', 'document_type', 'delivered', 'failed', 'failure_breakdown')
 Ack_Headers     = ('partner', 'acknowledged', 'average_seconds', 'max_seconds', 'outstanding', 'rejected')
 
 # ################################################################################################################################
@@ -125,12 +126,12 @@ Ack_Headers     = ('partner', 'acknowledged', 'average_seconds', 'max_seconds', 
 class VolumeRow:
     """ Traffic of one period, source, partner and document type.
     """
-    period:   str = ''
-    source:   str = ''
-    partner:  str = ''
-    doc_type: str = ''
-    sent:     int = 0
-    received: int = 0
+    period:        str = ''
+    source:        str = ''
+    partner:       str = ''
+    document_type: str = ''
+    sent:          int = 0
+    received:      int = 0
 
     # The filtered audit log page behind this row
     link: str = ''
@@ -142,11 +143,11 @@ class OutcomeRow:
     """ Delivered vs failed of one source, partner and document type, with the failures
     broken down by their disposition modifier so the number is actionable.
     """
-    source:    str = ''
-    partner:   str = ''
-    doc_type:  str = ''
-    delivered: int = 0
-    failed:    int = 0
+    source:        str = ''
+    partner:       str = ''
+    document_type: str = ''
+    delivered:     int = 0
+    failed:        int = 0
 
     # The per-modifier failure counts, e.g. 'decryption-failed: 2, integrity-check-failed: 1'
     failure_breakdown: str = ''
@@ -216,7 +217,7 @@ class _AckState:
 def _audit_log_link(source:'str', partner:'str', status:'str'='') -> 'str':
     """ Builds the drill-down path from one aggregate row to the filtered audit log page.
     """
-    out = f'/zato/audit-log/?source={source}&object_name={partner}&cluster=1'
+    out = f'/zato/audit-log/?source={source}&object_name={partner}&cluster={default_cluster_id}'
 
     if status:
         out = f'{out}&status={status}'
@@ -242,11 +243,11 @@ def _parse_details(data:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_doc_type(details:'anydict') -> 'str':
+def _get_document_type(details:'anydict') -> 'str':
     """ Returns the document type an event carries - only X12 interchange events have one.
     """
-    if 'doc_type' in details:
-        out = details['doc_type']
+    if document_type := details.get('document_type'):
+        out = document_type
     else:
         out = ''
 
@@ -268,7 +269,7 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
     """ Reads all the B2B events of the given types recorded after the cutoff, oldest first,
     with their JSON data parsed - what the aggregates below run on.
     """
-    stmt = select(
+    statement = select(
         event_table.c.source,
         event_table.c.event_type,
         event_table.c.object_name,
@@ -285,7 +286,8 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        db_rows = connection.execute(stmt).fetchall()
+        result = connection.execute(statement)
+        db_rows = result.fetchall()
 
     # Our response to produce
     out:'dictlist' = []
@@ -334,10 +336,13 @@ def get_volume(now:'datetime', time_range:'str'=Default_Range, partner:'str'='')
 
     for event in events:
 
-        period = event['event_time_iso'][:bucket_len]
-        doc_type = _get_doc_type(event['details'])
+        event_time_iso = event['event_time_iso']
+        period = event_time_iso[:bucket_len]
 
-        key = (period, event['source'], event['partner'], doc_type)
+        details = event['details']
+        document_type = _get_document_type(details)
+
+        key = (period, event['source'], event['partner'], document_type)
 
         if group := counts.get(key):
             pass
@@ -345,7 +350,8 @@ def get_volume(now:'datetime', time_range:'str'=Default_Range, partner:'str'='')
             group = _VolumeState()
             counts[key] = group
 
-        direction = _volume_direction[event['event_type']]
+        event_type = event['event_type']
+        direction = _volume_direction[event_type]
 
         if direction == _direction_sent:
             group.sent += 1
@@ -357,14 +363,14 @@ def get_volume(now:'datetime', time_range:'str'=Default_Range, partner:'str'='')
 
     for key in sorted(counts):
 
-        period, source, pair, doc_type = key
+        period, source, pair, document_type = key
         group = counts[key]
 
         row = VolumeRow()
         row.period = period
         row.source = source
         row.partner = pair
-        row.doc_type = doc_type
+        row.document_type = document_type
         row.sent = group.sent
         row.received = group.received
         row.link = _audit_log_link(source, pair)
@@ -403,11 +409,12 @@ def get_outcomes(now:'datetime', time_range:'str'=Default_Range, partner:'str'='
     sent_types = (AuditEvent.Interchange_Sent,)
     sent_events = _load_events(sent_types, cutoff_iso, partner)
 
-    doc_types:'anydict' = {}
+    document_types:'anydict' = {}
 
     for event in sent_events:
         lookup_key = (event['partner'], event['msg_id'])
-        doc_types[lookup_key] = _get_doc_type(event['details'])
+        details = event['details']
+        document_types[lookup_key] = _get_document_type(details)
 
     # Delivered and failed counts per source, partner and document type,
     # with a per-modifier breakdown of the failures.
@@ -422,14 +429,14 @@ def get_outcomes(now:'datetime', time_range:'str'=Default_Range, partner:'str'='
         if event_type == AuditEvent.Ack_Received:
             lookup_key = (event['partner'], event['msg_id'])
 
-            if found := doc_types.get(lookup_key):
-                doc_type = found
+            if found := document_types.get(lookup_key):
+                document_type = found
             else:
-                doc_type = ''
+                document_type = ''
         else:
-            doc_type = _get_doc_type(details)
+            document_type = _get_document_type(details)
 
-        key = (event['source'], event['partner'], doc_type)
+        key = (event['source'], event['partner'], document_type)
 
         if group := groups.get(key):
             pass
@@ -462,13 +469,13 @@ def get_outcomes(now:'datetime', time_range:'str'=Default_Range, partner:'str'='
 
     for key in sorted(groups):
 
-        source, pair, doc_type = key
+        source, pair, document_type = key
         group = groups[key]
 
         row = OutcomeRow()
         row.source = source
         row.partner = pair
-        row.doc_type = doc_type
+        row.document_type = document_type
         row.delivered = group.delivered
         row.failed = group.failed
         row.failure_breakdown = _format_breakdown(group.modifiers)
@@ -523,7 +530,8 @@ def get_ack_discipline(now:'datetime', time_range:'str'=Default_Range, partner:'
             ack_time = datetime.fromisoformat(ack['event_time_iso'])
 
             delta = ack_time - sent_time
-            group.deltas.append(delta.total_seconds())
+            delta_seconds = delta.total_seconds()
+            group.deltas.append(delta_seconds)
 
         # .. and one still waiting is an open item.
         else:
@@ -561,8 +569,10 @@ def get_ack_discipline(now:'datetime', time_range:'str'=Default_Range, partner:'
         if deltas:
             total = sum(deltas)
             count = len(deltas)
-            row.average_seconds = round(total / count, 1)
-            row.max_seconds = round(max(deltas), 1)
+            average = total / count
+            max_delta = max(deltas)
+            row.average_seconds = round(average, 1)
+            row.max_seconds = round(max_delta, 1)
 
         row.outstanding = group.outstanding
         row.rejected = group.rejected
@@ -598,7 +608,7 @@ def volume_csv(rows:'volume_row_list') -> 'str':
     values:'anylist' = []
 
     for row in rows:
-        values.append([row.period, row.source, row.partner, row.doc_type, row.sent, row.received])
+        values.append([row.period, row.source, row.partner, row.document_type, row.sent, row.received])
 
     out = _rows_to_csv(Volume_Headers, values)
     return out
@@ -611,7 +621,7 @@ def outcomes_csv(rows:'outcome_row_list') -> 'str':
     values:'anylist' = []
 
     for row in rows:
-        values.append([row.source, row.partner, row.doc_type, row.delivered, row.failed, row.failure_breakdown])
+        values.append([row.source, row.partner, row.document_type, row.delivered, row.failed, row.failure_breakdown])
 
     out = _rows_to_csv(Outcome_Headers, values)
     return out
