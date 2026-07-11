@@ -74,7 +74,8 @@ def merge_declarative_request(
     ) -> 'merged_request':
     """ Fills in the blanks of an outgoing REST call from the connection's declarative invocation
     profile - explicit arguments always win, the declarative values only cover what the caller
-    did not provide. JSONata-mode values are evaluated at call time against the given context.
+    did not provide. JSONata-mode values are evaluated at call time against the given context,
+    which also means a JSONata-mode body reshapes the data the caller passed in.
     """
 
     # An empty method resolves to the declarative one, which in turn defaults
@@ -110,13 +111,17 @@ def merge_declarative_request(
             if key not in headers:
                 headers[key] = value
 
-    # .. an empty body resolves to the declarative one, evaluated if its mode says so.
-    if not data:
-        if request_data := config.get(_invocation.Field_Request_Data):
-            data_mode = config.get(_invocation.Field_Request_Data_Mode)
-            if not data_mode:
-                data_mode = _invocation.ValueMode.Text
+    # .. the body - a JSONata-mode body is a transform of whatever the caller passed in,
+    # so it runs on every call, while a text-mode body only fills in an empty one.
+    if request_data := config.get(_invocation.Field_Request_Data):
+        data_mode = config.get(_invocation.Field_Request_Data_Mode)
+        if not data_mode:
+            data_mode = _invocation.ValueMode.Text
+
+        if data_mode == _invocation.ValueMode.JSONata:
             data = evaluate_request_data(request_data, data_mode, context)
+        elif not data:
+            data = request_data
 
     return method, data, params, headers
 

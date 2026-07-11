@@ -83,6 +83,46 @@ def wait_for_callback_entry(marker:'str', timeout:'float'=Delivery_Timeout) -> '
 # ################################################################################################################################
 # ################################################################################################################################
 #
+# Pub/sub topic streams
+#
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_for_topic_stream_entry(
+    redis_port:'int',
+    topic_name:'str',
+    marker:'str',
+    timeout:'float'=Delivery_Timeout,
+    ) -> 'anydict':
+    """ Waits until the Redis stream of the given pub/sub topic receives a message whose
+    data preview contains the marker and returns that message's fields.
+    """
+    # Redis
+    from redis import Redis
+
+    # Zato
+    from zato.common.pubsub.redis_backend import ModuleCtx
+
+    client = Redis(host='127.0.0.1', port=redis_port, decode_responses=True)
+
+    # Topic names are lowercased on publish
+    stream_key = ModuleCtx.Stream_Prefix + topic_name.lower()
+
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        entries = client.xrange(stream_key)
+        for _entry_id, fields in entries:
+            if marker in fields['data_preview']:
+                logger.info('[wait_for_topic_stream_entry] found: %s', fields)
+                return fields
+        time.sleep(_Poll_Interval)
+
+    raise Exception(f'No message with marker `{marker}` arrived on topic `{topic_name}` within {timeout}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+#
 # Filling the invocation tabs of the REST page
 #
 # ################################################################################################################################
@@ -376,14 +416,25 @@ def edit_job_interval_minutes(page:'Page', job_id:'str', minutes:'str') -> 'None
 # ################################################################################################################################
 # ################################################################################################################################
 
-def invoke_rest_declarative_from_service(api_client:'any_', outconn_name:'str') -> 'anydict':
-    """ Runs an outgoing REST connection through its declarative profile from inside
-    the boot-deployed invoker service and returns what the connection received back.
+def invoke_rest_declarative_from_service(
+    api_client:'any_',
+    outconn_name:'str',
+    *,
+    mode:'str'='invoke',
+    data:'any_'=None,
+    ) -> 'anydict':
+    """ Runs an outgoing REST connection from inside the boot-deployed invoker service and returns
+    what the connection received back. The default mode runs the declarative profile itself,
+    the 'post' mode makes an explicit .post(data) call that merges with the profile,
+    and data - when given - is the request data the calling service passes in.
     """
     request = {
-        'mode': 'invoke',
+        'mode': mode,
         'outconn_name': outconn_name,
-    }
+    } # type: anydict
+
+    if data is not None:
+        request['data'] = data
 
     response = api_client.invoke(REST_Declarative_Invoker_Service, request)
 

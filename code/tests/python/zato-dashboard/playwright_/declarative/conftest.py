@@ -330,6 +330,7 @@ def zato_dashboard() -> 'any_':
         'dashboard_process': dashboard_process,
         'scheduler_process': scheduler_process,
         'redis_process': redis_process,
+        'redis_port': redis_port,
     }
 
     # .. teardown: stop everything and remove the environment.
