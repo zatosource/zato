@@ -36,7 +36,16 @@ from zato.server.generic.api.outconn_as2 import _AS2Connection, OutconnAS2Wrappe
 # ################################################################################################################################
 
 if 0:
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anylist, stranydict
+    Path = Path
     from zato.server.base.config_manager import ConfigManager
     ConfigManager = ConfigManager
 
@@ -55,13 +64,13 @@ _payload = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _key_to_pem(key):
+def _key_to_pem(key:'any_') -> 'any_':
     out = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _certificate_to_pem(certificate):
+def _certificate_to_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
     return out
 
@@ -75,17 +84,19 @@ class _FakeServer:
     """
     name = 'test-server'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.decrypted = []
 
-    def decrypt(self, value):
+# ################################################################################################################################
+
+    def decrypt(self, value:'any_') -> 'any_':
         self.decrypted.append(value)
         return value
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _connection_config(parties, **overrides):
+def _connection_config(parties:'TestParties', **overrides:'any_') -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     with our own keys pasted in as PEMs and the partner's certificate on the rotation list.
     """
@@ -165,14 +176,14 @@ def _connection_config(parties, **overrides):
 
 # ################################################################################################################################
 
-def _new_mock_client(parties, requests, results):
+def _new_mock_client(parties:'TestParties', requests:'any_', results:'any_') -> 'any_':
     """ Wires the receiving side's real inbound pipeline behind an HTTP mock transport.
     """
     receiver_partnership = new_partnership()
     receiver_partnership.as2_from = _receiver_identifier
     receiver_partnership.as2_to = _sender_identifier
 
-    def _handler(request):
+    def _handler(request:'httpx.Request') -> 'any_':
 
         body = request.read()
         requests.append(request)
@@ -190,7 +201,7 @@ def _new_mock_client(parties, requests, results):
 
 # ################################################################################################################################
 
-def _make_connection(parties, **overrides):
+def _make_connection(parties:'TestParties', **overrides:'any_') -> 'any_':
     """ Builds one AS2 connection over a mock wire, returning it together
     with the receiving side's captures.
     """
@@ -214,7 +225,7 @@ def _make_connection(parties, **overrides):
 
 class TestConnection:
 
-    def test_send_reconciles_the_sync_mdn(self, parties):
+    def test_send_reconciles_the_sync_mdn(self, parties:'TestParties') -> 'None':
 
         connection, _, requests, results = _make_connection(parties)
 
@@ -232,18 +243,24 @@ class TestConnection:
         # .. and the receiver's real pipeline accepted the payload.
         assert len(requests) == 1
         assert not results[0].is_error
-        assert results[0].payloads[0].data == _payload
+        first_payload = results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_send_accepts_a_string_payload(self, parties):
+# ################################################################################################################################
+
+    def test_send_accepts_a_string_payload(self, parties:'TestParties') -> 'None':
 
         connection, _, _, results = _make_connection(parties)
 
         result = connection.send('cid-1', _payload.decode('ascii'))
 
         assert result.is_ok
-        assert results[0].payloads[0].data == _payload
+        first_payload = results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_send_reports_an_unconfirmed_delivery(self, parties):
+# ################################################################################################################################
+
+    def test_send_reports_an_unconfirmed_delivery(self, parties:'TestParties') -> 'None':
 
         # The receiver does not know this sender, so its MDN reports an error disposition.
         connection, _, _, results = _make_connection(parties, as2_from='UnknownSender')
@@ -258,7 +275,7 @@ class TestConnection:
 
 class TestConfigBridging:
 
-    def test_partnership_and_keystore_come_from_the_config(self, parties):
+    def test_partnership_and_keystore_come_from_the_config(self, parties:'TestParties') -> 'None':
 
         connection, server, _, _ = _make_connection(parties)
 
@@ -275,7 +292,9 @@ class TestConfigBridging:
         sender_key_pem = _key_to_pem(parties.sender.signing_key)
         assert server.decrypted == [sender_key_pem, sender_key_pem]
 
-    def test_rotation_list_supplies_the_peer_certificates(self, parties):
+# ################################################################################################################################
+
+    def test_rotation_list_supplies_the_peer_certificates(self, parties:'TestParties') -> 'None':
 
         connection, _, _, results = _make_connection(parties)
 
@@ -290,7 +309,9 @@ class TestConfigBridging:
         assert result.is_ok
         assert not results[0].is_error
 
-    def test_an_activated_next_certificate_supersedes_the_current_one(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_an_activated_next_certificate_supersedes_the_current_one(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
 
         # A fresh partner certificate whose activation date has already passed.
         rotated = make_rotated_pair('as2-receiver-next')
@@ -311,7 +332,9 @@ class TestConfigBridging:
         assert results[0].is_error
         assert results[0].error_modifier == AS2Error.Decryption_Failed
 
-    def test_a_future_next_certificate_leaves_the_current_one_in_place(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_a_future_next_certificate_leaves_the_current_one_in_place(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
 
         # A fresh partner certificate that only activates a month from now.
         rotated = make_rotated_pair('as2-receiver-next')
@@ -328,6 +351,8 @@ class TestConfigBridging:
         # Encryption stayed with the current certificate, so the receiver decrypts fine.
         assert result.is_ok
         assert not results[0].is_error
+
+# ################################################################################################################################
 
     def test_username_turns_on_basic_authentication(self, parties:'any_') -> 'None':
 
@@ -349,8 +374,11 @@ class TestConfigBridging:
         result = connection.send('cid-1', _payload)
         assert result.is_ok
 
-        credentials = b64encode(b'as2-basic-user:as2-basic-password').decode('ascii')
+        credentials_bytes = b64encode(b'as2-basic-user:as2-basic-password')
+        credentials = credentials_bytes.decode('ascii')
         assert requests[0].headers['authorization'] == f'Basic {credentials}'
+
+# ################################################################################################################################
 
     def test_no_username_means_no_basic_authentication(self, parties:'any_') -> 'None':
 
@@ -364,7 +392,9 @@ class TestConfigBridging:
         assert result.is_ok
         assert 'authorization' not in requests[0].headers
 
-    def test_next_decryption_pair_joins_the_rotation_entries(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_next_decryption_pair_joins_the_rotation_entries(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
 
         # Our own next key with its certificate, configured ahead of the rotation.
         rotated = make_rotated_pair('as2-sender-next')
@@ -387,7 +417,7 @@ class TestConfigBridging:
 
 class TestPing:
 
-    def test_ping_connects_over_plain_http(self, parties):
+    def test_ping_connects_over_plain_http(self, parties:'TestParties') -> 'None':
 
         # A listening socket is all a plain HTTP ping needs.
         listener = socket.socket()
@@ -401,7 +431,9 @@ class TestPing:
         finally:
             listener.close()
 
-    def test_ping_runs_the_tls_handshake(self, parties, tmp_path):
+# ################################################################################################################################
+
+    def test_ping_runs_the_tls_handshake(self, parties:'TestParties', tmp_path:'Path') -> 'None':
 
         # The endpoint presents the receiver's certificate over TLS.
         certificate_path = tmp_path / 'endpoint-cert.pem'
@@ -418,9 +450,9 @@ class TestPing:
         listener.listen(1)
         port = listener.getsockname()[1]
 
-        def _serve_one_handshake():
+        def _serve_one_handshake() -> 'None':
             try:
-                client_socket, _ignored = listener.accept()
+                client_socket, _ = listener.accept()
                 tls_socket = context.wrap_socket(client_socket, server_side=True)
                 tls_socket.close()
             except OSError:
@@ -442,7 +474,9 @@ class TestPing:
             server_thread.join()
             listener.close()
 
-    def test_ping_fails_when_nothing_listens(self, parties):
+# ################################################################################################################################
+
+    def test_ping_fails_when_nothing_listens(self, parties:'TestParties') -> 'None':
 
         # Bind a port and close it right away so nothing listens on it.
         listener = socket.socket()
@@ -455,7 +489,9 @@ class TestPing:
         with pytest.raises(OSError):
             connection.ping()
 
-    def test_ping_fails_without_an_endpoint(self, parties):
+# ################################################################################################################################
+
+    def test_ping_fails_without_an_endpoint(self, parties:'TestParties') -> 'None':
 
         connection, _, _, _ = _make_connection(parties, endpoint_url='')
 
@@ -467,7 +503,7 @@ class TestPing:
 
 class TestWrapper:
 
-    def test_send_goes_through_a_pooled_connection(self, parties):
+    def test_send_goes_through_a_pooled_connection(self, parties:'TestParties') -> 'None':
 
         server = _FakeServer()
         config = _connection_config(parties)
@@ -479,7 +515,8 @@ class TestWrapper:
         requests = []
         results = []
 
-        connection = wrapper.client.queue.queue[0]
+        client = cast_('any_', wrapper.client)
+        connection = client.queue.queue[0]
         connection.http_client = _new_mock_client(parties, requests, results)
 
         result = wrapper.send('cid-1', _payload)
@@ -491,7 +528,9 @@ class TestWrapper:
         # The connection went back to the pool after the send.
         assert wrapper.client.queue.qsize() == 1
 
-    def test_add_client_without_a_signing_key_adds_nothing(self, parties):
+# ################################################################################################################################
+
+    def test_add_client_without_a_signing_key_adds_nothing(self, parties:'TestParties') -> 'None':
 
         server = _FakeServer()
         config = _connection_config(parties, as2_signing_key='')
@@ -561,7 +600,10 @@ class TestFacade:
         assert result.is_ok
         assert len(requests) == 1
         assert not results[0].is_error
-        assert results[0].payloads[0].data == _payload
+        first_payload = results[0].payloads[0]
+        assert first_payload.data == _payload
+
+# ################################################################################################################################
 
     def test_an_unknown_name_raises_a_key_error(self, parties:'any_') -> 'None':
 

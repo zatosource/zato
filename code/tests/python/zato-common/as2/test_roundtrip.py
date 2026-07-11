@@ -28,6 +28,14 @@ from zato.common.util.xml_.keystore import DecryptionEntry, new_keystore
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, anylist
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _endpoint_url = 'https://partnercorp.example.com/as2'
 
 _sender_identifier   = 'ZatoRetail'
@@ -42,7 +50,7 @@ _payload = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_sender_partnership():
+def _make_sender_partnership() -> 'any_':
     """ The relationship as our own, sending side sees it.
     """
     out = new_partnership()
@@ -55,7 +63,7 @@ def _make_sender_partnership():
 
 # ################################################################################################################################
 
-def _make_receiver_partnership():
+def _make_receiver_partnership() -> 'any_':
     """ The same relationship as the partner's, receiving side sees it - the identities swap places.
     """
     out = new_partnership()
@@ -73,24 +81,24 @@ class _Exchange:
     """ One simulated wire between a sender and a receiver - the receiver runs the real inbound
     pipeline behind an HTTP mock transport, with a duplicate store and full wire captures.
     """
-    sender_partnership: 'object'
-    receiver_partnerships: 'object'
-    sender_keystore: 'object'
-    receiver_keystore: 'object'
+    sender_partnership: 'any_'
+    receiver_partnerships: 'anylist'
+    sender_keystore: 'any_'
+    receiver_keystore: 'any_'
 
     # Everything that went over the wire and everything the receiver decided.
-    requests: 'object'
-    bodies: 'object'
-    results: 'object'
+    requests: 'anylist'
+    bodies: 'anylist'
+    results: 'anylist'
 
     # The duplicate store, keyed on the identity pair and the Message-ID.
-    duplicate_store: 'object'
+    duplicate_store: 'anydict'
 
     client: 'httpx.Client'
 
 # ################################################################################################################################
 
-def _new_exchange(parties):
+def _new_exchange(parties:'TestParties') -> 'any_':
     """ Wires a sender and a receiver together over a mock HTTP transport.
     """
 
@@ -106,11 +114,11 @@ def _new_exchange(parties):
     out.results = []
     out.duplicate_store = {}
 
-    def _is_duplicate(as2_from, as2_to, message_id):
+    def _is_duplicate(as2_from:'any_', as2_to:'any_', message_id:'any_') -> 'any_':
         result = out.duplicate_store.get((as2_from, as2_to, message_id))
         return result
 
-    def _handler(request):
+    def _handler(request:'httpx.Request') -> 'any_':
 
         body = request.read()
 
@@ -142,7 +150,7 @@ def _new_exchange(parties):
 
 # ################################################################################################################################
 
-def _send(exchange, payload=_payload, filename=None, message_id=None):
+def _send(exchange:'any_', payload:'any_'=_payload, filename:'any_'=None, message_id:'any_'=None) -> 'any_':
     """ Delivers one message through the exchange's mock wire.
     """
     out = send(
@@ -163,7 +171,7 @@ class TestRoundtrip:
     """ The sender's send against the receiver's handle, over a mock wire.
     """
 
-    def test_signed_encrypted_compressed(self, parties):
+    def test_signed_encrypted_compressed(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.compress = True
 
@@ -186,7 +194,9 @@ class TestRoundtrip:
         # Both sides computed the same MIC.
         assert inbound.mic == result.mic
 
-    def test_sha1_signed_3des_encrypted(self, parties):
+# ################################################################################################################################
+
+    def test_sha1_signed_3des_encrypted(self, parties:'TestParties') -> 'None':
 
         # The exact wire combination the SHA-1 and 3DES partnership preset produces -
         # an in-house SHA-1 SignedData inside an in-house 3DES envelope,
@@ -215,25 +225,33 @@ class TestRoundtrip:
         assert inbound.mic == result.mic
         assert result.mic.endswith('sha-1')
 
-    def test_signed_only(self, parties):
+# ################################################################################################################################
+
+    def test_signed_only(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.encrypt = False
 
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_encrypted_only(self, parties):
+# ################################################################################################################################
+
+    def test_encrypted_only(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.sign = False
 
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_plain(self, parties):
+# ################################################################################################################################
+
+    def test_plain(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.sign = False
         exchange.sender_partnership.encrypt = False
@@ -241,13 +259,16 @@ class TestRoundtrip:
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
         # Nothing wrapped the payload, so it went over the wire as it is.
         assert exchange.bodies[0] == _payload
 
+# ################################################################################################################################
+
     @pytest.mark.parametrize('compress_before_signing', [True, False])
-    def test_compression_in_both_orders(self, parties, compress_before_signing):
+    def test_compression_in_both_orders(self, parties:'TestParties', compress_before_signing:'any_') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.compress = True
         exchange.sender_partnership.compress_before_signing = compress_before_signing
@@ -255,17 +276,21 @@ class TestRoundtrip:
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
         assert exchange.results[0].mic == result.mic
 
-    def test_force_base64(self, parties):
+# ################################################################################################################################
+
+    def test_force_base64(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.force_base64 = True
 
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
         # The outermost entity actually travelled base64-encoded.
         request = exchange.requests[0]
@@ -278,7 +303,7 @@ class TestWireShape:
     """ Wire-level assertions - what actually left the sender, not what the APIs report.
     """
 
-    def test_ciphertext_on_the_wire(self, parties):
+    def test_ciphertext_on_the_wire(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         _ = _send(exchange)
@@ -291,7 +316,9 @@ class TestWireShape:
         assert b'ISA*00' not in body
         assert b'4523891' not in body
 
-    def test_compression_on_the_wire(self, parties):
+# ################################################################################################################################
+
+    def test_compression_on_the_wire(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.sign = False
         exchange.sender_partnership.encrypt = False
@@ -308,7 +335,9 @@ class TestWireShape:
 
         assert result.is_ok
 
-    def test_as2_headers(self, parties):
+# ################################################################################################################################
+
+    def test_as2_headers(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         result = _send(exchange)
@@ -329,7 +358,9 @@ class TestWireShape:
             'signed-receipt-protocol=required, pkcs7-signature; signed-receipt-micalg=required, sha-256'
         assert 'receipt-delivery-option' not in request.headers
 
-    def test_version_pinning(self, parties):
+# ################################################################################################################################
+
+    def test_version_pinning(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.as2_version = '1.1'
 
@@ -338,7 +369,9 @@ class TestWireShape:
         assert result.is_ok
         assert exchange.requests[0].headers['as2-version'] == '1.1'
 
-    def test_inbound_accepts_an_absent_version(self, parties):
+# ################################################################################################################################
+
+    def test_inbound_accepts_an_absent_version(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         # An AS2 1.0 peer sends no AS2-Version header at all - inbound never rejects on version.
@@ -350,7 +383,9 @@ class TestWireShape:
         assert not result.is_error
         assert result.payloads[0].data == _payload
 
-    def test_quoted_identifiers(self, parties):
+# ################################################################################################################################
+
+    def test_quoted_identifiers(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.as2_from = 'Zato Retail'
         exchange.sender_partnership.as2_to = 'Partner:Corp'
@@ -374,7 +409,9 @@ class TestWireShape:
 
         assert result.is_ok
 
-    def test_ediint_features_are_surfaced(self, parties):
+# ################################################################################################################################
+
+    def test_ediint_features_are_surfaced(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         _ = _send(exchange)
@@ -389,7 +426,7 @@ class TestTransferModes:
     """ Content-Length is the default framing, chunked is per partner, threshold switches on size.
     """
 
-    def test_content_length_by_default(self, parties):
+    def test_content_length_by_default(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         result = _send(exchange)
@@ -400,7 +437,9 @@ class TestTransferModes:
 
         assert result.is_ok
 
-    def test_chunked(self, parties):
+# ################################################################################################################################
+
+    def test_chunked(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.http_transfer_mode = TransferMode.Chunked
 
@@ -412,7 +451,9 @@ class TestTransferModes:
 
         assert result.is_ok
 
-    def test_threshold_switches_to_chunked(self, parties):
+# ################################################################################################################################
+
+    def test_threshold_switches_to_chunked(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.http_transfer_mode = TransferMode.Threshold
         exchange.sender_partnership.chunked_threshold_bytes = 16
@@ -424,7 +465,9 @@ class TestTransferModes:
 
         assert result.is_ok
 
-    def test_threshold_keeps_content_length_below_it(self, parties):
+# ################################################################################################################################
+
+    def test_threshold_keeps_content_length_below_it(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.http_transfer_mode = TransferMode.Threshold
         exchange.sender_partnership.chunked_threshold_bytes = 100 * 1024 * 1024
@@ -437,7 +480,9 @@ class TestTransferModes:
 
         assert result.is_ok
 
-    def test_basic_auth(self, parties):
+# ################################################################################################################################
+
+    def test_basic_auth(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         auth = HTTPAuth()
@@ -460,7 +505,7 @@ class TestMDNModes:
     """ Synchronous, asynchronous and no MDN at all.
     """
 
-    def test_no_mdn_requested(self, parties):
+    def test_no_mdn_requested(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.mdn_mode = MDNMode.None_
 
@@ -474,9 +519,12 @@ class TestMDNModes:
         assert 'disposition-notification-to' not in request.headers
 
         # The payload was still delivered.
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_unsigned_sync_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_unsigned_sync_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.mdn_signed = False
 
@@ -486,7 +534,9 @@ class TestMDNModes:
         assert result.mdn
         assert result.mdn.is_signed is False
 
-    def test_signed_sync_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_signed_sync_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         result = _send(exchange)
@@ -501,7 +551,9 @@ class TestMDNModes:
         assert result.mdn.mic == digest
         assert result.mdn.mic_algorithm == algorithm
 
-    def test_async_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_async_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.mdn_mode = MDNMode.Async
         exchange.sender_partnership.async_mdn_url = 'https://zatoretail.example.com/zato/as2/mdn'
@@ -533,7 +585,9 @@ class TestMDNModes:
         assert mdn.mic == digest
         assert mdn.mic_algorithm == algorithm
 
-    def test_async_mdn_for_an_unknown_message_id_does_not_match(self, parties):
+# ################################################################################################################################
+
+    def test_async_mdn_for_an_unknown_message_id_does_not_match(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.mdn_mode = MDNMode.Async
         exchange.sender_partnership.async_mdn_url = 'https://zatoretail.example.com/zato/as2/mdn'
@@ -557,12 +611,13 @@ class TestMDNReconciliation:
     and Received-Content-MIC all check out.
     """
 
-    def test_withheld_mdn_is_a_failure(self, parties):
+    def test_withheld_mdn_is_a_failure(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
-        def _handler(request):
+        def _handler(request:'httpx.Request') -> 'any_':
             _ = request.read()
-            return httpx.Response(OK)
+            out = httpx.Response(OK)
+            return out
 
         transport = httpx.MockTransport(_handler)
         exchange.client = httpx.Client(transport=transport)
@@ -574,10 +629,12 @@ class TestMDNReconciliation:
         assert result.mdn is None
         assert result.http_status == OK
 
-    def test_mic_mismatch_is_a_failure(self, parties):
+# ################################################################################################################################
+
+    def test_mic_mismatch_is_a_failure(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
-        def _handler(request):
+        def _handler(request:'httpx.Request') -> 'any_':
             _ = request.read()
 
             mdn_request = MDNRequest()
@@ -590,7 +647,8 @@ class TestMDNReconciliation:
             disposition = new_processed_disposition()
 
             body, headers = build_mdn(mdn_request, disposition, wrong_mic)
-            return httpx.Response(OK, content=body, headers=headers)
+            out = httpx.Response(OK, content=body, headers=headers)
+            return out
 
         transport = httpx.MockTransport(_handler)
         exchange.client = httpx.Client(transport=transport)
@@ -600,10 +658,12 @@ class TestMDNReconciliation:
         assert not result.is_ok
         assert result.mdn
 
-    def test_original_message_id_mismatch_is_a_failure(self, parties):
+# ################################################################################################################################
+
+    def test_original_message_id_mismatch_is_a_failure(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
-        def _handler(request):
+        def _handler(request:'httpx.Request') -> 'any_':
             _ = request.read()
 
             mdn_request = MDNRequest()
@@ -614,7 +674,8 @@ class TestMDNReconciliation:
             disposition = new_processed_disposition()
 
             body, headers = build_mdn(mdn_request, disposition)
-            return httpx.Response(OK, content=body, headers=headers)
+            out = httpx.Response(OK, content=body, headers=headers)
+            return out
 
         transport = httpx.MockTransport(_handler)
         exchange.client = httpx.Client(transport=transport)
@@ -624,12 +685,15 @@ class TestMDNReconciliation:
         assert not result.is_ok
         assert result.mdn
 
-    def test_garbage_mdn_counts_as_no_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_garbage_mdn_counts_as_no_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
-        def _handler(request):
+        def _handler(request:'httpx.Request') -> 'any_':
             _ = request.read()
-            return httpx.Response(OK, content=b'This is not an MDN', headers={'Content-Type': 'text/plain'})
+            out = httpx.Response(OK, content=b'This is not an MDN', headers={'Content-Type': 'text/plain'})
+            return out
 
         transport = httpx.MockTransport(_handler)
         exchange.client = httpx.Client(transport=transport)
@@ -647,7 +711,7 @@ class TestReliability:
     because no MDN arrived for the original attempt.
     """
 
-    def test_resend_reuses_the_message_id(self, parties):
+    def test_resend_reuses_the_message_id(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         first = _send(exchange)
@@ -661,7 +725,9 @@ class TestReliability:
         assert first.is_ok
         assert second.is_ok
 
-    def test_fresh_sends_get_fresh_message_ids(self, parties):
+# ################################################################################################################################
+
+    def test_fresh_sends_get_fresh_message_ids(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         first = _send(exchange)
@@ -678,7 +744,7 @@ class TestDuplicateDetection:
     byte for byte, and its payload is never delivered a second time.
     """
 
-    def test_duplicate_gets_the_stored_mdn_bytes(self, parties):
+    def test_duplicate_gets_the_stored_mdn_bytes(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         first = _send(exchange)
@@ -699,7 +765,9 @@ class TestDuplicateDetection:
         assert second.response_body == first.response_body
         assert second_inbound.body == first_inbound.body
 
-    def test_different_message_ids_are_not_duplicates(self, parties):
+# ################################################################################################################################
+
+    def test_different_message_ids_are_not_duplicates(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         _ = _send(exchange)
@@ -719,7 +787,7 @@ class TestMultipleAttachments:
     """ Several documents ride together in a multipart/related - the ship-notice-plus-PDF shape.
     """
 
-    def test_two_documents_roundtrip(self, parties):
+    def test_two_documents_roundtrip(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.preserve_filename = True
 
@@ -747,7 +815,9 @@ class TestMultipleAttachments:
         assert second.content_type == 'application/pdf'
         assert second.filename == 'bill-of-lading.pdf'
 
-    def test_filename_preservation_for_a_single_document(self, parties):
+# ################################################################################################################################
+
+    def test_filename_preservation_for_a_single_document(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.preserve_filename = True
 
@@ -758,7 +828,9 @@ class TestMultipleAttachments:
         inbound = exchange.results[0]
         assert inbound.payloads[0].filename == 'po-850.edi'
 
-    def test_no_filename_without_preservation(self, parties):
+# ################################################################################################################################
+
+    def test_no_filename_without_preservation(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         result = _send(exchange, filename='po-850.edi')
@@ -775,11 +847,11 @@ class TestErrorDispositions:
     """ Failures still produce an MDN with the matching disposition modifier.
     """
 
-    def test_tampered_content_yields_integrity_check_failed(self, parties):
+    def test_tampered_content_yields_integrity_check_failed(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.encrypt = False
 
-        def _tampering_handler(request):
+        def _tampering_handler(request:'httpx.Request') -> 'any_':
             body = request.read()
 
             # Flip payload bytes inside the signed entity before it reaches the receiver.
@@ -808,7 +880,9 @@ class TestErrorDispositions:
         assert inbound.error_modifier == AS2Error.Integrity_Check_Failed
         assert len(inbound.payloads) == 0
 
-    def test_wrong_key_yields_decryption_failed(self, parties):
+# ################################################################################################################################
+
+    def test_wrong_key_yields_decryption_failed(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         # The receiver's own certificate is not the one this message was encrypted to -
@@ -825,11 +899,13 @@ class TestErrorDispositions:
         finally:
             exchange.sender_keystore.peer_encryption_certificate = parties.receiver.signing_certificate
 
-    def test_error_mdn_is_signed_when_a_signed_receipt_was_requested(self, parties):
+# ################################################################################################################################
+
+    def test_error_mdn_is_signed_when_a_signed_receipt_was_requested(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
         exchange.sender_partnership.encrypt = False
 
-        def _tampering_handler(request):
+        def _tampering_handler(request:'httpx.Request') -> 'any_':
             body = request.read()
             tampered = body.replace(b'4523891', b'4523892')
 
@@ -849,7 +925,9 @@ class TestErrorDispositions:
         assert result.mdn
         assert result.mdn.is_signed is True
 
-    def test_unknown_partner_gets_an_unsigned_explanatory_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_unknown_partner_gets_an_unsigned_explanatory_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         # The receiver has no partnership for this identity pair at all.
@@ -867,7 +945,9 @@ class TestErrorDispositions:
         assert inbound.error_modifier == AS2Error.Unknown_Trading_Relationship
         assert inbound.partnership is None
 
-    def test_unsupported_mic_algorithms_yield_a_failure_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_unsupported_mic_algorithms_yield_a_failure_mdn(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
 
         body, headers, _, _ = build_message(exchange.sender_partnership, exchange.sender_keystore, _payload)
@@ -892,7 +972,7 @@ class TestErrorDispositions:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _certificate_entry(certificate, valid_from=None, valid_until=None):
+def _certificate_entry(certificate:'any_', valid_from:'any_'=None, valid_until:'any_'=None) -> 'any_':
     """ Builds one entry of a partner's certificate rotation list.
     """
     out = CertificateEntry()
@@ -905,7 +985,7 @@ def _certificate_entry(certificate, valid_from=None, valid_until=None):
 
 # ################################################################################################################################
 
-def _rotated_sender_keystore(parties, rotated):
+def _rotated_sender_keystore(parties:'TestParties', rotated:'any_') -> 'any_':
     """ The sending side's keystore after it rotated its signing pair -
     encryption and MDN verification still target the receiver's current certificate.
     """
@@ -920,7 +1000,7 @@ def _rotated_sender_keystore(parties, rotated):
 
 # ################################################################################################################################
 
-def _receiver_keystore_with_entry(parties, rotated):
+def _receiver_keystore_with_entry(parties:'TestParties', rotated:'any_') -> 'any_':
     """ The receiving side's keystore during a rotation of its own decryption pair -
     the old key stays primary while the new pair joins the rotation entries.
     """
@@ -940,7 +1020,7 @@ def _receiver_keystore_with_entry(parties, rotated):
 
 # ################################################################################################################################
 
-def _receiver_keystore_signing_with(parties, rotated):
+def _receiver_keystore_signing_with(parties:'TestParties', rotated:'any_') -> 'any_':
     """ The receiving side's keystore after it rotated its signing pair - the old
     decryption pair stays on the rotation entries so incoming messages still decrypt.
     """
@@ -966,7 +1046,7 @@ class TestCertificateRotation:
     encryption following the most recently activated certificate and rotation of our own keys.
     """
 
-    def test_overlap_window_accepts_signatures_from_all_live_certificates(self, parties, make_rotated_pair):
+    def test_overlap_window_accepts_signatures_from_all_live_certificates(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         first_rotated = make_rotated_pair('as2-sender-rotation-first')
@@ -1001,7 +1081,9 @@ class TestCertificateRotation:
             assert not inbound.is_error
             assert inbound.payloads[0].data == _payload
 
-    def test_a_not_yet_activated_certificate_is_rejected(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_a_not_yet_activated_certificate_is_rejected(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         rotated = make_rotated_pair('as2-sender-rotation-early')
@@ -1027,7 +1109,9 @@ class TestCertificateRotation:
         assert inbound.is_error
         assert inbound.error_modifier == AS2Error.Authentication_Failed
 
-    def test_outbound_encrypts_to_the_most_recently_activated_certificate(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_outbound_encrypts_to_the_most_recently_activated_certificate(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         rotated = make_rotated_pair('as2-receiver-rotation')
@@ -1058,7 +1142,9 @@ class TestCertificateRotation:
         assert result.is_ok
         assert exchange.results[1].payloads[0].data == _payload
 
-    def test_the_old_certificate_still_decrypts_during_our_own_rotation(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_the_old_certificate_still_decrypts_during_our_own_rotation(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         # The receiver already carries its next pair on the rotation entries ..
@@ -1069,9 +1155,12 @@ class TestCertificateRotation:
         result = _send(exchange)
 
         assert result.is_ok
-        assert exchange.results[0].payloads[0].data == _payload
+        first_payload = exchange.results[0].payloads[0]
+        assert first_payload.data == _payload
 
-    def test_sync_mdn_signed_with_the_partners_new_certificate_reconciles(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_sync_mdn_signed_with_the_partners_new_certificate_reconciles(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         rotated = make_rotated_pair('as2-receiver-rotation')
@@ -1094,7 +1183,9 @@ class TestCertificateRotation:
         assert result.mdn
         assert result.mdn.signer_certificate.serial_number == rotated.certificate.serial_number
 
-    def test_sync_mdn_from_an_unlisted_certificate_does_not_reconcile(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_sync_mdn_from_an_unlisted_certificate_does_not_reconcile(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         exchange = _new_exchange(parties)
 
         rotated = make_rotated_pair('as2-receiver-rotation')

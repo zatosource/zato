@@ -21,15 +21,16 @@ from zato.common.defaults import default_env_base_dir
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import intnone, strnone
+    from zato.common.typing_ import intnone, strlist, strnone
     intnone = intnone
+    strlist = strlist
     strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # The full listing of sequences one store holds.
-sequence_info_list = list['SequenceInfo']
+sequence_details_list = list['SequenceDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +94,29 @@ CREATE TABLE IF NOT EXISTS x12_seen_value (
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The statements the store runs against its tables.
+_select_next_number = 'SELECT next_number FROM x12_control_sequence WHERE pair = ? AND kind = ?'
+_update_next_number = 'UPDATE x12_control_sequence SET next_number = ? WHERE pair = ? AND kind = ?'
+
+_update_sequence = 'UPDATE x12_control_sequence SET next_number = ?, last_used = ?, last_used_time = ?'
+_update_sequence += ' WHERE pair = ? AND kind = ?'
+
+_insert_sequence = 'INSERT INTO x12_control_sequence (pair, kind, next_number, last_used, last_used_time)'
+_insert_sequence += ' VALUES (?, ?, ?, ?, ?)'
+
+_insert_sequence_position = 'INSERT INTO x12_control_sequence (pair, kind, next_number) VALUES (?, ?, ?)'
+
+_select_sequences = 'SELECT pair, kind, next_number, last_used, last_used_time FROM x12_control_sequence ORDER BY pair, kind'
+
+_select_inbound = 'SELECT 1 FROM x12_inbound_control_number WHERE pair = ? AND kind = ? AND control_number = ?'
+_insert_inbound = 'INSERT INTO x12_inbound_control_number (pair, kind, control_number) VALUES (?, ?, ?)'
+
+_select_seen_value = 'SELECT 1 FROM x12_seen_value WHERE pair = ? AND kind = ? AND value = ?'
+_insert_seen_value = 'INSERT INTO x12_seen_value (pair, kind, value) VALUES (?, ?, ?)'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _pair_key(sender:'str', receiver:'str') -> 'str':
     """ Builds the storage key of one sender-receiver identifier pair.
     """
@@ -127,7 +151,7 @@ def _utc_now_iso() -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SequenceInfo(NamedTuple):
+class SequenceDetails(NamedTuple):
     """ One outbound control number sequence - the sender-receiver pair, the kind
     (interchange, group or transaction set), the next number the sequence will hand out
     and the number last handed out along with when that happened.
@@ -169,11 +193,12 @@ class ControlNumberStore:
         """
 
         # The names of the columns the file has today
-        existing:'list[str]' = []
+        existing:'strlist' = []
 
         cursor = self._connection.execute('PRAGMA table_info(x12_control_sequence)')
+        rows = cursor.fetchall()
 
-        for row in cursor.fetchall():
+        for row in rows:
             column_name = row[1]
             existing.append(column_name)
 
@@ -181,7 +206,8 @@ class ControlNumberStore:
         with self._connection:
             for column_name, column_type in _sequence_table_added_columns:
                 if column_name not in existing:
-                    _ = self._connection.execute(f'ALTER TABLE x12_control_sequence ADD COLUMN {column_name} {column_type}')
+                    alter = f'ALTER TABLE x12_control_sequence ADD COLUMN {column_name} {column_type}'
+                    _ = self._connection.execute(alter)
 
 # ################################################################################################################################
 
@@ -195,26 +221,20 @@ class ControlNumberStore:
 
         # The whole read-and-advance step is one transaction ..
         with self._connection:
-            cursor = self._connection.execute(
-                'SELECT next_number FROM x12_control_sequence WHERE pair = ? AND kind = ?',
-                (pair, kind))
+            cursor = self._connection.execute(_select_next_number, (pair, kind))
             row = cursor.fetchone()
 
             # .. a fresh pair starts a new sequence ..
             if row is None:
                 out = First_Control_Number
-                _ = self._connection.execute(
-                    'INSERT INTO x12_control_sequence (pair, kind, next_number, last_used, last_used_time) ' \
-                    'VALUES (?, ?, ?, ?, ?)',
-                    (pair, kind, out + 1, out, now_iso))
+                advanced = out + 1
+                _ = self._connection.execute(_insert_sequence, (pair, kind, advanced, out, now_iso))
 
             # .. and an existing one is advanced in place.
             else:
                 out = row[0]
-                _ = self._connection.execute(
-                    'UPDATE x12_control_sequence SET next_number = ?, last_used = ?, last_used_time = ? ' \
-                    'WHERE pair = ? AND kind = ?',
-                    (out + 1, out, now_iso, pair, kind))
+                advanced = out + 1
+                _ = self._connection.execute(_update_sequence, (advanced, out, now_iso, pair, kind))
 
         return out
 
@@ -229,45 +249,43 @@ class ControlNumberStore:
 
         # The check and the write are one transaction ..
         with self._connection:
-            cursor = self._connection.execute(
-                'SELECT next_number FROM x12_control_sequence WHERE pair = ? AND kind = ?',
-                (pair, kind))
+            cursor = self._connection.execute(_select_next_number, (pair, kind))
             row = cursor.fetchone()
 
             # .. a pair seen for the first time starts its sequence at the given number ..
             if row is None:
-                _ = self._connection.execute(
-                    'INSERT INTO x12_control_sequence (pair, kind, next_number) VALUES (?, ?, ?)',
-                    (pair, kind, next_number))
+                _ = self._connection.execute(_insert_sequence_position, (pair, kind, next_number))
 
             # .. and an existing sequence is repositioned in place.
             else:
-                _ = self._connection.execute(
-                    'UPDATE x12_control_sequence SET next_number = ? WHERE pair = ? AND kind = ?',
-                    (next_number, pair, kind))
+                _ = self._connection.execute(_update_next_number, (next_number, pair, kind))
 
 # ################################################################################################################################
 
-    def get_sequences(self) -> 'sequence_info_list':
+    def get_sequences(self) -> 'sequence_details_list':
         """ Returns all the outbound sequences the store holds, ordered by pair and kind -
         one entry per sender-receiver pair and control number level.
         """
 
         # Our response to produce
-        out:'sequence_info_list' = []
+        out:'sequence_details_list' = []
 
-        cursor = self._connection.execute(
-            'SELECT pair, kind, next_number, last_used, last_used_time FROM x12_control_sequence ORDER BY pair, kind')
+        cursor = self._connection.execute(_select_sequences)
+        rows = cursor.fetchall()
 
-        for row in cursor.fetchall():
+        for row in rows:
 
             pair = row[0]
+            kind = row[1]
+            next_number = row[2]
+            last_used = row[3]
+            last_used_time = row[4]
 
             # The pair key glues the identifiers with a colon and X12 identifiers never contain one.
             sender, _, receiver = pair.partition(':')
 
-            info = SequenceInfo(sender, receiver, row[1], row[2], row[3], row[4])
-            out.append(info)
+            details = SequenceDetails(sender, receiver, kind, next_number, last_used, last_used_time)
+            out.append(details)
 
         return out
 
@@ -281,9 +299,7 @@ class ControlNumberStore:
 
         # The check and the recording are one transaction ..
         with self._connection:
-            cursor = self._connection.execute(
-                'SELECT 1 FROM x12_inbound_control_number WHERE pair = ? AND kind = ? AND control_number = ?',
-                (pair, kind, control_number))
+            cursor = self._connection.execute(_select_inbound, (pair, kind, control_number))
             row = cursor.fetchone()
 
             # .. a number seen before is a duplicate ..
@@ -291,9 +307,7 @@ class ControlNumberStore:
                 return True
 
             # .. and a new one is recorded for the checks that follow.
-            _ = self._connection.execute(
-                'INSERT INTO x12_inbound_control_number (pair, kind, control_number) VALUES (?, ?, ?)',
-                (pair, kind, control_number))
+            _ = self._connection.execute(_insert_inbound, (pair, kind, control_number))
 
         return False
 
@@ -308,9 +322,7 @@ class ControlNumberStore:
 
         # The check and the recording are one transaction ..
         with self._connection:
-            cursor = self._connection.execute(
-                'SELECT 1 FROM x12_seen_value WHERE pair = ? AND kind = ? AND value = ?',
-                (pair, kind, value))
+            cursor = self._connection.execute(_select_seen_value, (pair, kind, value))
             row = cursor.fetchone()
 
             # .. a value seen before is a duplicate ..
@@ -318,9 +330,7 @@ class ControlNumberStore:
                 return True
 
             # .. and a new one is recorded for the checks that follow.
-            _ = self._connection.execute(
-                'INSERT INTO x12_seen_value (pair, kind, value) VALUES (?, ?, ?)',
-                (pair, kind, value))
+            _ = self._connection.execute(_insert_seen_value, (pair, kind, value))
 
         return False
 

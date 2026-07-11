@@ -180,7 +180,8 @@ def _mic_over(covered:'bytes') -> 'str':
     form of RFC 4130 section 7.4.3.
     """
     digest = sha256(covered).digest()
-    encoded = b64encode(digest).decode('ascii')
+    encoded_bytes = b64encode(digest)
+    encoded = encoded_bytes.decode('ascii')
 
     out = f'{encoded}, sha-256'
     return out
@@ -216,6 +217,8 @@ class TestHeaderGrammarConformance:
 
         # Section 5.2 with RFC 8551 - an encrypted message travels as enveloped-data.
         assert headers['Content-Type'].startswith('application/pkcs7-mime; smime-type=enveloped-data')
+
+# ################################################################################################################################
 
     @pytest.mark.parametrize('algorithm', _micalg_names)
     def test_micalg_parameter_uses_the_literal_names(self, parties:'any_', algorithm:'str') -> 'None':
@@ -375,6 +378,8 @@ class TestEnvelopedDataRecompute:
 
         assert plaintext == _edi_entity
 
+# ################################################################################################################################
+
     def test_gcm_envelope_decrypts_with_primitives_alone(self, parties:'any_') -> 'None':
         part = _edi_part()
         encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.AES_256_GCM)
@@ -444,6 +449,8 @@ class TestOpenSSLOracle:
         # What openssl recovered is the covered entity, byte for byte.
         assert content_path.read_bytes() == _edi_entity
 
+# ################################################################################################################################
+
     def test_openssl_signature_verifies_with_ours(self, parties:'any_', tmp_path:'Path') -> 'None':
         # Sign with an implementation we did not write ..
         payload_path = tmp_path / 'payload.bin'
@@ -492,6 +499,8 @@ class TestOpenSSLOracle:
         assert result.part.data == _edi_payload
         assert result.part.content_type == _edi_content_type
 
+# ################################################################################################################################
+
     def test_our_envelope_decrypts_with_openssl(self, parties:'any_', tmp_path:'Path') -> 'None':
         part = _edi_part()
         encrypted = encrypt(part, parties.sender.peer_encryption_certificate, EncryptionAlgorithm.AES_256_CBC)
@@ -520,6 +529,8 @@ class TestOpenSSLOracle:
         _ = subprocess_run(command, check=True, capture_output=True)
 
         assert plaintext_path.read_bytes() == _edi_entity
+
+# ################################################################################################################################
 
     def test_openssl_envelope_decrypts_with_ours(self, parties:'any_', tmp_path:'Path') -> 'None':
         # Encrypt to the receiver with an implementation we did not write ..

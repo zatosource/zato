@@ -23,6 +23,14 @@ from zato.common.as2.profiles import EPCIS_Content_Type, FDA_Production_Identifi
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _sender_identifier   = 'ZatoRetail'
 _receiver_identifier = 'PartnerCorp'
 
@@ -34,13 +42,13 @@ _one_day = timedelta(days=1)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _certificate_to_pem(certificate):
+def _certificate_to_pem(certificate:'any_') -> 'any_':
     out = certificate.public_bytes(Encoding.PEM).decode('ascii')
     return out
 
 # ################################################################################################################################
 
-def _make_entry(certificate, valid_from=None, valid_until=None):
+def _make_entry(certificate:'any_', valid_from:'any_'=None, valid_until:'any_'=None) -> 'any_':
     out = CertificateEntry()
 
     out.certificate = certificate
@@ -51,7 +59,7 @@ def _make_entry(certificate, valid_from=None, valid_until=None):
 
 # ################################################################################################################################
 
-def _partnership_config():
+def _partnership_config() -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     with every field of the connection schema present.
     """
@@ -105,14 +113,16 @@ def _partnership_config():
 
 class TestNewPartnership:
 
-    def test_fresh_partnership_has_its_list_fields_in_place(self):
+    def test_fresh_partnership_has_its_list_fields_in_place(self) -> 'None':
         partnership = new_partnership()
 
         assert partnership.mdn_mic_algorithms == [DigestAlgorithm.SHA256]
         assert partnership.verification_certificates == []
         assert partnership.encryption_certificates == []
 
-    def test_list_fields_are_not_shared_between_instances(self):
+# ################################################################################################################################
+
+    def test_list_fields_are_not_shared_between_instances(self) -> 'None':
         first = new_partnership()
         second = new_partnership()
 
@@ -122,7 +132,9 @@ class TestNewPartnership:
         assert second.verification_certificates == []
         assert second.mdn_mic_algorithms == [DigestAlgorithm.SHA256]
 
-    def test_edi_identity_is_empty_by_default(self):
+# ################################################################################################################################
+
+    def test_edi_identity_is_empty_by_default(self) -> 'None':
         partnership = new_partnership()
 
         assert partnership.isa_qualifier == ''
@@ -135,21 +147,27 @@ class TestNewPartnership:
 
 class TestIdentifierQuoting:
 
-    def test_atom_identifiers_travel_bare(self):
+    def test_atom_identifiers_travel_bare(self) -> 'None':
         assert quote_as2_identifier('PartnerCorp') == 'PartnerCorp'
         assert quote_as2_identifier('partner-corp_01') == 'partner-corp_01'
 
-    def test_identifiers_with_spaces_and_colons_are_quoted(self):
+# ################################################################################################################################
+
+    def test_identifiers_with_spaces_and_colons_are_quoted(self) -> 'None':
 
         # Certification events assign identifiers that deliberately contain spaces and colons.
         assert quote_as2_identifier('Partner Corp') == '"Partner Corp"'
         assert quote_as2_identifier('Partner:Corp') == '"Partner:Corp"'
 
-    def test_embedded_quotes_and_backslashes_are_escaped(self):
+# ################################################################################################################################
+
+    def test_embedded_quotes_and_backslashes_are_escaped(self) -> 'None':
         assert quote_as2_identifier('Partner "The Best" Corp') == '"Partner \\"The Best\\" Corp"'
         assert quote_as2_identifier('Partner\\Corp') == '"Partner\\\\Corp"'
 
-    def test_unquoting_undoes_the_quoting(self):
+# ################################################################################################################################
+
+    def test_unquoting_undoes_the_quoting(self) -> 'None':
         values = ['PartnerCorp', 'Partner Corp', 'Partner:Corp', 'Partner "The Best" Corp', 'Partner\\Corp']
 
         for value in values:
@@ -161,7 +179,7 @@ class TestIdentifierQuoting:
 
 class TestMatchPartnership:
 
-    def test_identities_match_crosswise(self):
+    def test_identities_match_crosswise(self) -> 'None':
         partnership = new_partnership()
         partnership.as2_from = _sender_identifier
         partnership.as2_to = _receiver_identifier
@@ -170,7 +188,9 @@ class TestMatchPartnership:
         matched = match_partnership([partnership], _receiver_identifier, _sender_identifier)
         assert matched is partnership
 
-    def test_unknown_pair_matches_nothing(self):
+# ################################################################################################################################
+
+    def test_unknown_pair_matches_nothing(self) -> 'None':
         partnership = new_partnership()
         partnership.as2_from = _sender_identifier
         partnership.as2_to = _receiver_identifier
@@ -183,7 +203,7 @@ class TestMatchPartnership:
 
 class TestEDIIdentity:
 
-    def test_edi_identifiers_come_from_configuration(self):
+    def test_edi_identifiers_come_from_configuration(self) -> 'None':
         config = _partnership_config()
 
         config['isa_qualifier'] = '01'
@@ -203,19 +223,25 @@ class TestEDIIdentity:
 
 class TestCertificateWindows:
 
-    def test_entry_without_a_window_is_always_active(self):
+    def test_entry_without_a_window_is_always_active(self) -> 'None':
         entry = _make_entry(None)
         assert is_certificate_entry_active(entry, _now)
 
-    def test_entry_before_its_activation_date_is_not_active(self):
+# ################################################################################################################################
+
+    def test_entry_before_its_activation_date_is_not_active(self) -> 'None':
         entry = _make_entry(None, valid_from=_now + _one_day)
         assert not is_certificate_entry_active(entry, _now)
 
-    def test_entry_past_its_expiry_date_is_not_active(self):
+# ################################################################################################################################
+
+    def test_entry_past_its_expiry_date_is_not_active(self) -> 'None':
         entry = _make_entry(None, valid_until=_now - _one_day)
         assert not is_certificate_entry_active(entry, _now)
 
-    def test_entry_inside_its_window_is_active(self):
+# ################################################################################################################################
+
+    def test_entry_inside_its_window_is_active(self) -> 'None':
         entry = _make_entry(None, valid_from=_now - _one_day, valid_until=_now + _one_day)
         assert is_certificate_entry_active(entry, _now)
 
@@ -224,7 +250,7 @@ class TestCertificateWindows:
 
 class TestVerificationCertificates:
 
-    def test_all_currently_valid_certificates_are_accepted(self, parties):
+    def test_all_currently_valid_certificates_are_accepted(self, parties:'TestParties') -> 'None':
         """ A migration window can have more than two certificates live at once -
         inbound verification accepts any of them.
         """
@@ -241,7 +267,9 @@ class TestVerificationCertificates:
 
         assert accepted == [old_certificate, new_certificate, next_certificate]
 
-    def test_certificates_outside_their_window_are_not_accepted(self, parties):
+# ################################################################################################################################
+
+    def test_certificates_outside_their_window_are_not_accepted(self, parties:'TestParties') -> 'None':
         expired_certificate = parties.sender.signing_certificate_chain[0]
         current_certificate = parties.receiver.signing_certificate_chain[0]
         future_certificate = parties.ca_certificate
@@ -260,11 +288,13 @@ class TestVerificationCertificates:
 
 class TestEncryptionCertificateSelection:
 
-    def test_nothing_is_selected_from_an_empty_list(self):
+    def test_nothing_is_selected_from_an_empty_list(self) -> 'None':
         partnership = new_partnership()
         assert select_encryption_certificate(partnership, _now) is None
 
-    def test_the_only_certificate_is_selected(self, parties):
+# ################################################################################################################################
+
+    def test_the_only_certificate_is_selected(self, parties:'TestParties') -> 'None':
         certificate = parties.receiver.signing_certificate_chain[0]
 
         partnership = new_partnership()
@@ -272,7 +302,9 @@ class TestEncryptionCertificateSelection:
 
         assert select_encryption_certificate(partnership, _now) is certificate
 
-    def test_current_certificate_wins_before_the_activation_date(self, parties):
+# ################################################################################################################################
+
+    def test_current_certificate_wins_before_the_activation_date(self, parties:'TestParties') -> 'None':
         current_certificate = parties.receiver.signing_certificate_chain[0]
         next_certificate = parties.sender.signing_certificate_chain[0]
 
@@ -282,7 +314,9 @@ class TestEncryptionCertificateSelection:
 
         assert select_encryption_certificate(partnership, _now) is current_certificate
 
-    def test_next_certificate_wins_once_its_activation_date_passes(self, parties):
+# ################################################################################################################################
+
+    def test_next_certificate_wins_once_its_activation_date_passes(self, parties:'TestParties') -> 'None':
         current_certificate = parties.receiver.signing_certificate_chain[0]
         next_certificate = parties.sender.signing_certificate_chain[0]
 
@@ -292,7 +326,9 @@ class TestEncryptionCertificateSelection:
 
         assert select_encryption_certificate(partnership, _now) is next_certificate
 
-    def test_most_recently_activated_certificate_wins_among_several_live_ones(self, parties):
+# ################################################################################################################################
+
+    def test_most_recently_activated_certificate_wins_among_several_live_ones(self, parties:'TestParties') -> 'None':
         oldest_certificate = parties.receiver.signing_certificate_chain[0]
         older_certificate = parties.sender.signing_certificate_chain[0]
         newest_certificate = parties.ca_certificate
@@ -309,7 +345,7 @@ class TestEncryptionCertificateSelection:
 
 class TestConfigBridging:
 
-    def test_scalar_fields_come_from_configuration(self):
+    def test_scalar_fields_come_from_configuration(self) -> 'None':
         config = _partnership_config()
 
         config['mdn_mode'] = MDNMode.Async
@@ -327,14 +363,18 @@ class TestConfigBridging:
         assert partnership.compress is True
         assert partnership.http_timeout_seconds == 120
 
-    def test_empty_certificate_fields_leave_the_lists_empty(self):
+# ################################################################################################################################
+
+    def test_empty_certificate_fields_leave_the_lists_empty(self) -> 'None':
         config = _partnership_config()
         partnership = build_partnership(config)
 
         assert partnership.verification_certificates == []
         assert partnership.encryption_certificates == []
 
-    def test_current_certificate_joins_both_lists_without_a_window(self, parties):
+# ################################################################################################################################
+
+    def test_current_certificate_joins_both_lists_without_a_window(self, parties:'TestParties') -> 'None':
         certificate = parties.receiver.signing_certificate_chain[0]
 
         config = _partnership_config()
@@ -351,7 +391,9 @@ class TestConfigBridging:
         assert entry.valid_from is None
         assert entry.valid_until is None
 
-    def test_next_certificate_carries_its_activation_date(self, parties):
+# ################################################################################################################################
+
+    def test_next_certificate_carries_its_activation_date(self, parties:'TestParties') -> 'None':
         current_certificate = parties.receiver.signing_certificate_chain[0]
         next_certificate = parties.sender.signing_certificate_chain[0]
 
@@ -379,7 +421,9 @@ class TestConfigBridging:
         assert select_encryption_certificate(partnership, after) == next_certificate
         assert active_verification_certificates(partnership, after) == [current_certificate, next_certificate]
 
-    def test_next_certificate_without_an_activation_date_is_accepted_immediately(self, parties):
+# ################################################################################################################################
+
+    def test_next_certificate_without_an_activation_date_is_accepted_immediately(self, parties:'TestParties') -> 'None':
         next_certificate = parties.sender.signing_certificate_chain[0]
 
         config = _partnership_config()
@@ -392,7 +436,9 @@ class TestConfigBridging:
         assert entry.certificate == next_certificate
         assert entry.valid_from is None
 
-    def test_a_pem_with_several_certificates_yields_one_entry_each(self, parties):
+# ################################################################################################################################
+
+    def test_a_pem_with_several_certificates_yields_one_entry_each(self, parties:'TestParties') -> 'None':
         first_certificate = parties.receiver.signing_certificate_chain[0]
         second_certificate = parties.sender.signing_certificate_chain[0]
 
@@ -410,7 +456,7 @@ class TestConfigBridging:
 
 class TestProfiles:
 
-    def test_default_partnership(self):
+    def test_default_partnership(self) -> 'None':
         partnership = new_default_partnership()
 
         assert partnership.sign is True
@@ -422,7 +468,9 @@ class TestProfiles:
         assert partnership.mdn_signed is True
         assert partnership.mdn_mic_algorithms == [DigestAlgorithm.SHA256]
 
-    def test_walmart_partnership(self):
+# ################################################################################################################################
+
+    def test_walmart_partnership(self) -> 'None':
         partnership = new_walmart_partnership()
 
         # SHA-256 is the only signing algorithm the partner accepts,
@@ -437,7 +485,9 @@ class TestProfiles:
         assert partnership.encryption_algorithm == EncryptionAlgorithm.AES_128_CBC
         assert partnership.compress is False
 
-    def test_sha1_3des_partnership(self):
+# ################################################################################################################################
+
+    def test_sha1_3des_partnership(self) -> 'None':
         partnership = new_sha1_3des_partnership()
 
         assert partnership.sign is True
@@ -448,7 +498,9 @@ class TestProfiles:
         assert partnership.encrypt is True
         assert partnership.encryption_algorithm == EncryptionAlgorithm.DES_EDE3_CBC
 
-    def test_fda_esg_partnership(self):
+# ################################################################################################################################
+
+    def test_fda_esg_partnership(self) -> 'None':
         partnership = new_fda_esg_partnership()
 
         assert partnership.as2_to == FDA_Production_Identifier
@@ -463,7 +515,9 @@ class TestProfiles:
         assert partnership.mdn_mode == MDNMode.Async
         assert partnership.mdn_signed is True
 
-    def test_dscsa_partnership(self):
+# ################################################################################################################################
+
+    def test_dscsa_partnership(self) -> 'None':
         partnership = new_dscsa_partnership()
 
         assert partnership.content_type == EPCIS_Content_Type

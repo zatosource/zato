@@ -115,7 +115,7 @@ class TestPurchaseOrder850(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('PurchaseOrder850', parse_x12(_purchase_order_850).transaction_set)
         self.assertIsInstance(message, PurchaseOrder850)
 
@@ -153,7 +153,9 @@ class TestPurchaseOrder850(unittest.TestCase):
 
         self.assertEqual(message.ctt.line_count, '2')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_purchase_order_850)
         serialized = interchange.serialize()
 
@@ -166,7 +168,7 @@ class TestAcknowledgment855(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('PurchaseOrderAcknowledgment855', parse_x12(_acknowledgment_855).transaction_set)
         self.assertIsInstance(message, PurchaseOrderAcknowledgment855)
 
@@ -180,7 +182,9 @@ class TestAcknowledgment855(unittest.TestCase):
         self.assertEqual(message.lines[1].acknowledgments[0].line_status, 'IR')
         self.assertEqual(message.lines[1].acknowledgments[0].quantity, '0')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_acknowledgment_855)
         serialized = interchange.serialize()
 
@@ -193,14 +197,16 @@ class TestShipNotice856(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('ShipNotice856', parse_x12(_ship_notice_856).transaction_set)
         self.assertIsInstance(message, ShipNotice856)
 
         self.assertEqual(message.bsn.shipment_id, 'SHIP-88112')
         self.assertEqual(message.ctt.line_count, '5')
 
-    def test_hierarchy(self) -> None:
+# ################################################################################################################################
+
+    def test_hierarchy(self) -> 'None':
         message = parse_x12(_ship_notice_856).transaction_set
 
         # The HL parent pointers resolve into the shipment/order/pack/item tree.
@@ -238,7 +244,9 @@ class TestShipNotice856(unittest.TestCase):
         self.assertEqual(second_item.segments('CTT'), [])
         self.assertEqual(second_item.segments('SE'), [])
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_ship_notice_856)
         serialized = interchange.serialize()
 
@@ -251,7 +259,7 @@ class TestInvoice810(unittest.TestCase):
 
     maxDiff = None
 
-    def test_navigate(self) -> None:
+    def test_navigate(self) -> 'None':
         message = cast_('Invoice810', parse_x12(_invoice_810).transaction_set)
         self.assertIsInstance(message, Invoice810)
 
@@ -273,7 +281,9 @@ class TestInvoice810(unittest.TestCase):
         self.assertEqual(message.shipment.quantity, '15')
         self.assertEqual(message.ctt.line_count, '2')
 
-    def test_roundtrip(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip(self) -> 'None':
         interchange = parse_x12(_invoice_810)
         serialized = interchange.serialize()
 

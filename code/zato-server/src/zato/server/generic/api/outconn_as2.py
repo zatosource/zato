@@ -300,6 +300,9 @@ class OutconnAS2Wrapper(Wrapper):
         try:
             conn = _AS2Connection(self.config, self.server)
             _ = self.client.put_client(conn)
+
+        # A genuinely broad boundary - building a connection parses user-pasted PEM material
+        # and decrypts keys, and any failure here must not break the connection pool.
         except Exception:
             logger.warning('Caught an exception while adding an AS2 client (%s); e:`%s`',
                 self.config['name'], format_exc())

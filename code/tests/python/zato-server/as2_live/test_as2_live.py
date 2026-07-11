@@ -323,7 +323,7 @@ class TestAS2LiveLoopback:
             message = received[0]
             assert message['message_id'] == reply['message_id'].strip('<>'), f'Expected the message id, got: {message}'
             assert message['data'] == reply['payload'], f'Expected the payload, got: {message}'
-            assert message['edi']['doc_type'] == '850', f'Expected an 850, got: {message}'
+            assert message['edi']['document_type'] == '850', f'Expected an 850, got: {message}'
             assert message['edi']['sender_id'] == 'ZATORETAIL', f'Expected the EDI sender, got: {message}'
 
         finally:

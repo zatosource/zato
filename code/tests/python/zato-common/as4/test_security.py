@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from uuid import uuid4
-
 # cryptography
 from cryptography.hazmat.primitives.serialization import Encoding
 
@@ -26,6 +23,7 @@ from zato.common.as4.pmode import new_pmode
 from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
+from zato.common.crypto.api import CryptoManager
 from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.util.xml_.core import qname, utc_timestamp, XMLSecurityException
 from zato.common.util.xml_.keystore import new_keystore
@@ -35,7 +33,15 @@ from zato.common.util.xml_.xmlsec import encode_base64
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _signed_message(keystore, token_type=TokenType.X509v3):
+if 0:
+    from zato.common.typing_ import any_
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _signed_message(keystore:'any_', token_type:'any_'=TokenType.X509v3) -> 'any_':
     """ Builds one signed user message with a single payload part.
     """
     pmode = new_pmode()
@@ -54,7 +60,7 @@ def _signed_message(keystore, token_type=TokenType.X509v3):
 
 # ################################################################################################################################
 
-def _reparse(envelope):
+def _reparse(envelope:'any_') -> 'any_':
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(etree.tostring(envelope))
@@ -65,7 +71,7 @@ def _reparse(envelope):
 
 class TestSignVerify:
 
-    def test_sign_verify_roundtrip(self, rsa_parties):
+    def test_sign_verify_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         envelope, parts, _ = _signed_message(rsa_parties.sender)
 
         result = verify_envelope(_reparse(envelope), parts, rsa_parties.receiver)
@@ -75,42 +81,51 @@ class TestSignVerify:
         # The messaging header, the body and the attachment are all covered.
         assert len(result.signed_references) == 3
 
-    def test_tampered_attachment_is_detected(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_tampered_attachment_is_detected(self, rsa_parties:'TestParties') -> 'None':
         envelope, parts, _ = _signed_message(rsa_parties.sender)
 
         parts[0].data = b'<Invoice>tampered content</Invoice>'
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(_reparse(envelope), parts, rsa_parties.receiver)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
-    def test_tampered_header_is_detected(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_tampered_header_is_detected(self, rsa_parties:'TestParties') -> 'None':
         envelope, parts, _ = _signed_message(rsa_parties.sender)
 
         # Change the action element after signing.
         wire = _reparse(envelope)
-        action = wire.find(f'.//{qname(NS.EBMS, "Action")}')
+        action_name = qname(NS.EBMS, 'Action')
+        action = wire.find(f'.//{action_name}')
         action.text = 'SomethingElse'
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(wire, parts, rsa_parties.receiver)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
-    def test_wrong_signer_is_rejected_by_pinning(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_wrong_signer_is_rejected_by_pinning(self, rsa_parties:'TestParties') -> 'None':
         # The receiver signs a message but the verifier expects the sender's certificate.
         envelope, parts, _ = _signed_message(rsa_parties.receiver)
 
         verifier = new_keystore()
         verifier.peer_signing_certificate = rsa_parties.sender.signing_certificate
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(_reparse(envelope), parts, verifier)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
-    def test_trust_anchor_chain_validation(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_trust_anchor_chain_validation(self, rsa_parties:'TestParties') -> 'None':
         envelope, parts, _ = _signed_message(rsa_parties.sender)
 
         # No pinned certificate - trust comes from the CA only.
@@ -120,19 +135,23 @@ class TestSignVerify:
         result = verify_envelope(_reparse(envelope), parts, verifier)
         assert result.signer_certificate == rsa_parties.sender.signing_certificate
 
-    def test_unknown_ca_is_rejected(self, rsa_parties, eddsa_parties):
+# ################################################################################################################################
+
+    def test_unknown_ca_is_rejected(self, rsa_parties:'TestParties', eddsa_parties:'TestParties') -> 'None':
         envelope, parts, _ = _signed_message(rsa_parties.sender)
 
         # The verifier only trusts the other CA.
         verifier = new_keystore()
         verifier.trust_anchors = [eddsa_parties.ca_certificate]
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(_reparse(envelope), parts, verifier)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
-    def test_ed25519_sign_verify_roundtrip(self, eddsa_parties):
+# ################################################################################################################################
+
+    def test_ed25519_sign_verify_roundtrip(self, eddsa_parties:'TestParties') -> 'None':
         pmode = new_pmode()
         pmode.security.signature_algorithm = Algorithm.Ed25519
 
@@ -149,7 +168,7 @@ class TestSignVerify:
 
 class TestPKIPath:
 
-    def test_pkipath_roundtrip(self, rsa_parties):
+    def test_pkipath_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         chain = [rsa_parties.sender.signing_certificate, rsa_parties.ca_certificate]
 
         encoded = build_pkipath(chain)
@@ -157,7 +176,9 @@ class TestPKIPath:
 
         assert decoded == chain
 
-    def test_pkipath_token_carries_the_chain(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_pkipath_token_carries_the_chain(self, rsa_parties:'TestParties') -> 'None':
         # Sign with a PKIPath token that carries both the leaf and the CA.
         keystore = new_keystore()
         keystore.signing_key = rsa_parties.sender.signing_key
@@ -178,7 +199,7 @@ class TestPKIPath:
 
 class TestEncryptDecrypt:
 
-    def test_rsa_encrypt_decrypt_roundtrip(self, rsa_parties):
+    def test_rsa_encrypt_decrypt_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         pmode = new_pmode()
         part = new_part(b'<Secret>rsa suite</Secret>')
 
@@ -194,7 +215,9 @@ class TestEncryptDecrypt:
         decrypt_parts(_reparse(envelope), [part], rsa_parties.receiver)
         assert part.data == plaintext
 
-    def test_x25519_encrypt_decrypt_roundtrip(self, eddsa_parties):
+# ################################################################################################################################
+
+    def test_x25519_encrypt_decrypt_roundtrip(self, eddsa_parties:'TestParties') -> 'None':
         pmode = new_pmode()
         pmode.security.crypto_suite = CryptoSuite.EdDSA
 
@@ -210,7 +233,9 @@ class TestEncryptDecrypt:
         decrypt_parts(_reparse(envelope), [part], eddsa_parties.receiver)
         assert part.data == plaintext
 
-    def test_wrong_key_cannot_decrypt(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_wrong_key_cannot_decrypt(self, rsa_parties:'TestParties') -> 'None':
         pmode = new_pmode()
         part = new_part(b'<Secret>for the receiver only</Secret>')
 
@@ -230,7 +255,7 @@ _holder_of_key = 'urn:oasis:names:tc:SAML:2.0:cm:holder-of-key'
 
 # ################################################################################################################################
 
-def _new_holder_of_key_assertion(certificate):
+def _new_holder_of_key_assertion(certificate:'any_') -> 'any_':
     """ Builds the kind of SAML 2.0 assertion a security token service issues -
     it vouches that the subject is whoever holds the private key matching
     the certificate carried in the subject confirmation.
@@ -238,7 +263,9 @@ def _new_holder_of_key_assertion(certificate):
     nsmap = {'saml2': NS.SAML2, 'ds': NS.DS}
 
     assertion = etree.Element(qname(NS.SAML2, 'Assertion'), nsmap=nsmap)
-    assertion.set('ID', f'_{uuid4().hex}')
+
+    assertion_id = CryptoManager.generate_hex_string()
+    assertion.set('ID', f'_{assertion_id}')
     assertion.set('Version', '2.0')
     assertion.set('IssueInstant', utc_timestamp())
 
@@ -271,7 +298,7 @@ class TestSAMLToken:
     the Australian SBR's ebMS3 exchanges use, with tokens issued by VANguard.
     """
 
-    def _saml_keystore(self, rsa_parties):
+    def _saml_keystore(self, rsa_parties:'TestParties') -> 'any_':
         keystore = new_keystore()
         keystore.signing_key = rsa_parties.sender.signing_key
         keystore.signing_certificate_chain = [rsa_parties.sender.signing_certificate]
@@ -279,7 +306,9 @@ class TestSAMLToken:
 
         return keystore
 
-    def test_saml_token_sign_verify_roundtrip(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_saml_token_sign_verify_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         keystore = self._saml_keystore(rsa_parties)
         envelope, parts, _ = _signed_message(keystore, TokenType.SAML20)
 
@@ -288,12 +317,15 @@ class TestSAMLToken:
         assert result.signer_certificate == rsa_parties.sender.signing_certificate
         assert len(result.signed_references) == 3
 
-    def test_saml_token_reference_layout(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_saml_token_reference_layout(self, rsa_parties:'TestParties') -> 'None':
         keystore = self._saml_keystore(rsa_parties)
         envelope, _, _ = _signed_message(keystore, TokenType.SAML20)
 
         wire = _reparse(envelope)
-        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security_name = qname(NS.WSSE, 'Security')
+        security = wire.find(f'.//{security_name}')
 
         # The assertion itself travels in the security header, in place of a binary token.
         assertion = security.find(qname(NS.SAML2, 'Assertion'))
@@ -303,7 +335,8 @@ class TestSAMLToken:
         # The key info names the token type and points at the assertion by its ID,
         # with the identifiers the SAML Token Profile 1.1 prescribes.
         signature = security.find(qname(NS.DS, 'Signature'))
-        token_reference = signature.find(f'.//{qname(NS.WSSE, "SecurityTokenReference")}')
+        securityTokenReference_name = qname(NS.WSSE, 'SecurityTokenReference')
+        token_reference = signature.find(f'.//{securityTokenReference_name}')
 
         token_type = token_reference.get(qname(NS.WSSE11, 'TokenType'))
         assert token_type == 'http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLV2.0'
@@ -314,38 +347,45 @@ class TestSAMLToken:
 
         assert key_identifier.text == assertion.get('ID')
 
-    def test_tampering_is_detected_with_saml_token(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_tampering_is_detected_with_saml_token(self, rsa_parties:'TestParties') -> 'None':
         keystore = self._saml_keystore(rsa_parties)
         envelope, parts, _ = _signed_message(keystore, TokenType.SAML20)
 
         parts[0].data = b'<Invoice>tampered content</Invoice>'
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(_reparse(envelope), parts, rsa_parties.receiver)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
-    def test_missing_assertion_is_rejected_at_signing_time(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_missing_assertion_is_rejected_at_signing_time(self, rsa_parties:'TestParties') -> 'None':
         keystore = self._saml_keystore(rsa_parties)
         keystore.saml_assertion = None
 
         with pytest.raises(XMLSecurityException):
             _, _, _ = _signed_message(keystore, TokenType.SAML20)
 
-    def test_missing_assertion_on_the_wire_is_rejected(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_missing_assertion_on_the_wire_is_rejected(self, rsa_parties:'TestParties') -> 'None':
         keystore = self._saml_keystore(rsa_parties)
         envelope, parts, _ = _signed_message(keystore, TokenType.SAML20)
 
         # Strip the assertion the signature's key identifier points at.
         wire = _reparse(envelope)
-        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security_name = qname(NS.WSSE, 'Security')
+        security = wire.find(f'.//{security_name}')
         assertion = security.find(qname(NS.SAML2, 'Assertion'))
         security.remove(assertion)
 
-        with pytest.raises(AS4SecurityException) as exc:
+        with pytest.raises(AS4SecurityException) as exception_info:
             _ = verify_envelope(wire, parts, rsa_parties.receiver)
 
-        assert exc.value.error_code == EbMSError.Failed_Authentication
+        assert exception_info.value.error_code == EbMSError.Failed_Authentication
 
 # ################################################################################################################################
 # ################################################################################################################################

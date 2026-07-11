@@ -272,8 +272,8 @@ def _collect_overdue_acks(configs:'dictlist', now:'datetime', server_name:'str')
             continue
 
         pair = f'{pending.sender}:{pending.receiver}'
-        message = f'Acknowledgment overdue from `{pair}` for interchange `{pending.control_number}`, ' \
-            f'sent {pending.sent_time_iso}'
+        message = f'Acknowledgment overdue from `{pair}` for interchange `{pending.control_number}`,'
+        message += f' sent {pending.sent_time_iso}'
         link = f'/zato/audit-log/?source=x12&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
 
         finding = _new_finding(Kind_Ack_Overdue, AuditSource.X12, pair, message, link)
@@ -458,8 +458,8 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
                 control_number = order['control_number']
                 hour_suffix = 'hour' if window_hours == 1 else 'hours'
 
-                message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix} ' \
-                    f'of order `{control_number}`, received {order["event_time_iso"]}'
+                message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix}'
+                message += f' of order `{control_number}`, received {order["event_time_iso"]}'
                 link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster={default_cluster_id}'
 
                 finding = _new_finding(Kind_Ship_Notice_Missing, AuditSource.X12, pair, message, link)

@@ -6,15 +6,13 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from uuid import uuid4
-
 # lxml
 from lxml import etree
 
 # Zato
 from zato.common.as4.common import NS
 from zato.common.as4.ebms import Body_Element_ID, Messaging_Element_ID
+from zato.common.crypto.api import CryptoManager
 from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import part_list
@@ -50,14 +48,20 @@ _signature_nsmap = {
 def get_security_header(envelope:'any_') -> 'any_':
     """ Returns the wsse:Security header of an envelope, creating it if needed.
     """
-    header = envelope.find(qname(NS.SOAP, 'Header'))
-    security = header.find(qname(NS.WSSE, 'Security'))
+    header_name = qname(NS.SOAP, 'Header')
+    security_name = qname(NS.WSSE, 'Security')
 
-    if security is None:
-        security = etree.SubElement(header, qname(NS.WSSE, 'Security'), nsmap=_security_nsmap)
-        security.set(qname(NS.SOAP, 'mustUnderstand'), 'true')
+    header = envelope.find(header_name)
 
-    return security
+    # Our response to produce
+    out = header.find(security_name)
+
+    if out is None:
+        out = etree.SubElement(header, security_name, nsmap=_security_nsmap)
+        must_understand_name = qname(NS.SOAP, 'mustUnderstand')
+        out.set(must_understand_name, 'true')
+
+    return out
 
 # ################################################################################################################################
 
@@ -83,16 +87,22 @@ def sign_envelope(
     else:
         token_id = add_binary_security_token(security, keystore, config.token_type)
 
-    signature = etree.SubElement(security, qname(NS.DS, 'Signature'), nsmap=_signature_nsmap)
-    signature.set('Id', f'SIG-{uuid4().hex}')
+    signature_name = qname(NS.DS, 'Signature')
+    signature_id_suffix = CryptoManager.generate_hex_string()
+
+    out = etree.SubElement(security, signature_name, nsmap=_signature_nsmap)
+    out.set('Id', f'SIG-{signature_id_suffix}')
 
     # The signed info lists everything the signature covers ..
-    signed_info = etree.SubElement(signature, qname(NS.DS, 'SignedInfo'))
+    signed_info_name = qname(NS.DS, 'SignedInfo')
+    signed_info = etree.SubElement(out, signed_info_name)
 
-    canonicalization_method = etree.SubElement(signed_info, qname(NS.DS, 'CanonicalizationMethod'))
+    canonicalization_method_name = qname(NS.DS, 'CanonicalizationMethod')
+    canonicalization_method = etree.SubElement(signed_info, canonicalization_method_name)
     canonicalization_method.set('Algorithm', Algorithm.C14N_Exclusive)
 
-    signature_method = etree.SubElement(signed_info, qname(NS.DS, 'SignatureMethod'))
+    signature_method_name = qname(NS.DS, 'SignatureMethod')
+    signature_method = etree.SubElement(signed_info, signature_method_name)
     signature_method.set('Algorithm', config.signature_algorithm)
 
     # .. the ebMS header and the (empty) SOAP body ..
@@ -106,16 +116,17 @@ def sign_envelope(
     # Now that all the references are in place, the signed info itself can be signed.
     signature_bytes = compute_signature_value(signed_info, keystore, config.signature_algorithm)
 
-    signature_value = etree.SubElement(signature, qname(NS.DS, 'SignatureValue'))
+    signature_value_name = qname(NS.DS, 'SignatureValue')
+    signature_value = etree.SubElement(out, signature_value_name)
     signature_value.text = encode_base64(signature_bytes)
 
     # The key info points back at the token so verifiers know which certificate signed this.
     if config.token_type == TokenType.SAML20:
-        add_key_info_saml_reference(signature, token_id)
+        add_key_info_saml_reference(out, token_id)
     else:
-        add_key_info_token_reference(signature, token_id, config.token_type)
+        add_key_info_token_reference(out, token_id, config.token_type)
 
-    return signature
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

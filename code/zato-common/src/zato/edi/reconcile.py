@@ -45,7 +45,10 @@ Default_Server_Name = 'edi-reconciler'
 def _pair_key(sender:'str', receiver:'str') -> 'str':
     """ Builds the storage key of one sender-receiver identifier pair.
     """
-    out = f'{sender.strip()}:{receiver.strip()}'
+    sender = sender.strip()
+    receiver = receiver.strip()
+
+    out = f'{sender}:{receiver}'
     return out
 
 # ################################################################################################################################
@@ -213,20 +216,25 @@ class Reconciler:
             ack.c.object_name == event_table.c.object_name,
             ack.c.msg_id == event_table.c.msg_id,
         )
-        ack_select = select(ack.c.id).where(ack_conditions)
+        ack_select = select(ack.c.id)
+        ack_select = ack_select.where(ack_conditions)
         ack_exists = exists(ack_select)
+
+        sent_conditions = and_(
+            event_table.c.source == AuditSource.X12,
+            event_table.c.event_type == AuditEvent.Interchange_Sent,
+            event_table.c.event_time_iso < cutoff_iso,
+            ~ack_exists,
+        )
 
         statement = select(
             event_table.c.object_name,
             event_table.c.msg_id,
             event_table.c.event_time_iso,
             event_table.c.cid,
-        ).where(and_(
-            event_table.c.source == AuditSource.X12,
-            event_table.c.event_type == AuditEvent.Interchange_Sent,
-            event_table.c.event_time_iso < cutoff_iso,
-            ~ack_exists,
-        )).order_by(event_table.c.id)
+        )
+        statement = statement.where(sent_conditions)
+        statement = statement.order_by(event_table.c.id)
 
         with self.engine.connect() as connection:
             result = connection.execute(statement)

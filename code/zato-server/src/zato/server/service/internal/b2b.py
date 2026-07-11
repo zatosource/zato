@@ -39,8 +39,8 @@ class B2BAlerting(AdminService):
         """ Returns one key of the scheduler job's extra data - the extra is user-editable
         in the scheduler UI, so a missing key simply means the feature it drives is off.
         """
-        if key in context:
-            out = context[key]
+        if value := context.get(key):
+            out = value
         else:
             out = ''
 
@@ -78,7 +78,10 @@ class B2BAlerting(AdminService):
         audit_log = AuditLog(self.server.name)
         record_alerts(audit_log, findings, cid=self.cid)
 
-        self.logger.info('B2B alerting sweep raised %d finding(s)', len(findings))
+        finding_count = len(findings)
+        suffix = 'finding' if finding_count == 1 else 'findings'
+
+        self.logger.info('B2B alerting sweep raised %d %s', finding_count, suffix)
 
         # The digest goes out only when the job's extra data names an SMTP connection.
         smtp_conn = self._get_extra(AS2.Alerting.Extra_SMTP_Conn, context)
@@ -89,8 +92,7 @@ class B2BAlerting(AdminService):
 
         # The email component may be disabled in server.conf.
         if not self.email:
-            self.logger.warning('Could not send the B2B alerting digest; ' \
-                'is component_enabled.email set to True in server.conf?')
+            self.logger.warning('Could not send the B2B alerting digest; is component_enabled.email set to True in server.conf?')
             return
 
         from_ = self._get_extra(AS2.Alerting.Extra_From, context)
@@ -105,7 +107,8 @@ class B2BAlerting(AdminService):
         message.subject = subject
         message.body = body
 
-        self.email.smtp.get(smtp_conn, True).conn.send(message)
+        smtp_item = self.email.smtp.get(smtp_conn, True)
+        smtp_item.conn.send(message)
 
         self.logger.info('B2B alerting digest sent through `%s` to `%s`', smtp_conn, to)
 

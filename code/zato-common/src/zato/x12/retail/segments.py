@@ -60,10 +60,10 @@ class PER(X12Segment):
     """
     _segment_tag = 'PER'
 
-    contact_function = EDIElement[str](position=1, usage=Usage.REQUIRED, format='ID 2/2')
-    name             = EDIElement[str](position=2, usage=Usage.OPTIONAL, format='AN 1/60')
-    comm_qualifier   = EDIElement[str](position=3, usage=Usage.CONDITIONAL, format='ID 2/2')
-    comm_number      = EDIElement[str](position=4, usage=Usage.CONDITIONAL, format='AN 1/80')
+    contact_function        = EDIElement[str](position=1, usage=Usage.REQUIRED, format='ID 2/2')
+    name                    = EDIElement[str](position=2, usage=Usage.OPTIONAL, format='AN 1/60')
+    communication_qualifier = EDIElement[str](position=3, usage=Usage.CONDITIONAL, format='ID 2/2')
+    communication_number    = EDIElement[str](position=4, usage=Usage.CONDITIONAL, format='AN 1/80')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +73,7 @@ class FOB(X12Segment):
     """
     _segment_tag = 'FOB'
 
-    payment_method = EDIElement[str](position=1, usage=Usage.REQUIRED, format='ID 2/2')
+    payment_method     = EDIElement[str](position=1, usage=Usage.REQUIRED, format='ID 2/2')
     location_qualifier = EDIElement[str](position=2, usage=Usage.CONDITIONAL, format='ID 1/2')
     location           = EDIElement[str](position=3, usage=Usage.OPTIONAL, format='AN 1/80')
 

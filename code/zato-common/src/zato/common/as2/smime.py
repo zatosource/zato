@@ -28,8 +28,8 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7EnvelopeBuil
 from cryptography.x509 import load_der_x509_certificate
 
 # Zato
-from zato.common.as2.common import AS2Error, AS2Exception, AS2ProtocolException, AS2SecurityException, Default, \
-    DigestAlgorithm, EncryptionAlgorithm, Failure
+from zato.common.as2.common import AS2Error, AS2Exception, AS2MalformedCMSException, AS2ProtocolException, \
+    AS2SecurityException, Default, DigestAlgorithm, EncryptionAlgorithm, Failure
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_, optional
 from zato.common.util.xml_.core import XMLSecurityException
@@ -701,7 +701,7 @@ def _read_content_info(der:'bytes') -> 'anytuple':
     content_info = _read_der_element(der, 0)
 
     if content_info.tag != _tag_sequence:
-        raise AS2Exception('ContentInfo is not a DER sequence')
+        raise AS2MalformedCMSException('ContentInfo is not a DER sequence')
 
     info_children = _der_children(der, content_info)
 
@@ -1121,9 +1121,7 @@ def verify(
 
         signer_certificate, digest_name, signing_time = _verify_signed_data(
             content, signature_der, keystore, accepted_certificates)
-    except AS2Exception:
-        raise
-    except (IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError) as e:
         raise AS2SecurityException(AS2Error.Integrity_Check_Failed, f'Malformed signature structure ({e})') from None
 
     inner = parse_part(content)
@@ -1599,9 +1597,7 @@ def decrypt(part:'SMIMEPart', keystore:'Keystore') -> 'SMIMEPart':
         else:
             raise AS2SecurityException(AS2Error.Decryption_Failed, 'CMS content type is not an enveloped structure')
 
-    except AS2Exception:
-        raise
-    except (IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError) as e:
         raise AS2SecurityException(AS2Error.Decryption_Failed, f'Malformed encrypted structure ({e})') from None
 
     out = parse_part(plaintext)
@@ -1670,9 +1666,7 @@ def decompress(part:'SMIMEPart') -> 'SMIMEPart':
         octets = _read_der_element(der, explicit_octets.content_offset)
         compressed = _collect_compressed_content(der, octets)
 
-    except AS2Exception:
-        raise
-    except (IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError) as e:
         raise AS2ProtocolException(AS2Error.Decompression_Failed, f'Malformed compressed structure ({e})') from None
 
     try:

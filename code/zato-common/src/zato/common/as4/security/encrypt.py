@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from os import urandom
-from uuid import uuid4
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
@@ -24,6 +23,7 @@ from lxml import etree
 # Zato
 from zato.common.as4.common import CryptoSuite, NS
 from zato.common.as4.security.sign import get_security_header
+from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, Transform
 from zato.common.util.xml_.core import qname
@@ -67,12 +67,38 @@ _xenc_nsmap = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _encrypt_part_data(content_key:'bytes', part_data:'bytes') -> 'bytes':
+# The fully qualified names of the XML encryption elements built below.
+_encrypted_data_name    = qname(NS.XENC, 'EncryptedData')
+_encryption_method_name = qname(NS.XENC, 'EncryptionMethod')
+_cipher_data_name       = qname(NS.XENC, 'CipherData')
+_cipher_reference_name  = qname(NS.XENC, 'CipherReference')
+_cipher_value_name      = qname(NS.XENC, 'CipherValue')
+_transforms_name        = qname(NS.XENC, 'Transforms')
+_encrypted_key_name     = qname(NS.XENC, 'EncryptedKey')
+_reference_list_name    = qname(NS.XENC, 'ReferenceList')
+_data_reference_name    = qname(NS.XENC, 'DataReference')
+_agreement_method_name  = qname(NS.XENC, 'AgreementMethod')
+_originator_name        = qname(NS.XENC, 'OriginatorKeyInfo')
+_recipient_name         = qname(NS.XENC, 'RecipientKeyInfo')
+_mgf_name               = qname(NS.XENC11, 'MGF')
+_key_derivation_name    = qname(NS.XENC11, 'KeyDerivationMethod')
+_transform_name         = qname(NS.DS, 'Transform')
+_digest_method_name     = qname(NS.DS, 'DigestMethod')
+_key_info_name          = qname(NS.DS, 'KeyInfo')
+_x509_data_name         = qname(NS.DS, 'X509Data')
+_x509_certificate_name  = qname(NS.DS, 'X509Certificate')
+_key_value_name         = qname(NS.DS, 'KeyValue')
+_der_key_value_name     = qname(NS.XMLDSIG11, 'DEREncodedKeyValue')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _encrypt_part_data(cipher:'AESGCM', part_data:'bytes') -> 'bytes':
     """ Encrypts one attachment body with AES-128-GCM. Per XML Encryption 1.1
     the cipher bytes are the nonce, the ciphertext and the authentication tag, in that order.
     """
     nonce = urandom(_gcm_nonce_size_bytes)
-    ciphertext = AESGCM(content_key).encrypt(nonce, part_data, None)
+    ciphertext = cipher.encrypt(nonce, part_data, None)
 
     out = nonce + ciphertext
     return out
@@ -84,25 +110,27 @@ def _add_encrypted_data(security:'any_', part_content_id:'str') -> 'str':
     The cipher bytes stay in the MIME part - the element points at them
     through a CipherReference with the SwA ciphertext transform. Returns the element id.
     """
-    encrypted_data_id = f'ED-{uuid4().hex}'
+    id_suffix = CryptoManager.generate_hex_string()
 
-    encrypted_data = etree.SubElement(security, qname(NS.XENC, 'EncryptedData'), nsmap=_xenc_nsmap)
-    encrypted_data.set('Id', encrypted_data_id)
+    # Our response to produce
+    out = f'ED-{id_suffix}'
+
+    encrypted_data = etree.SubElement(security, _encrypted_data_name, nsmap=_xenc_nsmap)
+    encrypted_data.set('Id', out)
     encrypted_data.set('Type', Transform.Attachment_Ciphertext)
     encrypted_data.set('MimeType', 'application/octet-stream')
 
-    encryption_method = etree.SubElement(encrypted_data, qname(NS.XENC, 'EncryptionMethod'))
+    encryption_method = etree.SubElement(encrypted_data, _encryption_method_name)
     encryption_method.set('Algorithm', Algorithm.AES128_GCM)
 
-    cipher_data = etree.SubElement(encrypted_data, qname(NS.XENC, 'CipherData'))
-    cipher_reference = etree.SubElement(cipher_data, qname(NS.XENC, 'CipherReference'))
+    cipher_data = etree.SubElement(encrypted_data, _cipher_data_name)
+    cipher_reference = etree.SubElement(cipher_data, _cipher_reference_name)
     cipher_reference.set('URI', f'cid:{part_content_id}')
 
-    transforms = etree.SubElement(cipher_reference, qname(NS.XENC, 'Transforms'))
-    transform = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
+    transforms = etree.SubElement(cipher_reference, _transforms_name)
+    transform = etree.SubElement(transforms, _transform_name)
     transform.set('Algorithm', Transform.Attachment_Ciphertext)
 
-    out = encrypted_data_id
     return out
 
 # ################################################################################################################################
@@ -111,11 +139,12 @@ def _add_recipient_certificate(parent:'any_', keystore:'Keystore') -> 'None':
     """ Adds a ds:KeyInfo with the recipient's certificate so they know which key decrypts this.
     """
     certificate = cast_('Certificate', keystore.peer_encryption_certificate)
+    certificate_der = certificate.public_bytes(Encoding.DER)
 
-    key_info = etree.SubElement(parent, qname(NS.DS, 'KeyInfo'))
-    x509_data = etree.SubElement(key_info, qname(NS.DS, 'X509Data'))
-    x509_certificate = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
-    x509_certificate.text = encode_base64(certificate.public_bytes(Encoding.DER))
+    key_info = etree.SubElement(parent, _key_info_name)
+    x509_data = etree.SubElement(key_info, _x509_data_name)
+    x509_certificate = etree.SubElement(x509_data, _x509_certificate_name)
+    x509_certificate.text = encode_base64(certificate_der)
 
 # ################################################################################################################################
 
@@ -129,16 +158,18 @@ def _add_encrypted_key_rsa(
     """ Adds an xenc:EncryptedKey that wraps the content key with RSA-OAEP
     for the recipient's RSA certificate - the eDelivery 1.x key transport.
     """
-    encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
-    encrypted_key.set('Id', f'EK-{uuid4().hex}')
+    id_suffix = CryptoManager.generate_hex_string()
 
-    encryption_method = etree.SubElement(encrypted_key, qname(NS.XENC, 'EncryptionMethod'))
+    encrypted_key = etree.Element(_encrypted_key_name, nsmap=_xenc_nsmap)
+    encrypted_key.set('Id', f'EK-{id_suffix}')
+
+    encryption_method = etree.SubElement(encrypted_key, _encryption_method_name)
     encryption_method.set('Algorithm', config.key_transport_algorithm)
 
-    digest_method = etree.SubElement(encryption_method, qname(NS.DS, 'DigestMethod'))
+    digest_method = etree.SubElement(encryption_method, _digest_method_name)
     digest_method.set('Algorithm', config.key_transport_digest)
 
-    mgf = etree.SubElement(encryption_method, qname(NS.XENC11, 'MGF'))
+    mgf = etree.SubElement(encryption_method, _mgf_name)
     mgf.set('Algorithm', config.key_transport_mgf)
 
     _add_recipient_certificate(encrypted_key, keystore)
@@ -146,18 +177,23 @@ def _add_encrypted_key_rsa(
     # Wrap the content key for the recipient ..
     peer_certificate = cast_('Certificate', keystore.peer_encryption_certificate)
     public_key = cast_('RSAPublicKey', peer_certificate.public_key())
-    oaep_padding = OAEP(mgf=MGF1(SHA256()), algorithm=SHA256(), label=None)
+
+    mgf_digest = SHA256()
+    oaep_digest = SHA256()
+    oaep_mgf = MGF1(mgf_digest)
+    oaep_padding = OAEP(mgf=oaep_mgf, algorithm=oaep_digest, label=None)
+
     wrapped_key = public_key.encrypt(content_key, oaep_padding)
 
-    cipher_data = etree.SubElement(encrypted_key, qname(NS.XENC, 'CipherData'))
-    cipher_value = etree.SubElement(cipher_data, qname(NS.XENC, 'CipherValue'))
+    cipher_data = etree.SubElement(encrypted_key, _cipher_data_name)
+    cipher_value = etree.SubElement(cipher_data, _cipher_value_name)
     cipher_value.text = encode_base64(wrapped_key)
 
     # .. and point at every EncryptedData this key unlocks.
-    reference_list = etree.SubElement(encrypted_key, qname(NS.XENC, 'ReferenceList'))
+    reference_list = etree.SubElement(encrypted_key, _reference_list_name)
 
     for reference_id in reference_ids:
-        data_reference = etree.SubElement(reference_list, qname(NS.XENC, 'DataReference'))
+        data_reference = etree.SubElement(reference_list, _data_reference_name)
         data_reference.set('URI', f'#{reference_id}')
 
     # The key goes first in the security header so receivers process it before the signature.
@@ -186,40 +222,46 @@ def _add_encrypted_key_ecdh(
     key_encryption_key = derive_key_encryption_key(shared_secret, HKDF_Info)
     wrapped_key = aes_key_wrap(key_encryption_key, content_key)
 
-    encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
-    encrypted_key.set('Id', f'EK-{uuid4().hex}')
+    id_suffix = CryptoManager.generate_hex_string()
 
-    encryption_method = etree.SubElement(encrypted_key, qname(NS.XENC, 'EncryptionMethod'))
+    encrypted_key = etree.Element(_encrypted_key_name, nsmap=_xenc_nsmap)
+    encrypted_key.set('Id', f'EK-{id_suffix}')
+
+    encryption_method = etree.SubElement(encrypted_key, _encryption_method_name)
     encryption_method.set('Algorithm', Algorithm.AES128_KeyWrap)
 
     # The agreement method tells the recipient how the wrapping key came to be -
     # it carries our ephemeral public key and names the derivation function.
-    key_info = etree.SubElement(encrypted_key, qname(NS.DS, 'KeyInfo'))
-    agreement_method = etree.SubElement(key_info, qname(NS.XENC, 'AgreementMethod'))
+    key_info = etree.SubElement(encrypted_key, _key_info_name)
+    agreement_method = etree.SubElement(key_info, _agreement_method_name)
     agreement_method.set('Algorithm', Algorithm.ECDH_ES)
 
-    key_derivation = etree.SubElement(agreement_method, qname(NS.XENC11, 'KeyDerivationMethod'))
+    key_derivation = etree.SubElement(agreement_method, _key_derivation_name)
     key_derivation.set('Algorithm', Algorithm.HKDF)
 
-    originator = etree.SubElement(agreement_method, qname(NS.XENC, 'OriginatorKeyInfo'))
-    ephemeral_public_bytes = ephemeral_key.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
-    key_value = etree.SubElement(originator, qname(NS.DS, 'KeyValue'))
-    der_key_value = etree.SubElement(key_value, qname(NS.XMLDSIG11, 'DEREncodedKeyValue'))
+    ephemeral_public_key = ephemeral_key.public_key()
+    ephemeral_public_bytes = ephemeral_public_key.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+
+    originator = etree.SubElement(agreement_method, _originator_name)
+    key_value = etree.SubElement(originator, _key_value_name)
+    der_key_value = etree.SubElement(key_value, _der_key_value_name)
     der_key_value.text = encode_base64(ephemeral_public_bytes)
 
-    recipient = etree.SubElement(agreement_method, qname(NS.XENC, 'RecipientKeyInfo'))
-    x509_data = etree.SubElement(recipient, qname(NS.DS, 'X509Data'))
-    x509_certificate = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
-    x509_certificate.text = encode_base64(peer_certificate.public_bytes(Encoding.DER))
+    peer_certificate_der = peer_certificate.public_bytes(Encoding.DER)
 
-    cipher_data = etree.SubElement(encrypted_key, qname(NS.XENC, 'CipherData'))
-    cipher_value = etree.SubElement(cipher_data, qname(NS.XENC, 'CipherValue'))
+    recipient = etree.SubElement(agreement_method, _recipient_name)
+    x509_data = etree.SubElement(recipient, _x509_data_name)
+    x509_certificate = etree.SubElement(x509_data, _x509_certificate_name)
+    x509_certificate.text = encode_base64(peer_certificate_der)
+
+    cipher_data = etree.SubElement(encrypted_key, _cipher_data_name)
+    cipher_value = etree.SubElement(cipher_data, _cipher_value_name)
     cipher_value.text = encode_base64(wrapped_key)
 
-    reference_list = etree.SubElement(encrypted_key, qname(NS.XENC, 'ReferenceList'))
+    reference_list = etree.SubElement(encrypted_key, _reference_list_name)
 
     for reference_id in reference_ids:
-        data_reference = etree.SubElement(reference_list, qname(NS.XENC, 'DataReference'))
+        data_reference = etree.SubElement(reference_list, _data_reference_name)
         data_reference.set('URI', f'#{reference_id}')
 
     security.insert(0, encrypted_key)
@@ -243,11 +285,14 @@ def encrypt_parts(
     security = get_security_header(envelope)
     content_key = urandom(_content_key_size_bytes)
 
+    # The same content key encrypts every attachment of the message.
+    cipher = AESGCM(content_key)
+
     reference_ids:'strlist' = []
 
     # Encrypt each attachment and describe it in the header ..
     for part in parts:
-        part.data = _encrypt_part_data(content_key, part.data)
+        part.data = _encrypt_part_data(cipher, part.data)
         part.content_type = 'application/octet-stream'
 
         encrypted_data_id = _add_encrypted_data(security, part.content_id)

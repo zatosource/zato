@@ -17,14 +17,21 @@ from zato.common.as4.sbdh import build_sbdh, parse_sbdh
 # ################################################################################################################################
 # ################################################################################################################################
 
-Document_Type = 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2' \
-    '::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1'
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_document_type_prefix = 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2'
+_document_type_suffix = '::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1'
+Document_Type = _document_type_prefix + _document_type_suffix
 Process_ID = 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build():
+def _build() -> 'any_':
     invoice = etree.fromstring(b'<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/>')
 
     out = build_sbdh(
@@ -48,14 +55,16 @@ def _build():
 
 class TestSBDH:
 
-    def test_header_validates_against_official_schema(self, sbdh_schema):
+    def test_header_validates_against_official_schema(self, sbdh_schema:'any_') -> 'None':
         wire = _build()
         root = etree.fromstring(wire)
 
         header = root.find(qname(NS.SBDH, 'StandardBusinessDocumentHeader'))
         sbdh_schema.assertValid(header)
 
-    def test_parse_roundtrip(self):
+# ################################################################################################################################
+
+    def test_parse_roundtrip(self) -> 'None':
         wire = _build()
 
         info, business_document = parse_sbdh(wire)

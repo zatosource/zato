@@ -258,7 +258,8 @@ def _get_document_type(details:'anydict') -> 'str':
 def _get_range_cutoff(now:'datetime', time_range:'str') -> 'str':
     """ Returns the ISO timestamp the given range reaches back to.
     """
-    cutoff = now - timedelta(hours=Range_Hours[time_range])
+    range_hours = Range_Hours[time_range]
+    cutoff = now - timedelta(hours=range_hours)
 
     out = cutoff.isoformat()
     return out
@@ -269,6 +270,15 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
     """ Reads all the B2B events of the given types recorded after the cutoff, oldest first,
     with their JSON data parsed - what the aggregates below run on.
     """
+    source_matches = event_table.c.source.in_((AuditSource.AS2, AuditSource.X12))
+    event_type_matches = event_table.c.event_type.in_(event_types)
+
+    conditions = and_(
+        source_matches,
+        event_type_matches,
+        event_table.c.event_time_iso >= cutoff_iso,
+    )
+
     statement = select(
         event_table.c.source,
         event_table.c.event_type,
@@ -277,11 +287,9 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
         event_table.c.event_time_iso,
         event_table.c.outcome,
         event_table.c.data,
-    ).where(and_(
-        event_table.c.source.in_((AuditSource.AS2, AuditSource.X12)),
-        event_table.c.event_type.in_(event_types),
-        event_table.c.event_time_iso >= cutoff_iso,
-    )).order_by(event_table.c.id)
+    )
+    statement = statement.where(conditions)
+    statement = statement.order_by(event_table.c.id)
 
     engine = get_audit_engine()
 
@@ -300,6 +308,8 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
             if partner not in object_name:
                 continue
 
+        details = _parse_details(data)
+
         item = {
             'source': source,
             'event_type': event_type,
@@ -307,7 +317,7 @@ def _load_events(event_types:'strtuple', cutoff_iso:'str', partner:'str') -> 'di
             'msg_id': msg_id,
             'event_time_iso': event_time_iso,
             'outcome': outcome,
-            'details': _parse_details(data),
+            'details': details,
         }
 
         out.append(item)
@@ -414,7 +424,8 @@ def get_outcomes(now:'datetime', time_range:'str'=Default_Range, partner:'str'='
     for event in sent_events:
         lookup_key = (event['partner'], event['msg_id'])
         details = event['details']
-        document_types[lookup_key] = _get_document_type(details)
+        document_type = _get_document_type(details)
+        document_types[lookup_key] = document_type
 
     # Delivered and failed counts per source, partner and document type,
     # with a per-modifier breakdown of the failures.
@@ -526,8 +537,11 @@ def get_ack_discipline(now:'datetime', time_range:'str'=Default_Range, partner:'
 
         # An acknowledged interchange contributes its turnaround ..
         if ack := first_acks.get(lookup_key):
-            sent_time = datetime.fromisoformat(event['event_time_iso'])
-            ack_time = datetime.fromisoformat(ack['event_time_iso'])
+            sent_time_iso = event['event_time_iso']
+            ack_time_iso = ack['event_time_iso']
+
+            sent_time = datetime.fromisoformat(sent_time_iso)
+            ack_time = datetime.fromisoformat(ack_time_iso)
 
             delta = ack_time - sent_time
             delta_seconds = delta.total_seconds()
@@ -608,7 +622,8 @@ def volume_csv(rows:'volume_row_list') -> 'str':
     values:'anylist' = []
 
     for row in rows:
-        values.append([row.period, row.source, row.partner, row.document_type, row.sent, row.received])
+        row_values = [row.period, row.source, row.partner, row.document_type, row.sent, row.received]
+        values.append(row_values)
 
     out = _rows_to_csv(Volume_Headers, values)
     return out
@@ -621,7 +636,8 @@ def outcomes_csv(rows:'outcome_row_list') -> 'str':
     values:'anylist' = []
 
     for row in rows:
-        values.append([row.source, row.partner, row.document_type, row.delivered, row.failed, row.failure_breakdown])
+        row_values = [row.source, row.partner, row.document_type, row.delivered, row.failed, row.failure_breakdown]
+        values.append(row_values)
 
     out = _rows_to_csv(Outcome_Headers, values)
     return out
@@ -634,7 +650,8 @@ def ack_discipline_csv(rows:'ack_row_list') -> 'str':
     values:'anylist' = []
 
     for row in rows:
-        values.append([row.partner, row.acknowledged, row.average_seconds, row.max_seconds, row.outstanding, row.rejected])
+        row_values = [row.partner, row.acknowledged, row.average_seconds, row.max_seconds, row.outstanding, row.rejected]
+        values.append(row_values)
 
     out = _rows_to_csv(Ack_Headers, values)
     return out

@@ -15,10 +15,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # Zato
+from zato.common.typing_ import optional
 from zato.x12.base import EDIComponent, EDIComposite, EDIElement, EDIGroup, EDIGroupAttr, EDIRepeatableList, EDISegmentAttr, \
      Usage, X12Message, X12Segment, _element_value
 from zato.x12.envelope import X12Interchange
-from zato.x12.service import SE, ST
+from zato.x12.service import SE, ST, TA1
 from zato.x12.validation import Set_Error_Segments_In_Error, SetValidationResult, business_key_context_name, \
      extract_business_key, validate_interchange
 
@@ -26,19 +27,24 @@ from zato.x12.validation import Set_Error_Segments_In_Error, SetValidationResult
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
+    from zato.common.typing_ import any_, anylist, strlist
+    any_ = any_
+    anylist = anylist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases
-any_    = 'Any'
-anylist = list['Any']
-strlist = list[str]
-
 set_result_list      = list[SetValidationResult]
-set_result_list_none = 'set_result_list | None'
-issue_group_list     = list[tuple[int, str, 'anylist']]
+set_result_list_none = optional[set_result_list]
+
+issue_group      = tuple[int, str, 'anylist']
+issue_group_list = list[issue_group]
+
+element_note_result_list = list['ElementNoteResult']
+segment_note_result_list = list['SegmentNoteResult']
+set_ack_result_list      = list['SetAckResult']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -333,7 +339,7 @@ class SegmentNoteResult:
         self.segment_id:'str' = ''
         self.position:'int' = 0
         self.error_code:'str' = ''
-        self.element_notes:'list[ElementNoteResult]' = []
+        self.element_notes:'element_note_result_list' = []
 
 # ################################################################################################################################
 
@@ -346,7 +352,7 @@ class SetAckResult:
         self.control_number:'str' = ''
         self.ack_code:'str' = ''
         self.error_codes:'strlist' = []
-        self.segment_notes:'list[SegmentNoteResult]' = []
+        self.segment_notes:'segment_note_result_list' = []
 
 # ################################################################################################################################
 
@@ -368,7 +374,7 @@ class AckResult:
         self.included_count:'int' = 0
         self.received_count:'int' = 0
         self.accepted_count:'int' = 0
-        self.set_results:'list[SetAckResult]' = []
+        self.set_results:'set_ack_result_list' = []
 
 # ################################################################################################################################
 
@@ -402,7 +408,6 @@ def build_ta1(interchange:'X12Interchange', ack_code:'str'=Ack_Accepted, note_co
     segment without GS/GE wrapping, echoing the ISA13 control number with the date,
     time and the A/E/R code.
     """
-    from zato.x12.service import TA1
 
     # Our response to produce
     out = X12Interchange()

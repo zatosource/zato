@@ -27,6 +27,12 @@ from zato.common.util.xml_.keystore import Keystore, new_keystore
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # RSA parameters for throwaway test keys.
 _rsa_public_exponent = 65537
 _rsa_key_size = 2048
@@ -35,31 +41,36 @@ _rsa_key_size = 2048
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def audit_db_env(tmp_path):
+def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
     """ Points the audit database at a per-test SQLite file, so every test that records
     audit events - directly or through the live send and receive pipelines - runs
     on its own isolated database instead of the environment-wide default one.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
-    yield db_path
+    yield database_path
 
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    # Tests that manage the audit database themselves remove the variables
+    # in their own cleanup, before this teardown runs.
+    if AuditLogCtx.Env_Type in os.environ:
+        del os.environ[AuditLogCtx.Env_Type]
+
+    if AuditLogCtx.Env_Name in os.environ:
+        del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_name(common_name):
+def _make_name(common_name:'any_') -> 'any_':
     out = Name([NameAttribute(NameOID.COMMON_NAME, common_name)])
     return out
 
 # ################################################################################################################################
 
-def make_certificate(common_name, public_key, signer_name, signer_key, is_ca=False):
+def make_certificate(common_name:'any_', public_key:'any_', signer_name:'any_', signer_key:'any_', is_ca:'any_'=False) -> 'any_':
     """ Issues a test certificate valid around the current moment.
     """
     now = datetime.now(timezone.utc)
@@ -93,7 +104,7 @@ class TestParties:
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def parties():
+def parties() -> 'any_':
     """ A CA plus a sender and a receiver with CA-issued RSA certificates.
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
@@ -130,7 +141,7 @@ def parties():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def unrelated_ca_certificate():
+def unrelated_ca_certificate() -> 'any_':
     """ A CA that issued none of the certificates the parties use - for negative trust tests.
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
@@ -153,11 +164,11 @@ class RotatedPair:
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def make_rotated_pair():
+def make_rotated_pair() -> 'any_':
     """ A factory issuing fresh keys with self-signed certificates for rotation tests -
     the rotation lists pin exact certificates, so no CA needs to stand behind them.
     """
-    def _make(common_name):
+    def _make(common_name:'any_') -> 'any_':
 
         key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
         name = _make_name(common_name)

@@ -11,6 +11,7 @@ from __future__ import annotations
 # stdlib
 import json
 
+from collections.abc import Sequence
 from enum import Enum
 from typing import Generic, Protocol, Self, TypeVar, overload
 
@@ -18,21 +19,24 @@ from typing import Generic, Protocol, Self, TypeVar, overload
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
+    from zato.common.typing_ import any_, anylist, intnone, stranydict, strlist, strnone
+    any_ = any_
+    anylist = anylist
+    intnone = intnone
+    stranydict = stranydict
+    strlist = strlist
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases following the zato.common.typing_ naming convention
-any_               = 'Any'
-intnone            = 'Optional[int]'
-strnone            = 'Optional[str]'
-strlist            = list[str]
 strlistlist        = list[list[str]]
-anylist            = list['Any']
-stranydict         = dict[str, 'Any']
 strtypedict        = dict[str, type]
 message_class_dict = dict[str, type['EDIMessage']]
+
+segment_class_type = type['EDISegment']
+group_class_type   = type['EDIGroup']
 
 T = TypeVar('T')
 
@@ -52,6 +56,10 @@ class EDIRawSegment(Protocol):
 # ################################################################################################################################
 
 raw_segment_list = list[EDIRawSegment]
+
+# A covariant view of raw segments - what parsing entry points accept, so that
+# the concrete segment lists of each dialect are assignable without a copy.
+raw_segment_seq = Sequence[EDIRawSegment]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,7 +97,9 @@ class EDIRepeatableList(list):
         if not self:
             raise AttributeError(f'Empty list has no attribute {name!r}')
 
-        out = getattr(self[0], name)
+        first = self[0]
+
+        out = getattr(first, name)
         return out
 
 # ################################################################################################################################
@@ -531,7 +541,7 @@ class EDISegmentAttr(Generic[T]):
 
     def __init__(
         self,
-        segment_class:'type[EDISegment]',
+        segment_class:'segment_class_type',
         optional:'bool' = False,
         repeatable:'bool' = False,
         ) -> 'None':
@@ -626,7 +636,7 @@ class EDIGroup:
 # ################################################################################################################################
 
     @classmethod
-    def from_raw(cls, raw_segments:'raw_segment_list') -> 'Self':
+    def from_raw(cls, raw_segments:'raw_segment_seq') -> 'Self':
         """ Wraps a slice of raw segments in a typed group instance.
         """
         group = cls.__new__(cls)
@@ -644,7 +654,9 @@ class EDIGroup:
         """
         lines:'strlist' = []
 
-        for descriptor in _declared_attr_descriptors(type(self)):
+        group_class = type(self)
+
+        for descriptor in _declared_attr_descriptors(group_class):
             value = self.__dict__.get(descriptor.attr_name)
             if value is None:
                 continue
@@ -677,7 +689,7 @@ class EDIGroupAttr(Generic[T]):
 
     def __init__(
         self,
-        group_class:'type[EDIGroup]',
+        group_class:'group_class_type',
         optional:'bool' = False,
         repeatable:'bool' = True,
         ) -> 'None':
@@ -755,8 +767,10 @@ def _attrs_to_dict(instance:'any_', include_empty:'bool') -> 'stranydict':
     # Our response to produce
     out:'stranydict' = {}
 
-    for name in dir(type(instance)):
-        attribute = getattr(type(instance), name)
+    instance_class = type(instance)
+
+    for name in dir(instance_class):
+        attribute = getattr(instance_class, name)
         is_segment_attr = isinstance(attribute, EDISegmentAttr)
         is_group_attr = isinstance(attribute, EDIGroupAttr)
 
@@ -777,7 +791,8 @@ def _attrs_to_dict(instance:'any_', include_empty:'bool') -> 'stranydict':
             items:'anylist' = []
 
             for item in value:
-                items.append(item.to_dict(include_empty=include_empty))
+                item_dict = item.to_dict(include_empty=include_empty)
+                items.append(item_dict)
 
             out[name] = items
 
@@ -850,7 +865,8 @@ class EDIMessage:
 
         if cls._message_type:
             if cls._message_version:
-                EDIMessage._registry[f'{cls._message_type}:{cls._message_version}'] = cls
+                type_and_version = f'{cls._message_type}:{cls._message_version}'
+                EDIMessage._registry[type_and_version] = cls
 
             if cls._message_type not in EDIMessage._registry:
                 EDIMessage._registry[cls._message_type] = cls
@@ -866,7 +882,7 @@ class EDIMessage:
 # ################################################################################################################################
 
     @classmethod
-    def from_raw(cls, raw_segments:'raw_segment_list', separators:'any_') -> 'Self':
+    def from_raw(cls, raw_segments:'raw_segment_seq', separators:'any_') -> 'Self':
         """ Wraps the raw segments of one message in a typed message instance.
         """
         message = cls.__new__(cls)
@@ -918,7 +934,9 @@ class EDIMessage:
             return out
 
         # .. a built message walks its declared attributes in declaration order.
-        for descriptor in _declared_attr_descriptors(type(self)):
+        message_class = type(self)
+
+        for descriptor in _declared_attr_descriptors(message_class):
             value = self.__dict__.get(descriptor.attr_name)
             if value is None:
                 continue

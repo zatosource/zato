@@ -95,7 +95,7 @@ class TestTA1(unittest.TestCase):
 
     maxDiff = None
 
-    def test_build_and_parse(self) -> None:
+    def test_build_and_parse(self) -> 'None':
         interchange = parse_x12(_interchange_clean)
 
         ack = build_ta1(interchange)
@@ -119,7 +119,9 @@ class TestTA1(unittest.TestCase):
         self.assertEqual(result.note_code, '000')
         self.assertTrue(result.is_accepted)
 
-    def test_rejection_code(self) -> None:
+# ################################################################################################################################
+
+    def test_rejection_code(self) -> 'None':
         interchange = parse_x12(_interchange_clean)
 
         ack = build_ta1(interchange, ack_code=Ack_Rejected, note_code='001')
@@ -129,7 +131,9 @@ class TestTA1(unittest.TestCase):
         self.assertEqual(result.note_code, '001')
         self.assertFalse(result.is_accepted)
 
-    def test_no_ta1_found(self) -> None:
+# ################################################################################################################################
+
+    def test_no_ta1_found(self) -> 'None':
         interchange = parse_x12(_interchange_clean)
 
         with self.assertRaises(X12AckError) as ctx:
@@ -144,7 +148,7 @@ class Test997(unittest.TestCase):
 
     maxDiff = None
 
-    def test_accepted(self) -> None:
+    def test_accepted(self) -> 'None':
         interchange = parse_x12(_interchange_clean)
 
         ack = build_997(interchange)
@@ -173,7 +177,9 @@ class Test997(unittest.TestCase):
         self.assertEqual(set_result.ack_code, Ack_Accepted)
         self.assertEqual(set_result.segment_notes, [])
 
-    def test_rejected_set_never_produces_a_clean_997(self) -> None:
+# ################################################################################################################################
+
+    def test_rejected_set_never_produces_a_clean_997(self) -> 'None':
         interchange = parse_x12(_interchange_mixed)
 
         ack = build_997(interchange)
@@ -211,7 +217,9 @@ class Test997(unittest.TestCase):
         self.assertEqual(unknown_note.position, 3)
         self.assertEqual(unknown_note.error_code, Segment_Unrecognized)
 
-    def test_all_sets_rejected(self) -> None:
+# ################################################################################################################################
+
+    def test_all_sets_rejected(self) -> 'None':
         raw = _isa + \
             'GS*IN*SENDERGS*RECEIVERGS*20260709*1200*905*X*004010~' + \
             _invoice_bad + \
@@ -226,7 +234,9 @@ class Test997(unittest.TestCase):
         self.assertEqual(result.ack_code, Ack_Rejected)
         self.assertEqual(result.accepted_count, 0)
 
-    def test_no_997_found(self) -> None:
+# ################################################################################################################################
+
+    def test_no_997_found(self) -> 'None':
         interchange = parse_x12(_interchange_clean)
 
         with self.assertRaises(X12AckError) as ctx:
@@ -241,8 +251,9 @@ class Test999(unittest.TestCase):
 
     maxDiff = None
 
-    def test_accepted(self) -> None:
-        interchange = parse_x12(_in_hipaa_group(_claim_clean))
+    def test_accepted(self) -> 'None':
+        wire = _in_hipaa_group(_claim_clean)
+        interchange = parse_x12(wire)
 
         ack = build_999(interchange)
         serialized = ack.serialize()
@@ -257,8 +268,11 @@ class Test999(unittest.TestCase):
         self.assertEqual(result.ack_code, Ack_Accepted)
         self.assertTrue(result.set_results[0].is_accepted)
 
-    def test_rejected_with_context(self) -> None:
-        interchange = parse_x12(_in_hipaa_group(_claim_bad))
+# ################################################################################################################################
+
+    def test_rejected_with_context(self) -> 'None':
+        wire = _in_hipaa_group(_claim_bad)
+        interchange = parse_x12(wire)
 
         ack = build_999(interchange)
         serialized = ack.serialize()
@@ -266,7 +280,8 @@ class Test999(unittest.TestCase):
         # The CTX carries the business-unit reference of the rejected claim
         self.assertIn('CTX*CLM01:PATIENT-001', serialized)
 
-        result = parse_999(parse_x12(serialized))
+        interchange = parse_x12(serialized)
+        result = parse_999(interchange)
 
         self.assertEqual(result.ack_code, Ack_Rejected)
         self.assertEqual(result.accepted_count, 0)

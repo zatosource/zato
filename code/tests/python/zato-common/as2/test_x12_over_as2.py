@@ -204,7 +204,7 @@ class TestX12OverAS2:
         payload = interchange.serialize().encode('utf-8')
 
         # .. records the interchange as awaiting its acknowledgment ..
-        reconciler.record_interchange_sent(_buyer_edi_id, _supplier_edi_id, _x12_control_number, doc_type='850')
+        reconciler.record_interchange_sent(_buyer_edi_id, _supplier_edi_id, _x12_control_number, document_type='850')
 
         # .. and delivers it over AS2, signed and encrypted, with the sync MDN reconciling.
         document_leg = _new_exchange(_buyer_identifier, _supplier_identifier, parties.sender, parties.receiver)

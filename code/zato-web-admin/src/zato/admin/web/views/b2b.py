@@ -102,7 +102,9 @@ def control_numbers(req:'any_') -> 'TemplateResponse':
         'zato_template_name': 'zato/b2b-control-numbers.html',
     }
 
-    return TemplateResponse(req, 'zato/b2b-control-numbers.html', return_data)
+    out = TemplateResponse(req, 'zato/b2b-control-numbers.html', return_data)
+
+    return out
 
 # ################################################################################################################################
 
@@ -121,11 +123,16 @@ def set_next(req:'any_') -> 'JsonResponse':
     try:
         next_number = int(next_number)
     except ValueError:
-        return JsonResponse({'is_ok': False, 'message': 'Next number must be an integer'}, status=400)
+        out = JsonResponse({'is_ok': False, 'message': 'Next number must be an integer'}, status=BAD_REQUEST)
+        return out
 
-    if next_number < 1 or next_number > Max_Control_Number:
-        message = 'Next number must be between 1 and {}'.format(Max_Control_Number)
-        return JsonResponse({'is_ok': False, 'message': message}, status=400)
+    is_too_small = next_number < 1
+    is_too_big = next_number > Max_Control_Number
+
+    if is_too_small or is_too_big:
+        message = f'Next number must be between 1 and {Max_Control_Number}'
+        out = JsonResponse({'is_ok': False, 'message': message}, status=BAD_REQUEST)
+        return out
 
     store = ControlNumberStore(get_control_db_path())
 
@@ -134,7 +141,9 @@ def set_next(req:'any_') -> 'JsonResponse':
     finally:
         store.close()
 
-    return JsonResponse({'is_ok': True, 'message': 'Next number saved', 'next_number': next_number})
+    out = JsonResponse({'is_ok': True, 'message': 'Next number saved', 'next_number': next_number})
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,7 +200,9 @@ def reports(req:'any_') -> 'TemplateResponse':
         'zato_template_name': 'zato/b2b-reports.html',
     }
 
-    return TemplateResponse(req, 'zato/b2b-reports.html', return_data)
+    out = TemplateResponse(req, 'zato/b2b-reports.html', return_data)
+
+    return out
 
 # ################################################################################################################################
 
@@ -205,7 +216,8 @@ def reports_csv(req:'any_') -> 'HttpResponse':
     if table_entry := _csv_tables.get(table):
         get_rows, to_csv = table_entry
     else:
-        return HttpResponse(b'Unknown table', status=BAD_REQUEST)
+        out = HttpResponse(b'Unknown table', status=BAD_REQUEST)
+        return out
 
     time_range, partner = _get_report_filters(req)
 

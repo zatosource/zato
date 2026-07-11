@@ -19,7 +19,7 @@ from zato.common.as4.outbound import new_part
 
 class TestCompression:
 
-    def test_compress_decompress_roundtrip(self):
+    def test_compress_decompress_roundtrip(self) -> 'None':
         part = new_part(b'<Invoice>data</Invoice>')
 
         compress_part(part)
@@ -32,7 +32,9 @@ class TestCompression:
         assert part.content_type == 'application/xml'
         assert part.data == b'<Invoice>data</Invoice>'
 
-    def test_compression_is_deterministic(self):
+# ################################################################################################################################
+
+    def test_compression_is_deterministic(self) -> 'None':
         part1 = new_part(b'same bytes')
         part2 = new_part(b'same bytes')
 
@@ -41,21 +43,23 @@ class TestCompression:
 
         assert part1.data == part2.data
 
-    def test_decompress_garbage_raises_0303(self):
+# ################################################################################################################################
+
+    def test_decompress_garbage_raises_0303(self) -> 'None':
         part = new_part(b'this is not gzip')
         part.compressed = True
 
-        with pytest.raises(AS4ProtocolException) as exc:
+        with pytest.raises(AS4ProtocolException) as exception_info:
             decompress_part(part)
 
-        assert exc.value.error_code == EbMSError.Decompression_Failure
+        assert exception_info.value.error_code == EbMSError.Decompression_Failure
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestMultipart:
 
-    def test_multipart_roundtrip(self):
+    def test_multipart_roundtrip(self) -> 'None':
         envelope = b'<Envelope>test</Envelope>'
         part = new_part(b'payload bytes', 'application/pdf')
 
@@ -71,7 +75,9 @@ class TestMultipart:
         assert parsed_parts[0].content_id == part.content_id
         assert parsed_parts[0].data == b'payload bytes'
 
-    def test_binary_payload_survives(self):
+# ################################################################################################################################
+
+    def test_binary_payload_survives(self) -> 'None':
         # Bytes that look like MIME structure must survive the trip.
         tricky = b'\r\n--fake-boundary\r\nContent-Type: evil\r\n\r\n\x00\x01\x02\xff'
         envelope = b'<Envelope/>'
@@ -82,7 +88,9 @@ class TestMultipart:
 
         assert parsed_parts[0].data == tricky
 
-    def test_signal_without_parts_is_bare_soap(self):
+# ################################################################################################################################
+
+    def test_signal_without_parts_is_bare_soap(self) -> 'None':
         envelope = b'<Envelope>signal</Envelope>'
 
         body, content_type = build_multipart(envelope, [])
@@ -94,17 +102,21 @@ class TestMultipart:
         assert parsed_envelope == envelope
         assert parsed_parts == []
 
-    def test_unexpected_content_type_raises_0007(self):
-        with pytest.raises(AS4ProtocolException) as exc:
+# ################################################################################################################################
+
+    def test_unexpected_content_type_raises_0007(self) -> 'None':
+        with pytest.raises(AS4ProtocolException) as exception_info:
             _ = parse_multipart(b'{}', 'application/json')
 
-        assert exc.value.error_code == EbMSError.Mime_Inconsistency
+        assert exception_info.value.error_code == EbMSError.Mime_Inconsistency
 
-    def test_missing_boundary_raises_0007(self):
-        with pytest.raises(AS4ProtocolException) as exc:
+# ################################################################################################################################
+
+    def test_missing_boundary_raises_0007(self) -> 'None':
+        with pytest.raises(AS4ProtocolException) as exception_info:
             _ = parse_multipart(b'body', 'multipart/related')
 
-        assert exc.value.error_code == EbMSError.Mime_Inconsistency
+        assert exception_info.value.error_code == EbMSError.Mime_Inconsistency
 
 # ################################################################################################################################
 # ################################################################################################################################

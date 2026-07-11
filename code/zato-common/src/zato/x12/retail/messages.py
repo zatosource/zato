@@ -122,22 +122,22 @@ class ShipNotice856(X12Message):
     _message_type = '856'
     _message_version = '004010'
 
-    st        = EDISegmentAttr[ST](ST)
-    bsn       = EDISegmentAttr[BSN](BSN)
-    dates     = EDISegmentAttr[EDIRepeatableList](DTM, optional=True, repeatable=True)
-    levels    = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
+    st         = EDISegmentAttr[ST](ST)
+    bsn        = EDISegmentAttr[BSN](BSN)
+    dates      = EDISegmentAttr[EDIRepeatableList](DTM, optional=True, repeatable=True)
+    levels     = EDISegmentAttr[EDIRepeatableList](HL, optional=True, repeatable=True)
     quantities = EDISegmentAttr[EDIRepeatableList](TD1, optional=True, repeatable=True)
-    routings  = EDISegmentAttr[EDIRepeatableList](TD5, optional=True, repeatable=True)
-    equipment = EDISegmentAttr[EDIRepeatableList](TD3, optional=True, repeatable=True)
-    orders    = EDISegmentAttr[EDIRepeatableList](PRF, optional=True, repeatable=True)
-    marks     = EDISegmentAttr[EDIRepeatableList](MAN, optional=True, repeatable=True)
-    items     = EDISegmentAttr[EDIRepeatableList](LIN, optional=True, repeatable=True)
-    shipped   = EDISegmentAttr[EDIRepeatableList](SN1, optional=True, repeatable=True)
-    packaging = EDISegmentAttr[EDIRepeatableList](PO4, optional=True, repeatable=True)
+    routings   = EDISegmentAttr[EDIRepeatableList](TD5, optional=True, repeatable=True)
+    equipment  = EDISegmentAttr[EDIRepeatableList](TD3, optional=True, repeatable=True)
+    orders     = EDISegmentAttr[EDIRepeatableList](PRF, optional=True, repeatable=True)
+    marks      = EDISegmentAttr[EDIRepeatableList](MAN, optional=True, repeatable=True)
+    items      = EDISegmentAttr[EDIRepeatableList](LIN, optional=True, repeatable=True)
+    shipped    = EDISegmentAttr[EDIRepeatableList](SN1, optional=True, repeatable=True)
+    packaging  = EDISegmentAttr[EDIRepeatableList](PO4, optional=True, repeatable=True)
     references = EDISegmentAttr[EDIRepeatableList](REF, optional=True, repeatable=True)
-    parties   = EDIGroupAttr[EDIRepeatableList](Party, optional=True)
-    ctt       = EDISegmentAttr[CTT](CTT, optional=True)
-    se        = EDISegmentAttr[SE](SE)
+    parties    = EDIGroupAttr[EDIRepeatableList](Party, optional=True)
+    ctt        = EDISegmentAttr[CTT](CTT, optional=True)
+    se         = EDISegmentAttr[SE](SE)
 
 # ################################################################################################################################
 # ################################################################################################################################

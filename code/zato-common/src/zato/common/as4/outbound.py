@@ -23,21 +23,33 @@ from zato.common.as4.mime_ import build_multipart, compress_part, decompress_par
 from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
-from zato.common.util.xml_.core import qname
+from zato.common.typing_ import optional
+from zato.common.util.xml_.core import element_attribute, element_text, qname
 from zato.common.util.xml_.mime_ import new_content_id, Part, part_list
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.as4.ebms import error_info_list, SignalInfo, UserMessageInfo
+    from zato.common.as4.ebms import error_details_list, SignalDetails, UserMessageDetails
     from zato.common.as4.pmode import PMode
     from zato.common.typing_ import any_, anytuple, strnone, strstrdict
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
     anytuple = anytuple
+    error_details_list = error_details_list
+    SignalDetails = SignalDetails
     strnone = strnone
     strstrdict = strstrdict
+    UserMessageDetails = UserMessageDetails
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+clientnone             = optional[httpx.Client]
+signaldetailsnone      = optional['SignalDetails']
+usermessagedetailsnone = optional['UserMessageDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,10 +63,10 @@ class SendResult:
     http_status: int = 0
 
     # The receipt signal parsed from the response, when one arrived synchronously.
-    receipt: 'SignalInfo | None' = None
+    receipt: 'signaldetailsnone' = None
 
     # Any error signals the responder returned instead of, or next to, a receipt.
-    errors: 'error_info_list'
+    errors: 'error_details_list'
 
     # The raw response body, kept for audit purposes.
     response_body: bytes = b''
@@ -70,9 +82,9 @@ class PullResult:
     has_message: bool = False
     http_status: int = 0
 
-    user_message: 'UserMessageInfo | None' = None
+    user_message: 'usermessagedetailsnone' = None
     payloads: 'part_list'
-    errors: 'error_info_list'
+    errors: 'error_details_list'
 
     # Whether the receipt for the pulled message was delivered back successfully.
     receipt_sent: bool = False
@@ -105,26 +117,41 @@ def _serialize(envelope:'any_') -> 'bytes':
 def _collect_sent_digests(signature:'any_') -> 'strstrdict':
     """ Maps each signed reference URI to its digest value - the receipt must echo these back.
     """
+
+    # Our response to produce
     out:'strstrdict' = {}
 
-    signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
+    signed_info_name = qname(NS.DS, 'SignedInfo')
+    reference_name = qname(NS.DS, 'Reference')
+    digest_value_name = qname(NS.DS, 'DigestValue')
 
-    for reference in signed_info.findall(qname(NS.DS, 'Reference')):
-        digest_value = reference.find(qname(NS.DS, 'DigestValue'))
-        out[reference.get('URI') or ''] = digest_value.text or ''
+    signed_info = signature.find(signed_info_name)
+    references = signed_info.findall(reference_name)
+
+    for reference in references:
+        digest_value = reference.find(digest_value_name)
+
+        uri = element_attribute(reference, 'URI')
+        out[uri] = element_text(digest_value)
 
     return out
 
 # ################################################################################################################################
 
-def _check_receipt_digests(receipt:'SignalInfo', sent_digests:'strstrdict') -> 'None':
+def _check_receipt_digests(receipt:'SignalDetails', sent_digests:'strstrdict') -> 'None':
     """ Compares the digests echoed in a receipt's non-repudiation information
     with what was actually sent - a mismatch means the responder received something else.
     """
+    digest_value_name = qname(NS.DS, 'DigestValue')
+
     for reference in receipt.receipt_references:
-        uri = reference.get('URI') or ''
-        digest_value = reference.find(qname(NS.DS, 'DigestValue'))
-        echoed = ''.join((digest_value.text or '').split())
+        uri = element_attribute(reference, 'URI')
+        digest_value = reference.find(digest_value_name)
+
+        # The echoed digest may travel with whitespace inserted by the responder's serializer.
+        digest_text = element_text(digest_value)
+        digest_parts = digest_text.split()
+        echoed = ''.join(digest_parts)
 
         if sent := sent_digests.get(uri):
             if echoed != sent:
@@ -164,7 +191,8 @@ def build_push_message(
         if keystore.peer_encryption_certificate:
             encrypt_parts(envelope, parts, keystore, pmode.security)
 
-    body, content_type = build_multipart(_serialize(envelope), parts)
+    serialized = _serialize(envelope)
+    body, content_type = build_multipart(serialized, parts)
 
     out = (body, content_type, message_id, sent_digests)
     return out
@@ -175,7 +203,7 @@ def _post(
     pmode:'PMode',
     body:'bytes',
     content_type:'str',
-    client:'httpx.Client | None',
+    client:'clientnone',
     ) -> 'httpx.Response':
     """ Delivers one AS4 request over HTTP, with a per-call client unless one was supplied.
     """
@@ -196,7 +224,7 @@ def send(
     keystore:'Keystore',
     parts:'part_list',
     conversation_id:'strnone'=None,
-    client:'httpx.Client | None'=None,
+    client:'clientnone'=None,
     ) -> 'SendResult':
     """ Pushes one AS4 user message with the given payload parts and verifies
     the synchronous receipt when one comes back.
@@ -218,8 +246,11 @@ def send(
         out.is_ok = response.is_success
         return out
 
-    response_envelope, response_parts = parse_multipart(response.content, response.headers['content-type'])
-    messaging = parse_messaging(etree.fromstring(response_envelope))
+    response_content_type = response.headers['content-type']
+    response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
+
+    response_envelope = etree.fromstring(response_envelope_bytes)
+    messaging = parse_messaging(response_envelope)
 
     for signal in messaging.signals:
 
@@ -233,7 +264,10 @@ def send(
             out.errors.append(error)
 
     _ = response_parts
-    out.is_ok = bool(out.receipt) and not out.errors
+
+    has_receipt = bool(out.receipt)
+    has_errors = bool(out.errors)
+    out.is_ok = has_receipt and not has_errors
 
     return out
 
@@ -244,7 +278,7 @@ def _send_pull_receipt(
     keystore:'Keystore',
     pulled_message_id:'str',
     signed_references:'any_',
-    client:'httpx.Client | None',
+    client:'clientnone',
     ) -> 'bool':
     """ Acknowledges a pulled user message - per the pull pattern, signals for pulled
     messages are posted asynchronously to the same URL the message was pulled from.
@@ -255,7 +289,9 @@ def _send_pull_receipt(
     if pmode.security.sign_receipts:
         _ = sign_envelope(envelope, [], keystore, pmode.security)
 
-    body, content_type = build_multipart(_serialize(envelope), [])
+    serialized = _serialize(envelope)
+    body, content_type = build_multipart(serialized, [])
+
     response = _post(pmode, body, content_type, client)
 
     out = response.is_success
@@ -267,7 +303,7 @@ def pull(
     pmode:'PMode',
     keystore:'Keystore',
     mpc:'strnone'=None,
-    client:'httpx.Client | None'=None,
+    client:'clientnone'=None,
     ) -> 'PullResult':
     """ Sends a pull request for the given message partition channel and processes
     whatever user message the responder returns: decrypt, verify, decompress, acknowledge.
@@ -286,7 +322,8 @@ def pull(
     _ = build_pull_request(envelope, mpc)
     _ = sign_envelope(envelope, [], keystore, pmode.security)
 
-    body, content_type = build_multipart(_serialize(envelope), [])
+    serialized = _serialize(envelope)
+    body, content_type = build_multipart(serialized, [])
 
     # .. the response carries either a user message or an error signal such as an empty channel warning.
     response = _post(pmode, body, content_type, client)
@@ -296,7 +333,8 @@ def pull(
         out.is_ok = response.is_success
         return out
 
-    response_envelope_bytes, response_parts = parse_multipart(response.content, response.headers['content-type'])
+    response_content_type = response.headers['content-type']
+    response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
     response_envelope = etree.fromstring(response_envelope_bytes)
     messaging = parse_messaging(response_envelope)
 
@@ -318,17 +356,21 @@ def pull(
     decrypt_parts(response_envelope, response_parts, keystore)
     verify_result = verify_envelope(response_envelope, response_parts, keystore)
 
-    for part_info in user_message.part_infos:
-        content_id = part_info.href[4:]
+    for part_details in user_message.part_details:
+        content_id = part_details.href[4:]
 
         for part in response_parts:
             if part.content_id == content_id:
-                if compression_type := part_info.properties.get('CompressionType'):
+
+                if compression_type := part_details.properties.get('CompressionType'):
                     part.compressed = True
                     part.content_type = compression_type
-                    if mime_type := part_info.properties.get('MimeType'):
+
+                    if mime_type := part_details.properties.get('MimeType'):
                         part.mime_type = mime_type
+
                     decompress_part(part)
+
                 out.payloads.append(part)
                 break
 

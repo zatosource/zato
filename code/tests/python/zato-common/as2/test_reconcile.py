@@ -20,13 +20,21 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_reconciler(tmp_path:'os.PathLike') -> 'MDNReconciler':
     """ Points the audit database at a per-test SQLite file and builds a reconciler on it.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
     out = MDNReconciler('test-server')
     return out
@@ -34,12 +42,12 @@ def _make_reconciler(tmp_path:'os.PathLike') -> 'MDNReconciler':
 # ################################################################################################################################
 
 def _cleanup_env() -> 'None':
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 
-def _build_mdn_bytes(message_id, disposition=None, mic='', signing_keystore=None):
+def _build_mdn_bytes(message_id:'any_', disposition:'any_'=None, mic:'any_'='', signing_keystore:'any_'=None) -> 'any_':
     """ Builds one real MDN answering the given Message-ID, returning its body and content type.
     """
     request = MDNRequest()
@@ -72,7 +80,7 @@ def _build_mdn_bytes(message_id, disposition=None, mic='', signing_keystore=None
 
 class TestMatching:
 
-    def test_sent_message_matches_until_its_mdn_arrives(self, tmp_path):
+    def test_sent_message_matches_until_its_mdn_arrives(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -103,7 +111,9 @@ class TestMatching:
         finally:
             _cleanup_env()
 
-    def test_unknown_message_id_matches_nothing(self, tmp_path):
+# ################################################################################################################################
+
+    def test_unknown_message_id_matches_nothing(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -117,7 +127,7 @@ class TestMatching:
 
 class TestOutstanding:
 
-    def test_outstanding_shrinks_as_mdns_arrive(self, tmp_path):
+    def test_outstanding_shrinks_as_mdns_arrive(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -144,7 +154,9 @@ class TestOutstanding:
         finally:
             _cleanup_env()
 
-    def test_recent_messages_are_not_overdue(self, tmp_path):
+# ################################################################################################################################
+
+    def test_recent_messages_are_not_overdue(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -163,7 +175,7 @@ class TestOutstanding:
 
 class TestProcessIncomingMDN:
 
-    def test_matched_mdn_reconciles_ok(self, tmp_path):
+    def test_matched_mdn_reconciles_ok(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -174,6 +186,8 @@ class TestProcessIncomingMDN:
             assert result.is_parsed
             assert result.is_matched
             assert result.is_ok
+
+            assert result.pending is not None
             assert result.pending.as2_from == 'ZatoRetail'
             assert result.pending.as2_to == 'PartnerCorp'
 
@@ -183,7 +197,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_mic_must_match_what_was_computed_at_send_time(self, tmp_path):
+# ################################################################################################################################
+
+    def test_mic_must_match_what_was_computed_at_send_time(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', mic='QUFB, sha-256')
@@ -199,7 +215,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_error_disposition_is_not_ok(self, tmp_path):
+# ################################################################################################################################
+
+    def test_error_disposition_is_not_ok(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -216,7 +234,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_unknown_message_id_is_accepted_and_logged(self, tmp_path):
+# ################################################################################################################################
+
+    def test_unknown_message_id_is_accepted_and_logged(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -230,7 +250,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_already_reconciled_message_id_is_accepted_and_logged(self, tmp_path):
+# ################################################################################################################################
+
+    def test_already_reconciled_message_id_is_accepted_and_logged(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -247,7 +269,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_garbage_body_is_accepted_and_logged(self, tmp_path):
+# ################################################################################################################################
+
+    def test_garbage_body_is_accepted_and_logged(self, tmp_path:'os.PathLike') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
 
@@ -260,7 +284,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_accepted_certificates_admit_a_rotated_signer(self, tmp_path, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_accepted_certificates_admit_a_rotated_signer(self, tmp_path:'os.PathLike', parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -281,7 +307,9 @@ class TestProcessIncomingMDN:
         finally:
             _cleanup_env()
 
-    def test_accepted_certificates_reject_an_unlisted_signer(self, tmp_path, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_accepted_certificates_reject_an_unlisted_signer(self, tmp_path:'os.PathLike', parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')

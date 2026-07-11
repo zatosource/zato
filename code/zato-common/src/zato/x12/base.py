@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import cast as cast_
 
 # Zato
+from zato.common.typing_ import optional
 from zato.edi.base import EDIComponent, EDIComposite, EDIElement, EDIGroup, EDIGroupAttr, EDIMessage as _EDIMessageCore, \
      EDIRepeatableList, EDISegment as _EDISegmentCore, EDISegmentAttr, EDIValidationError, Usage
 from zato.x12.syntax import RawSegment, default_separators, serialize_segment
@@ -20,21 +21,21 @@ from zato.x12.syntax import RawSegment, default_separators, serialize_segment
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
+    from zato.common.typing_ import any_, anylist, stranydict, strlist
+    any_ = any_
+    anylist = anylist
+    stranydict = stranydict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases following the zato.common.typing_ naming convention
-any_             = 'Any'
-strlist          = list[str]
 strlistlist      = list[list[str]]
-anylist          = list['Any']
-stranydict       = dict[str, 'Any']
 raw_segment_list = list[RawSegment]
 
 hierarchical_loop_list = list['X12HierarchicalLoop']
-hierarchical_loop_none = 'X12HierarchicalLoop | None'
+hierarchical_loop_none = optional['X12HierarchicalLoop']
 str_loop_dict          = dict[str, 'X12HierarchicalLoop']
 
 # ################################################################################################################################
@@ -210,7 +211,8 @@ class X12HierarchicalLoop:
 # ################################################################################################################################
 
     def __repr__(self) -> 'str':
-        out = f'<X12HierarchicalLoop id={self.hl_id} level={self.level_code} children={len(self.children)}>'
+        child_count = len(self.children)
+        out = f'<X12HierarchicalLoop id={self.hl_id} level={self.level_code} children={child_count}>'
         return out
 
 # ################################################################################################################################
@@ -393,7 +395,8 @@ class X12GenericMessage(X12Message):
 
         for raw_segment in raw_segments:
             segment = X12GenericSegment.from_raw(raw_segment)
-            segments.append(segment.to_dict(include_empty=include_empty))
+            segment_dict = segment.to_dict(include_empty=include_empty)
+            segments.append(segment_dict)
 
         out['segments'] = segments
 

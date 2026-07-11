@@ -19,29 +19,39 @@ from zato.common.as4.ebms import build_envelope, build_error, build_receipt, par
 from zato.common.as4.mime_ import decompress_part, parse_multipart
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
+from zato.common.typing_ import optional
 from zato.common.util.xml_.mime_ import part_list
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.as4.ebms import signal_info_list, UserMessageInfo
+    from zato.common.as4.ebms import signal_details_list, UserMessageDetails
     from zato.common.as4.pmode import PMode
-    from zato.common.typing_ import any_, callable_, strnone
+    from zato.common.typing_ import any_, callnone, strnone
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
-    callable_ = callable_
+    callnone = callnone
+    Keystore = Keystore
+    PMode = PMode
+    signal_details_list = signal_details_list
     strnone = strnone
+    UserMessageDetails = UserMessageDetails
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+pmode_list = list['PMode']
+
+keystorenone           = optional['Keystore']
+pmodenone              = optional['PMode']
+usermessagedetailsnone = optional['UserMessageDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _soap_content_type = 'application/soap+xml; charset=UTF-8'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-pmode_list = list['PMode']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,11 +66,11 @@ class InboundResult:
     body:         bytes = b''
 
     # The parsed user message and its decrypted, decompressed payloads.
-    user_message: 'UserMessageInfo | None' = None
+    user_message: 'usermessagedetailsnone' = None
     payloads: 'part_list'
 
     # Signals delivered to us - asynchronous receipts or errors from a previous exchange.
-    signals: 'signal_info_list'
+    signals: 'signal_details_list'
 
     # Whether the message was recognized as a duplicate - the receipt is still returned
     # but the payloads must not be processed a second time.
@@ -73,7 +83,7 @@ class InboundResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageInfo') -> 'PMode':
+def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageDetails') -> 'PMode':
     """ Finds the P-Mode that governs an incoming user message by its service and action,
     defaulting to the first configured one when nothing matches exactly.
     """
@@ -103,8 +113,8 @@ def build_error_response(
     ref_to_message_id:'strnone',
     error_code:'str',
     detail:'str',
-    keystore:'Keystore | None',
-    pmode:'PMode | None',
+    keystore:'keystorenone',
+    pmode:'pmodenone',
     ) -> 'bytes':
     """ Builds the ebMS error signal that goes back on the HTTP response,
     signing it when the P-Mode calls for signed signals and signing is possible.
@@ -123,36 +133,38 @@ def build_error_response(
 
 # ################################################################################################################################
 
-def _restore_payloads(user_message:'UserMessageInfo', parts:'part_list') -> 'part_list':
+def _restore_payloads(user_message:'UserMessageDetails', parts:'part_list') -> 'part_list':
     """ Matches decrypted MIME parts with their eb:PartInfo entries and undoes
     the AS4 compression, returning the payloads as the sender originally submitted them.
     """
+
+    # Our response to produce
     out:'part_list' = []
 
-    for part_info in user_message.part_infos:
+    for part_details in user_message.part_details:
 
         # Only cid: references point at MIME parts - anything else would be
         # an (unsupported) external or body reference.
-        if not part_info.href.startswith('cid:'):
-            raise AS4ProtocolException(EbMSError.Value_Not_Recognized, f'Unsupported PartInfo href `{part_info.href}`')
+        if not part_details.href.startswith('cid:'):
+            raise AS4ProtocolException(EbMSError.Value_Not_Recognized, f'Unsupported PartInfo href `{part_details.href}`')
 
-        content_id = part_info.href[4:]
+        content_id = part_details.href[4:]
 
         for part in parts:
             if part.content_id == content_id:
                 break
         else:
             raise AS4ProtocolException(
-                EbMSError.Mime_Inconsistency, f'PartInfo `{part_info.href}` has no matching MIME part')
+                EbMSError.Mime_Inconsistency, f'PartInfo `{part_details.href}` has no matching MIME part')
 
-        if mime_type := part_info.properties.get('MimeType'):
+        if mime_type := part_details.properties.get('MimeType'):
             part.mime_type = mime_type
 
-        if character_set := part_info.properties.get('CharacterSet'):
+        if character_set := part_details.properties.get('CharacterSet'):
             part.character_set = character_set
 
         # The CompressionType property is the receiver's only signal that a part is compressed.
-        if compression_type := part_info.properties.get('CompressionType'):
+        if compression_type := part_details.properties.get('CompressionType'):
             part.content_type = compression_type
             part.compressed = True
             decompress_part(part)
@@ -168,8 +180,8 @@ def handle(
     content_type:'str',
     pmodes:'pmode_list',
     keystore:'Keystore',
-    is_duplicate:'callable_ | None'=None,
-    validate:'callable_ | None'=None,
+    is_duplicate:'callnone'=None,
+    validate:'callnone'=None,
     ) -> 'InboundResult':
     """ The transport-neutral inbound pipeline. Takes the raw HTTP body and content type
     of an incoming AS4 request and returns what to send back plus the delivered payloads.
@@ -189,7 +201,9 @@ def handle(
     out.signals = []
 
     ref_to_message_id:'strnone' = None
-    pmode:'PMode | None' = None
+
+    # The P-Mode is looked up mid-pipeline - this keeps it reachable for the error path below.
+    matched_pmode:'pmodenone' = None
 
     try:
         # Take the envelope and attachments apart ..
@@ -197,7 +211,7 @@ def handle(
 
         try:
             envelope = etree.fromstring(envelope_bytes)
-        except Exception as e:
+        except etree.XMLSyntaxError as e:
             raise AS4ProtocolException(EbMSError.Invalid_Header, f'Could not parse the SOAP envelope -> {e}')
 
         messaging = parse_messaging(envelope)
@@ -216,7 +230,9 @@ def handle(
 
         user_message = messaging.user_messages[0]
         ref_to_message_id = user_message.message_id
+
         pmode = _match_pmode(pmodes, user_message)
+        matched_pmode = pmode
 
         # Reverse the security processing - decrypt the wire bytes first,
         # then verify the signature that covers the plaintext ..
@@ -251,7 +267,7 @@ def handle(
     except AS4ProtocolException as e:
         out.is_error = True
         out.error_code = e.error_code
-        out.body = build_error_response(ref_to_message_id, e.error_code, e.detail, keystore, pmode)
+        out.body = build_error_response(ref_to_message_id, e.error_code, e.detail, keystore, matched_pmode)
 
     return out
 

@@ -52,7 +52,6 @@ if 0:
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
-    from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
 
     # Zato
@@ -75,7 +74,6 @@ if 0:
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
     PoolStore = PoolStore
-    SearchAPI = SearchAPI
     Service = Service
 
 # ################################################################################################################################

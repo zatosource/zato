@@ -16,6 +16,12 @@ from zato.admin.web.forms.outgoing.as4 import profile_choices
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _pem_attrs = {'style':'width:100%', 'rows':4, 'class':'pem-input'}
 
 # ################################################################################################################################
@@ -56,7 +62,7 @@ class CreateForm(forms.Form):
     as4_original_sender = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     as4_final_recipient = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
+    def __init__(self, security_list:'any_'=None, prefix:'any_'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
         if security_list is None:
             security_list = []
         super(CreateForm, self).__init__(post_data, prefix=prefix)

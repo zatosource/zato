@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from gzip import compress as gzip_compress, decompress as gzip_decompress
+from gzip import BadGzipFile, compress as gzip_compress, decompress as gzip_decompress
+from zlib import error as ZlibError
 
 # Zato
 from zato.common.as4.common import AS4ProtocolException, EbMSError
@@ -42,10 +43,11 @@ def compress_part(part:'Part') -> 'None':
 def decompress_part(part:'Part') -> 'None':
     """ Reverses AS4 GZIP compression in place, restoring the original content type.
     """
-    # A part that does not decompress cleanly must surface as EBMS:0303 per the AS4 profile.
+    # A part that does not decompress cleanly must surface as EBMS:0303 per the AS4 profile -
+    # a bad header raises BadGzipFile, truncated data EOFError and a corrupt stream ZlibError.
     try:
         part.data = gzip_decompress(part.data)
-    except Exception as e:
+    except (BadGzipFile, EOFError, ZlibError) as e:
         raise AS4ProtocolException(EbMSError.Decompression_Failure, f'Could not decompress part `{part.content_id}` -> {e}')
 
     part.content_type = part.mime_type
@@ -61,12 +63,14 @@ def build_multipart(envelope:'bytes', parts:'part_list') -> 'anytuple':
     Messages without attachments (signals such as receipts and errors) are serialized
     as a bare SOAP envelope without any MIME wrapping.
     """
+    envelope_content_type = f'{_soap_content_type}; charset=UTF-8'
+
     # Signals have no payloads, so no multipart is needed for them.
     if not parts:
-        out = (envelope, f'{_soap_content_type}; charset=UTF-8')
+        out = (envelope, envelope_content_type)
         return out
 
-    out = build_related(envelope, f'{_soap_content_type}; charset=UTF-8', parts, _soap_content_type, boundary_prefix='=-as4-')
+    out = build_related(envelope, envelope_content_type, parts, _soap_content_type, boundary_prefix='=-as4-')
     return out
 
 # ################################################################################################################################
@@ -87,16 +91,19 @@ def parse_multipart(body:'bytes', content_type:'str') -> 'anytuple':
     if base_type != 'multipart/related':
         raise AS4ProtocolException(EbMSError.Mime_Inconsistency, f'Unexpected content type `{base_type}`')
 
-    if 'boundary' not in parameters:
+    if not (boundary := parameters.get('boundary')):
         raise AS4ProtocolException(EbMSError.Mime_Inconsistency, 'Content-Type has no boundary parameter')
 
-    envelope, parts = split_related(body, parameters['boundary'])
+    envelope, parts = split_related(body, boundary)
 
-    if not envelope and not parts:
-        raise AS4ProtocolException(EbMSError.Mime_Inconsistency, 'Multipart body has no parts')
-
+    # A multipart without an envelope is either empty altogether ..
     if not envelope:
-        raise AS4ProtocolException(EbMSError.Mime_Inconsistency, 'Multipart body has no SOAP envelope part')
+        if not parts:
+            raise AS4ProtocolException(EbMSError.Mime_Inconsistency, 'Multipart body has no parts')
+
+        # .. or it carries attachments while missing its SOAP root part.
+        else:
+            raise AS4ProtocolException(EbMSError.Mime_Inconsistency, 'Multipart body has no SOAP envelope part')
 
     out = (envelope, parts)
     return out

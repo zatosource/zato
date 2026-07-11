@@ -18,6 +18,12 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The identities the two parties exchange messages under - required to route anything at all.
 _as2_required_field_names = ('endpoint_url', 'as2_from', 'as2_to')
 
@@ -57,30 +63,49 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-    def handle(self):
-        return {
+    def handle(self) -> 'stranydict':
+
+        out = {
             'show_search_form': True,
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
             'change_password_form': ChangePasswordForm(),
         }
 
+        return out
+
 # ################################################################################################################################
 
-    def on_before_append_item(self, item):
+    def on_before_append_item(self, item:'any_') -> 'any_':
 
         # The expiry of the partner's pasted certificate is computed for display only -
         # an expired partner certificate is the single most common AS2 operational failure.
-        partner_cert = getattr(item, 'as2_partner_cert', '')
+        # The field is optional in the get-list response, so it may be missing entirely.
+        if hasattr(item, 'as2_partner_cert'):
+            partner_cert = item.as2_partner_cert
+        else:
+            partner_cert = ''
+
         expiry = get_expiry_info(partner_cert)
 
         item.cert_expiry = expiry['date']
         item.cert_expiry_is_warning = expiry['is_warning']
 
         # The audit log of this connection's exchanges is filed under its AS2 identity pair.
-        as2_from = getattr(item, 'as2_from', '')
-        as2_to = getattr(item, 'as2_to', '')
-        item.audit_log_object_name = f'{as2_from.strip()}:{as2_to.strip()}'
+        if hasattr(item, 'as2_from'):
+            as2_from = item.as2_from
+        else:
+            as2_from = ''
+
+        if hasattr(item, 'as2_to'):
+            as2_to = item.as2_to
+        else:
+            as2_to = ''
+
+        as2_from = as2_from.strip()
+        as2_to = as2_to.strip()
+
+        item.audit_log_object_name = f'{as2_from}:{as2_to}'
 
         return item
 
@@ -97,7 +122,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'anydict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_AS2
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
@@ -106,7 +131,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def pre_process_input_dict(self, input_dict):
+    def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
 
         # Checkboxes arrive as 'on' or not at all - the backend expects real booleans ..
         for name in _as2_bool_field_names:
@@ -128,8 +153,9 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def success_message(self, item):
-        return 'Successfully {} outgoing AS2 connection `{}`'.format(self.verb, item.name)
+    def success_message(self, item:'any_') -> 'str':
+        out = f'Successfully {self.verb} outgoing AS2 connection `{item.name}`'
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,19 +184,21 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
+def change_password(req:'any_') -> 'any_':
+    out = _change_password(req, 'zato.generic.connection.change-password')
+    return out
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
-    return ping_connection(req, 'zato.generic.connection.ping', id, 'AS2 connection')
+def ping(req:'any_', id:'str', cluster_id:'str') -> 'any_':
+    out = ping_connection(req, 'zato.generic.connection.ping', id, 'AS2 connection')
+    return out
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def send_test_message(req):
+def send_test_message(req:'any_') -> 'any_':
     out = invoke_action_handler(req, 'zato.outgoing.as2.send-test-message', ('name',))
     return out
 

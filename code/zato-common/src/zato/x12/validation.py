@@ -12,32 +12,39 @@ from __future__ import annotations
 from decimal import Decimal
 
 # Zato
+from zato.common.typing_ import optional
 from zato.edi.base import EDIComponent, EDIElement, EDIGroupAttr, EDISegmentAttr, EDIValidationError, Usage, \
      _composite_classes, _declared_attr_descriptors, _sort_by_position
 from zato.x12.base import X12GenericMessage, X12Message, _element_value
-from zato.x12.syntax import RawSegment
+from zato.x12.envelope import X12EnvelopeError, parse_x12
+from zato.x12.syntax import RawSegment, X12SyntaxError
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Any  # noqa: F401
+    from zato.common.typing_ import any_, anylist, strlist
     from zato.x12.envelope import X12Interchange
+    any_ = any_
+    anylist = anylist
+    strlist = strlist
     X12Interchange = X12Interchange
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases
-any_             = 'Any'
-strlist          = list[str]
-anylist          = list['Any']
 raw_segment_list = list[RawSegment]
+rawsegmentnone   = optional[RawSegment]
 
 issue_list           = list['ValidationIssue']
 set_result_list      = list['SetValidationResult']
 descriptor_list      = list[EDIElement]
 tag_descriptors_dict = dict[str, descriptor_list]
+schema_by_class_dict = dict[type, '_MessageSchema']
+
+length_bounds      = tuple[int, int]
+length_bounds_none = optional[length_bounds]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +88,7 @@ TDS_Implied_Decimals = Decimal(100)
 # ################################################################################################################################
 
 class X12ValidationError(EDIValidationError):
-    """ Raised by parse_x12 in strict mode when at least one transaction set has
+    """ Raised by parse_x12_strict when at least one transaction set has
     implementation guide syntax issues - the per-set results are on .results.
     """
 
@@ -173,7 +180,7 @@ class _MessageSchema:
 
 # ################################################################################################################################
 
-_schema_cache:'dict[type, _MessageSchema]' = {}
+_schema_cache:'schema_by_class_dict' = {}
 
 # ################################################################################################################################
 
@@ -243,17 +250,21 @@ def _get_schema(message_class:'type') -> '_MessageSchema':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _parse_length_bounds(format:'str') -> 'tuple[int, int] | None':
+def _parse_length_bounds(format:'str') -> 'length_bounds_none':
     """ Reads the min/max lengths out of an X12 format string like `AN 1/22` or `1/1`.
     Formats without a length pair yield None and no length check applies.
     """
     if '/' not in format:
         return None
 
-    length_part = format.split(' ')[-1]
+    format_parts = format.split(' ')
+    length_part = format_parts[-1]
     min_text, max_text = length_part.split('/')
 
-    out = (int(min_text), int(max_text))
+    min_length = int(min_text)
+    max_length = int(max_text)
+
+    out = (min_length, max_length)
     return out
 
 # ################################################################################################################################
@@ -277,15 +288,17 @@ def _check_length(
     value_length = len(value)
 
     if value_length < min_length:
+        suffix = 'character' if min_length == 1 else 'characters'
         issue = ValidationIssue(tag, segment_position, Segment_Data_Element_Error, element_position, component_position,
             Element_Too_Short, value,
-            f'{tag}{element_position:02d} `{value}` is shorter than {min_length} character(s)')
+            f'{tag}{element_position:02d} `{value}` is shorter than {min_length} {suffix}')
         issues.append(issue)
 
     elif value_length > max_length:
+        suffix = 'character' if max_length == 1 else 'characters'
         issue = ValidationIssue(tag, segment_position, Segment_Data_Element_Error, element_position, component_position,
             Element_Too_Long, value,
-            f'{tag}{element_position:02d} `{value}` is longer than {max_length} character(s)')
+            f'{tag}{element_position:02d} `{value}` is longer than {max_length} {suffix}')
         issues.append(issue)
 
 # ################################################################################################################################
@@ -393,7 +406,8 @@ def validate_transaction_set(message:'X12Message') -> 'issue_list':
     if isinstance(message, X12GenericMessage):
         return out
 
-    schema = _get_schema(type(message))
+    message_class = type(message)
+    schema = _get_schema(message_class)
     raw_segments = message._raw_segments
 
     # A message built from scratch has no wire data to check
@@ -460,6 +474,28 @@ def validate_interchange(interchange:'X12Interchange') -> 'set_result_list':
     return out
 
 # ################################################################################################################################
+
+def parse_x12_strict(raw:'str') -> 'X12Interchange':
+    """ Parses an interchange and applies the dictionary-level checks on top
+    of the envelope ones, raising X12ValidationError when any set has issues.
+    """
+
+    # Our response to produce
+    out = parse_x12(raw)
+
+    results = validate_interchange(out)
+
+    issue_count = 0
+    for result in results:
+        issue_count += len(result.issues)
+
+    if issue_count:
+        suffix = 'issue' if issue_count == 1 else 'issues'
+        raise X12ValidationError(f'Found {issue_count} validation {suffix}', results)
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def _set_type(message:'X12Message') -> 'str':
@@ -489,7 +525,8 @@ def _sum_element(raw_segments:'raw_segment_list', tag:'str', position:'int') -> 
         if raw_segment.tag == tag:
             value = _element_value(raw_segment, position)
             if value:
-                out += Decimal(value)
+                amount = Decimal(value)
+                out += amount
 
     return out
 
@@ -508,14 +545,17 @@ def _count_segments(raw_segments:'raw_segment_list', tag:'str') -> 'int':
 
 # ################################################################################################################################
 
-def _find_first(raw_segments:'raw_segment_list', tag:'str') -> 'RawSegment | None':
+def _find_first(raw_segments:'raw_segment_list', tag:'str') -> 'rawsegmentnone':
     """ Returns the first segment with the given tag, or None.
     """
     for raw_segment in raw_segments:
         if raw_segment.tag == tag:
-            return raw_segment
+            out = raw_segment
+            break
+    else:
+        out = None
 
-    return None
+    return out
 
 # ################################################################################################################################
 
@@ -526,7 +566,8 @@ def _check_ctt_count(out:'strlist', raw_segments:'raw_segment_list', line_tag:'s
     if ctt is None:
         return
 
-    declared_count = int(_element_value(ctt, 1))
+    declared_value = _element_value(ctt, 1)
+    declared_count = int(declared_value)
     actual_count = _count_segments(raw_segments, line_tag)
 
     if declared_count != actual_count:
@@ -545,13 +586,16 @@ def _balance_810(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
         return
 
     # TDS01 has two implied decimal places
-    declared_total = Decimal(_element_value(tds, 1)) / TDS_Implied_Decimals
+    declared_value = _element_value(tds, 1)
+    declared_total = Decimal(declared_value) / TDS_Implied_Decimals
 
     line_total = Decimal(0)
     for raw_segment in raw_segments:
         if raw_segment.tag == 'IT1':
-            quantity = Decimal(_element_value(raw_segment, 2))
-            unit_price = Decimal(_element_value(raw_segment, 4))
+            quantity_value = _element_value(raw_segment, 2)
+            unit_price_value = _element_value(raw_segment, 4)
+            quantity = Decimal(quantity_value)
+            unit_price = Decimal(unit_price_value)
             line_total += quantity * unit_price
 
     if declared_total != line_total:
@@ -574,8 +618,9 @@ def _balance_850(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
         return
 
     quantity_total = _sum_element(raw_segments, 'PO1', 2)
+    declared_total = Decimal(declared_hash)
 
-    if Decimal(declared_hash) != quantity_total:
+    if declared_total != quantity_total:
         out.append(f'CTT02 `{declared_hash}` does not match the quantity hash total {quantity_total}')
 
 # ################################################################################################################################
@@ -595,7 +640,8 @@ def _balance_835(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
     if bpr is None:
         return
 
-    declared_payment = Decimal(_element_value(bpr, 2))
+    declared_value = _element_value(bpr, 2)
+    declared_payment = Decimal(declared_value)
 
     claim_total = _sum_element(raw_segments, 'CLP', 4)
     adjustment_total = _sum_element(raw_segments, 'PLB', 4)
@@ -664,7 +710,8 @@ def _situational_835(out:'strlist', raw_segments:'raw_segment_list') -> 'None':
         if raw_segment.tag == 'CLP':
             status_code = _element_value(raw_segment, 2)
             if status_code == Claim_Status_Denied:
-                payment = Decimal(_element_value(raw_segment, 4))
+                payment_value = _element_value(raw_segment, 4)
+                payment = Decimal(payment_value)
                 if payment != 0:
                     claim_id = _element_value(raw_segment, 1)
                     out.append(f'Denied claim `{claim_id}` has a non-zero payment amount {payment}')
@@ -717,8 +764,6 @@ def validate_snip_1(raw:'str') -> 'strlist':
     separators, control number echoes and segment counts. Returns the errors found,
     an empty list meaning the interchange is syntactically sound.
     """
-    from zato.x12.envelope import X12EnvelopeError, parse_x12
-    from zato.x12.syntax import X12SyntaxError
 
     # Our response to produce
     out:'strlist' = []

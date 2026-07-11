@@ -37,6 +37,7 @@ if 0:
     anytuple = anytuple
     byteslist = byteslist
     certificate_list = certificate_list
+    MDNDetails = MDNDetails
     stranydict = stranydict
     strnone = strnone
     strstrdict = strstrdict

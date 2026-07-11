@@ -22,6 +22,7 @@ if 0:
     from zato.common.typing_ import dtnone, strlist
     from zato.common.util.xml_.keystore import certificate_list
     certificate_list = certificate_list
+    Certificate = Certificate
     dtnone = dtnone
     strlist = strlist
 

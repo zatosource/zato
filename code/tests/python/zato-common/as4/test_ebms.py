@@ -23,7 +23,13 @@ from zato.common.util.xml_.core import qname
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_pmode():
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_pmode() -> 'any_':
     out = new_pmode()
 
     out.initiator.party_id = 'party-a'
@@ -41,17 +47,18 @@ def _make_pmode():
 
 # ################################################################################################################################
 
-def _messaging_of(envelope):
+def _messaging_of(envelope:'any_') -> 'any_':
     header = envelope.find(qname(NS.SOAP, 'Header'))
     out = header.find(qname(NS.EBMS, 'Messaging'))
     return out
 
 # ################################################################################################################################
 
-def _validate(schema, envelope):
+def _validate(schema:'any_', envelope:'any_') -> 'None':
     """ Validates the eb:Messaging block of an envelope against the official OASIS schema.
     """
-    messaging = deepcopy(_messaging_of(envelope))
+    original_messaging = _messaging_of(envelope)
+    messaging = deepcopy(original_messaging)
     schema.assertValid(messaging)
 
 # ################################################################################################################################
@@ -59,7 +66,7 @@ def _validate(schema, envelope):
 
 class TestUserMessage:
 
-    def test_user_message_validates_against_official_schema(self, ebms_schema):
+    def test_user_message_validates_against_official_schema(self, ebms_schema:'any_') -> 'None':
         pmode = _make_pmode()
         part = new_part(b'<Invoice/>')
         part.compressed = True
@@ -70,7 +77,9 @@ class TestUserMessage:
 
         _validate(ebms_schema, envelope)
 
-    def test_user_message_parse_roundtrip(self):
+# ################################################################################################################################
+
+    def test_user_message_parse_roundtrip(self) -> 'None':
         pmode = _make_pmode()
         part = new_part(b'<Invoice/>')
         part.compressed = True
@@ -99,24 +108,28 @@ class TestUserMessage:
         assert user_message.message_properties['finalRecipient'] == 'C4-final-recipient'
 
         # The payload part is described with its compression state.
-        assert len(user_message.part_infos) == 1
-        part_info = user_message.part_infos[0]
-        assert part_info.href == f'cid:{part.content_id}'
-        assert part_info.properties['MimeType'] == 'application/xml'
-        assert part_info.properties['CompressionType'] == 'application/gzip'
+        part_details_count = len(user_message.part_details)
+        assert part_details_count == 1
+
+        part_details = user_message.part_details[0]
+        assert part_details.href == f'cid:{part.content_id}'
+        assert part_details.properties['MimeType'] == 'application/xml'
+        assert part_details.properties['CompressionType'] == 'application/gzip'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestSignals:
 
-    def test_receipt_validates_against_official_schema(self, ebms_schema):
+    def test_receipt_validates_against_official_schema(self, ebms_schema:'any_') -> 'None':
         envelope = build_envelope()
         _ = build_receipt(envelope, 'original-message-id@test', [])
 
         _validate(ebms_schema, envelope)
 
-    def test_receipt_parse_roundtrip(self):
+# ################################################################################################################################
+
+    def test_receipt_parse_roundtrip(self) -> 'None':
         envelope = build_envelope()
         _ = build_receipt(envelope, 'original-message-id@test', [])
 
@@ -129,13 +142,17 @@ class TestSignals:
         assert signal.is_receipt
         assert signal.ref_to_message_id == 'original-message-id@test'
 
-    def test_error_validates_against_official_schema(self, ebms_schema):
+# ################################################################################################################################
+
+    def test_error_validates_against_official_schema(self, ebms_schema:'any_') -> 'None':
         envelope = build_envelope()
         _ = build_error(envelope, 'bad-message-id@test', 'EBMS:0101', 'FailedAuthentication', 'The check failed')
 
         _validate(ebms_schema, envelope)
 
-    def test_error_parse_roundtrip(self):
+# ################################################################################################################################
+
+    def test_error_parse_roundtrip(self) -> 'None':
         envelope = build_envelope()
         _ = build_error(envelope, 'bad-message-id@test', 'EBMS:0101', 'FailedAuthentication', 'The check failed')
 
@@ -151,13 +168,17 @@ class TestSignals:
         assert error.detail == 'The check failed'
         assert error.ref_to_message_id == 'bad-message-id@test'
 
-    def test_pull_request_validates_against_official_schema(self, ebms_schema):
+# ################################################################################################################################
+
+    def test_pull_request_validates_against_official_schema(self, ebms_schema:'any_') -> 'None':
         envelope = build_envelope()
         _ = build_pull_request(envelope, 'urn:test:mpc:eori:pl:1234')
 
         _validate(ebms_schema, envelope)
 
-    def test_pull_request_parse_roundtrip(self):
+# ################################################################################################################################
+
+    def test_pull_request_parse_roundtrip(self) -> 'None':
         envelope = build_envelope()
         _ = build_pull_request(envelope, 'urn:test:mpc:eori:pl:1234')
 

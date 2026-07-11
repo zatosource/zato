@@ -71,22 +71,25 @@ class AS2Exporter:
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
+# ################################################################################################################################
+
     def export(self, session:'SASession', cluster_id:'int') -> 'as2_def_list':
         """ Exports outgoing AS2 connection definitions.
         """
         logger.info('Exporting outgoing AS2 connection definitions')
+
+        # Our response to produce
+        out:'as2_def_list' = []
 
         # Get AS2 connections from database using the generic connection query
         db_as2 = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_AS2)
 
         if not db_as2:
             logger.info('No outgoing AS2 connection definitions found in DB')
-            return []
+            return out
 
         as2_connections = to_json(db_as2, return_as_dict=True)
         logger.debug('Processing %d outgoing AS2 connection definitions', len(as2_connections))
-
-        exported_as2 = []
 
         for row in as2_connections:
 
@@ -120,15 +123,15 @@ class AS2Exporter:
 
             # .. and boolean fields travel only when they differ from the defaults.
             for field, default in _bool_field_defaults.items():
-                value = row.get(field)
-                if value is not None:
+                if (value := row.get(field)) is not None:
                     if value != default:
                         item[field] = value
 
-            exported_as2.append(item)
+            out.append(item)
 
-        logger.info('Successfully prepared %d outgoing AS2 connection definitions for export', len(exported_as2))
-        return exported_as2
+        logger.info('Successfully prepared %d outgoing AS2 connection definitions for export', len(out))
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

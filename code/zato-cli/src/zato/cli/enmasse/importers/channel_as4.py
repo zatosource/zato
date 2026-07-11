@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 # Keys that never map to database columns directly - they are handled separately.
 _non_column_keys = ('id', 'service', 'security', 'security_name')
 
+# What a YAML definition means when it does not say otherwise.
+_default_is_active = True
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,13 +46,17 @@ class ChannelAS4Importer:
 # ################################################################################################################################
 
     def get_as4_channels_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
-        out = {}
+
+        # Our response to produce
+        out:'anydict' = {}
+
         logger.info('Retrieving AS4 channels from database for cluster_id=%s', cluster_id)
 
-        query = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id==cluster_id).\
-            filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
-            filter(HTTPSOAP.transport==URL_TYPE.AS4) # type: ignore
+        query = session.query(HTTPSOAP)
+        query = query.filter(HTTPSOAP.cluster_id==cluster_id)
+        query = query.filter(HTTPSOAP.connection==CONNECTION.CHANNEL)
+        query = query.filter(HTTPSOAP.transport==URL_TYPE.AS4)
+
         channels = to_json(query, return_as_dict=True)
         logger.info('Processing %d AS4 channels', len(channels))
 
@@ -91,8 +98,8 @@ class ChannelAS4Importer:
 # ################################################################################################################################
 
     def compare_channel_as4(self, yaml_defs:'anylist', db_defs:'anydict', session:'SASession') -> 'listtuple':
-        to_create = []
-        to_update = []
+        to_create:'anylist' = []
+        to_update:'anylist' = []
 
         logger.info('Comparing %d YAML AS4 channels with %d DB AS4 channels', len(yaml_defs), len(db_defs))
 
@@ -146,7 +153,9 @@ class ChannelAS4Importer:
                     logger.info('No update needed for %s', name)
 
         logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
-        return to_create, to_update
+
+        out = to_create, to_update
+        return out
 
 # ################################################################################################################################
 
@@ -199,7 +208,7 @@ class ChannelAS4Importer:
         channel.transport = URL_TYPE.AS4
         channel.url_path = channel_def['url_path']
         channel.soap_action = ''
-        channel.is_active = channel_def.get('is_active', True)
+        channel.is_active = channel_def.get('is_active', _default_is_active)
         channel.is_internal = False
 
         # Process standard attributes - the AS4 fields are not columns,
@@ -215,6 +224,7 @@ class ChannelAS4Importer:
         set_instance_opaque_attrs(channel, channel_def)
 
         session.add(channel)
+
         return channel
 
 # ################################################################################################################################
@@ -246,6 +256,7 @@ class ChannelAS4Importer:
         set_instance_opaque_attrs(channel, channel_def)
 
         session.add(channel)
+
         return channel
 
 # ################################################################################################################################
@@ -256,8 +267,8 @@ class ChannelAS4Importer:
         db_channels = self.get_as4_channels_from_db(session, self.importer.cluster_id)
         to_create, to_update = self.compare_channel_as4(channel_list, db_channels, session)
 
-        out_created = []
-        out_updated = []
+        out_created:'anylist' = []
+        out_updated:'anylist' = []
 
         try:
             logger.info('Creating %d new AS4 channels', len(to_create))
@@ -278,13 +289,16 @@ class ChannelAS4Importer:
             session.commit()
             logger.info('Successfully committed all changes')
 
+        # A genuinely broad boundary - whatever failed while syncing,
+        # the session must be rolled back before the error propagates.
         except Exception as e:
             logger.error('Error syncing AS4 channels: %s', e)
             logger.exception('Full exception details:')
             session.rollback()
             raise
 
-        return out_created, out_updated
+        out = out_created, out_updated
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -76,7 +76,7 @@ class TestParseX12(unittest.TestCase):
 
     maxDiff = None
 
-    def test_parse_single_set(self) -> None:
+    def test_parse_single_set(self) -> 'None':
         interchange = parse_x12(_interchange_single)
 
         self.assertEqual(interchange.isa.sender_id, 'SENDERID       ')
@@ -94,7 +94,9 @@ class TestParseX12(unittest.TestCase):
         self.assertIsInstance(message, Invoice810)
         self.assertEqual(message.big.invoice_number, 'INV-9981')
 
-    def test_parse_multi_set(self) -> None:
+# ################################################################################################################################
+
+    def test_parse_multi_set(self) -> 'None':
         interchange = parse_x12(_interchange_multi_set)
 
         group = interchange.groups[0]
@@ -112,7 +114,9 @@ class TestParseX12(unittest.TestCase):
 
         self.assertIn('Expected exactly 1 transaction set, found 2', str(ctx.exception))
 
-    def test_parse_multi_group(self) -> None:
+# ################################################################################################################################
+
+    def test_parse_multi_group(self) -> 'None':
         interchange = parse_x12(_interchange_multi_group)
 
         self.assertEqual(len(interchange.groups), 2)
@@ -122,21 +126,27 @@ class TestParseX12(unittest.TestCase):
         self.assertIsInstance(interchange.groups[0].transaction_sets[0], Invoice810)
         self.assertIsInstance(interchange.groups[1].transaction_sets[0], PurchaseOrder850)
 
-    def test_parse_ta1(self) -> None:
+# ################################################################################################################################
+
+    def test_parse_ta1(self) -> 'None':
         interchange = parse_x12(_interchange_ta1)
 
         self.assertEqual(len(interchange.ta1_list), 1)
         self.assertEqual(interchange.ta1_list[0].control_number, '000000800')
         self.assertEqual(interchange.ta1_list[0].ack_code, 'A')
 
-    def test_parse_unregistered_set_is_generic(self) -> None:
+# ################################################################################################################################
+
+    def test_parse_unregistered_set_is_generic(self) -> 'None':
         interchange = parse_x12(_interchange_generic)
 
         message = interchange.transaction_set
         self.assertIs(type(message), X12GenericMessage)
         self.assertEqual(message.segments('BCT')[0].e_1, 'PC')
 
-    def test_roundtrip_is_byte_exact(self) -> None:
+# ################################################################################################################################
+
+    def test_roundtrip_is_byte_exact(self) -> 'None':
         interchange = parse_x12(_interchange_multi_group)
         serialized = interchange.serialize()
 
@@ -145,7 +155,9 @@ class TestParseX12(unittest.TestCase):
         # A second parse-serialize cycle is byte-stable.
         self.assertEqual(parse_x12(serialized).serialize(), serialized)
 
-    def test_to_dict(self) -> None:
+# ################################################################################################################################
+
+    def test_to_dict(self) -> 'None':
         interchange = parse_x12(_interchange_single)
         dict_data = interchange.to_dict()
 
@@ -161,7 +173,7 @@ class TestEnvelopeValidation(unittest.TestCase):
 
     maxDiff = None
 
-    def test_isa_iea_control_number_mismatch(self) -> None:
+    def test_isa_iea_control_number_mismatch(self) -> 'None':
         raw = _interchange_single.replace('IEA*1*000000905~', 'IEA*1*000000906~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -169,7 +181,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match IEA02', str(ctx.exception))
 
-    def test_iea_group_count_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_iea_group_count_mismatch(self) -> 'None':
         raw = _interchange_single.replace('IEA*1*000000905~', 'IEA*2*000000905~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -177,7 +191,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match the group count', str(ctx.exception))
 
-    def test_gs_ge_control_number_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_gs_ge_control_number_mismatch(self) -> 'None':
         raw = _interchange_single.replace('GE*1*905~', 'GE*1*906~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -185,7 +201,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match GE02', str(ctx.exception))
 
-    def test_ge_set_count_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_ge_set_count_mismatch(self) -> 'None':
         raw = _interchange_single.replace('GE*1*905~', 'GE*2*905~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -193,7 +211,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match the transaction set count', str(ctx.exception))
 
-    def test_st_se_control_number_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_st_se_control_number_mismatch(self) -> 'None':
         raw = _interchange_single.replace('SE*4*0001~', 'SE*4*0002~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -201,7 +221,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match SE02', str(ctx.exception))
 
-    def test_se_segment_count_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_se_segment_count_mismatch(self) -> 'None':
         raw = _interchange_single.replace('SE*4*0001~', 'SE*5*0001~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -209,7 +231,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('does not match the segment count', str(ctx.exception))
 
-    def test_duplicate_set_control_number(self) -> None:
+# ################################################################################################################################
+
+    def test_duplicate_set_control_number(self) -> 'None':
         raw = _interchange_multi_set.replace('ST*810*0002~', 'ST*810*0001~')
         raw = raw.replace('SE*4*0002~', 'SE*4*0001~')
 
@@ -218,7 +242,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('Duplicate transaction set control number', str(ctx.exception))
 
-    def test_duplicate_group_control_number(self) -> None:
+# ################################################################################################################################
+
+    def test_duplicate_group_control_number(self) -> 'None':
         raw = _interchange_multi_group.replace('GS*PO*SENDERGS*RECEIVERGS*20260709*1200*906*X*004010~',
             'GS*PO*SENDERGS*RECEIVERGS*20260709*1200*905*X*004010~')
         raw = raw.replace('GE*1*906~', 'GE*1*905~')
@@ -228,7 +254,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('Duplicate group control number', str(ctx.exception))
 
-    def test_missing_iea(self) -> None:
+# ################################################################################################################################
+
+    def test_missing_iea(self) -> 'None':
         raw = _interchange_single.replace('IEA*1*000000905~', '')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -236,7 +264,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('not closed with IEA', str(ctx.exception))
 
-    def test_missing_ge(self) -> None:
+# ################################################################################################################################
+
+    def test_missing_ge(self) -> 'None':
         raw = _interchange_single.replace('GE*1*905~', '')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -244,7 +274,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('not closed with GE', str(ctx.exception))
 
-    def test_missing_se(self) -> None:
+# ################################################################################################################################
+
+    def test_missing_se(self) -> 'None':
         raw = _interchange_single.replace('SE*4*0001~', '')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -252,7 +284,9 @@ class TestEnvelopeValidation(unittest.TestCase):
 
         self.assertIn('not closed with SE', str(ctx.exception))
 
-    def test_segment_outside_transaction_set(self) -> None:
+# ################################################################################################################################
+
+    def test_segment_outside_transaction_set(self) -> 'None':
         raw = _interchange_single.replace('IEA*1*000000905~', 'REF*ZZ*STRAY~IEA*1*000000905~')
 
         with self.assertRaises(X12EnvelopeError) as ctx:
@@ -267,7 +301,7 @@ class TestBatchedConstruction(unittest.TestCase):
 
     maxDiff = None
 
-    def test_many_sets_in_one_group(self) -> None:
+    def test_many_sets_in_one_group(self) -> 'None':
         interchange = X12Interchange()
         interchange.isa.sender_id = 'SENDERID'
         interchange.isa.receiver_id = 'RECEIVERID'
@@ -306,7 +340,9 @@ class TestBatchedConstruction(unittest.TestCase):
         self.assertEqual(control_numbers, ['0001', '0002', '0003'])
         self.assertEqual(parsed_numbers, invoice_numbers)
 
-    def test_many_groups_in_one_interchange(self) -> None:
+# ################################################################################################################################
+
+    def test_many_groups_in_one_interchange(self) -> 'None':
         interchange = X12Interchange()
         interchange.isa.sender_id = 'SENDERID'
         interchange.isa.receiver_id = 'RECEIVERID'
@@ -334,7 +370,9 @@ class TestBatchedConstruction(unittest.TestCase):
         self.assertIsInstance(parsed.groups[0].transaction_sets[0], PurchaseOrder850)
         self.assertIsInstance(parsed.groups[1].transaction_sets[0], ShipNotice856)
 
-    def test_unknown_set_type_is_rejected(self) -> None:
+# ################################################################################################################################
+
+    def test_unknown_set_type_is_rejected(self) -> 'None':
         interchange = X12Interchange()
         message = X12GenericMessage()
 
@@ -350,7 +388,7 @@ class TestLargeInterchange(unittest.TestCase):
 
     maxDiff = None
 
-    def test_large_interchange_roundtrip(self) -> None:
+    def test_large_interchange_roundtrip(self) -> 'None':
 
         # Build a purchase order with a very long note loop ..
         segment_texts = [

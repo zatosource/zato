@@ -33,6 +33,12 @@ from zato.edi.reconcile import Reconciler
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The reconciliation store all the tests write to and the sweep reads from.
 _server_name = 'test-server'
 
@@ -53,7 +59,7 @@ _rsa_key_size = 2048
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_config(**overrides):
+def _new_config(**overrides:'any_') -> 'any_':
     """ One partner's connection configuration, the way the alerting sweep sees it.
     """
     out = Bunch()
@@ -73,7 +79,7 @@ def _new_config(**overrides):
 
 # ################################################################################################################################
 
-def _make_certificate_pem(days_left):
+def _make_certificate_pem(days_left:'any_') -> 'any_':
     """ Issues one self-signed certificate expiring in the given number of days,
     returned as a PEM string the way the partner form stores it.
     """
@@ -96,7 +102,7 @@ def _make_certificate_pem(days_left):
 
 # ################################################################################################################################
 
-def _findings_of_kind(findings, kind):
+def _findings_of_kind(findings:'any_', kind:'any_') -> 'any_':
     """ Filters one sweep's findings down to a single kind - a test seeding
     the store for one check must not trip over the others.
     """
@@ -113,7 +119,7 @@ def _findings_of_kind(findings, kind):
 
 class TestOverdueMDNs:
 
-    def test_an_overdue_mdn_raises_a_finding(self):
+    def test_an_overdue_mdn_raises_a_finding(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
@@ -134,7 +140,9 @@ class TestOverdueMDNs:
         assert 'source=as2' in finding.link
         assert 'status=outstanding' in finding.link
 
-    def test_a_pending_mdn_inside_the_window_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_a_pending_mdn_inside_the_window_raises_nothing(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
@@ -147,7 +155,9 @@ class TestOverdueMDNs:
 
         assert findings == []
 
-    def test_the_default_window_applies_without_a_matching_partner(self):
+# ################################################################################################################################
+
+    def test_the_default_window_applies_without_a_matching_partner(self) -> 'None':
 
         # The pair maps to no configured partner, so the default window decides.
         reconciler = MDNReconciler(_server_name)
@@ -167,7 +177,9 @@ class TestOverdueMDNs:
 
         assert len(findings) == 1
 
-    def test_an_opted_out_partner_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_an_opted_out_partner_raises_nothing(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
@@ -184,7 +196,7 @@ class TestOverdueMDNs:
 
 class TestOverdueAcks:
 
-    def test_an_overdue_acknowledgment_raises_a_finding(self):
+    def test_an_overdue_acknowledgment_raises_a_finding(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001')
@@ -205,7 +217,9 @@ class TestOverdueAcks:
         assert 'source=x12' in finding.link
         assert 'status=outstanding' in finding.link
 
-    def test_an_acknowledged_interchange_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_an_acknowledged_interchange_raises_nothing(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001')
@@ -218,7 +232,9 @@ class TestOverdueAcks:
 
         assert findings == []
 
-    def test_an_opted_out_partner_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_an_opted_out_partner_raises_nothing(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001')
@@ -235,7 +251,7 @@ class TestOverdueAcks:
 
 class TestExpiringCertificates:
 
-    def test_a_partner_certificate_inside_the_window_raises_a_finding(self):
+    def test_a_partner_certificate_inside_the_window_raises_a_finding(self) -> 'None':
 
         config = _new_config(as2_partner_cert=_make_certificate_pem(10))
 
@@ -251,7 +267,9 @@ class TestExpiringCertificates:
         assert 'PartnerCorp AS2' in finding.message
         assert 'expires in' in finding.message
 
-    def test_a_healthy_partner_certificate_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_a_healthy_partner_certificate_raises_nothing(self) -> 'None':
 
         config = _new_config(as2_partner_cert=_make_certificate_pem(365))
 
@@ -260,7 +278,9 @@ class TestExpiringCertificates:
 
         assert findings == []
 
-    def test_our_own_certificate_is_checked_too(self):
+# ################################################################################################################################
+
+    def test_our_own_certificate_is_checked_too(self) -> 'None':
 
         own_cert_chain = _make_certificate_pem(10)
 
@@ -275,7 +295,9 @@ class TestExpiringCertificates:
         assert finding.partner == Own_Keystore_Name
         assert 'own' in finding.message
 
-    def test_an_opted_out_partner_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_an_opted_out_partner_raises_nothing(self) -> 'None':
 
         config = _new_config(as2_partner_cert=_make_certificate_pem(10), alerting_opt_out=True)
 
@@ -284,7 +306,9 @@ class TestExpiringCertificates:
 
         assert findings == []
 
-    def test_days_left_of_an_empty_chain_is_none(self):
+# ################################################################################################################################
+
+    def test_days_left_of_an_empty_chain_is_none(self) -> 'None':
 
         now = utcnow()
 
@@ -296,12 +320,12 @@ class TestExpiringCertificates:
 
 class TestShipNoticeGuard:
 
-    def test_an_unanswered_order_past_the_window_raises_a_finding(self):
+    def test_an_unanswered_order_past_the_window_raises_a_finding(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
         # An 850 arrived from the partner and nothing went back.
-        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', doc_type='850')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
 
         config = _new_config(ship_notice_window_hours=4)
 
@@ -319,12 +343,14 @@ class TestShipNoticeGuard:
         assert 'ship notice' in finding.message
         assert 'source=x12' in finding.link
 
-    def test_a_ship_notice_sent_back_answers_the_order(self):
+# ################################################################################################################################
+
+    def test_a_ship_notice_sent_back_answers_the_order(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
 
-        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', doc_type='850')
-        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000043', doc_type='856')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000043', document_type='856')
 
         config = _new_config(ship_notice_window_hours=4)
 
@@ -334,10 +360,12 @@ class TestShipNoticeGuard:
 
         assert findings == []
 
-    def test_an_order_inside_the_window_raises_nothing(self):
+# ################################################################################################################################
+
+    def test_an_order_inside_the_window_raises_nothing(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', doc_type='850')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
 
         config = _new_config(ship_notice_window_hours=4)
 
@@ -347,10 +375,12 @@ class TestShipNoticeGuard:
 
         assert findings == []
 
-    def test_a_partner_without_a_window_is_not_guarded(self):
+# ################################################################################################################################
+
+    def test_a_partner_without_a_window_is_not_guarded(self) -> 'None':
 
         reconciler = Reconciler(_server_name)
-        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', doc_type='850')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
 
         config = _new_config()
 
@@ -365,7 +395,7 @@ class TestShipNoticeGuard:
 
 class TestDigestAndEvents:
 
-    def _collect_one_sweep(self):
+    def _collect_one_sweep(self) -> 'any_':
         """ Seeds the store with one overdue MDN and runs the sweep past the window.
         """
         reconciler = MDNReconciler(_server_name)
@@ -378,7 +408,9 @@ class TestDigestAndEvents:
         out = collect_findings([config], now, server_name=_server_name)
         return out
 
-    def test_the_digest_has_one_line_per_finding(self):
+# ################################################################################################################################
+
+    def test_the_digest_has_one_line_per_finding(self) -> 'None':
 
         findings = self._collect_one_sweep()
 
@@ -390,7 +422,9 @@ class TestDigestAndEvents:
         # Each line links to the filtered audit log page under the given Dashboard address.
         assert f'https://dashboard.example.com/zato/audit-log/?source=as2&object_name={_pair}' in body
 
-    def test_each_finding_becomes_an_alert_raised_event(self):
+# ################################################################################################################################
+
+    def test_each_finding_becomes_an_alert_raised_event(self) -> 'None':
 
         findings = self._collect_one_sweep()
 
@@ -398,7 +432,7 @@ class TestDigestAndEvents:
         record_alerts(audit_log, findings, cid='cid-alerting')
 
         # The alerting history is filed under the partner the finding is about.
-        stmt = select(
+        statement = select(
             event_table.c.source,
             event_table.c.object_name,
             event_table.c.cid,
@@ -408,7 +442,8 @@ class TestDigestAndEvents:
         engine = get_audit_engine()
 
         with engine.connect() as connection:
-            rows = connection.execute(stmt).fetchall()
+            result = connection.execute(statement)
+            rows = result.fetchall()
 
         assert len(rows) == 1
 

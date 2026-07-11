@@ -79,7 +79,8 @@ _isa_hipaa = 'ISA*00*          *00*          *ZZ*SUBMITTERID    *ZZ*PAYERID     
 def _in_group(functional_id:'str', version:'str', body:'str', isa:'str'=_isa) -> 'str':
     """ Wraps a transaction set body in a full interchange whose IEA echoes the ISA13.
     """
-    control_number = isa.split('*')[13]
+    isa_elements = isa.split('*')
+    control_number = isa_elements[_isa_control_number_position]
 
     out = isa + \
         f'GS*{functional_id}*SENDERGS*RECEIVERGS*20260709*1200*905*X*{version}~' + \
@@ -327,7 +328,8 @@ def _recompute_remittance_payment(body:'str') -> 'Decimal':
 def _build_997_wire(body:'str', functional_id:'str', version:'str') -> 'str':
     """ Builds a 997 for the given transaction set body and returns the acknowledgment's wire text.
     """
-    interchange = parse_x12(_in_group(functional_id, version, body))
+    wire = _in_group(functional_id, version, body)
+    interchange = parse_x12(wire)
     acknowledgment = build_997(interchange)
     serialized = acknowledgment.serialize()
 
@@ -339,7 +341,8 @@ def _build_997_wire(body:'str', functional_id:'str', version:'str') -> 'str':
 def _build_999_wire(body:'str', functional_id:'str', version:'str') -> 'str':
     """ Builds a 999 for the given transaction set body and returns the acknowledgment's wire text.
     """
-    interchange = parse_x12(_in_group(functional_id, version, body, isa=_isa_hipaa))
+    wire = _in_group(functional_id, version, body, isa=_isa_hipaa)
+    interchange = parse_x12(wire)
     acknowledgment = build_999(interchange)
     serialized = acknowledgment.serialize()
 
@@ -357,8 +360,9 @@ class TestISAFixedWidth(unittest.TestCase):
 
     maxDiff = None
 
-    def test_isa_is_exactly_106_characters(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+    def test_isa_is_exactly_106_characters(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
 
         isa = wire[:_isa_total_length]
 
@@ -366,8 +370,11 @@ class TestISAFixedWidth(unittest.TestCase):
         self.assertTrue(isa.startswith('ISA*'))
         self.assertEqual(isa[_isa_total_length - 1], '~')
 
-    def test_separators_sit_at_the_offsets_the_widths_dictate(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+# ################################################################################################################################
+
+    def test_separators_sit_at_the_offsets_the_widths_dictate(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
 
         # Walk the literal widths - an element separator must precede every element ..
         offset = len('ISA')
@@ -380,8 +387,11 @@ class TestISAFixedWidth(unittest.TestCase):
         self.assertEqual(wire[offset], '~')
         self.assertEqual(offset + 1, _isa_total_length)
 
-    def test_element_values_have_the_literal_widths(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+# ################################################################################################################################
+
+    def test_element_values_have_the_literal_widths(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
 
         # Split the fixed-width body on the element separator ..
         isa_body = wire[:_isa_total_length - 1]
@@ -408,8 +418,9 @@ class TestEnvelopeCountsRecompute(unittest.TestCase):
 
     maxDiff = None
 
-    def test_se01_counts_every_segment_of_the_set(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+    def test_se01_counts_every_segment_of_the_set(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
         segments = _split_wire(wire)
 
         # Find where the transaction set starts and ends ..
@@ -434,8 +445,11 @@ class TestEnvelopeCountsRecompute(unittest.TestCase):
         st_elements = _elements_of_first(segments, 'ST')
         self.assertEqual(se_elements[2], st_elements[2])
 
-    def test_ge_counts_the_sets_and_echoes_gs06(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+# ################################################################################################################################
+
+    def test_ge_counts_the_sets_and_echoes_gs06(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
         segments = _split_wire(wire)
 
         # GE01 counts the ST segments of its group ..
@@ -449,8 +463,11 @@ class TestEnvelopeCountsRecompute(unittest.TestCase):
         gs_elements = _elements_of_first(segments, 'GS')
         self.assertEqual(ge_elements[2], gs_elements[6])
 
-    def test_iea_counts_the_groups_and_echoes_isa13(self) -> None:
-        wire = _wire_of(_in_group('IN', '004010', _invoice_balanced))
+# ################################################################################################################################
+
+    def test_iea_counts_the_groups_and_echoes_isa13(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        wire = _wire_of(wire)
         segments = _split_wire(wire)
 
         # IEA01 counts the GS segments of the interchange ..
@@ -475,7 +492,7 @@ class Test997Conformance(unittest.TestCase):
 
     maxDiff = None
 
-    def test_accepted_codes_come_from_the_literal_tables(self) -> None:
+    def test_accepted_codes_come_from_the_literal_tables(self) -> 'None':
         wire = _build_997_wire(_invoice_balanced, 'IN', '004010')
         segments = _split_wire(wire)
 
@@ -489,7 +506,9 @@ class Test997Conformance(unittest.TestCase):
         self.assertEqual(ak9_elements[1], 'A')
         self.assertIn(ak9_elements[1], _group_ack_codes)
 
-    def test_rejected_set_carries_the_literal_error_codes(self) -> None:
+# ################################################################################################################################
+
+    def test_rejected_set_carries_the_literal_error_codes(self) -> 'None':
         wire = _build_997_wire(_invoice_with_unknown_segment, 'IN', '004010')
         segments = _split_wire(wire)
 
@@ -507,7 +526,9 @@ class Test997Conformance(unittest.TestCase):
         ak9_elements = _elements_of_first(segments, 'AK9')
         self.assertEqual(ak9_elements[1], 'R')
 
-    def test_ak9_counts_recompute_from_the_wire(self) -> None:
+# ################################################################################################################################
+
+    def test_ak9_counts_recompute_from_the_wire(self) -> 'None':
         for body in (_invoice_balanced, _invoice_with_unknown_segment):
 
             wire = _build_997_wire(body, 'IN', '004010')
@@ -541,7 +562,7 @@ class Test999Conformance(unittest.TestCase):
 
     maxDiff = None
 
-    def test_999_declares_the_hipaa_implementation_reference(self) -> None:
+    def test_999_declares_the_hipaa_implementation_reference(self) -> 'None':
         wire = _build_999_wire(_claim_clean, 'HC', '005010X222A1')
         segments = _split_wire(wire)
 
@@ -550,7 +571,9 @@ class Test999Conformance(unittest.TestCase):
         self.assertEqual(st_elements[1], '999')
         self.assertEqual(st_elements[3], _hipaa_999_reference)
 
-    def test_accepted_set_carries_the_literal_acceptance_code(self) -> None:
+# ################################################################################################################################
+
+    def test_accepted_set_carries_the_literal_acceptance_code(self) -> 'None':
         wire = _build_999_wire(_claim_clean, 'HC', '005010X222A1')
         segments = _split_wire(wire)
 
@@ -558,7 +581,9 @@ class Test999Conformance(unittest.TestCase):
         self.assertEqual(ik5_elements[1], 'A')
         self.assertIn(ik5_elements[1], _set_ack_codes)
 
-    def test_rejected_set_carries_the_literal_error_codes_and_context(self) -> None:
+# ################################################################################################################################
+
+    def test_rejected_set_carries_the_literal_error_codes_and_context(self) -> 'None':
         wire = _build_999_wire(_claim_with_unknown_segment, 'HC', '005010X222A1')
         segments = _split_wire(wire)
 
@@ -577,7 +602,9 @@ class Test999Conformance(unittest.TestCase):
         self.assertEqual(ik5_elements[1], 'R')
         self.assertEqual(ik5_elements[2], _set_error_segments_in_error)
 
-    def test_ak9_counts_recompute_from_the_wire(self) -> None:
+# ################################################################################################################################
+
+    def test_ak9_counts_recompute_from_the_wire(self) -> 'None':
         for body in (_claim_clean, _claim_with_unknown_segment):
 
             wire = _build_999_wire(body, 'HC', '005010X222A1')
@@ -611,11 +638,14 @@ class TestSnipType1(unittest.TestCase):
 
     maxDiff = None
 
-    def test_snip_1_clean(self) -> None:
-        errors = validate_snip_1(_in_group('IN', '004010', _invoice_balanced))
+    def test_snip_1_clean(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        errors = validate_snip_1(wire)
         self.assertEqual(errors, [])
 
-    def test_snip_1_verdict_agrees_with_independent_recomputation(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_1_verdict_agrees_with_independent_recomputation(self) -> 'None':
         raw = _in_group('IN', '004010', _invoice_balanced)
         segments = _split_wire(raw)
 
@@ -644,7 +674,9 @@ class TestSnipType1(unittest.TestCase):
         # .. so the validator must agree the interchange is sound.
         self.assertEqual(validate_snip_1(raw), [])
 
-    def test_snip_1_control_number_mismatch(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_1_control_number_mismatch(self) -> 'None':
         raw = _in_group('IN', '004010', _invoice_balanced)
         raw = raw.replace('IEA*1*000000905~', 'IEA*1*000000999~')
 
@@ -652,7 +684,9 @@ class TestSnipType1(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn('does not match IEA02', errors[0])
 
-    def test_snip_1_wrong_segment_count(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_1_wrong_segment_count(self) -> 'None':
         raw = _in_group('IN', '004010', _invoice_balanced)
         raw = raw.replace('SE*7*0001~', 'SE*9*0001~')
 
@@ -669,13 +703,19 @@ class TestSnipType2(unittest.TestCase):
 
     maxDiff = None
 
-    def test_snip_2_clean(self) -> None:
-        message = parse_x12(_in_group('IN', '004010', _invoice_balanced)).transaction_set
+    def test_snip_2_clean(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         issues = validate_snip_2(message)
         self.assertEqual(issues, [])
 
-    def test_snip_2_finds_issues(self) -> None:
-        message = parse_x12(_in_group('IN', '004010', _invoice_with_unknown_segment)).transaction_set
+# ################################################################################################################################
+
+    def test_snip_2_finds_issues(self) -> 'None':
+        wire = _in_group('IN', '004010', _invoice_with_unknown_segment)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_2(message)
         self.assertEqual(len(issues), 1)
@@ -692,7 +732,7 @@ class TestSnipType3(unittest.TestCase):
 
     maxDiff = None
 
-    def test_snip_3_invoice_balanced(self) -> None:
+    def test_snip_3_invoice_balanced(self) -> 'None':
         # The independent line-total sum matches what TDS01 declares ..
         recomputed_cents = _recompute_invoice_total_cents(_invoice_balanced)
         segments = _split_wire(_invoice_balanced)
@@ -700,10 +740,14 @@ class TestSnipType3(unittest.TestCase):
         self.assertEqual(int(tds_elements[1]), recomputed_cents)
 
         # .. so the validator must agree the invoice balances.
-        message = parse_x12(_in_group('IN', '004010', _invoice_balanced)).transaction_set
+        wire = _in_group('IN', '004010', _invoice_balanced)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_3(message), [])
 
-    def test_snip_3_invoice_unbalanced(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_invoice_unbalanced(self) -> 'None':
         # The independent line-total sum disagrees with what TDS01 declares ..
         recomputed_cents = _recompute_invoice_total_cents(_invoice_unbalanced)
         segments = _split_wire(_invoice_unbalanced)
@@ -711,13 +755,17 @@ class TestSnipType3(unittest.TestCase):
         self.assertNotEqual(int(tds_elements[1]), recomputed_cents)
 
         # .. so the validator must flag exactly that disagreement.
-        message = parse_x12(_in_group('IN', '004010', _invoice_unbalanced)).transaction_set
+        wire = _in_group('IN', '004010', _invoice_unbalanced)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_3(message)
         self.assertEqual(len(issues), 1)
         self.assertIn('TDS01', issues[0])
 
-    def test_snip_3_order_balanced(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_order_balanced(self) -> 'None':
         # The independent quantity hash matches what CTT02 declares ..
         recomputed_hash = _recompute_order_hash_total(_order_balanced)
         segments = _split_wire(_order_balanced)
@@ -725,10 +773,14 @@ class TestSnipType3(unittest.TestCase):
         self.assertEqual(Decimal(ctt_elements[2]), recomputed_hash)
 
         # .. so the validator must agree the order balances.
-        message = parse_x12(_in_group('PO', '004010', _order_balanced)).transaction_set
+        wire = _in_group('PO', '004010', _order_balanced)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_3(message), [])
 
-    def test_snip_3_order_bad_count(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_order_bad_count(self) -> 'None':
         # The independent line count disagrees with what CTT01 declares ..
         segments = _split_wire(_order_bad_count)
         line_segments = _segments_with_tag(segments, 'PO1')
@@ -738,13 +790,17 @@ class TestSnipType3(unittest.TestCase):
         self.assertNotEqual(int(ctt_elements[1]), line_count)
 
         # .. so the validator must flag exactly that disagreement.
-        message = parse_x12(_in_group('PO', '004010', _order_bad_count)).transaction_set
+        wire = _in_group('PO', '004010', _order_bad_count)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_3(message)
         self.assertEqual(len(issues), 1)
         self.assertIn('CTT01', issues[0])
 
-    def test_snip_3_order_bad_hash_total(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_order_bad_hash_total(self) -> 'None':
         body = _order_balanced.replace('CTT*2*15~', 'CTT*2*99~')
 
         # The independent quantity hash disagrees with what CTT02 declares ..
@@ -754,13 +810,17 @@ class TestSnipType3(unittest.TestCase):
         self.assertNotEqual(Decimal(ctt_elements[2]), recomputed_hash)
 
         # .. so the validator must flag exactly that disagreement.
-        message = parse_x12(_in_group('PO', '004010', body)).transaction_set
+        wire = _in_group('PO', '004010', body)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_3(message)
         self.assertEqual(len(issues), 1)
         self.assertIn('CTT02', issues[0])
 
-    def test_snip_3_ship_notice_hl_count(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_ship_notice_hl_count(self) -> 'None':
         # The independent HL count matches what CTT01 declares ..
         segments = _split_wire(_ship_notice_balanced)
         hierarchy_segments = _segments_with_tag(segments, 'HL')
@@ -770,18 +830,24 @@ class TestSnipType3(unittest.TestCase):
         self.assertEqual(int(ctt_elements[1]), hierarchy_count)
 
         # .. so the validator must agree the ship notice balances ..
-        message = parse_x12(_in_group('SH', '004010', _ship_notice_balanced)).transaction_set
+        wire = _in_group('SH', '004010', _ship_notice_balanced)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_3(message), [])
 
         # .. and a wrong CTT01 is flagged as exactly that disagreement.
         body = _ship_notice_balanced.replace('CTT*3~', 'CTT*5~')
-        message = parse_x12(_in_group('SH', '004010', body)).transaction_set
+        wire = _in_group('SH', '004010', body)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_3(message)
         self.assertEqual(len(issues), 1)
         self.assertIn('CTT01', issues[0])
 
-    def test_snip_3_remittance_balanced(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_remittance_balanced(self) -> 'None':
         # The independent CLP04-minus-PLB computation matches what BPR02 declares ..
         recomputed_payment = _recompute_remittance_payment(_remittance_balanced)
         segments = _split_wire(_remittance_balanced)
@@ -789,10 +855,14 @@ class TestSnipType3(unittest.TestCase):
         self.assertEqual(Decimal(bpr_elements[2]), recomputed_payment)
 
         # .. so the validator must agree the remittance reconciles.
-        message = parse_x12(_in_group('HP', '005010X221A1', _remittance_balanced, isa=_isa_hipaa)).transaction_set
+        wire = _in_group('HP', '005010X221A1', _remittance_balanced, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_3(message), [])
 
-    def test_snip_3_remittance_unbalanced(self) -> None:
+# ################################################################################################################################
+
+    def test_snip_3_remittance_unbalanced(self) -> 'None':
         # The independent CLP04-minus-PLB computation disagrees with what BPR02 declares ..
         recomputed_payment = _recompute_remittance_payment(_remittance_unbalanced)
         segments = _split_wire(_remittance_unbalanced)
@@ -800,7 +870,9 @@ class TestSnipType3(unittest.TestCase):
         self.assertNotEqual(Decimal(bpr_elements[2]), recomputed_payment)
 
         # .. so the validator must flag exactly that disagreement.
-        message = parse_x12(_in_group('HP', '005010X221A1', _remittance_unbalanced, isa=_isa_hipaa)).transaction_set
+        wire = _in_group('HP', '005010X221A1', _remittance_unbalanced, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_3(message)
         self.assertEqual(len(issues), 1)
@@ -815,31 +887,49 @@ class TestSnipType4(unittest.TestCase):
 
     maxDiff = None
 
-    def test_snip_4_claim_clean(self) -> None:
-        message = parse_x12(_in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa)).transaction_set
+    def test_snip_4_claim_clean(self) -> 'None':
+        wire = _in_group('HC', '005010X222A1', _claim_clean, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_4(message), [])
 
-    def test_snip_4_claim_without_diagnosis_or_lines(self) -> None:
-        message = parse_x12(_in_group('HC', '005010X222A1', _claim_bare, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_snip_4_claim_without_diagnosis_or_lines(self) -> 'None':
+        wire = _in_group('HC', '005010X222A1', _claim_bare, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_4(message)
         self.assertEqual(len(issues), 2)
         self.assertIn('no HI diagnosis codes', issues[0])
         self.assertIn('no LX service lines', issues[1])
 
-    def test_snip_4_denied_claim_pays_nothing(self) -> None:
-        message = parse_x12(_in_group('HP', '005010X221A1', _remittance_denied_paid, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_snip_4_denied_claim_pays_nothing(self) -> 'None':
+        wire = _in_group('HP', '005010X221A1', _remittance_denied_paid, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_4(message)
         self.assertEqual(len(issues), 1)
         self.assertIn('Denied claim', issues[0])
 
-    def test_snip_4_inquiry_clean(self) -> None:
-        message = parse_x12(_in_group('HS', '005010X279A1', _inquiry_clean, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_snip_4_inquiry_clean(self) -> 'None':
+        wire = _in_group('HS', '005010X279A1', _inquiry_clean, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
         self.assertEqual(validate_snip_4(message), [])
 
-    def test_snip_4_inquiry_without_subscriber_name(self) -> None:
-        message = parse_x12(_in_group('HS', '005010X279A1', _inquiry_no_subscriber, isa=_isa_hipaa)).transaction_set
+# ################################################################################################################################
+
+    def test_snip_4_inquiry_without_subscriber_name(self) -> 'None':
+        wire = _in_group('HS', '005010X279A1', _inquiry_no_subscriber, isa=_isa_hipaa)
+        interchange = parse_x12(wire)
+        message = interchange.transaction_set
 
         issues = validate_snip_4(message)
         self.assertEqual(len(issues), 1)

@@ -31,6 +31,14 @@ from zato.common.util.xml_.keystore import Keystore, new_keystore
 # ################################################################################################################################
 # ################################################################################################################################
 
+from zato.common.typing_ import cast_
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Where the official XSDs and other fixtures live.
 Fixtures_Dir = os.path.join(os.path.dirname(__file__), 'fixtures')
 Schemas_Dir = os.path.join(Fixtures_Dir, 'schemas')
@@ -42,13 +50,20 @@ _rsa_key_size = 2048
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_name(common_name):
+def _make_name(common_name:'str') -> 'Name':
     out = Name([NameAttribute(NameOID.COMMON_NAME, common_name)])
     return out
 
 # ################################################################################################################################
 
-def make_certificate(common_name, public_key, signer_name, signer_key, hash_algorithm, is_ca=False):
+def make_certificate(
+    common_name:'str',
+    public_key:'any_',
+    signer_name:'Name',
+    signer_key:'any_',
+    hash_algorithm:'any_',
+    is_ca:'bool'=False,
+    ) -> 'any_':
     """ Issues a test certificate valid around the current moment.
     """
     now = datetime.now(timezone.utc)
@@ -82,18 +97,22 @@ class TestParties:
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def rsa_parties():
+def rsa_parties() -> 'TestParties':
     """ A CA plus a sender and a receiver with CA-issued RSA certificates - the eDelivery 1.x world.
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
     ca_name = _make_name('as4-test-ca')
-    ca_certificate = make_certificate('as4-test-ca', ca_key.public_key(), ca_name, ca_key, SHA256(), is_ca=True)
+
+    ca_public_key = ca_key.public_key()
+    ca_certificate = make_certificate('as4-test-ca', ca_public_key, ca_name, ca_key, SHA256(), is_ca=True)
 
     sender_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-    sender_certificate = make_certificate('as4-sender', sender_key.public_key(), ca_name, ca_key, SHA256())
+    sender_public_key = sender_key.public_key()
+    sender_certificate = make_certificate('as4-sender', sender_public_key, ca_name, ca_key, SHA256())
 
     receiver_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-    receiver_certificate = make_certificate('as4-receiver', receiver_key.public_key(), ca_name, ca_key, SHA256())
+    receiver_public_key = receiver_key.public_key()
+    receiver_certificate = make_certificate('as4-receiver', receiver_public_key, ca_name, ca_key, SHA256())
 
     sender = new_keystore()
     sender.signing_key = sender_key
@@ -119,38 +138,45 @@ def rsa_parties():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def eddsa_parties():
+def eddsa_parties() -> 'TestParties':
     """ A sender and a receiver for the eDelivery 2.0 world - Ed25519 signing keys
     and X25519 key agreement keys, all certificates issued by an Ed25519 CA.
     """
     ca_key = Ed25519PrivateKey.generate()
     ca_name = _make_name('as4-test-ca-ed')
-    ca_certificate = make_certificate('as4-test-ca-ed', ca_key.public_key(), ca_name, ca_key, None, is_ca=True)
+
+    ca_public_key = ca_key.public_key()
+    ca_certificate = make_certificate('as4-test-ca-ed', ca_public_key, ca_name, ca_key, None, is_ca=True)
 
     sender_sign_key = Ed25519PrivateKey.generate()
-    sender_sign_certificate = make_certificate('as4-sender-ed', sender_sign_key.public_key(), ca_name, ca_key, None)
+    sender_sign_public_key = sender_sign_key.public_key()
+    sender_sign_certificate = make_certificate('as4-sender-ed', sender_sign_public_key, ca_name, ca_key, None)
 
-    sender_kex_key = X25519PrivateKey.generate()
-    sender_kex_certificate = make_certificate('as4-sender-x', sender_kex_key.public_key(), ca_name, ca_key, None)
+    sender_key_exchange_key = X25519PrivateKey.generate()
+    sender_key_exchange_public_key = sender_key_exchange_key.public_key()
+    sender_key_exchange_certificate = make_certificate('as4-sender-x', sender_key_exchange_public_key, ca_name, ca_key, None)
 
     receiver_sign_key = Ed25519PrivateKey.generate()
-    receiver_sign_certificate = make_certificate('as4-receiver-ed', receiver_sign_key.public_key(), ca_name, ca_key, None)
+    receiver_sign_public_key = receiver_sign_key.public_key()
+    receiver_sign_certificate = make_certificate('as4-receiver-ed', receiver_sign_public_key, ca_name, ca_key, None)
 
-    receiver_kex_key = X25519PrivateKey.generate()
-    receiver_kex_certificate = make_certificate('as4-receiver-x', receiver_kex_key.public_key(), ca_name, ca_key, None)
+    receiver_key_exchange_key = X25519PrivateKey.generate()
+    receiver_key_exchange_public_key = receiver_key_exchange_key.public_key()
+    receiver_key_exchange_certificate = make_certificate(
+        'as4-receiver-x', receiver_key_exchange_public_key, ca_name, ca_key, None)
 
     sender = new_keystore()
     sender.signing_key = sender_sign_key
     sender.signing_certificate_chain = [sender_sign_certificate]
-    sender.decryption_key = sender_kex_key
-    sender.peer_encryption_certificate = receiver_kex_certificate
+    sender.decryption_key = sender_key_exchange_key
+    sender.peer_encryption_certificate = receiver_key_exchange_certificate
     sender.peer_signing_certificate = receiver_sign_certificate
 
     receiver = new_keystore()
     receiver.signing_key = receiver_sign_key
     receiver.signing_certificate_chain = [receiver_sign_certificate]
-    receiver.decryption_key = receiver_kex_key
-    receiver.peer_encryption_certificate = sender_kex_certificate
+    receiver.decryption_key = receiver_key_exchange_key
+    receiver.peer_encryption_certificate = sender_key_exchange_certificate
     receiver.peer_signing_certificate = sender_sign_certificate
 
     out = TestParties()
@@ -158,7 +184,7 @@ def eddsa_parties():
     out.sender = sender
     out.receiver = receiver
 
-    _ = sender_kex_certificate
+    _ = sender_key_exchange_certificate
     return out
 
 # ################################################################################################################################
@@ -179,21 +205,28 @@ class _LocalSchemaResolver(etree.Resolver):
             'oasis-200401-wss-wssecurity-utility-1.0.xsd',
     }
 
-    def resolve(self, url, public_id, context):
-        if url in self.url_map:
-            path = os.path.join(Schemas_Dir, self.url_map[url])
-            return self.resolve_filename(path, context)
-        return None
+    def resolve(self, url:'str', public_id:'any_', context:'any_') -> 'any_':
+        if file_name := self.url_map.get(url):
+            path = os.path.join(Schemas_Dir, file_name)
+
+            # The lxml stubs do not expose resolve_filename on Resolver subclasses
+            resolver = cast_('any_', self)
+            out = resolver.resolve_filename(path, context)
+        else:
+            out = None
+
+        return out
 
 # ################################################################################################################################
 
-def load_schema(file_name, base_dir=Schemas_Dir):
+def load_schema(file_name:'str', base_dir:'str'=Schemas_Dir) -> 'etree.XMLSchema':
     """ Loads one of the official XSDs with offline import resolution.
     """
     parser = etree.XMLParser()
     parser.resolvers.add(_LocalSchemaResolver())
 
-    document = etree.parse(os.path.join(base_dir, file_name), parser)
+    schema_path = os.path.join(base_dir, file_name)
+    document = etree.parse(schema_path, parser)
 
     out = etree.XMLSchema(document)
     return out
@@ -201,7 +234,7 @@ def load_schema(file_name, base_dir=Schemas_Dir):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def ebms_schema():
+def ebms_schema() -> 'etree.XMLSchema':
     """ The official OASIS ebMS 3.0 header schema.
     """
     out = load_schema('ebms-header-3_0-200704.xsd')
@@ -210,10 +243,12 @@ def ebms_schema():
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def sbdh_schema():
+def sbdh_schema() -> 'etree.XMLSchema':
     """ The official UN/CEFACT SBDH schema.
     """
-    out = load_schema('StandardBusinessDocumentHeader.xsd', os.path.join(Schemas_Dir, 'sbdh'))
+    sbdh_dir = os.path.join(Schemas_Dir, 'sbdh')
+
+    out = load_schema('StandardBusinessDocumentHeader.xsd', sbdh_dir)
     return out
 
 # ################################################################################################################################

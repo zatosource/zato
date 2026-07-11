@@ -26,16 +26,16 @@ from zato.edi.reconcile import Reconciler
 def _use_tmp_audit_db(tmp_path:'os.PathLike') -> 'None':
     """ Points the audit database at a per-test SQLite file.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = db_path
+    os.environ[AuditLogCtx.Env_Name] = database_path
 
 # ################################################################################################################################
 
 def _cleanup_env() -> 'None':
-    _ = os.environ.pop(AuditLogCtx.Env_Type, None)
-    _ = os.environ.pop(AuditLogCtx.Env_Name, None)
+    del os.environ[AuditLogCtx.Env_Type]
+    del os.environ[AuditLogCtx.Env_Name]
 
 # ################################################################################################################################
 
@@ -50,7 +50,7 @@ def _run_outstanding_query(
     """
     conditions = outstanding_conditions(source, open_event, close_event, needs_object_name_match)
 
-    stmt = select(
+    statement = select(
         event_table.c.object_name,
         event_table.c.msg_id,
     ).where(
@@ -61,7 +61,8 @@ def _run_outstanding_query(
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        rows = connection.execute(stmt).fetchall()
+        result = connection.execute(statement)
+        rows = result.fetchall()
 
     out:'anylist' = []
 
@@ -87,7 +88,7 @@ def _run_x12_query() -> 'anylist':
 
 class TestAS2Outstanding:
 
-    def test_sent_messages_without_their_mdn_are_outstanding_oldest_first(self, tmp_path):
+    def test_sent_messages_without_their_mdn_are_outstanding_oldest_first(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -111,7 +112,9 @@ class TestAS2Outstanding:
         finally:
             _cleanup_env()
 
-    def test_nothing_is_outstanding_once_every_mdn_arrived(self, tmp_path):
+# ################################################################################################################################
+
+    def test_nothing_is_outstanding_once_every_mdn_arrived(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -124,7 +127,9 @@ class TestAS2Outstanding:
         finally:
             _cleanup_env()
 
-    def test_other_event_types_are_not_open_items(self, tmp_path):
+# ################################################################################################################################
+
+    def test_other_event_types_are_not_open_items(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = MDNReconciler('test-server')
@@ -143,7 +148,7 @@ class TestAS2Outstanding:
 
 class TestX12Outstanding:
 
-    def test_interchanges_without_their_ack_are_outstanding(self, tmp_path):
+    def test_interchanges_without_their_ack_are_outstanding(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = Reconciler('test-server')
@@ -164,7 +169,9 @@ class TestX12Outstanding:
         finally:
             _cleanup_env()
 
-    def test_an_ack_for_another_pair_does_not_close_the_interchange(self, tmp_path):
+# ################################################################################################################################
+
+    def test_an_ack_for_another_pair_does_not_close_the_interchange(self, tmp_path:'os.PathLike') -> 'None':
         try:
             _use_tmp_audit_db(tmp_path)
             reconciler = Reconciler('test-server')

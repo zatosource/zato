@@ -15,6 +15,12 @@ from zato.common.api import AS4, MISC
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _validate_tls_choices = [
     (True, 'Yes'),
     (False, 'No'),
@@ -66,7 +72,7 @@ class CreateForm(forms.Form):
     as4_final_recipient = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     as4_extra_pmodes = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%', 'rows':4}))
 
-    def __init__(self, prefix=None, post_data=None, req=None):
+    def __init__(self, prefix:'any_'=None, post_data:'any_'=None, req:'any_'=None) -> 'None':
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['as4_profile'].choices = []

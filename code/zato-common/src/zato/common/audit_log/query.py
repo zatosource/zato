@@ -49,9 +49,13 @@ def outstanding_conditions(
 
     # .. and, for sources whose acknowledgments echo the partner pair, on the pair too.
     if needs_object_name_match:
-        match_conditions.append(closing.c.object_name == event_table.c.object_name)
+        object_name_matches = closing.c.object_name == event_table.c.object_name
+        match_conditions.append(object_name_matches)
 
-    close_exists = exists(select(closing.c.id).where(and_(*match_conditions)))
+    close_conditions = and_(*match_conditions)
+    close_select = select(closing.c.id)
+    close_select = close_select.where(close_conditions)
+    close_exists = exists(close_select)
 
     out:'anylist' = [
         event_table.c.event_type == open_event,

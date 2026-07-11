@@ -11,7 +11,7 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import EbMSError, NS
-from zato.common.as4.ebms import parse_messaging
+from zato.common.as4.ebms import build_envelope, build_pull_request, build_receipt, parse_messaging
 from zato.common.util.xml_.core import qname
 from zato.common.as4.inbound import handle
 from zato.common.as4.outbound import build_push_message, new_part
@@ -21,12 +21,20 @@ from zato.common.as4.security.verify import verify_envelope
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 Payload = b'<Invoice xmlns="urn:test"><Total>100</Total></Invoice>'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_pmode(factory):
+def _make_pmode(factory:'any_') -> 'any_':
     out = factory()
 
     out.initiator.party_id = 'party-a'
@@ -39,7 +47,7 @@ def _make_pmode(factory):
 
 # ################################################################################################################################
 
-def _roundtrip(pmode, parties):
+def _roundtrip(pmode:'any_', parties:'TestParties') -> 'any_':
     """ Builds a push message as the sender and processes it as the receiver.
     """
     parts = [new_part(Payload)]
@@ -55,7 +63,7 @@ def _roundtrip(pmode, parties):
 
 class TestPushRoundtrip:
 
-    def test_edelivery1_roundtrip(self, rsa_parties):
+    def test_edelivery1_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
         result, message_id, _ = _roundtrip(pmode, rsa_parties)
 
@@ -68,7 +76,9 @@ class TestPushRoundtrip:
         assert result.payloads[0].data == Payload
         assert result.payloads[0].content_type == 'application/xml'
 
-    def test_edelivery1_wire_is_encrypted_and_compressed(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_edelivery1_wire_is_encrypted_and_compressed(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
         parts = [new_part(Payload)]
 
@@ -79,7 +89,9 @@ class TestPushRoundtrip:
         assert b'EncryptedKey' in body
         assert b'CompressionType' in body
 
-    def test_edelivery2_roundtrip(self, eddsa_parties):
+# ################################################################################################################################
+
+    def test_edelivery2_roundtrip(self, eddsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery2_pmode)
         result, message_id, _ = _roundtrip(pmode, eddsa_parties)
 
@@ -87,19 +99,23 @@ class TestPushRoundtrip:
         assert result.user_message.message_id == message_id
         assert result.payloads[0].data == Payload
 
-    def test_peppol_roundtrip(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_peppol_roundtrip(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_peppol_pmode)
         pmode.original_sender = '0192:991825827'
         pmode.final_recipient = '0192:810418052'
 
-        result, message_id, _ = _roundtrip(pmode, rsa_parties)
+        result, _, _ = _roundtrip(pmode, rsa_parties)
 
         assert not result.is_error
         assert result.payloads[0].data == Payload
         assert result.user_message.message_properties['originalSender'] == '0192:991825827'
         assert result.user_message.message_properties['finalRecipient'] == '0192:810418052'
 
-    def test_peppol_wire_is_not_encrypted(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_peppol_wire_is_not_encrypted(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_peppol_pmode)
         parts = [new_part(Payload)]
 
@@ -113,7 +129,7 @@ class TestPushRoundtrip:
 
 class TestReceipt:
 
-    def test_receipt_is_signed_and_echoes_digests(self, rsa_parties):
+    def test_receipt_is_signed_and_echoes_digests(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
         result, message_id, sent_digests = _roundtrip(pmode, rsa_parties)
 
@@ -139,14 +155,14 @@ class TestReceipt:
 
 class TestDuplicateDetection:
 
-    def test_duplicate_gets_receipt_but_no_delivery(self, rsa_parties):
+    def test_duplicate_gets_receipt_but_no_delivery(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
         parts = [new_part(Payload)]
         body, content_type, message_id, _ = build_push_message(pmode, rsa_parties.sender, parts)
 
         seen = set()
 
-        def is_duplicate(incoming_message_id):
+        def is_duplicate(incoming_message_id:'any_') -> 'any_':
             out = incoming_message_id in seen
             seen.add(incoming_message_id)
             return out
@@ -171,7 +187,7 @@ class TestDuplicateDetection:
 
 class TestInboundErrors:
 
-    def test_tampered_message_yields_0101_error_signal(self, rsa_parties):
+    def test_tampered_message_yields_0101_error_signal(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
         parts = [new_part(Payload)]
         body, content_type, _, _ = build_push_message(pmode, rsa_parties.sender, parts)
@@ -185,9 +201,12 @@ class TestInboundErrors:
         assert result.error_code == EbMSError.Failed_Authentication
 
         messaging = parse_messaging(etree.fromstring(result.body))
-        assert messaging.signals[0].errors[0].error_code == EbMSError.Failed_Authentication
+        first_error = messaging.signals[0].errors[0]
+        assert first_error.error_code == EbMSError.Failed_Authentication
 
-    def test_unparseable_envelope_yields_0009_error_signal(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_unparseable_envelope_yields_0009_error_signal(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
 
         result = handle(b'this is not xml', 'application/soap+xml', [pmode], rsa_parties.receiver)
@@ -195,10 +214,11 @@ class TestInboundErrors:
         assert result.is_error
         assert result.error_code == EbMSError.Invalid_Header
 
-    def test_pull_request_is_refused_with_0002(self, rsa_parties):
+# ################################################################################################################################
+
+    def test_pull_request_is_refused_with_0002(self, rsa_parties:'TestParties') -> 'None':
         pmode = _make_pmode(new_edelivery1_pmode)
 
-        from zato.common.as4.ebms import build_envelope, build_pull_request
         envelope = build_envelope()
         _ = build_pull_request(envelope, 'urn:test:mpc')
         body = etree.tostring(envelope)
@@ -213,9 +233,8 @@ class TestInboundErrors:
 
 class TestAsyncSignals:
 
-    def test_async_receipt_is_surfaced_to_the_caller(self, rsa_parties):
+    def test_async_receipt_is_surfaced_to_the_caller(self, rsa_parties:'TestParties') -> 'None':
         # Simulate an asynchronous receipt arriving on its own.
-        from zato.common.as4.ebms import build_envelope, build_receipt
         envelope = build_envelope()
         _ = build_receipt(envelope, 'earlier-message@test', [])
         body = etree.tostring(envelope)

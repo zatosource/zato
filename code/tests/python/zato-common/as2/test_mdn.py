@@ -19,17 +19,25 @@ from zato.common.as2.smime import compute_mic, new_part
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    from .conftest import TestParties
+    TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _message_id = '<20260709100000.12345@sender.example.com>'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _make_request(
-    requests_signed_mdn=False,
-    signed_receipt_protocol='',
-    mic_algorithms=None,
-    async_mdn_url='',
-    ):
+    requests_signed_mdn:'any_'=False,
+    signed_receipt_protocol:'any_'='',
+    mic_algorithms:'any_'=None,
+    async_mdn_url:'any_'='',
+    ) -> 'any_':
     """ Returns an MDN request the way the inbound pipeline would have parsed it.
     """
     out = MDNRequest()
@@ -50,7 +58,7 @@ def _make_request(
 
 # ################################################################################################################################
 
-def _make_signing_config(parties):
+def _make_signing_config(parties:'TestParties') -> 'any_':
     out = MDNSigningConfig()
     out.keystore = parties.receiver
 
@@ -58,7 +66,7 @@ def _make_signing_config(parties):
 
 # ################################################################################################################################
 
-def _sample_mic():
+def _sample_mic() -> 'any_':
     """ A MIC over a sample payload, the way the inbound pipeline would have computed it.
     """
     part = new_part(b'ISA*00*          *00*          *', 'application/edi-x12', 'binary')
@@ -68,7 +76,7 @@ def _sample_mic():
 
 # ################################################################################################################################
 
-def _crlf_join(lines):
+def _crlf_join(lines:'any_') -> 'any_':
     """ Joins wire-format lines with CRLF, the way an AS2 peer would have sent them.
     """
     encoded:'list[bytes]' = []
@@ -87,23 +95,29 @@ class TestDispositionFormatting:
     so they are the only form ever emitted.
     """
 
-    def test_processed(self):
+    def test_processed(self) -> 'None':
         disposition = new_processed_disposition()
 
         assert format_disposition(disposition) == 'automatic-action/MDN-sent-automatically; processed'
 
-    def test_processed_error(self):
+# ################################################################################################################################
+
+    def test_processed_error(self) -> 'None':
         disposition = new_error_disposition(AS2Error.Decryption_Failed)
 
         assert format_disposition(disposition) == 'automatic-action/MDN-sent-automatically; processed/error: decryption-failed'
 
-    def test_processed_warning(self):
+# ################################################################################################################################
+
+    def test_processed_warning(self) -> 'None':
         disposition = new_warning_disposition('duplicate-document')
 
         assert format_disposition(disposition) == \
             'automatic-action/MDN-sent-automatically; processed/warning: duplicate-document'
 
-    def test_failed_failure(self):
+# ################################################################################################################################
+
+    def test_failed_failure(self) -> 'None':
         disposition = new_failure_disposition(Failure.Unsupported_MIC_Algorithms)
 
         assert format_disposition(disposition) == \
@@ -124,7 +138,7 @@ class TestDispositionSelection:
         AS2Error.Decompression_Failed,
         AS2Error.Unexpected_Processing_Error,
     ])
-    def test_content_processing_problems_are_errors(self, modifier):
+    def test_content_processing_problems_are_errors(self, modifier:'any_') -> 'None':
         exception = AS2SecurityException(modifier, 'Test error detail')
 
         disposition = disposition_from_exception(exception)
@@ -137,7 +151,10 @@ class TestDispositionSelection:
         Failure.Unsupported_Format,
         Failure.Unsupported_MIC_Algorithms,
     ])
-    def test_mdn_request_problems_are_failures(self, description):
+
+# ################################################################################################################################
+
+    def test_mdn_request_problems_are_failures(self, description:'any_') -> 'None':
         exception = AS2ProtocolException(description, 'Test failure detail')
 
         disposition = disposition_from_exception(exception)
@@ -151,7 +168,7 @@ class TestDispositionSelection:
 
 class TestDispositionParsing:
 
-    def test_historic_processed(self):
+    def test_historic_processed(self) -> 'None':
         disposition = parse_disposition('automatic-action/MDN-sent-automatically; processed')
 
         assert disposition.mode == 'automatic-action/MDN-sent-automatically'
@@ -159,27 +176,35 @@ class TestDispositionParsing:
         assert disposition.modifier_kind == ''
         assert disposition.modifier == ''
 
-    def test_historic_error(self):
+# ################################################################################################################################
+
+    def test_historic_error(self) -> 'None':
         disposition = parse_disposition('automatic-action/MDN-sent-automatically; processed/error: authentication-failed')
 
         assert disposition.disposition_type == 'processed'
         assert disposition.modifier_kind == 'error'
         assert disposition.modifier == 'authentication-failed'
 
-    def test_historic_failure(self):
+# ################################################################################################################################
+
+    def test_historic_failure(self) -> 'None':
         disposition = parse_disposition('automatic-action/MDN-sent-automatically; failed/Failure: unsupported format')
 
         assert disposition.disposition_type == 'failed'
         assert disposition.modifier_kind == 'failure'
         assert disposition.modifier == 'unsupported format'
 
-    def test_capitalized_error_kind_is_accepted(self):
+# ################################################################################################################################
+
+    def test_capitalized_error_kind_is_accepted(self) -> 'None':
         disposition = parse_disposition('automatic-action/MDN-sent-automatically; processed/Error: decryption-failed')
 
         assert disposition.modifier_kind == 'error'
         assert disposition.modifier == 'decryption-failed'
 
-    def test_rfc_8098_bare_modifier_form(self):
+# ################################################################################################################################
+
+    def test_rfc_8098_bare_modifier_form(self) -> 'None':
         # The RFC 8098 form may carry the bare kind alone, with the details in separate fields.
         disposition = parse_disposition('automatic-action/MDN-sent-automatically; processed/error')
 
@@ -187,20 +212,26 @@ class TestDispositionParsing:
         assert disposition.modifier_kind == 'error'
         assert disposition.modifier == ''
 
-    def test_manual_action_mode(self):
+# ################################################################################################################################
+
+    def test_manual_action_mode(self) -> 'None':
         disposition = parse_disposition('manual-action/MDN-sent-manually; processed')
 
         assert disposition.mode == 'manual-action/MDN-sent-manually'
         assert disposition.disposition_type == 'processed'
 
-    def test_mode_may_be_absent(self):
+# ################################################################################################################################
+
+    def test_mode_may_be_absent(self) -> 'None':
         disposition = parse_disposition('processed/error: decryption-failed')
 
         assert disposition.disposition_type == 'processed'
         assert disposition.modifier_kind == 'error'
         assert disposition.modifier == 'decryption-failed'
 
-    def test_modifier_is_never_split_on_a_comma(self):
+# ################################################################################################################################
+
+    def test_modifier_is_never_split_on_a_comma(self) -> 'None':
         value = 'automatic-action/MDN-sent-automatically; processed/warning: authentication-failed, processing continued'
 
         disposition = parse_disposition(value)
@@ -208,10 +239,13 @@ class TestDispositionParsing:
         assert disposition.modifier_kind == 'warning'
         assert disposition.modifier == 'authentication-failed, processing continued'
 
-    def test_emitted_form_parses_back(self):
+# ################################################################################################################################
+
+    def test_emitted_form_parses_back(self) -> 'None':
         original = new_error_disposition(AS2Error.Integrity_Check_Failed)
 
-        parsed = parse_disposition(format_disposition(original))
+        formatted = format_disposition(original)
+        parsed = parse_disposition(formatted)
 
         assert parsed.mode == original.mode
         assert parsed.disposition_type == original.disposition_type
@@ -238,10 +272,12 @@ class TestKnownModifiers:
         'unknown-trading-partner',
         'unknown-trading-relationship',
     ])
-    def test_registry_modifiers_are_known(self, modifier):
+    def test_registry_modifiers_are_known(self, modifier:'any_') -> 'None':
         assert is_known_modifier(modifier)
 
-    def test_free_text_is_not_a_registry_value(self):
+# ################################################################################################################################
+
+    def test_free_text_is_not_a_registry_value(self) -> 'None':
         assert not is_known_modifier('sender-equals-receiver')
 
 # ################################################################################################################################
@@ -249,7 +285,7 @@ class TestKnownModifiers:
 
 class TestMDNRequestParsing:
 
-    def test_full_signed_sync_request(self):
+    def test_full_signed_sync_request(self) -> 'None':
         headers = {
             'message-id': _message_id,
             'as2-from': 'PartnerCorp',
@@ -270,7 +306,9 @@ class TestMDNRequestParsing:
         assert request.mic_algorithms == ['sha-256', 'sha1']
         assert request.async_mdn_url == ''
 
-    def test_async_request(self):
+# ################################################################################################################################
+
+    def test_async_request(self) -> 'None':
         headers = {
             'message-id': _message_id,
             'as2-from': 'PartnerCorp',
@@ -285,7 +323,9 @@ class TestMDNRequestParsing:
         assert request.requests_signed_mdn is False
         assert request.async_mdn_url == 'https://partnercorp.example.com/as2/mdn'
 
-    def test_no_mdn_requested(self):
+# ################################################################################################################################
+
+    def test_no_mdn_requested(self) -> 'None':
         headers = {
             'message-id': _message_id,
             'as2-from': 'PartnerCorp',
@@ -297,7 +337,9 @@ class TestMDNRequestParsing:
         assert request.requests_mdn is False
         assert request.requests_signed_mdn is False
 
-    def test_empty_protocol_value_is_tolerated(self):
+# ################################################################################################################################
+
+    def test_empty_protocol_value_is_tolerated(self) -> 'None':
         # The specification shows this degenerate shape explicitly - it must not be rejected.
         headers = {
             'message-id': _message_id,
@@ -317,7 +359,7 @@ class TestMDNRequestParsing:
 
 class TestBuildUnsignedMDN:
 
-    def test_processed_mdn(self):
+    def test_processed_mdn(self) -> 'None':
         request = _make_request()
         mic = _sample_mic()
 
@@ -340,7 +382,9 @@ class TestBuildUnsignedMDN:
         assert f'Received-Content-MIC: {mic}'.encode('ascii') in body
         assert b'Disposition: automatic-action/MDN-sent-automatically; processed' in body
 
-    def test_error_mdn_without_mic(self):
+# ################################################################################################################################
+
+    def test_error_mdn_without_mic(self) -> 'None':
         # When decryption failed there is nothing to digest, so the MIC field is absent.
         request = _make_request()
         disposition = new_error_disposition(AS2Error.Decryption_Failed)
@@ -350,7 +394,9 @@ class TestBuildUnsignedMDN:
         assert b'Received-Content-MIC' not in body
         assert b'Disposition: automatic-action/MDN-sent-automatically; processed/error: decryption-failed' in body
 
-    def test_unsupported_receipt_protocol_yields_an_unsigned_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_unsupported_receipt_protocol_yields_an_unsigned_mdn(self, parties:'TestParties') -> 'None':
         # An unsigned MDN is the legitimate answer when the requested protocol is not the one AS2 defines.
         request = _make_request(requests_signed_mdn=True, signed_receipt_protocol='pgp-signature')
         signing_config = _make_signing_config(parties)
@@ -359,7 +405,9 @@ class TestBuildUnsignedMDN:
 
         assert headers['Content-Type'].startswith('multipart/report')
 
-    def test_no_signing_material_yields_an_unsigned_mdn(self):
+# ################################################################################################################################
+
+    def test_no_signing_material_yields_an_unsigned_mdn(self) -> 'None':
         # An unknown AS2-From/AS2-To pair gets an unsigned explanatory MDN - there is no partnership
         # to sign under, so no signing material is passed in.
         request = _make_request(requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature')
@@ -375,7 +423,7 @@ class TestBuildUnsignedMDN:
 
 class TestBuildSignedMDN:
 
-    def test_signed_processed_mdn_verifies(self, parties):
+    def test_signed_processed_mdn_verifies(self, parties:'TestParties') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -394,7 +442,9 @@ class TestBuildSignedMDN:
         assert info.disposition == 'processed'
         assert info.mic_algorithm == 'sha-256'
 
-    def test_signed_receipt_request_is_honored_even_when_processing_failed(self, parties):
+# ################################################################################################################################
+
+    def test_signed_receipt_request_is_honored_even_when_processing_failed(self, parties:'TestParties') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -410,7 +460,9 @@ class TestBuildSignedMDN:
         assert info.modifier_kind == 'error'
         assert info.modifier == 'integrity-check-failed'
 
-    def test_signature_algorithm_honors_the_request(self, parties):
+# ################################################################################################################################
+
+    def test_signature_algorithm_honors_the_request(self, parties:'TestParties') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha384', 'sha-256'])
         signing_config = _make_signing_config(parties)
@@ -421,7 +473,9 @@ class TestBuildSignedMDN:
         # announced in the RFC 5751 spelling regardless of how it was requested.
         assert 'micalg=sha-384' in headers['Content-Type']
 
-    def test_unsupported_mic_algorithms_still_get_a_signed_failure_mdn(self, parties):
+# ################################################################################################################################
+
+    def test_unsupported_mic_algorithms_still_get_a_signed_failure_mdn(self, parties:'TestParties') -> 'None':
         # Nothing on the request's list is supported, so the failure MDN reports it -
         # signed all the same, under our own default algorithm.
         request = _make_request(
@@ -445,7 +499,7 @@ class TestBuildSignedMDN:
 
 class TestParseMDN:
 
-    def test_unsigned_roundtrip(self):
+    def test_unsigned_roundtrip(self) -> 'None':
         request = _make_request()
         mic = _sample_mic()
 
@@ -463,7 +517,9 @@ class TestParseMDN:
         assert f'{info.mic}, {info.mic_algorithm}' == mic
         assert 'MDN for -' in info.text
 
-    def test_async_mdn_payload_parses_the_same(self):
+# ################################################################################################################################
+
+    def test_async_mdn_payload_parses_the_same(self) -> 'None':
         # An asynchronous MDN is the same multipart/report, delivered by a separate POST
         # to the requested URL rather than in the HTTP response.
         request = _make_request(async_mdn_url='https://partnercorp.example.com/as2/mdn')
@@ -479,7 +535,9 @@ class TestParseMDN:
         assert info.disposition == 'processed'
         assert f'{info.mic}, {info.mic_algorithm}' == mic
 
-    def test_micalg_spelling_variants_are_normalized(self):
+# ################################################################################################################################
+
+    def test_micalg_spelling_variants_are_normalized(self) -> 'None':
         # A peer's MDN may spell the algorithm without the dash - the parsed name is normalized.
         body = _crlf_join([
             '--test-boundary',
@@ -502,7 +560,9 @@ class TestParseMDN:
         assert info.mic == 'q83vEjRWeJA='
         assert info.mic_algorithm == 'sha-256'
 
-    def test_error_and_failure_dispositions_parse(self):
+# ################################################################################################################################
+
+    def test_error_and_failure_dispositions_parse(self) -> 'None':
         request = _make_request()
 
         for disposition, expected_type, expected_kind, expected_modifier in [
@@ -518,7 +578,9 @@ class TestParseMDN:
             assert info.modifier_kind == expected_kind
             assert info.modifier == expected_modifier
 
-    def test_tampered_signed_mdn_is_rejected(self, parties):
+# ################################################################################################################################
+
+    def test_tampered_signed_mdn_is_rejected(self, parties:'TestParties') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -532,7 +594,9 @@ class TestParseMDN:
 
         assert exception_info.value.modifier == AS2Error.Integrity_Check_Failed
 
-    def test_signed_mdn_without_a_keystore_is_rejected(self, parties):
+# ################################################################################################################################
+
+    def test_signed_mdn_without_a_keystore_is_rejected(self, parties:'TestParties') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -542,7 +606,9 @@ class TestParseMDN:
         with pytest.raises(AS2Exception):
             _ = parse_mdn(body, headers['Content-Type'])
 
-    def test_accepted_certificates_admit_a_listed_signer(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_accepted_certificates_admit_a_listed_signer(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -558,7 +624,9 @@ class TestParseMDN:
         assert info.is_signed is True
         assert info.signer_certificate == parties.receiver.signing_certificate
 
-    def test_accepted_certificates_reject_an_unlisted_signer(self, parties, make_rotated_pair):
+# ################################################################################################################################
+
+    def test_accepted_certificates_reject_an_unlisted_signer(self, parties:'TestParties', make_rotated_pair:'any_') -> 'None':
         request = _make_request(
             requests_signed_mdn=True, signed_receipt_protocol='pkcs7-signature', mic_algorithms=['sha-256'])
         signing_config = _make_signing_config(parties)
@@ -575,13 +643,17 @@ class TestParseMDN:
 
         assert exception_info.value.modifier == AS2Error.Authentication_Failed
 
-    def test_non_mdn_content_type_is_rejected(self):
+# ################################################################################################################################
+
+    def test_non_mdn_content_type_is_rejected(self) -> 'None':
         with pytest.raises(AS2ProtocolException) as exception_info:
             _ = parse_mdn(b'Not an MDN at all', 'text/plain')
 
         assert exception_info.value.modifier == AS2Error.Unexpected_Processing_Error
 
-    def test_report_without_a_boundary_is_rejected(self):
+# ################################################################################################################################
+
+    def test_report_without_a_boundary_is_rejected(self) -> 'None':
         with pytest.raises(AS2ProtocolException) as exception_info:
             _ = parse_mdn(b'Not a valid report body', 'multipart/report; report-type=disposition-notification')
 
@@ -592,7 +664,7 @@ class TestParseMDN:
 
 class TestMessageID:
 
-    def test_message_ids_are_unique_and_bracketed(self):
+    def test_message_ids_are_unique_and_bracketed(self) -> 'None':
         first = new_message_id()
         second = new_message_id()
 

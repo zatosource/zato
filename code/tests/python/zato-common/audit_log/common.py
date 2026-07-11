@@ -88,10 +88,13 @@ def _count_events(source:'str', object_name:'str', query:'str'='') -> 'int':
 
         where_conditions.append(or_(*like_parts))
 
-    count_query = select(func.count()).select_from(event_table).where(*where_conditions)
+    count_query = select(func.count())
+    count_query = count_query.select_from(event_table)
+    count_query = count_query.where(*where_conditions)
 
     with engine.connect() as connection:
-        out = connection.execute(count_query).scalar()
+        count_result = connection.execute(count_query)
+        out = count_result.scalar()
 
     return out
 
@@ -104,10 +107,11 @@ def _get_page(source:'str', object_name:'str', page:'int', page_size:'int') -> '
 
     offset = (page - 1) * page_size
 
-    page_query = select(event_table.c.id, event_table.c.cid, event_table.c.data). \
-        where(event_table.c.source == source, event_table.c.object_name == object_name). \
-        order_by(event_table.c.id.desc()). \
-        limit(page_size).offset(offset)
+    page_query = select(event_table.c.id, event_table.c.cid, event_table.c.data)
+    page_query = page_query.where(event_table.c.source == source, event_table.c.object_name == object_name)
+    page_query = page_query.order_by(event_table.c.id.desc())
+    page_query = page_query.limit(page_size)
+    page_query = page_query.offset(offset)
 
     out:'anylist' = []
 
