@@ -156,7 +156,7 @@ class SchedulerImporter:
         # Parse the start_date from string to datetime object, defaulting to now
         start_date_value = job_def.get('start_date')
         if not start_date_value:
-            original_start_date = datetime.utcnow()
+            original_start_date = datetime.now(timezone.utc)
         elif isinstance(start_date_value, datetime):
             original_start_date = start_date_value
         else:

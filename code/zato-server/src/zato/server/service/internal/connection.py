@@ -70,12 +70,6 @@ class HealthCheckRun(AdminService):
         if notify_on == _health_check.NotifyOn.Failures and is_ok:
             return
 
-        # Nothing to deliver to without a fully configured callback
-        if not callback_type:
-            return
-        if not callback_name:
-            return
-
         outcome = {
             'conn_name': conn_name,
             'conn_type': conn_type,
