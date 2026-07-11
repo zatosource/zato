@@ -18,11 +18,12 @@ except ImportError:
     from dateutil.parser import parse as parse_datetime
 
 # Zato
-from zato.common.api import EMAIL, SCHEDULER, ZATO_NONE
+from zato.common.api import EMAIL, SCHEDULER, SchedulerLink, ZATO_NONE
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
+from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
@@ -39,6 +40,10 @@ _new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms',
 # This one is stored in the job's opaque attributes only - it points back to the IMAP connection
 # that the job was auto-created for and it must never be sent to the scheduler process itself.
 _imap_conn_id_param = 'imap_conn_id'
+
+# These are stored in the job's opaque attributes only - they point back to the connection of any type
+# that the job was auto-created for, no matter if it runs scheduled invocations or health checks.
+_link_params = list(SchedulerLink.FieldList)
 
 # The key in a job's extra data under which an IMAP-linked job carries the service
 # that is to be invoked once per each message received.
@@ -111,6 +116,10 @@ def _create_edit(self, action):
     # Note whether the caller is the IMAP connection layer - if it is not, and the job carries a link
     # to an IMAP connection, the connection's own scheduler fields will be updated after the job is saved.
     input_had_imap_conn_id = bool(input.get(_imap_conn_id_param))
+
+    # The same applies to the generic connection link, e.g. an outgoing REST or SOAP connection
+    # whose scheduled invocations or health checks this job runs.
+    input_had_link = bool(input.get(SchedulerLink.Conn_ID))
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = f'Unrecognized job type [{job_type}]'
@@ -244,7 +253,14 @@ def _create_edit(self, action):
                 if existing_link := existing_opaque.get(_imap_conn_id_param):
                     input.imap_conn_id = existing_link
 
-            set_instance_opaque_attrs(job_row, input, only=list(_new_params) + [_imap_conn_id_param])
+            # The same protection applies to the generic connection link
+            if not input_had_link:
+                existing_opaque = parse_instance_opaque_attr(job_row)
+                for link_param in _link_params:
+                    if existing_value := existing_opaque.get(link_param):
+                        input[link_param] = existing_value
+
+            set_instance_opaque_attrs(job_row, input, only=list(_new_params) + [_imap_conn_id_param] + _link_params)
 
             if job_row.opaque1:
                 from json import loads as json_loads, dumps as json_dumps
@@ -300,6 +316,19 @@ def _create_edit(self, action):
                                 session, imap_conn_id, run.run_every, run.run_unit, start_iso, target_service,
                                 invoke_with, job_id)
 
+        # Likewise, an edit made directly in the scheduler is written back to the connection of any type
+        # that this job is linked to, no matter if the job runs scheduled invocations or health checks.
+        if action == 'edit':
+            if not input_had_link:
+                if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+                    if link_conn_id := job_opaque.get(SchedulerLink.Conn_ID):
+                        link_kind = job_opaque[SchedulerLink.Kind]
+                        run = unit_from_interval(data['weeks'], data['days'], data['hours'], data['minutes'], data['seconds'])
+
+                        with closing(self.odb.session()) as session:
+                            update_linked_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
+                                start_iso, job_id)
+
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
     except Exception:
@@ -317,7 +346,7 @@ class _CreateEdit(_SchedulerAdmin):
         '-cron_definition', '-should_ignore_existing', \
         '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
-        '-imap_conn_id'
+        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind'
     output = '-id', '-name', '-cron_definition'
 
     def handle(self):
@@ -333,7 +362,7 @@ class _Get(_SchedulerAdmin):
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
         '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
-        '-imap_conn_id'
+        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -515,6 +544,13 @@ class Delete(_SchedulerAdmin):
             if imap_conn_id := job_opaque.get(_imap_conn_id_param):
                 with closing(self.odb.session()) as session:
                     clear_imap_scheduler_fields(session, imap_conn_id)
+
+            # The same applies to jobs auto-created for connections of any other type,
+            # no matter if the job ran scheduled invocations or health checks.
+            if link_conn_id := job_opaque.get(SchedulerLink.Conn_ID):
+                link_kind = job_opaque[SchedulerLink.Kind]
+                with closing(self.odb.session()) as session:
+                    clear_linked_job_fields(session, link_conn_id, link_kind)
 
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())

@@ -1,5 +1,6 @@
 {% comment %}
-Response tab for outgoing REST connections - how the scheduler transforms the response.
+Response tab for outgoing REST and SOAP connections - how the response is transformed
+before the callback receives it, applied to every invocation of the connection.
 
 Expects in the context:
 * form         - the create or edit form
@@ -10,8 +11,13 @@ Expects in the context:
 <table class="form-data">
 
     <tr>
-        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}scheduler_response_map">Response map</label></td>
-        <td>{{ form.scheduler_response_map }}</td>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}response_map_mode">Map mode</label></td>
+        <td>{{ form.response_map_mode }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}response_map">Response map</label></td>
+        <td>{{ form.response_map }}</td>
     </tr>
 
 </table>

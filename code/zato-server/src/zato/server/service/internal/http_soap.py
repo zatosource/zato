@@ -13,19 +13,22 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SEC_DEF_TYPE, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+     Groups, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SCHEDULER, SEC_DEF_TYPE, \
+     SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.const import SECRETS
+from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException
 from zato.common.ext_db.api import ensure_security_copy, ensure_service_copy, get_ext_db_session, is_ext_db_configured, \
      is_ext_object_id, merge_ext_channel_items, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import Cluster, HTTPSOAP, Job, SecurityBase, Service
 from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import http_soap, http_soap_list
 from zato.common.typing_ import cast_
-from zato.common.util.api import as_bool
+from zato.common.util.api import as_bool, utcnow
+from zato.common.util.imap_scheduler import interval_from_unit
+from zato.common.util.rest_invocation import parse_param_rows, update_linked_job_fields, validate_jsonata, validate_xpath
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
@@ -36,12 +39,41 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strdict, strintdict
+    from zato.common.ext.bunch import Bunch
+    from zato.common.typing_ import any_, anylist, intnone, strdict, strintdict
+
+    Bunch = Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport', 'data_format', 'needs_security_group_names')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_invocation = HTTP_SOAP.Invocation
+_health_check = HTTP_SOAP.HealthCheck
+
+# All the declarative invocation and health check fields, each optional on input and output.
+_invocation_fields = []
+
+for _invocation_field_name in _invocation.FieldList + _health_check.FieldList:
+    _invocation_fields.append('-' + _invocation_field_name)
+
+_invocation_input = tuple(_invocation_fields)
+
+# The row-based fields whose JSONata-mode values are validated at create/edit time
+_row_fields = (
+    _invocation.Field_Request_Query_String,
+    _invocation.Field_Request_Path_Params,
+    _invocation.Field_Request_Headers,
+    _invocation.Field_Request_Message,
+    _invocation.Field_Request_SOAP_Headers,
+)
+
+# Transports that support the declarative invocation profile
+_declarative_transports = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,6 +94,353 @@ for _as2_field_name in AS2.Common_Fields + AS2.Channel_Fields:
     _as2_fields.append('-' + _as2_field_name)
 
 _as2_input = tuple(_as2_fields)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _is_declarative(input:'Bunch') -> 'bool':
+    """ Returns True if this connection carries the declarative invocation profile,
+    i.e. it is an outgoing REST or SOAP connection.
+    """
+    if input.connection != CONNECTION.OUTGOING:
+        return False
+
+    out = input.transport in _declarative_transports
+    return out
+
+# ################################################################################################################################
+
+def _validate_expression(service:'AdminService', expression:'str', mode:'str', field_name:'str') -> 'None':
+    """ Compiles a JSONata or XPath expression, reporting the field it came from if it is invalid.
+    """
+    try:
+        if mode == _invocation.ResponseMapMode.XPath:
+            validate_xpath(expression)
+        else:
+            validate_jsonata(expression)
+    except Exception as e:
+        raise BadRequest(service.cid, f'Invalid {mode} expression in `{field_name}` -> `{expression}` -> {e}')
+
+# ################################################################################################################################
+
+def _validate_callback(service:'AdminService', callback_type:'str', callback_name:'str', type_field:'str') -> 'None':
+    """ Makes sure a callback is either fully configured or not given at all.
+    """
+
+    # No callback at all is valid
+    if not callback_type:
+        if not callback_name:
+            return
+
+    if not callback_type:
+        raise BadRequest(service.cid, f'A callback name requires `{type_field}` to be given too')
+
+    if callback_type not in _invocation.CallbackTypeList:
+        raise BadRequest(service.cid, f'Callback type `{callback_type}` is not one of `{_invocation.CallbackTypeList}`')
+
+    if not callback_name:
+        raise BadRequest(service.cid, f'Callback type `{callback_type}` requires a callback name')
+
+    # A callback service must exist so typos are caught at config time, not at call time
+    if callback_type == _invocation.CallbackType.Service:
+        if callback_name not in service.server.service_store.name_to_impl_name:
+            raise BadRequest(service.cid, f'Callback service `{callback_name}` does not exist')
+
+# ################################################################################################################################
+
+def _has_scheduler_config(service:'AdminService', input:'Bunch') -> 'bool':
+    """ Returns True if the scheduler fields were given on input, raising an error if only some of them were.
+    """
+    run_every = input.scheduler_run_every
+    start_date = input.scheduler_start_date
+
+    # Collect the core fields that were actually filled in
+    given = []
+
+    for value in (run_every, start_date):
+        if value:
+            given.append(value)
+
+    given_count = len(given)
+
+    # Nothing was given, which means that no job is expected to exist
+    if not given_count:
+        return False
+
+    # Only some of the fields were given, which we cannot accept
+    if given_count != 2:
+        raise BadRequest(service.cid, 'Scheduler options require both run-every and start date to be given')
+
+    return True
+
+# ################################################################################################################################
+
+def _has_health_check_config(service:'AdminService', input:'Bunch') -> 'bool':
+    """ Returns True if the health check fields were given on input, raising an error if only some of them were.
+    """
+    run_every = input.health_check_run_every
+    callback_type = input.health_check_callback_type
+    callback_name = input.health_check_callback_name
+
+    # Collect the core fields that were actually filled in
+    given = []
+
+    for value in (run_every, callback_type, callback_name):
+        if value:
+            given.append(value)
+
+    given_count = len(given)
+
+    # Nothing was given, which means that no job is expected to exist
+    if not given_count:
+        return False
+
+    # Only some of the fields were given, which we cannot accept
+    if given_count != 3:
+        raise BadRequest(service.cid, 'Health check options require run-every, callback type and callback name together')
+
+    return True
+
+# ################################################################################################################################
+
+def _validate_run_every(service:'AdminService', run_every:'any_', run_unit:'str', label:'str') -> 'int':
+    """ Makes sure a run-every value and its unit describe a job interval that can be created.
+    """
+    run_every = int(run_every)
+
+    if run_every < 1:
+        raise BadRequest(service.cid, f'{label} run-every must be a positive integer instead of `{run_every}`')
+
+    if run_unit not in _invocation.UnitList:
+        raise BadRequest(service.cid, f'{label} unit `{run_unit}` is not one of `{_invocation.UnitList}`')
+
+    return run_every
+
+# ################################################################################################################################
+
+def _validate_invocation_config(service:'AdminService', input:'Bunch') -> 'None':
+    """ Validates the declarative invocation profile of an outgoing REST or SOAP connection,
+    compiling every expression so syntax errors are rejected at config time instead of at call time.
+    """
+
+    # Each JSONata-mode row value must compile ..
+    for field_name in _row_fields:
+        if rows_json := input.get(field_name):
+            rows = parse_param_rows(rows_json)
+            for row in rows:
+                mode = row['mode']
+                if mode not in _invocation.ValueModeList:
+                    raise BadRequest(service.cid, f'Value mode `{mode}` in `{field_name}` is not one of `{_invocation.ValueModeList}`')
+                if mode == _invocation.ValueMode.JSONata:
+                    _validate_expression(service, row['value'], _invocation.ValueMode.JSONata, field_name)
+
+    # .. so must a JSONata-mode body ..
+    if input.request_data:
+        if input.request_data_mode == _invocation.ValueMode.JSONata:
+            _validate_expression(service, input.request_data, _invocation.ValueMode.JSONata, _invocation.Field_Request_Data)
+
+    # .. and a message map that builds a SOAP message ..
+    if input.request_message_map:
+        _validate_expression(service, input.request_message_map, _invocation.ValueMode.JSONata,
+            _invocation.Field_Request_Message_Map)
+
+    # .. and the response map, in whichever mode it is in ..
+    if response_map := input.response_map:
+        map_mode = input.response_map_mode
+        if not map_mode:
+            map_mode = _invocation.ResponseMapMode.JSONata
+        if map_mode not in _invocation.ResponseMapModeList:
+            raise BadRequest(service.cid, f'Response map mode `{map_mode}` is not one of `{_invocation.ResponseMapModeList}`')
+        _validate_expression(service, response_map, map_mode, _invocation.Field_Response_Map)
+
+    # .. callbacks must be fully configured or absent ..
+    _validate_callback(service, input.callback_type, input.callback_name, _invocation.Field_Callback_Type)
+    _validate_callback(service, input.health_check_callback_type, input.health_check_callback_name,
+        _health_check.Field_Callback_Type)
+
+    # .. the scheduler fields must describe a job that can be created ..
+    if _has_scheduler_config(service, input):
+        input.scheduler_run_every = _validate_run_every(
+            service, input.scheduler_run_every, input.scheduler_run_unit, 'Scheduler')
+
+    # .. and so must the health check fields.
+    if _has_health_check_config(service, input):
+        input.health_check_run_every = _validate_run_every(
+            service, input.health_check_run_every, input.health_check_run_unit, 'Health check')
+
+        notify_on = input.health_check_notify_on
+        if not notify_on:
+            notify_on = _health_check.NotifyOn.Failures
+        if notify_on not in _health_check.NotifyOnList:
+            raise BadRequest(service.cid, f'Health check notify-on `{notify_on}` is not one of `{_health_check.NotifyOnList}`')
+
+        # Store the normalized value back so a default is saved explicitly
+        input.health_check_notify_on = notify_on
+
+# ################################################################################################################################
+
+def _get_linked_job(service:'AdminService', job_id:'int') -> 'any_':
+    """ Returns the Job row of the given ID or None if it no longer exists.
+    """
+    with closing(service.odb.session()) as session:
+        out = session.query(Job).filter_by(id=job_id).first()
+        if out:
+            session.expunge(out)
+
+    return out
+
+# ################################################################################################################################
+
+def _preserve_job_ids(input:'Bunch', opaque:'any_') -> 'None':
+    """ An empty job ID on input must not overwrite the one stored previously - the authoritative values
+    are written back after the linked jobs are synchronized, once this request is committed.
+    """
+    for field_name in (_invocation.Field_Job_ID, _health_check.Field_Job_ID):
+        if not input.get(field_name):
+            if previous_job_id := opaque.get(field_name):
+                input[field_name] = previous_job_id
+
+# ################################################################################################################################
+
+def _sync_one_linked_job(
+    service,       # type: AdminService
+    input,         # type: Bunch
+    conn_id,       # type: int
+    kind,          # type: str
+    has_config,    # type: bool
+    job_id,        # type: intnone
+    job_name,      # type: str
+    job_service,   # type: str
+    start_date,    # type: str
+    run_every,     # type: any_
+    run_unit,      # type: str
+    extra,         # type: str
+    ) -> 'None':
+    """ Creates, updates or deletes one scheduler job linked to a connection, based on the input just committed.
+    """
+
+    # The job the connection points to may or may not still exist,
+    # e.g. it could have been deleted from the scheduler's own UI.
+    job = None
+    if job_id:
+        job = _get_linked_job(service, job_id)
+
+    # We are to keep a job in sync with what was given on input ..
+    if has_config:
+
+        # The connection's transport decides which config store the job's link points back to
+        if input.transport == URL_TYPE.SOAP:
+            link_conn_type = SchedulerLink.ConnType.SOAP_Outgoing
+        else:
+            link_conn_type = SchedulerLink.ConnType.REST_Outgoing
+
+        request = {
+            'cluster_id': default_cluster_id,
+            'is_active': input.is_active,
+            'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+            'service': job_service,
+            'start_date': start_date,
+            'extra': extra,
+            SchedulerLink.Conn_Type: link_conn_type,
+            SchedulerLink.Conn_ID: conn_id,
+            SchedulerLink.Kind: kind,
+        }
+
+        interval = interval_from_unit(run_every, run_unit)
+        request.update(interval)
+
+        # .. the job exists so it is updated in place, keeping its current name to honor renames done in the scheduler ..
+        if job:
+            request['id'] = job.id
+            request['name'] = job.name
+            _ = service.invoke('zato.scheduler.job.edit', request)
+            new_job_id = job.id
+
+        # .. otherwise, a new job is created for this connection ..
+        else:
+            request['name'] = job_name
+            response = service.invoke('zato.scheduler.job.create', request)
+            if 'id' not in response:
+                response = response['zato_scheduler_job_create_response']
+            new_job_id = response['id']
+
+        # .. either way, the connection's opaque attributes now reflect the job's current state.
+        with closing(service.odb.session()) as session:
+            update_linked_job_fields(session, conn_id, kind, run_every, run_unit, start_date, new_job_id)
+
+    # There is no configuration on input ..
+    else:
+
+        # .. so a job that still exists is deleted, which also clears the connection's linked-job fields.
+        if job:
+            _ = service.invoke('zato.scheduler.job.delete', {'id': job.id})
+
+# ################################################################################################################################
+
+def _sync_linked_jobs(service:'AdminService', input:'Bunch', conn_id:'int') -> 'None':
+    """ Keeps the scheduled-invocation and health check jobs of an outgoing connection in sync
+    with the input just committed.
+    """
+
+    # The declarative invocation job runs the connection through the shared dispatch service ..
+    if input.transport == URL_TYPE.SOAP:
+        job_prefix = _invocation.Job_Prefix_SOAP
+    else:
+        job_prefix = _invocation.Job_Prefix_REST
+
+    scheduler_extra = dumps({
+        _invocation.Extra_Conn_ID: conn_id,
+        _invocation.Extra_Conn_Name: input.name,
+        _invocation.Extra_Transport: input.transport,
+    })
+
+    _sync_one_linked_job(
+        service,
+        input,
+        conn_id,
+        kind=SchedulerLink.KindType.Scheduler,
+        has_config=_has_scheduler_config(service, input),
+        job_id=input.get(_invocation.Field_Job_ID),
+        job_name=job_prefix + input.name,
+        job_service=_invocation.Dispatch_Service,
+        start_date=input.scheduler_start_date,
+        run_every=input.scheduler_run_every,
+        run_unit=input.scheduler_run_unit,
+        extra=scheduler_extra,
+    )
+
+    # .. and the health check job pings the connection, delivering each outcome to the callback.
+    if input.transport == URL_TYPE.SOAP:
+        health_check_conn_type = SchedulerLink.ConnType.SOAP_Outgoing
+    else:
+        health_check_conn_type = SchedulerLink.ConnType.REST_Outgoing
+
+    health_check_extra = dumps({
+        _health_check.Extra_Conn_ID: conn_id,
+        _health_check.Extra_Conn_Name: input.name,
+        _health_check.Extra_Conn_Type: health_check_conn_type,
+        _health_check.Field_Callback_Type: input.health_check_callback_type,
+        _health_check.Field_Callback_Name: input.health_check_callback_name,
+        _health_check.Field_Notify_On: input.health_check_notify_on,
+    })
+
+    # Health check jobs have no user-facing start date so they start right away
+    health_check_start_date = utcnow().isoformat()
+
+    _sync_one_linked_job(
+        service,
+        input,
+        conn_id,
+        kind=SchedulerLink.KindType.HealthCheck,
+        has_config=_has_health_check_config(service, input),
+        job_id=input.get(_health_check.Field_Job_ID),
+        job_name=_health_check.Job_Prefix + input.name,
+        job_service=_health_check.Dispatch_Service,
+        start_date=health_check_start_date,
+        run_every=input.health_check_run_every,
+        run_unit=input.health_check_run_unit,
+        extra=health_check_extra,
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +492,7 @@ class _BaseGet(AdminService):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
+        *_invocation_input, \
         *_as4_input, \
         *_as2_input
 
@@ -190,6 +570,7 @@ class GetList(_BaseGet):
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
         '-connection', '-transport', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_invocation_input, \
         *_as4_input, \
         *_as2_input
 
@@ -419,6 +800,18 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
+    def _normalize_as2_fields(self, input):
+        """ Casts the numeric AS2 fields to integers - a Dashboard form submits them as strings,
+        and normalizing here means both the stored value and the published config event carry a number.
+        """
+        if input.transport != URL_TYPE.AS2:
+            return
+
+        if value := input.get('as2_duplicate_window_days'):
+            input['as2_duplicate_window_days'] = int(value)
+
+# ################################################################################################################################
+
     def _get_channel_service(self, session:'any_', input:'any_', is_ext:'bool') -> 'any_':
         """ Returns the service a channel routes to. For external-database objects, the service is validated
         against the main ODB and then mirrored in the external database so the foreign key holds.
@@ -472,6 +865,7 @@ class Create(_CreateEdit):
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_invocation_input, \
         *_as4_input, \
         *_as2_input
     output = 'id', 'name', '-url_path'
@@ -502,6 +896,9 @@ class Create(_CreateEdit):
         # AS2 private keys are stored encrypted too
         self._encrypt_as2_secrets(input)
 
+        # The numeric AS2 fields arrive as strings from Dashboard forms
+        self._normalize_as2_fields(input)
+
         # Remove extra whitespace
         input_name = input.name
         input_host = input.host
@@ -523,6 +920,11 @@ class Create(_CreateEdit):
 
         if input_content_type:
             input.content_type = input_content_type.strip()
+
+        # The declarative invocation profile of an outgoing connection is validated
+        # before anything is committed to the database.
+        if _is_declarative(input):
+            _validate_invocation_config(self, input)
 
         # AS2/AS4 objects are stored in the external database when one is configured
         is_ext = needs_ext_db(input.transport)
@@ -631,6 +1033,10 @@ class Create(_CreateEdit):
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
                 self.notify_server(input, action)
 
+                # The connection is committed by now so its linked jobs can be created
+                if _is_declarative(input):
+                    _sync_linked_jobs(self, input, item_id)
+
                 self.response.payload.id = public_id
                 self.response.payload.name = item.name
                 self.response.payload.url_path = item.url_path
@@ -656,6 +1062,7 @@ class Edit(_CreateEdit):
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
+        *_invocation_input, \
         *_as4_input, \
         *_as2_input
     output = '-id', '-name'
@@ -686,6 +1093,9 @@ class Edit(_CreateEdit):
         # AS2 private keys are stored encrypted too
         self._encrypt_as2_secrets(input)
 
+        # The numeric AS2 fields arrive as strings from Dashboard forms
+        self._normalize_as2_fields(input)
+
         # Remove extra whitespace
         input_name = input.name
         input_host = input.host
@@ -707,6 +1117,11 @@ class Edit(_CreateEdit):
 
         if input_content_type:
             input.content_type = input_content_type.strip()
+
+        # The declarative invocation profile of an outgoing connection is validated
+        # before anything is committed to the database.
+        if _is_declarative(input):
+            _validate_invocation_config(self, input)
 
         # AS2/AS4 objects are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
@@ -757,6 +1172,10 @@ class Edit(_CreateEdit):
                 old_soap_action = item.soap_action
                 old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
+
+                # An empty job ID on input must not overwrite the one stored previously
+                if _is_declarative(input):
+                    _preserve_job_ids(input, opaque)
 
                 item.name = input.name
                 item.is_active = input.is_active
@@ -825,6 +1244,10 @@ class Edit(_CreateEdit):
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
 
                 self.notify_server(input, action)
+
+                # The connection is committed by now so its linked jobs can be created, updated or deleted
+                if _is_declarative(input):
+                    _sync_linked_jobs(self, input, item.id)
 
                 # Everyone else knows objects from the external database under their offset ids
                 item_id = cast_('int', item.id)
@@ -929,6 +1352,13 @@ class Delete(AdminService, _HTTPSOAPService):
                     'old_http_method': old_http_method,
                     'old_http_accept': old_http_accept,
                 }, action)
+
+                # Scheduler jobs auto-created for this connection are deleted along with it,
+                # but only if they still exist - they could have been deleted from the scheduler's own UI.
+                for job_id_field in (_invocation.Field_Job_ID, _health_check.Field_Job_ID):
+                    if job_id := opaque.get(job_id_field):
+                        if _get_linked_job(self, job_id):
+                            _ = self.invoke('zato.scheduler.job.delete', {'id': job_id})
 
                 self.response.payload.details = 'OK, deleted'
 
@@ -1296,5 +1726,30 @@ class RateLimitingClearCounters(AdminService):
         key_prefix = f'rest{channel_id}:'
 
         self.server.rate_limiting_manager.clear_rule_counters(channel_id, rule_index, key_prefix)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ProcessScheduledRequest(AdminService):
+    """ Invoked by the scheduler on behalf of an outgoing REST or SOAP connection - runs the connection
+    through its declarative invocation profile, which also delivers the response to the configured callback.
+    """
+    name = _invocation.Dispatch_Service
+
+    def handle(self) -> 'None':
+
+        # The scheduler job carries the connection's identity in its extra data,
+        # which arrives here as a dict no matter if the invocation came from the scheduler or over HTTP.
+        context = self.request.payload
+
+        conn_name = context[_invocation.Extra_Conn_Name]
+        transport = context[_invocation.Extra_Transport]
+
+        # The connection's declarative profile fills in everything else - the HTTP method, query string,
+        # path params, headers and body for REST, or the operation and message for SOAP.
+        if transport == URL_TYPE.SOAP:
+            _ = self.soap[conn_name].invoke()
+        else:
+            _ = self.rest[conn_name].invoke()
 
 # ################################################################################################################################

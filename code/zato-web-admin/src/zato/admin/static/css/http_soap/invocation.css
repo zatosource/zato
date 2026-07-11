@@ -1,6 +1,6 @@
-/* Scheduler request tab in the forms of outgoing REST connections */
+/* Declarative invocation tabs in the forms of outgoing connections */
 
-td.scheduler-request-cell {
+td.request-config-cell {
     padding:12px 8px;
 }
 
@@ -8,25 +8,25 @@ td.scheduler-request-cell {
 
 /* Parameter tables - a JSONata toggle, a name, a value and a remove badge per row */
 
-.scheduler-param-table {
+.request-param-table {
     border-collapse:collapse;
     width:100%;
 }
 
 /* The header appears only once there is at least one parameter row */
-.scheduler-param-table thead {
+.request-param-table thead {
     display:none;
 }
 
-.scheduler-param-table:has(tbody tr) thead {
+.request-param-table:has(tbody tr) thead {
     display:table-header-group;
 }
 
-.scheduler-param-table:has(tbody tr) {
+.request-param-table:has(tbody tr) {
     margin-bottom:6px;
 }
 
-.scheduler-param-table th {
+.request-param-table th {
     font-weight:500;
     font-size:85%;
     color:#444444;
@@ -35,44 +35,44 @@ td.scheduler-request-cell {
     padding:0 4px 3px 4px;
 }
 
-.scheduler-param-table td {
+.request-param-table td {
     padding:3px 4px;
     vertical-align:middle;
     background:transparent !important;
 }
 
-.scheduler-param-table td.scheduler-param-jsonata-cell,
-.scheduler-param-table th:first-child {
+.request-param-table td.request-param-jsonata-cell,
+.request-param-table th:first-child {
     width:1%;
     text-align:center;
     white-space:nowrap;
 }
 
-.scheduler-param-table td.scheduler-param-key-cell {
+.request-param-table td.request-param-key-cell {
     width:32%;
 }
 
-.scheduler-param-table td.scheduler-param-remove-cell {
+.request-param-table td.request-param-remove-cell {
     width:1%;
     white-space:nowrap;
 }
 
-.scheduler-param-table input.scheduler-param-key,
-.scheduler-param-table input.scheduler-param-value {
+.request-param-table input.request-param-key,
+.request-param-table input.request-param-value {
     width:100%;
     box-sizing:border-box;
 }
 
 /* The JSONata toggle needs its clickable area vertically centered */
-.scheduler-param-table .toggle-switch {
+.request-param-table .toggle-switch {
     vertical-align:middle;
 }
 
 /* The remove badge follows the same look as the OK and Cancel buttons */
 
-a.scheduler-param-remove,
-a.scheduler-param-remove:hover,
-a.scheduler-param-remove:active {
+a.request-param-remove,
+a.request-param-remove:hover,
+a.request-param-remove:active {
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -95,12 +95,12 @@ a.scheduler-param-remove:active {
     cursor:pointer;
 }
 
-a.scheduler-param-remove:hover {
+a.request-param-remove:hover {
     background-image:linear-gradient(#ffffff, #eeeeee 1px, #cccccc);
 }
 
 /* Body mode select sits above the body textarea */
 
-#id_scheduler_data_mode {
+#id_request_data_mode {
     margin-bottom:6px;
 }

@@ -9,9 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from copy import deepcopy
+from json import loads
 
 # Zato
-from zato.cli.enmasse.util import assign_security, preprocess_item, security_needs_update
+from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
+    security_needs_update, serialize_invocation_rows, sync_invocation_jobs
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -62,6 +64,14 @@ class OutgoingRESTImporter:
             item = item['fields']
             name = item['name']
             logger.info('Processing outgoing REST connection: %s (id=%s)', name, item['id'])
+
+            # Unpack opaque attributes into top-level keys so comparisons see the declarative
+            # invocation and health check fields.
+            if opaque1 := item.get('opaque1'):
+                opaque = loads(opaque1)
+                if opaque:
+                    item.update(opaque)
+
             out[name] = item
             self.connection_defs[name] = item
 
@@ -98,6 +108,16 @@ class OutgoingRESTImporter:
                 # Compare standard attributes (excluding security)
                 for key, value in item.items():
                     if key != 'security':
+
+                        # Row-based invocation fields are compared as lists no matter
+                        # which of the two storage forms each side uses.
+                        if key in Invocation_Row_Fields:
+                            if as_row_list(value) != as_row_list(db_def.get(key)):
+                                logger.info('Row mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def.get(key))
+                                needs_update = True
+                                break
+                            continue
+
                         db_value = db_def.get(key)
                         if db_value != value:
                             logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
@@ -150,9 +170,19 @@ class OutgoingRESTImporter:
         for key, value in connection_extra_field_defaults.items():
             if key not in outgoing_def:
                 outgoing_def[key] = value
+
+        # Row-based invocation fields are stored the way the Dashboard stores them - as JSON strings
+        serialize_invocation_rows(outgoing_def)
+
+        # The linked jobs need the connection's ID, hence the flush
+        session.add(outgoing)
+        session.flush()
+
+        # Create or update the linked jobs, which stores their IDs in the definition
+        sync_invocation_jobs(self.importer, session, outgoing_def, outgoing, URL_TYPE.PLAIN_HTTP)
+
         set_instance_opaque_attrs(outgoing, outgoing_def)
 
-        session.add(outgoing)
         self.connection_defs[name] = outgoing
         return outgoing
 
@@ -175,6 +205,13 @@ class OutgoingRESTImporter:
         for key, value in connection_extra_field_defaults.items():
             if key not in outgoing_def:
                 outgoing_def[key] = value
+
+        # Row-based invocation fields are stored the way the Dashboard stores them - as JSON strings
+        serialize_invocation_rows(outgoing_def)
+
+        # Create or update the linked jobs, which stores their IDs in the definition
+        sync_invocation_jobs(self.importer, session, outgoing_def, outgoing, URL_TYPE.PLAIN_HTTP)
+
         set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)

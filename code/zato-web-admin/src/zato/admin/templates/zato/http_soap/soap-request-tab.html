@@ -1,0 +1,79 @@
+{% comment %}
+Request tab for outgoing SOAP connections - what request every invocation builds,
+whether it comes from service code or from the connection's scheduled job.
+
+Expects in the context:
+* form         - the create or edit form
+* action       - "create" or "edit"
+* field_prefix - "" for create, "edit-" for edit
+
+The message and SOAP header rows are edited as rows of widgets, each with its own value mode,
+serialized by JS to the form's hidden JSON fields before the form is submitted.
+{% endcomment %}
+
+<table class="form-data request-config-table">
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}request_operation">Operation</label></td>
+        <td class="request-config-cell">{{ form.request_operation }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_message">Message</label></td>
+        <td class="request-config-cell">
+            <table class="request-param-table">
+                <thead>
+                    <tr>
+                        <th>JSONata</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="request-message-rows-{{ action }}"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.outgoing.soap.add_param_row('{{ action }}', 'message')">Add an element</a>
+            {{ form.request_message }}
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_message_map">Message map</label></td>
+        <td class="request-config-cell">{{ form.request_message_map }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_soap_headers">SOAP headers</label></td>
+        <td class="request-config-cell">
+            <table class="request-param-table">
+                <thead>
+                    <tr>
+                        <th>JSONata</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="request-soap_headers-rows-{{ action }}"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.outgoing.soap.add_param_row('{{ action }}', 'soap_headers')">Add a header</a>
+            {{ form.request_soap_headers }}
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}wsa_action">WSA Action</label></td>
+        <td class="request-config-cell">{{ form.wsa_action }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}wsa_to">WSA To</label></td>
+        <td class="request-config-cell">{{ form.wsa_to }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}wsa_reply_to">WSA ReplyTo</label></td>
+        <td class="request-config-cell">{{ form.wsa_reply_to }}</td>
+    </tr>
+
+</table>

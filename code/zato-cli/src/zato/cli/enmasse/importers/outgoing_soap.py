@@ -12,7 +12,8 @@ from copy import deepcopy
 from json import dumps, loads
 
 # Zato
-from zato.cli.enmasse.util import assign_security, preprocess_item, security_needs_update
+from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
+    security_needs_update, serialize_invocation_rows, sync_invocation_jobs
 from zato.common.api import CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -131,6 +132,14 @@ class OutgoingSOAPImporter:
                             break
                         continue
 
+                    # Row-based invocation fields are compared the same way
+                    if key in Invocation_Row_Fields:
+                        if as_row_list(value) != as_row_list(db_def.get(key)):
+                            logger.info('Row mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def.get(key))
+                            needs_update = True
+                            break
+                        continue
+
                     # A field the database row does not have yet means an update too.
                     if key not in db_def:
                         logger.info('Field %s.%s not in DB yet, will update', name, key)
@@ -202,10 +211,20 @@ class OutgoingSOAPImporter:
             if not isinstance(body_credentials, str):
                 outgoing_def['body_credentials'] = dumps(body_credentials)
 
-        set_instance_opaque_attrs(outgoing, outgoing_def)
+        # Row-based invocation fields are stored the same way - as JSON strings
+        serialize_invocation_rows(outgoing_def)
+
         assign_security(outgoing, outgoing_def, self.importer, session)
 
+        # The linked jobs need the connection's ID, hence the flush
         session.add(outgoing)
+        session.flush()
+
+        # Create or update the linked jobs, which stores their IDs in the definition
+        sync_invocation_jobs(self.importer, session, outgoing_def, outgoing, URL_TYPE.SOAP)
+
+        set_instance_opaque_attrs(outgoing, outgoing_def)
+
         self.connection_defs[name] = outgoing
         return outgoing
 
@@ -225,9 +244,15 @@ class OutgoingSOAPImporter:
             if not isinstance(body_credentials, str):
                 outgoing_def['body_credentials'] = dumps(body_credentials)
 
+        # Row-based invocation fields are stored the same way - as JSON strings
+        serialize_invocation_rows(outgoing_def)
+
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:
                 setattr(outgoing, key, value)
+
+        # Create or update the linked jobs, which stores their IDs in the definition
+        sync_invocation_jobs(self.importer, session, outgoing_def, outgoing, URL_TYPE.SOAP)
 
         # Fields that are not columns go into the opaque attributes,
         # merged with whatever the row already keeps there.

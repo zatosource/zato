@@ -332,11 +332,11 @@ SOAP_CHANNEL_VERSIONS = ('1.1', '1.2')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SEARCH:
-    class ES:
-        class DEFAULTS:
-            BODY_AS = 'POST'
-            HOSTS = '127.0.0.1:9200\n'
+class ES:
+
+    class Default:
+        Address_List = 'http://127.0.0.1:9200'
+        Timeout = 90
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -625,6 +625,162 @@ class HTTP_SOAP:
     class METHOD:
         ANY_INTERNAL = 'hmany'
 
+    class Invocation:
+        """ Declarative invocation config of outgoing REST and SOAP connections - the Request, Response,
+        Callback and Scheduler tabs. All the fields are stored in the connection's opaque attributes.
+        """
+
+        class Unit:
+            Seconds = 'seconds'
+            Minutes = 'minutes'
+            Hours = 'hours'
+            Days = 'days'
+
+        UnitList = (Unit.Seconds, Unit.Minutes, Unit.Hours, Unit.Days)
+
+        class CallbackType:
+            Service = 'service'
+            Topic = 'topic'
+            REST = 'rest'
+
+        CallbackTypeList = (CallbackType.Service, CallbackType.Topic, CallbackType.REST)
+
+        class ValueMode:
+            Text = 'text'
+            JSONata = 'jsonata'
+
+        ValueModeList = (ValueMode.Text, ValueMode.JSONata)
+
+        class ResponseMapMode:
+            JSONata = 'jsonata'
+            XPath = 'xpath'
+
+        ResponseMapModeList = (ResponseMapMode.JSONata, ResponseMapMode.XPath)
+
+        # Prefixes of the names of the jobs that are auto-created for outgoing connections
+        Job_Prefix_REST = 'rest.'
+        Job_Prefix_SOAP = 'soap.'
+
+        # Name of the internal service that the auto-created jobs invoke to run the connection
+        Dispatch_Service = 'zato.http-soap.scheduler.process-request'
+
+        # Names of the keys in the extra data that an auto-created job carries
+        Extra_Conn_ID = 'conn_id'
+        Extra_Conn_Name = 'conn_name'
+        Extra_Transport = 'transport'
+
+        # Request tab - REST
+        Field_Request_Method = 'request_method'
+        Field_Request_Query_String = 'request_query_string'
+        Field_Request_Path_Params = 'request_path_params'
+        Field_Request_Headers = 'request_headers'
+        Field_Request_Data = 'request_data'
+        Field_Request_Data_Mode = 'request_data_mode'
+
+        # Request tab - SOAP
+        Field_Request_Operation = 'request_operation'
+        Field_Request_Message = 'request_message'
+        Field_Request_Message_Map = 'request_message_map'
+        Field_Request_SOAP_Headers = 'request_soap_headers'
+
+        # Request tab - the WS-Addressing values injected into every SOAP envelope
+        Field_WSA_Action = 'wsa_action'
+        Field_WSA_To = 'wsa_to'
+        Field_WSA_Reply_To = 'wsa_reply_to'
+
+        # Response tab
+        Field_Response_Map = 'response_map'
+        Field_Response_Map_Mode = 'response_map_mode'
+
+        # Callback tab
+        Field_Callback_Type = 'callback_type'
+        Field_Callback_Name = 'callback_name'
+
+        # Scheduler tab
+        Field_Run_Every = 'scheduler_run_every'
+        Field_Run_Unit = 'scheduler_run_unit'
+        Field_Start_Date = 'scheduler_start_date'
+        Field_Job_ID = 'scheduler_job_id'
+
+        SchedulerFieldList = (Field_Run_Every, Field_Run_Unit, Field_Start_Date, Field_Job_ID)
+
+        RequestFieldListREST = (Field_Request_Method, Field_Request_Query_String, Field_Request_Path_Params,
+            Field_Request_Headers, Field_Request_Data, Field_Request_Data_Mode)
+
+        RequestFieldListSOAP = (Field_Request_Operation, Field_Request_Message, Field_Request_Message_Map,
+            Field_Request_SOAP_Headers, Field_WSA_Action, Field_WSA_To, Field_WSA_Reply_To)
+
+        ResponseFieldList = (Field_Response_Map, Field_Response_Map_Mode)
+
+        CallbackFieldList = (Field_Callback_Type, Field_Callback_Name)
+
+        FieldList = RequestFieldListREST + RequestFieldListSOAP + ResponseFieldList + CallbackFieldList + SchedulerFieldList
+
+    class HealthCheck:
+        """ Scheduled health checks of connections - a generic component attachable to any connection type
+        that has a ping, starting with outgoing REST and SOAP. All the fields are stored in the connection's
+        opaque attributes.
+        """
+
+        # Prefix of the names of the jobs that are auto-created for health checks
+        Job_Prefix = 'health.'
+
+        # Name of the internal service that the auto-created jobs invoke to ping a connection
+        Dispatch_Service = 'zato.connection.health-check.run'
+
+        class NotifyOn:
+            Failures = 'failures'
+            All = 'all'
+
+        NotifyOnList = (NotifyOn.Failures, NotifyOn.All)
+
+        # Names of the keys in the extra data that an auto-created job carries
+        Extra_Conn_ID = 'conn_id'
+        Extra_Conn_Name = 'conn_name'
+        Extra_Conn_Type = 'conn_type'
+
+        # Names of the opaque attributes that a connection carries to describe its health check
+        Field_Run_Every = 'health_check_run_every'
+        Field_Run_Unit = 'health_check_run_unit'
+        Field_Job_ID = 'health_check_job_id'
+        Field_Callback_Type = 'health_check_callback_type'
+        Field_Callback_Name = 'health_check_callback_name'
+        Field_Notify_On = 'health_check_notify_on'
+
+        FieldList = (Field_Run_Every, Field_Run_Unit, Field_Job_ID, Field_Callback_Type, Field_Callback_Name,
+            Field_Notify_On)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SchedulerLink:
+    """ A scheduler job auto-created for a connection carries these opaque attributes to point back
+    to the connection it was created for, no matter the connection type.
+    """
+
+    # The connection object type, e.g. an outgoing REST or SOAP connection
+    Conn_Type = 'link_conn_type'
+
+    # The database ID of the linked connection
+    Conn_ID = 'link_conn_id'
+
+    # What field set on the connection the job describes - a scheduled invocation or a health check
+    Kind = 'link_kind'
+
+    class ConnType:
+        REST_Outgoing = 'rest_outgoing'
+        SOAP_Outgoing = 'soap_outgoing'
+
+    ConnTypeList = (ConnType.REST_Outgoing, ConnType.SOAP_Outgoing)
+
+    class KindType:
+        Scheduler = 'scheduler'
+        HealthCheck = 'health_check'
+
+    KindList = (KindType.Scheduler, KindType.HealthCheck)
+
+    FieldList = (Conn_Type, Conn_ID, Kind)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -873,6 +1029,7 @@ class GENERIC:
             CLOUD_MICROSOFT_POWER_AUTOMATE = 'cloud-microsoft-power-automate'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             OUTCONN_AS2 = 'outconn-as2'
+            OUTCONN_ES = 'outconn-es'
             OUTCONN_LDAP = 'outconn-ldap'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'

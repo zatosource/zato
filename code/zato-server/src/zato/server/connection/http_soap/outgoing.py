@@ -35,11 +35,15 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.soap.client import SOAPClient
+from zato.common.soap.common import SOAPFault
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
 from zato.common.util.open_ import open_rb
+from zato.server.connection.http_soap.invocation import build_jsonata_context, build_soap_jsonata_context, \
+    evaluate_soap_headers, maybe_run_callback, maybe_run_fault_callback, maybe_run_soap_callback, \
+    merge_declarative_request, merge_declarative_soap_request
 from zato.server.metrics import get_error_source_from_status_class, get_status_code_class, \
     zato_rest_outgoing_request_duration_seconds, zato_rest_outgoing_requests_total
 
@@ -730,7 +734,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             'tls_client_key': self.config.get('tls_client_key'),
             'use_ws_addressing': self.config.get('use_ws_addressing') or False,
             'use_mtom': self.config.get('use_mtom') or False,
+            'wsa_action': self.config.get('wsa_action'),
+            'wsa_to': self.config.get('wsa_to'),
+            'wsa_reply_to': self.config.get('wsa_reply_to'),
         }
+
+        # Declarative WS-Addressing values imply the headers are wanted even if the flag is off
+        if config['wsa_action'] or config['wsa_to'] or config['wsa_reply_to']:
+            config['use_ws_addressing'] = True
 
         # Body credentials pair the mapping rows with the username and password
         # of the security definition attached to the connection.
@@ -774,16 +785,36 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def invoke(self, cid:'str', operation:'str', message:'any_') -> 'any_':
+    def invoke(self, cid:'str', operation:'str'='', message:'any_'=None) -> 'any_':
         """ Invokes a SOAP operation over this connection - the message is a dot-accessed
         SOAPMessage that becomes the operation element in soap:Body, and the parsed response
-        body comes back the same way, with faults raised as SOAPFault.
+        body comes back the same way, with faults raised as SOAPFault. An operation or message
+        the caller does not pass comes from the connection's declarative invocation profile.
         """
         self._enforce_is_active()
 
+        # Fill in the blanks from the connection's declarative invocation profile - explicit
+        # arguments always win and JSONata values are evaluated at call time against
+        # the message the caller passed in.
+        context = build_soap_jsonata_context(message)
+        operation, message = merge_declarative_soap_request(self.config, operation, message, context)
+        soap_headers = evaluate_soap_headers(self.config, context)
+
         logger.info('SOAP out -> cid=%s; %s %s; name:%s', cid, operation, self.address, self.config['name'])
 
-        return self.soap_client.invoke(operation, message, cid=cid)
+        try:
+            response = self.soap_client.invoke(operation, message, cid=cid, soap_headers=soap_headers)
+        except SOAPFault as fault:
+
+            # The callback hears about the fault first, then the caller sees it re-raised unchanged
+            maybe_run_fault_callback(self.server, self.config, cid, fault)
+            raise
+
+        # Deliver the response-mapped result to the configured callback in the background,
+        # a no-op for connections without callback config
+        maybe_run_soap_callback(self.server, self.config, cid, response)
+
+        return response
 
 # ################################################################################################################################
 
@@ -817,6 +848,17 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
+
+        # Fill in the blanks from the connection's declarative invocation profile (REST only) -
+        # explicit arguments always win and JSONata values are evaluated at call time
+        # against the data the caller passed in.
+        if not _is_soap:
+            declarative_headers = kwargs.pop('headers', None)
+            context = build_jsonata_context(data)
+            method, data, params, declarative_headers = merge_declarative_request(
+                self.config, method, data, params, declarative_headers, context)
+            if declarative_headers:
+                kwargs['headers'] = declarative_headers
 
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
@@ -922,6 +964,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if model:
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
+        # .. deliver the response-mapped result to the configured callback in the background,
+        # .. a no-op for connections without callback config ..
+        if not _is_soap:
+            maybe_run_callback(self.server, self.config, cid, response.data)
+
         # .. now, return the response to the caller.
         return response
 
@@ -946,6 +993,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     def patch(self, cid:'str', data:'str'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
+
+    def rest_invoke(self, cid:'str', data:'any_'='', params:'dictnone'=None, *args:'any_', **kwargs:'any_') -> 'Response':
+        """ Invokes the connection with no explicit arguments needed - the HTTP method,
+        query string, path params, headers and body all come from the connection's
+        declarative invocation profile, with anything given explicitly winning.
+        """
+        return self.http_request('', cid, data, params, *args, **kwargs)
 
     def upload(
         self,

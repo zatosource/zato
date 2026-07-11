@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
+from zato.cli.enmasse.util import export_invocation_fields, Invocation_Fields_REST
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
@@ -86,6 +88,14 @@ class OutgoingRESTExporter:
             # Add content type if present
             if outgoing_row.get('content_type'):
                 exported_conn['content_type'] = outgoing_row['content_type']
+
+            # The declarative invocation and health check fields live in the opaque attributes,
+            # exported with row-based fields as YAML lists and without the environment-local job IDs.
+            opaque = {}
+            if opaque1 := outgoing_row.get('opaque1'):
+                opaque = loads(opaque1) or {}
+
+            export_invocation_fields(exported_conn, opaque, Invocation_Fields_REST)
 
             exported_outgoing.append(exported_conn)
 

@@ -38,6 +38,7 @@ from zato.server.connection.smb import SMBConnection
 ################################################################################################################################
 
 if 0:
+    from elasticsearch import Elasticsearch
     from pymongo import MongoClient
     from requests import Response
     from zato.common.as2.outbound import SendResult as AS2SendResult
@@ -325,6 +326,13 @@ class RESTInvoker:
 
 # ################################################################################################################################
 
+    def invoke(self, *args:'any_', **kwargs:'str') -> 'any_':
+        """ Invokes the connection with no arguments needed at all - the HTTP method,
+        query string, path params, headers and body come from the connection's
+        declarative invocation profile.
+        """
+        return self.call_wrapper('rest_invoke', *args, **kwargs)
+
     def get(self, *args:'any_', **kwargs:'str') -> 'any_':
         return self.call_wrapper('get', *args, **kwargs)
 
@@ -369,7 +377,10 @@ class SOAPInvoker:
 
 # ################################################################################################################################
 
-    def invoke(self, operation:'str', message:'any_') -> 'any_':
+    def invoke(self, operation:'str'='', message:'any_'=None) -> 'any_':
+        """ Invokes a SOAP operation - with no arguments, the operation and message both come
+        from the connection's declarative invocation profile, explicit arguments always win.
+        """
         return self.conn.invoke(self.cid, operation, message)
 
 # ################################################################################################################################
@@ -896,6 +907,32 @@ class MongoDBFacade:
         item = self._outconn_mongodb[name]
 
         # The wrapper holds the underlying pymongo client
+        wrapper = item['conn']
+
+        out = wrapper.client
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ESFacade:
+    """ Provides dict-like access to Elasticsearch outgoing connections from services via self.es.
+    """
+    cid: 'str'
+    _outconn_es: 'anydict'
+
+    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
+        self.cid = cid
+        self._outconn_es = config_manager.outconn_es
+
+# ################################################################################################################################
+
+    def __getitem__(self, name:'str') -> 'Elasticsearch':
+
+        # This will raise a KeyError if there is no such connection
+        item = self._outconn_es[name]
+
+        # The wrapper holds the underlying Elasticsearch client
         wrapper = item['conn']
 
         out = wrapper.client

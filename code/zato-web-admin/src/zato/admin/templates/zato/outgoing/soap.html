@@ -10,6 +10,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -21,9 +23,11 @@
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -55,6 +59,27 @@
             'body_credentials',
             'tls_client_cert',
             'tls_client_key',
+            'request_operation',
+            'request_message',
+            'request_message_map',
+            'request_soap_headers',
+            'wsa_action',
+            'wsa_to',
+            'wsa_reply_to',
+            'response_map',
+            'response_map_mode',
+            'callback_type',
+            'callback_name',
+            'scheduler_run_every',
+            'scheduler_run_unit',
+            'scheduler_start_date',
+            'scheduler_job_id',
+            'health_check_run_every',
+            'health_check_run_unit',
+            'health_check_notify_on',
+            'health_check_job_id',
+            'health_check_callback_type',
+            'health_check_callback_name',
         ]
     }
     </script>
@@ -122,6 +147,31 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} Declarative invocation fields {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} Health check fields {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -180,11 +230,36 @@
                         <td class='ignore'>{{ item.tls_client_cert|default:'' }}</td>
                         <td class='ignore'>{{ item.tls_client_key|default:'' }}</td>
 
+                        {% comment %} Declarative invocation fields {% endcomment %}
+                        <td class='ignore'>{{ item.request_operation|default:'' }}</td>
+                        <td class='ignore'>{{ item.request_message|default:'' }}</td>
+                        <td class='ignore'>{{ item.request_message_map|default:'' }}</td>
+                        <td class='ignore'>{{ item.request_soap_headers|default:'' }}</td>
+                        <td class='ignore'>{{ item.wsa_action|default:'' }}</td>
+                        <td class='ignore'>{{ item.wsa_to|default:'' }}</td>
+                        <td class='ignore'>{{ item.wsa_reply_to|default:'' }}</td>
+                        <td class='ignore'>{{ item.response_map|default:'' }}</td>
+                        <td class='ignore'>{{ item.response_map_mode|default:'' }}</td>
+                        <td class='ignore'>{{ item.callback_type|default:'' }}</td>
+                        <td class='ignore'>{{ item.callback_name|default:'' }}</td>
+                        <td class='ignore'>{{ item.scheduler_run_every|default:'' }}</td>
+                        <td class='ignore'>{{ item.scheduler_run_unit|default:'' }}</td>
+                        <td class='ignore'>{{ item.scheduler_start_date|default:'' }}</td>
+                        <td class='ignore'>{{ item.scheduler_job_id|default:'' }}</td>
+
+                        {% comment %} Health check fields {% endcomment %}
+                        <td class='ignore'>{{ item.health_check_run_every|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_run_unit|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_notify_on|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_job_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_callback_type|default:'' }}</td>
+                        <td class='ignore'>{{ item.health_check_callback_name|default:'' }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='26'>No results</td>
+                        <td colspan='47'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -204,6 +279,11 @@
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
+                        <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
+                        <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
+                        <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
+                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                         <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
                     </div>
 
@@ -287,6 +367,26 @@
                         </table>
                     </div>
 
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-scheduler" role="tabpanel" hidden>
+                        {% include "zato/http_soap/scheduler-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-request" role="tabpanel" hidden>
+                        {% include "zato/http_soap/soap-request-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-response" role="tabpanel" hidden>
+                        {% include "zato/http_soap/response-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-callback" role="tabpanel" hidden>
+                        {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-health_check" role="tabpanel" hidden>
+                        {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-more" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
@@ -327,6 +427,11 @@
                         <button type="button" class="dashboard-tab" data-tab="soap" role="tab" aria-selected="false">SOAP</button>
                         <button type="button" class="dashboard-tab" data-tab="security" role="tab" aria-selected="false">Security</button>
                         <button type="button" class="dashboard-tab" data-tab="credentials" role="tab" aria-selected="false">Body credentials</button>
+                        <button type="button" class="dashboard-tab" data-tab="scheduler" role="tab" aria-selected="false">Scheduler</button>
+                        <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
+                        <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
+                        <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
+                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                         <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
                     </div>
 
@@ -410,6 +515,26 @@
                         </table>
                     </div>
 
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-scheduler" role="tabpanel" hidden>
+                        {% include "zato/http_soap/scheduler-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-request" role="tabpanel" hidden>
+                        {% include "zato/http_soap/soap-request-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-response" role="tabpanel" hidden>
+                        {% include "zato/http_soap/response-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-callback" role="tabpanel" hidden>
+                        {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
+                        {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-more" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
@@ -441,6 +566,12 @@
                 </form>
             </div>
         </div>
+
+        <form>
+            <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+            <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+            <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+        </form>
     {% endif %}
 
 
