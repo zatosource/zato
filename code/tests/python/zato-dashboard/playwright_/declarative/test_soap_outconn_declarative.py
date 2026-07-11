@@ -16,6 +16,7 @@ import pytest
 
 # Zato
 from zato.common.api import ZATO_NONE
+from zato.common.soap.common import FaultCode
 from zato.common.test import rand_string
 from zato.common.test.playwright_pubsub import open_create_dialog, submit_create_form
 
@@ -126,6 +127,41 @@ def invoke_declarative_with_retry(page:'Page', base_url:'str', outconn_name:'str
             return out
 
     raise Exception(f'Could not invoke `{outconn_name}` within {_Propagation_Timeout}s, last error: {last_error}')
+
+# ################################################################################################################################
+
+def invoke_declarative_expecting_fault(page:'Page', base_url:'str', outconn_name:'str') -> 'anydict':
+    """ Runs a declarative invocation that is expected to end in a SOAP fault - retries only
+    while the connection configured a moment ago in the browser propagates to the server,
+    a fault code in the reply is the final answer, not a reason to retry.
+    """
+
+    request = {
+        'mode': 'invoke_declarative',
+        'outconn_name': outconn_name,
+    }
+
+    open_soap_invoker_in_ide(page, base_url)
+
+    deadline = time.monotonic() + _Propagation_Timeout
+    last_error = None
+
+    while time.monotonic() < deadline:
+        try:
+            out = invoke_service_in_ide(page, request)
+        except Exception as invoke_error:
+            last_error = invoke_error
+            time.sleep(_Propagation_Poll_Interval)
+            continue
+
+        # A fault code means the connection is up and the endpoint answered with the fault
+        if out.get('fault_code'):
+            return out
+
+        last_error = out.get('error')
+        time.sleep(_Propagation_Poll_Interval)
+
+    raise Exception(f'No fault arrived from `{outconn_name}` within {_Propagation_Timeout}s, last error: {last_error}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -329,6 +365,53 @@ class TestSOAPOutconnDeclarative:
         # .. and the callback received exactly what the XPath selected.
         entry = wait_for_callback_entry(marker)
         assert entry == f'{marker}-ref', f'Expected the XPath-selected value, got: {entry}'
+
+# ################################################################################################################################
+
+    def test_fault_routed_to_callback_and_reraised(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
+        """ When the endpoint answers with a soap:Fault, the callback receives the fault payload
+        with is_fault set while the calling service sees the SOAPFault re-raised unchanged.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        wait_for_soap_invoker_service(page, base_url)
+
+        name = _Test_Name_Prefix + 'fault'
+        marker = rand_string()
+        path = '/declarative-fault'
+
+        # The endpoint always faults on this path - the reason carries the marker
+        # so the test can find its own callback delivery.
+        fault_reason = f'Backend unavailable {marker}'
+        soap_test_server.configure(path, respond_fault=(FaultCode.Receiver, fault_reason))
+
+        _ = create_declarative_soap_outconn(
+            page, base_url, name, soap_test_server.address,
+            {'url_path': path, 'soap_version': '1.2'},
+            {
+                'request_operation': 'checkStatus',
+                'request_message': [{'key': 'request_id', 'value': name}],
+                'callback_type': 'service',
+                'callback_name': Callback_Store_Service,
+            })
+
+        soap_test_server.clear_requests()
+
+        # Run the connection - the calling service must see the re-raised fault ..
+        result = invoke_declarative_expecting_fault(page, base_url, name)
+
+        logger.info('[test_fault_routed_to_callback_and_reraised] result=%s', result)
+
+        assert result['fault_code'] == 'Receiver', f'Expected the fault code, got: {result}'
+        assert result['fault_reason'] == fault_reason, f'Expected the fault reason, got: {result}'
+
+        # .. and the callback received the fault payload with the is_fault flag.
+        entry = wait_for_callback_entry(marker)
+        assert entry == {'is_fault': True, 'code': 'Receiver', 'reason': fault_reason, 'detail': {}}, \
+            f'Expected the fault payload, got: {entry}'
 
 # ################################################################################################################################
 
