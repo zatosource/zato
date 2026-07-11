@@ -166,6 +166,10 @@ class ConfigManager(_ConfigManagerBase):
     """
     config_dispatcher: 'ConfigDispatcher | None' = None
 
+    # Assigned in init() - the declaration exists so that a config reload can check
+    # whether a previous instance needs to be unregistered from the dispatcher.
+    request_dispatcher: 'RequestDispatcher | None' = None
+
     def __init__(self, config_store:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
@@ -354,6 +358,12 @@ class ConfigManager(_ConfigManagerBase):
 
         # API keys
         self.update_apikeys()
+
+        # During a config reload, the previous URLData instance is still registered with the dispatcher,
+        # so it needs to be unregistered first - otherwise each security event would be handled twice,
+        # e.g. API key headers would be transformed to their WSGI form two times ('HTTP_HTTP_X_API_KEY').
+        if self.request_dispatcher:
+            dispatcher.unlisten(self.request_dispatcher.url_data.dispatcher_callback)
 
         request_handler = RequestHandler(self.server)
         url_data = URLData(
