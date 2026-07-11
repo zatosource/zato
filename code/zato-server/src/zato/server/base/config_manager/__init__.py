@@ -31,7 +31,7 @@ from orjson import dumps
 from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, AS4 as COMMON_AS4, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     HTTP_SOAP, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -56,7 +56,6 @@ from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
-from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_aws import CloudAWSWrapper
@@ -70,6 +69,7 @@ from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
+from zato.server.generic.api.outconn_es import OutconnESWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
@@ -233,6 +233,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Kafka outconns
         self.outconn_kafka = {}
 
+        # Generic connections - Elasticsearch outconns
+        self.outconn_es = {}
+
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
 
@@ -270,9 +273,6 @@ class ConfigManager(_ConfigManagerBase):
 
     def init(self) -> 'None':
 
-        # Search
-        self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
-
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore(self.server.name))
@@ -297,6 +297,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
@@ -323,6 +324,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
@@ -339,9 +341,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # Maps message actions against generic connection types and their message handlers
         self.generic_impl_func_map = {}
-
-        # Search
-        self.init_search_es()
 
         # E-mail
         self.init_email_smtp()
@@ -593,7 +592,15 @@ class ConfigManager(_ConfigManagerBase):
             'body_credentials':config.get('body_credentials'),
             'tls_client_cert':config.get('tls_client_cert'),
             'tls_client_key':config.get('tls_client_key'),
+            'wsa_action':config.get('wsa_action'),
+            'wsa_to':config.get('wsa_to'),
+            'wsa_reply_to':config.get('wsa_reply_to'),
         }
+
+        # The declarative invocation profile - these also arrive as opaque attributes
+        # and are absent from connections that never set them.
+        for field_name in HTTP_SOAP.Invocation.FieldList:
+            wrapper_config[field_name] = config.get(field_name)
 
         wrapper_config.update(sec_config)
 
@@ -671,11 +678,6 @@ class ConfigManager(_ConfigManagerBase):
                 api.create(k, v.config)
             except Exception:
                 logger.warning('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
-
-# ################################################################################################################################
-
-    def init_search_es(self) -> 'None':
-        self.init_simple(self.config_store.search_es, self.search_es_api, 'an ElasticSearch')
 
 # ################################################################################################################################
 
@@ -931,6 +933,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
         outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
+        outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
         outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
@@ -957,6 +960,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_microsoft_power_automate_map,
             cloud_salesforce_map,
             outconn_as2_map,
+            outconn_es_map,
             outconn_graphql_map,
             outconn_hl7_fhir_map,
             outconn_hl7_mllp_map,
@@ -973,6 +977,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_aws_map,
             cloud_microsoft_fabric_map,
             cloud_microsoft_power_automate_map,
+            outconn_es_map,
             outconn_hl7_fhir_map,
             outconn_ibm_mq_map,
             outconn_kafka_map,
@@ -2379,20 +2384,6 @@ class ConfigManager(_ConfigManagerBase):
         """ Closes and deletes an SAP RFC connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.config_store.out_sap, 'SAP', logger.debug)
-
-# ################################################################################################################################
-
-    def on_config_event_SEARCH_ES_CREATE(self, msg:'bunch_') -> 'None':
-        self.search_es_api.create(msg.name, msg)
-
-    def on_config_event_SEARCH_ES_EDIT(self, msg:'bunch_') -> 'None':
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.search_es_api.edit(del_name, msg)
-
-    def on_config_event_SEARCH_ES_DELETE(self, msg:'bunch_') -> 'None':
-        self.search_es_api.delete(msg.name)
 
 # ################################################################################################################################
 

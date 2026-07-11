@@ -10,6 +10,7 @@ import logging
 from json import loads
 
 # Zato
+from zato.cli.enmasse.util import export_invocation_fields, Invocation_Fields_SOAP
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
@@ -117,6 +118,10 @@ class OutgoingSOAPExporter:
                     body_credentials = loads(body_credentials)
                 if body_credentials:
                     exported_conn['body_credentials'] = body_credentials
+
+            # The declarative invocation and health check fields are exported the same way,
+            # with row-based fields as YAML lists and without the environment-local job IDs.
+            export_invocation_fields(exported_conn, opaque, Invocation_Fields_SOAP)
 
             exported_outgoing.append(exported_conn)
 

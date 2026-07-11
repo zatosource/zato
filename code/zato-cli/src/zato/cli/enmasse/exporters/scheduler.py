@@ -11,6 +11,7 @@ import logging
 from json import loads as json_loads
 
 # Zato
+from zato.common.api import SchedulerLink
 from zato.common.odb.model import to_json
 from zato.common.odb.query import job_list
 
@@ -96,6 +97,11 @@ class SchedulerExporter:
                 # Jobs auto-created for IMAP connections are not exported on their own
                 # because they are already fully described by their connection's scheduler fields.
                 if opaque_data.get('imap_conn_id'):
+                    continue
+
+                # The same goes for every job linked to a connection through the generic link
+                # attributes - outgoing REST, outgoing SOAP and health check jobs alike.
+                if opaque_data.get(SchedulerLink.Conn_ID):
                     continue
 
                 for callback_field in ('on_success_service', 'on_success_job', 'on_error_service', 'on_error_job'):

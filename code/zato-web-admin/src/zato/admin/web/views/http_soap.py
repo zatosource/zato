@@ -17,6 +17,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import add_http_soap_select
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
@@ -65,29 +66,48 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.OAUTH,
 }
 
-# Names of the fields that describe a scheduled invocation of an outgoing REST connection
-_scheduler_field_names = (
+# Names of the fields that describe the declarative invocation profile of an outgoing REST connection
+_invocation_field_names = (
     'scheduler_run_every',
     'scheduler_run_unit',
     'scheduler_start_date',
-    'scheduler_method',
-    'scheduler_query_string',
-    'scheduler_path_params',
-    'scheduler_headers',
-    'scheduler_data',
-    'scheduler_data_mode',
-    'scheduler_response_map',
-    'scheduler_callback_type',
-    'scheduler_service',
-    'scheduler_callback_topic',
-    'scheduler_callback_rest',
     'scheduler_job_id',
+    'request_method',
+    'request_query_string',
+    'request_path_params',
+    'request_headers',
+    'request_data',
+    'request_data_mode',
+    'response_map',
+    'response_map_mode',
+    'callback_type',
+    'callback_name',
+    'health_check_run_every',
+    'health_check_run_unit',
+    'health_check_notify_on',
+    'health_check_job_id',
+    'health_check_callback_type',
+    'health_check_callback_name',
 )
 
+# The callback name arrives from the widget that matches the callback type selected
+_callback_widget_names = {
+    'service': 'callback_service',
+    'topic': 'callback_topic',
+    'rest': 'callback_rest',
+}
+
+# The same pattern applies to the health check tab's callback widgets
+_health_check_callback_widget_names = {
+    'service': 'health_check_callback_service',
+    'topic': 'health_check_callback_topic',
+    'rest': 'health_check_callback_rest',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_edit_create_message(params, prefix=''): # type: ignore
+def _get_edit_create_message(params, prefix='', user_profile=None): # type: ignore
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
@@ -127,9 +147,23 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'gateway_service_list': params.get(prefix + 'gateway_service_list'),
     }
 
-    # Scheduler fields exist only in the forms of outgoing REST connections
-    for name in _scheduler_field_names:
+    # The declarative invocation fields exist only in the forms of outgoing connections
+    for name in _invocation_field_names:
         message[name] = params.get(prefix + name)
+
+    # The start date is entered in the user's own timezone and format and it is stored in UTC
+    if scheduler_start_date := message['scheduler_start_date']:
+        message['scheduler_start_date'] = from_user_to_utc(scheduler_start_date, user_profile).isoformat()
+
+    # The callback name comes from whichever widget matches the callback type selected
+    if callback_type := message['callback_type']:
+        widget_name = _callback_widget_names[callback_type]
+        message['callback_name'] = params.get(prefix + widget_name)
+
+    # The health check tab's callback widgets work the same way
+    if health_check_callback_type := message['health_check_callback_type']:
+        widget_name = _health_check_callback_widget_names[health_check_callback_type]
+        message['health_check_callback_name'] = params.get(prefix + widget_name)
 
     return message
 
@@ -212,10 +246,13 @@ def index(req): # type: ignore
             create_form.fields['url_path'].required = False
             edit_form.fields['url_path'].required = False
 
-        # The scheduler tab lets outgoing REST connections deliver responses to other outgoing REST connections
+        # The callback tabs let outgoing REST connections deliver responses
+        # and health check outcomes to other outgoing REST connections
         if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
-            add_http_soap_select(create_form, 'scheduler_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP)
-            add_http_soap_select(edit_form, 'scheduler_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP)
+            add_http_soap_select(create_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
+            add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
+            add_http_soap_select(create_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
+            add_http_soap_select(edit_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -292,10 +329,16 @@ def index(req): # type: ignore
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
 
-            # Scheduler details are opaque attributes so they are absent from connections that never set them
+            # The declarative invocation details are opaque attributes so they are absent
+            # from connections that never set them.
             if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
-                for name in _scheduler_field_names:
+                for name in _invocation_field_names:
                     setattr(http_soap, name, item.get(name))
+
+                # The start date is stored in UTC and displayed in the user's own timezone and format
+                if scheduler_start_date := http_soap.get('scheduler_start_date'):
+                    http_soap.scheduler_start_date = from_utc_to_user(
+                        scheduler_start_date + '+00:00', req.zato.user_profile)
 
             items.append(http_soap)
 
@@ -351,7 +394,7 @@ def index(req): # type: ignore
 @method_allowed('POST')
 def create(req): # type: ignore
     try:
-        msg_data = _get_edit_create_message(req.POST)
+        msg_data = _get_edit_create_message(req.POST, user_profile=req.zato.user_profile)
         logger.debug('[DIAG] http_soap.create: POST keys=%s', list(req.POST.keys()))
         logger.debug('[DIAG] http_soap.create: msg_data=%s', msg_data)
         response = req.zato.client.invoke('zato.http-soap.create', msg_data)
@@ -374,7 +417,7 @@ def create(req): # type: ignore
 @method_allowed('POST')
 def edit(req): # type: ignore
     try:
-        edit_create_request = _get_edit_create_message(req.POST, 'edit-')
+        edit_create_request = _get_edit_create_message(req.POST, 'edit-', user_profile=req.zato.user_profile)
         response = req.zato.client.invoke('zato.http-soap.edit', edit_create_request)
         if response.has_data:
             return _edit_create_response(req, response.data.id, 'updated',

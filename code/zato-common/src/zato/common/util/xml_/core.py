@@ -12,6 +12,13 @@ from datetime import datetime, timezone
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def qname(namespace:'str', tag:'str') -> 'str':
     """ Returns the fully-qualified lxml tag name for a namespace and local name.
     """
@@ -32,6 +39,28 @@ def utc_timestamp() -> 'str':
     """ Returns the current UTC time in the xsd:dateTime format that SOAP-family messages use.
     """
     out = to_timestamp(datetime.now(timezone.utc))
+    return out
+
+# ################################################################################################################################
+
+def element_text(element:'any_') -> 'str':
+    """ Returns the text of an element - an empty element genuinely carries None.
+    """
+    out = element.text
+    if out is None:
+        out = ''
+
+    return out
+
+# ################################################################################################################################
+
+def element_attribute(element:'any_', name:'str') -> 'str':
+    """ Returns the value of an element's attribute - a missing attribute genuinely yields None.
+    """
+    out = element.get(name)
+    if out is None:
+        out = ''
+
     return out
 
 # ################################################################################################################################

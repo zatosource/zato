@@ -37,6 +37,14 @@ class InvokeSOAPOutconnForTests(Service):
         if mode == 'ping':
             out = {'is_ready': True}
 
+        # .. a declarative call runs the connection with no arguments at all,
+        # everything coming from the connection's own invocation profile ..
+        elif mode == 'invoke_declarative':
+            try:
+                out = self._invoke_outconn_declarative(request)
+            except Exception as invoke_error:
+                out = {'error': repr(invoke_error)}
+
         # .. otherwise, call the outgoing connection and report what came back.
         # Errors turn into a field in the reply rather than a 500 - the tests retry
         # while browser-made configuration propagates to the server and these
@@ -49,6 +57,37 @@ class InvokeSOAPOutconnForTests(Service):
 
         self.response.payload = dumps(out)
         self.response.content_type = 'application/json'
+
+# ################################################################################################################################
+
+    def _invoke_outconn_declarative(self, request):
+
+        outconn_name = request['outconn_name']
+
+        try:
+            response = self.soap[outconn_name].invoke()
+        except SOAPFault as fault:
+            out = {
+                'fault_code': fault.code,
+                'fault_reason': fault.reason,
+            }
+            return out
+
+        # Read back the fields the caller asked for - the declarative profile names the operation,
+        # so the caller passes it in only to know where the response fields live.
+        response_fields = {}
+        operation = request.get('operation')
+
+        if operation:
+            operation_response = getattr(response, f'{operation}Response')
+            for name in (request.get('response_fields') or []):
+                value = getattr(operation_response, name, None)
+                if value is not None:
+                    value = str(value)
+                response_fields[name] = value
+
+        out = {'fields': response_fields}
+        return out
 
 # ################################################################################################################################
 

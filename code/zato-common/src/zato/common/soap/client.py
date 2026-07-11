@@ -20,9 +20,9 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.soap.addressing import add_addressing, AddressingInfo, parse_addressing
 from zato.common.soap.common import Content_Type, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
-from zato.common.soap.envelope import attach_body, build_envelope, get_security_header, parse_body, parse_envelope, \
-    raise_for_fault, to_bytes
-from zato.common.soap.message import SOAPMessage
+from zato.common.soap.envelope import attach_body, build_envelope, get_header, get_security_header, parse_body, \
+    parse_envelope, raise_for_fault, to_bytes
+from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
 from zato.common.util.xml_.keystore import new_keystore
@@ -31,7 +31,7 @@ from zato.common.util.xml_.keystore import new_keystore
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, stranydict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, stranydict, strdictnone, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
@@ -40,6 +40,7 @@ if 0:
     Keystore = Keystore
     part_list = part_list
     stranydict = stranydict
+    strdictnone = strdictnone
     strnone = strnone
 
 # ################################################################################################################################
@@ -182,9 +183,21 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _build_request(self, operation:'str', message:'SOAPMessage') -> 'any_':
+    def _inject_soap_headers(self, envelope:'any_', soap_headers:'stranydict') -> 'None':
+        """ Injects custom header elements into the envelope's soap:Header. A name in Clark
+        notation, {namespace}Name, carries its own namespace, a plain name has none.
+        """
+        header = get_header(envelope)
+
+        for name, value in soap_headers.items():
+            element = etree.SubElement(header, name)
+            element.text = value if isinstance(value, str) else to_lexical(value)
+
+# ################################################################################################################################
+
+    def _build_request(self, operation:'str', message:'SOAPMessage', soap_headers:'strdictnone'=None) -> 'any_':
         """ Builds the request body bytes and their Content-Type from a message - applying
-        credential injection, WS-Security, WS-Addressing and MTOM packaging as configured.
+        credential injection, custom headers, WS-Security, WS-Addressing and MTOM packaging as configured.
         """
         envelope = build_envelope(self.soap_version)
 
@@ -196,6 +209,10 @@ class SOAPClient:
         # Body credentials go in before signing so a signature covers the final body.
         if self.body_credentials:
             self._inject_body_credentials(operation_element)
+
+        # Custom headers go in before signing too, for the same reason.
+        if soap_headers:
+            self._inject_soap_headers(envelope, soap_headers)
 
         if self.security:
             apply_wss(envelope, self.security)
@@ -313,11 +330,11 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def invoke(self, operation:'str', message:'SOAPMessage', cid:'str'='') -> 'SOAPMessage':
+    def invoke(self, operation:'str', message:'SOAPMessage', cid:'str'='', soap_headers:'strdictnone'=None) -> 'SOAPMessage':
         """ Invokes a SOAP operation - builds the request from the message, sends it and returns
         the parsed response body. The operation name becomes the single child of soap:Body.
         """
-        body, content_type = self._build_request(operation, message)
+        body, content_type = self._build_request(operation, message, soap_headers)
 
         logger.info('SOAP out -> %s %s; len=%d', operation, self.address, len(body))
 

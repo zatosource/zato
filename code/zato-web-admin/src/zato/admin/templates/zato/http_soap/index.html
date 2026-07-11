@@ -37,7 +37,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/scheduler.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     {% endif %}
 {% endblock %}
@@ -66,6 +66,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
@@ -188,6 +189,30 @@
             // 39 - gateway_service_list for REST channels
             {% if connection == 'channel' and transport == 'plain_http' %}
                 'gateway_service_list',
+            {% endif %}
+
+            // 40 - declarative invocation and health check fields for REST outgoing connections
+            {% if connection == 'outgoing' and transport == 'plain_http' %}
+                'scheduler_run_every',
+                'scheduler_run_unit',
+                'scheduler_start_date',
+                'scheduler_job_id',
+                'request_method',
+                'request_query_string',
+                'request_path_params',
+                'request_headers',
+                'request_data',
+                'request_data_mode',
+                'response_map',
+                'response_map_mode',
+                'callback_type',
+                'callback_name',
+                'health_check_run_every',
+                'health_check_run_unit',
+                'health_check_notify_on',
+                'health_check_job_id',
+                'health_check_callback_type',
+                'health_check_callback_name',
             {% endif %}
 
         ]
@@ -335,6 +360,30 @@
                             <th class='ignore'>&nbsp;</th>
                         {% endif %}
 
+                        <!-- 40 - declarative invocation and health check fields for REST outgoing connections -->
+                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} scheduler_run_every {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} scheduler_run_unit {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} scheduler_start_date {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} scheduler_job_id {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_method {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_query_string {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_path_params {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_headers {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_data {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} request_data_mode {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} response_map {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} response_map_mode {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} callback_type {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} callback_name {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_every {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_run_unit {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_notify_on {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_job_id {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_type {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_name {% endcomment %}
+                        {% endif %}
+
                 </thead>
 
                 <tbody>
@@ -474,6 +523,30 @@
                             <td class='ignore'>{{ item.gateway_service_list|default:"" }}</td>
                         {% endif %}
 
+                        <!-- 40 - declarative invocation and health check fields for REST outgoing connections -->
+                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                            <td class='ignore'>{{ item.scheduler_run_every|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.scheduler_run_unit|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.scheduler_start_date|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.scheduler_job_id|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_method|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_query_string|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_path_params|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_headers|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_data|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.request_data_mode|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.response_map|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.response_map_mode|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.callback_type|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.callback_name|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_run_every|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_run_unit|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_notify_on|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_callback_type|default_if_none:"" }}</td>
+                            <td class='ignore'>{{ item.health_check_callback_name|default_if_none:"" }}</td>
+                        {% endif %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -499,6 +572,7 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
+                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-config" role="tabpanel">
@@ -735,6 +809,10 @@
                         {% include "zato/http_soap/callback-tab.html" with form=create_form action="create" field_prefix="" %}
                     </div>
 
+                    <div class="dashboard-tab-panel" id="http-soap-create-tab-panel-health_check" role="tabpanel" hidden>
+                        {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
+                    </div>
+
                     <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
@@ -774,6 +852,7 @@
                         <button type="button" class="dashboard-tab" data-tab="request" role="tab" aria-selected="false">Request</button>
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
+                        <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-config" role="tabpanel">
@@ -1005,6 +1084,10 @@
 
                     <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-callback" role="tabpanel" hidden>
                         {% include "zato/http_soap/callback-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="http-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
+                        {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
                     </div>
 
                     <table class="form-data">

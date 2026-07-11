@@ -1,0 +1,49 @@
+{% comment %}
+Health check tab - a generic component attachable to any connection type that has a ping,
+starting with outgoing REST and SOAP connections. The connection is pinged on the given
+schedule and the outcome is delivered to the configured callback.
+
+Expects in the context:
+* form         - the create or edit form
+* action       - "create" or "edit"
+* field_prefix - "" for create, "edit-" for edit
+{% endcomment %}
+
+<table class="form-data">
+
+    <tr>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}health_check_run_every">Run every</label></td>
+        <td>
+            {{ form.health_check_run_every }}
+            {{ form.health_check_run_unit }}
+        </td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_notify_on">Notify on</label></td>
+        <td>{{ form.health_check_notify_on }}</td>
+    </tr>
+
+    <tr>
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_type">Deliver to</label></td>
+        <td>{{ form.health_check_callback_type }}</td>
+    </tr>
+
+    <tr id="health-check-callback-service-row-{{ action }}">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_service">Service</label></td>
+        <td>{{ form.health_check_callback_service }}</td>
+    </tr>
+
+    <tr id="health-check-callback-topic-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_topic">Topic</label></td>
+        <td>{{ form.health_check_callback_topic }}</td>
+    </tr>
+
+    <tr id="health-check-callback-rest-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}health_check_callback_rest">Connection</label></td>
+        <td>{{ form.health_check_callback_rest }}</td>
+    </tr>
+
+</table>
+
+{{ form.health_check_job_id }}

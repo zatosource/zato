@@ -1,5 +1,6 @@
 {% comment %}
-Callback tab for outgoing REST connections - where the scheduler delivers the response.
+Callback tab for outgoing REST and SOAP connections - where the response of every invocation
+is delivered in the background, whether the invocation came from service code or from the scheduler.
 
 Expects in the context:
 * form         - the create or edit form
@@ -10,23 +11,23 @@ Expects in the context:
 <table class="form-data">
 
     <tr>
-        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}scheduler_callback_type">Deliver to</label></td>
-        <td>{{ form.scheduler_callback_type }}</td>
+        <td style="vertical-align:middle;width:19%"><label for="id_{{ field_prefix }}callback_type">Deliver to</label></td>
+        <td>{{ form.callback_type }}</td>
     </tr>
 
-    <tr id="scheduler-callback-service-row-{{ action }}">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_service">Service</label></td>
-        <td>{{ form.scheduler_service }}</td>
+    <tr id="callback-service-row-{{ action }}">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}callback_service">Service</label></td>
+        <td>{{ form.callback_service }}</td>
     </tr>
 
-    <tr id="scheduler-callback-topic-row-{{ action }}" class="hidden">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_callback_topic">Topic</label></td>
-        <td>{{ form.scheduler_callback_topic }}</td>
+    <tr id="callback-topic-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}callback_topic">Topic</label></td>
+        <td>{{ form.callback_topic }}</td>
     </tr>
 
-    <tr id="scheduler-callback-rest-row-{{ action }}" class="hidden">
-        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}scheduler_callback_rest">Connection</label></td>
-        <td>{{ form.scheduler_callback_rest }}</td>
+    <tr id="callback-rest-row-{{ action }}" class="hidden">
+        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}callback_rest">Connection</label></td>
+        <td>{{ form.callback_rest }}</td>
     </tr>
 
 </table>
