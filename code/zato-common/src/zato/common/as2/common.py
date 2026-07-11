@@ -56,7 +56,7 @@ class DigestAlgorithm:
 class EncryptionAlgorithm:
     """ Content encryption algorithms for outgoing messages. The AES-CBC ones are the interop baseline,
     the GCM ones use CMS AuthEnvelopedData and are opt-in per partner, never the default.
-    3DES exists for partners that cannot decrypt AES and for the Drummond certification event,
+    3DES exists for partners that cannot decrypt AES and for interoperability certification events,
     never the default either.
     """
     AES_128_CBC  = 'aes-128-cbc'

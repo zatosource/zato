@@ -25,6 +25,7 @@ from sqlalchemy import and_, select
 from zato.common.api import AS2
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.defaults import default_cluster_id
 from zato.common.json_internal import dumps, loads
 from zato.common.util.xml_.keystore import load_certificates_pem
 from zato.edi.reconcile import Reconciler
@@ -34,8 +35,9 @@ from zato.edi.reconcile import Reconciler
 
 if 0:
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import anydict, dictlist, intnone, strtuple
+    from zato.common.typing_ import anydict, anydictnone, dictlist, intnone, strtuple
     anydict = anydict
+    anydictnone = anydictnone
     AuditLog = AuditLog
     dictlist = dictlist
     intnone = intnone
@@ -64,8 +66,8 @@ Own_Keystore_Name = 'as2-keystore'
 
 # The X12 document types the business-document timing guard watches -
 # an order that arrived and the ship notice that must answer it.
-_doc_type_order       = '850'
-_doc_type_ship_notice = '856'
+_document_type_order       = '850'
+_document_type_ship_notice = '856'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,8 +117,10 @@ def get_cert_days_left(cert_chain:'str', now:'datetime') -> 'intnone':
     if not cert_chain:
         return None
 
+    cert_chain_bytes = cert_chain.encode('utf8')
+
     try:
-        certificates = load_certificates_pem(cert_chain.encode('utf8'))
+        certificates = load_certificates_pem(cert_chain_bytes)
     except ValueError:
         return None
 
@@ -130,7 +134,7 @@ def get_cert_days_left(cert_chain:'str', now:'datetime') -> 'intnone':
 
 # ################################################################################################################################
 
-def _get_overdue_seconds(config:'anydict | None') -> 'int':
+def _get_overdue_seconds(config:'anydictnone') -> 'int':
     """ Returns the overdue window of one partner - its own ack_overdue_after
     or the alerting default when the partner does not set one.
     """
@@ -144,7 +148,7 @@ def _get_overdue_seconds(config:'anydict | None') -> 'int':
 
 # ################################################################################################################################
 
-def _is_opted_out(config:'anydict | None') -> 'bool':
+def _is_opted_out(config:'anydictnone') -> 'bool':
     """ Tells whether a partner opted out of alerting - no configuration means no opt-out.
     """
     # No matching partner means nothing to opt out of.
@@ -152,10 +156,11 @@ def _is_opted_out(config:'anydict | None') -> 'bool':
         return False
 
     # Connections saved before the opt-out existed do not carry the field at all.
-    if 'alerting_opt_out' not in config:
-        return False
+    if opt_out := config.get('alerting_opt_out'):
+        out = opt_out
+    else:
+        out = False
 
-    out = config['alerting_opt_out']
     return out
 
 # ################################################################################################################################
@@ -164,15 +169,16 @@ def _get_ship_notice_window_hours(config:'anydict') -> 'int':
     """ Returns the partner's ship notice window in hours - zero means the guard is off,
     and connections saved before the field existed do not carry it at all.
     """
-    if 'ship_notice_window_hours' not in config:
-        return 0
+    if window_hours := config.get('ship_notice_window_hours'):
+        out = window_hours
+    else:
+        out = 0
 
-    out = config['ship_notice_window_hours']
     return out
 
 # ################################################################################################################################
 
-def _find_config_by_as2_pair(configs:'dictlist', as2_from:'str', as2_to:'str') -> 'anydict | None':
+def _find_config_by_as2_pair(configs:'dictlist', as2_from:'str', as2_to:'str') -> 'anydictnone':
     """ Returns the connection whose AS2 identities form the given pair, or None.
     """
     for config in configs:
@@ -187,7 +193,7 @@ def _find_config_by_as2_pair(configs:'dictlist', as2_from:'str', as2_to:'str') -
 
 # ################################################################################################################################
 
-def _find_config_by_isa_id(configs:'dictlist', isa_id:'str') -> 'anydict | None':
+def _find_config_by_isa_id(configs:'dictlist', isa_id:'str') -> 'anydictnone':
     """ Returns the connection whose partner EDI identifier matches, or None -
     the identifier is how X12 reconciliation pairs map back to partners.
     """
@@ -222,14 +228,15 @@ def _collect_overdue_mdns(configs:'dictlist', now:'datetime', server_name:'str')
 
         # A message younger than its partner's window is merely pending, not overdue.
         sent_time = datetime.fromisoformat(pending.sent_time_iso)
-        overdue_from = sent_time + timedelta(seconds=_get_overdue_seconds(config))
+        overdue_seconds = _get_overdue_seconds(config)
+        overdue_from = sent_time + timedelta(seconds=overdue_seconds)
 
         if now < overdue_from:
             continue
 
         pair = f'{pending.as2_from}:{pending.as2_to}'
         message = f'MDN overdue from `{pair}` for message `{pending.message_id}`, sent {pending.sent_time_iso}'
-        link = f'/zato/audit-log/?source=as2&object_name={pair}&status=outstanding&cluster=1'
+        link = f'/zato/audit-log/?source=as2&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
 
         finding = _new_finding(Kind_MDN_Overdue, AuditSource.AS2, pair, message, link)
         out.append(finding)
@@ -258,7 +265,8 @@ def _collect_overdue_acks(configs:'dictlist', now:'datetime', server_name:'str')
 
         # An interchange younger than its partner's window is merely pending, not overdue.
         sent_time = datetime.fromisoformat(pending.sent_time_iso)
-        overdue_from = sent_time + timedelta(seconds=_get_overdue_seconds(config))
+        overdue_seconds = _get_overdue_seconds(config)
+        overdue_from = sent_time + timedelta(seconds=overdue_seconds)
 
         if now < overdue_from:
             continue
@@ -266,7 +274,7 @@ def _collect_overdue_acks(configs:'dictlist', now:'datetime', server_name:'str')
         pair = f'{pending.sender}:{pending.receiver}'
         message = f'Acknowledgment overdue from `{pair}` for interchange `{pending.control_number}`, ' \
             f'sent {pending.sent_time_iso}'
-        link = f'/zato/audit-log/?source=x12&object_name={pair}&status=outstanding&cluster=1'
+        link = f'/zato/audit-log/?source=x12&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
 
         finding = _new_finding(Kind_Ack_Overdue, AuditSource.X12, pair, message, link)
         out.append(finding)
@@ -303,8 +311,9 @@ def _collect_expiring_certificates(configs:'dictlist', now:'datetime', own_cert_
         pair = f'{as2_from}:{as2_to}'
 
         name = config['name']
-        message = f'Certificate of partner `{name}` ({pair}) expires in {days_left} day(s)'
-        link = '/zato/outgoing/as2/?cluster=1&type_=outconn-as2'
+        day_suffix = 'day' if days_left == 1 else 'days'
+        message = f'Certificate of partner `{name}` ({pair}) expires in {days_left} {day_suffix}'
+        link = f'/zato/outgoing/as2/?cluster={default_cluster_id}&type_=outconn-as2'
 
         finding = _new_finding(Kind_Cert_Expiry, AuditSource.AS2, pair, message, link)
         out.append(finding)
@@ -315,8 +324,9 @@ def _collect_expiring_certificates(configs:'dictlist', now:'datetime', own_cert_
     if days_left is not None:
         if days_left < AS2.Alerting.Cert_Warning_Days:
 
-            message = f'Our own AS2 signing certificate expires in {days_left} day(s)'
-            link = '/zato/as2-keystore/?cluster=1'
+            day_suffix = 'day' if days_left == 1 else 'days'
+            message = f'Our own AS2 signing certificate expires in {days_left} {day_suffix}'
+            link = f'/zato/as2-keystore/?cluster={default_cluster_id}'
 
             finding = _new_finding(Kind_Cert_Expiry, AuditSource.AS2, Own_Keystore_Name, message, link)
             out.append(finding)
@@ -329,7 +339,7 @@ def _load_x12_events(event_type:'str', server_name:'str') -> 'dictlist':
     """ Reads all the X12 reconciliation events of one type, oldest first,
     with their JSON data parsed - what the timing guard runs on.
     """
-    stmt = select(
+    statement = select(
         event_table.c.object_name,
         event_table.c.msg_id,
         event_table.c.event_time_iso,
@@ -342,7 +352,8 @@ def _load_x12_events(event_type:'str', server_name:'str') -> 'dictlist':
     reconciler = Reconciler(server_name)
 
     with reconciler.engine.connect() as connection:
-        rows = connection.execute(stmt).fetchall()
+        result = connection.execute(statement)
+        rows = result.fetchall()
 
     # Our response to produce
     out:'dictlist' = []
@@ -357,17 +368,17 @@ def _load_x12_events(event_type:'str', server_name:'str') -> 'dictlist':
         else:
             details = {}
 
-        if 'doc_type' in details:
-            doc_type = details['doc_type']
+        if document_type := details.get('document_type'):
+            pass
         else:
-            doc_type = ''
+            document_type = ''
 
         item = {
             'sender': sender,
             'receiver': receiver,
             'control_number': msg_id,
             'event_time_iso': event_time_iso,
-            'doc_type': doc_type,
+            'document_type': document_type,
         }
 
         out.append(item)
@@ -409,12 +420,13 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
     for config in guarded_configs:
 
         isa_id = config['isa_id']
-        window = timedelta(hours=_get_ship_notice_window_hours(config))
+        window_hours = _get_ship_notice_window_hours(config)
+        window = timedelta(hours=window_hours)
 
         for order in received:
 
             # Only this partner's orders are of interest here ..
-            if order['doc_type'] != _doc_type_order:
+            if order['document_type'] != _document_type_order:
                 continue
 
             if order['sender'] != isa_id:
@@ -430,7 +442,7 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
             # .. and a ship notice sent back to the partner after the order answers it.
             for notice in sent:
 
-                if notice['doc_type'] != _doc_type_ship_notice:
+                if notice['document_type'] != _document_type_ship_notice:
                     continue
 
                 if notice['receiver'] != isa_id:
@@ -444,11 +456,11 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
                 pair = f'{order["sender"]}:{order["receiver"]}'
                 name = config['name']
                 control_number = order['control_number']
-                window_hours = config['ship_notice_window_hours']
+                hour_suffix = 'hour' if window_hours == 1 else 'hours'
 
-                message = f'No ship notice sent to `{name}` within {window_hours} hour(s) ' \
+                message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix} ' \
                     f'of order `{control_number}`, received {order["event_time_iso"]}'
-                link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster=1'
+                link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster={default_cluster_id}'
 
                 finding = _new_finding(Kind_Ship_Notice_Missing, AuditSource.X12, pair, message, link)
                 out.append(finding)
@@ -472,10 +484,15 @@ def collect_findings(
     # Our response to produce
     out:'finding_list' = []
 
-    out.extend(_collect_overdue_mdns(configs, now, server_name))
-    out.extend(_collect_overdue_acks(configs, now, server_name))
-    out.extend(_collect_expiring_certificates(configs, now, own_cert_chain))
-    out.extend(_collect_missing_ship_notices(configs, now, server_name))
+    overdue_mdns = _collect_overdue_mdns(configs, now, server_name)
+    overdue_acks = _collect_overdue_acks(configs, now, server_name)
+    expiring_certificates = _collect_expiring_certificates(configs, now, own_cert_chain)
+    missing_ship_notices = _collect_missing_ship_notices(configs, now, server_name)
+
+    out.extend(overdue_mdns)
+    out.extend(overdue_acks)
+    out.extend(expiring_certificates)
+    out.extend(missing_ship_notices)
 
     return out
 
@@ -509,7 +526,8 @@ def record_alerts(audit_log:'AuditLog', findings:'finding_list', cid:'str'='') -
     """
     for finding in findings:
 
-        data = dumps({'kind': finding.kind, 'message': finding.message})
+        details = {'kind': finding.kind, 'message': finding.message}
+        data = dumps(details)
 
         audit_log.insert(finding.source, AuditEvent.Alert_Raised, finding.partner, cid=cid, data=data)
 

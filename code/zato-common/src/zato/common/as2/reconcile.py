@@ -26,18 +26,19 @@ from zato.common.as2.common import AS2Exception
 from zato.common.as2.mdn import DispositionType, ModifierKind, normalize_message_id, parse_mdn
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
 from zato.common.json_internal import dumps, loads
+from zato.common.typing_ import optional
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from datetime import datetime
-    from zato.common.as2.mdn import MDNInfo
+    from zato.common.as2.mdn import MDNDetails
     from zato.common.util.xml_.keystore import certificate_list, Keystore
     certificate_list = certificate_list
     datetime = datetime
     Keystore = Keystore
-    MDNInfo = MDNInfo
+    MDNDetails = MDNDetails
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +50,11 @@ logger = getLogger(__name__)
 
 #  Type aliases
 pending_mdn_list = list['PendingMDN']
+
+certificatelistnone = optional['certificate_list']
+keystorenone        = optional['Keystore']
+mdndetailsnone      = optional['MDNDetails']
+pendingmdnnone      = optional['PendingMDN']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,7 +68,10 @@ Default_Server_Name = 'as2-reconciler'
 def _pair_key(as2_from:'str', as2_to:'str') -> 'str':
     """ Builds the storage key of one AS2 identity pair.
     """
-    out = f'{as2_from.strip()}:{as2_to.strip()}'
+    as2_from = as2_from.strip()
+    as2_to = as2_to.strip()
+
+    out = f'{as2_from}:{as2_to}'
     return out
 
 # ################################################################################################################################
@@ -98,10 +107,10 @@ class MDNMatchResult:
     is_ok: bool = False
 
     # The parsed MDN, when the body parsed at all.
-    mdn: 'MDNInfo | None' = None
+    mdn: 'mdndetailsnone' = None
 
     # The sent message the MDN answered, when one matched.
-    pending: 'PendingMDN | None' = None
+    pending: 'pendingmdnnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,8 +149,9 @@ class MDNReconciler:
         pair = _pair_key(as2_from, as2_to)
         message_id = normalize_message_id(message_id)
 
-        data = dumps({'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename,
-            'raw_mime': raw_mime})
+        details = {'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename,
+            'raw_mime': raw_mime}
+        data = dumps(details)
 
         self.audit_log.insert(
             AuditSource.AS2, AuditEvent.Message_Sent, pair, cid=cid, msg_id=message_id, correl_id=correl_id, data=data)
@@ -172,7 +182,7 @@ class MDNReconciler:
 
 # ################################################################################################################################
 
-    def match(self, message_id:'str') -> 'PendingMDN | None':
+    def match(self, message_id:'str') -> 'pendingmdnnone':
         """ Returns the sent message the given Message-ID belongs to, provided its MDN
         has not arrived yet, or None for an unknown or already-reconciled one.
         """
@@ -181,14 +191,15 @@ class MDNReconciler:
         # An already-arrived MDN matches on the same Message-ID.
         mdn = event_table.alias('mdn')
 
-        mdn_exists = exists(
-            select(mdn.c.id).where(and_(
-                mdn.c.source == AuditSource.AS2,
-                mdn.c.event_type == AuditEvent.MDN_Received,
-                mdn.c.msg_id == event_table.c.msg_id,
-            )))
+        mdn_conditions = and_(
+            mdn.c.source == AuditSource.AS2,
+            mdn.c.event_type == AuditEvent.MDN_Received,
+            mdn.c.msg_id == event_table.c.msg_id,
+        )
+        mdn_select = select(mdn.c.id).where(mdn_conditions)
+        mdn_exists = exists(mdn_select)
 
-        stmt = select(
+        statement = select(
             event_table.c.object_name,
             event_table.c.msg_id,
             event_table.c.event_time_iso,
@@ -202,7 +213,8 @@ class MDNReconciler:
         )).order_by(event_table.c.id)
 
         with self.engine.connect() as connection:
-            row = connection.execute(stmt).first()
+            result = connection.execute(statement)
+            row = result.first()
 
         # An unknown or already-reconciled Message-ID matches nothing ..
         if row is None:
@@ -236,14 +248,15 @@ class MDNReconciler:
         # An MDN matches on the same Message-ID.
         mdn = event_table.alias('mdn')
 
-        mdn_exists = exists(
-            select(mdn.c.id).where(and_(
-                mdn.c.source == AuditSource.AS2,
-                mdn.c.event_type == AuditEvent.MDN_Received,
-                mdn.c.msg_id == event_table.c.msg_id,
-            )))
+        mdn_conditions = and_(
+            mdn.c.source == AuditSource.AS2,
+            mdn.c.event_type == AuditEvent.MDN_Received,
+            mdn.c.msg_id == event_table.c.msg_id,
+        )
+        mdn_select = select(mdn.c.id).where(mdn_conditions)
+        mdn_exists = exists(mdn_select)
 
-        stmt = select(
+        statement = select(
             event_table.c.object_name,
             event_table.c.msg_id,
             event_table.c.event_time_iso,
@@ -257,7 +270,8 @@ class MDNReconciler:
         )).order_by(event_table.c.id)
 
         with self.engine.connect() as connection:
-            rows = connection.execute(stmt).fetchall()
+            result = connection.execute(statement)
+            rows = result.fetchall()
 
         # Our response to produce
         out:'pending_mdn_list' = []
@@ -283,7 +297,7 @@ class MDNReconciler:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _is_mdn_ok(mdn:'MDNInfo', pending:'PendingMDN') -> 'bool':
+def _is_mdn_ok(mdn:'MDNDetails', pending:'PendingMDN') -> 'bool':
     """ Tells whether an MDN reports clean processing of the message it answers,
     with its Received-Content-MIC agreeing with the one computed at send time.
     """
@@ -316,9 +330,9 @@ def process_incoming_mdn(
     body:'bytes',
     content_type:'str',
     reconciler:'MDNReconciler',
-    keystore:'Keystore | None'=None,
+    keystore:'keystorenone'=None,
     cid:'str'='',
-    accepted_certificates:'certificate_list | None'=None,
+    accepted_certificates:'certificatelistnone'=None,
     ) -> 'MDNMatchResult':
     """ Parses one asynchronously delivered MDN and reconciles it against the sent messages.
     Never raises - an unparseable body, an unknown Message-ID and an already-reconciled one
@@ -345,8 +359,9 @@ def process_incoming_mdn(
     # are the partner's signed receipt, which is the evidence half of non-repudiation.
     raw_mime = encode_raw_mime(body)
 
-    mdn_data = dumps({'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
-        'mic': mdn.mic, 'raw_mime': raw_mime})
+    mdn_details = {'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
+        'mic': mdn.mic, 'raw_mime': raw_mime}
+    mdn_data = dumps(mdn_details)
 
     # An unknown or already-reconciled Message-ID is accepted and logged, never errored ..
     pending = reconciler.match(message_id)

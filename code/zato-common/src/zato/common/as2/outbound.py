@@ -24,16 +24,18 @@ from zato.common.as2.partnership import active_verification_certificates, quote_
 from zato.common.as2.smime import compress, compute_mic, encode_base64_lines, encrypt, new_part, \
     select_mic_algorithm, sign, SMIMEPart
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import optional
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.as2.mdn import MDNInfo
+    from zato.common.as2.mdn import MDNDetails
     from zato.common.as2.partnership import Partnership
-    from zato.common.typing_ import anytuple, stranydict, strnone, strstrdict
+    from zato.common.typing_ import anytuple, byteslist, stranydict, strnone, strstrdict
     from zato.common.util.xml_.keystore import certificate_list, Keystore
     anytuple = anytuple
+    byteslist = byteslist
     certificate_list = certificate_list
     stranydict = stranydict
     strnone = strnone
@@ -56,6 +58,10 @@ payload_item_list = list[PayloadItem]
 bytesgen          = Generator[bytes, None, None]
 
 send_payload:TypeAlias = 'bytes | payload_item_list'
+
+certificatelistnone = optional['certificate_list']
+httpclientnone      = optional[httpx.Client]
+mdndetailsnone      = optional['MDNDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +87,7 @@ class SendResult:
     mic: str = ''
 
     # The parsed and verified MDN, when a synchronous one arrived.
-    mdn: 'MDNInfo | None' = None
+    mdn: 'mdndetailsnone' = None
 
     # The complete raw MIME body that went over the wire, kept as delivery evidence.
     request_body: bytes = b''
@@ -161,7 +167,7 @@ def _build_related_payload_part(partnership:'Partnership', items:'payload_item_l
     transfer_encoding = _resolve_transfer_encoding(partnership)
     boundary = _new_boundary()
 
-    chunks:'list[bytes]' = []
+    chunks:'byteslist' = []
 
     for item in items:
         encoded = _encode_payload_data(item.data, transfer_encoding)
@@ -351,7 +357,7 @@ def _post(
     partnership:'Partnership',
     body:'bytes',
     headers:'strstrdict',
-    client:'httpx.Client | None',
+    client:'httpclientnone',
     ) -> 'httpx.Response':
     """ Delivers one AS2 request over HTTP, with a per-call client unless one was supplied.
     """
@@ -382,7 +388,7 @@ def _reconcile_sync_mdn(
     result:'SendResult',
     keystore:'Keystore',
     response:'httpx.Response',
-    accepted_certificates:'certificate_list | None'=None,
+    accepted_certificates:'certificatelistnone'=None,
     ) -> 'None':
     """ Parses and verifies the synchronous MDN riding on the HTTP response. A response whose body
     fails MDN parsing or signature verification counts as no MDN received, an Original-Message-ID
@@ -437,7 +443,7 @@ def send(
     keystore:'Keystore',
     payload:'send_payload',
     filename:'strnone'=None,
-    client:'httpx.Client | None'=None,
+    client:'httpclientnone'=None,
     *,
     message_id:'strnone'=None,
     ) -> 'SendResult':

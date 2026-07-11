@@ -58,7 +58,8 @@ def _normalize_control_number(value:'str') -> 'str':
     value = value.strip()
 
     if value.isdigit():
-        out = str(int(value))
+        without_padding = int(value)
+        out = str(without_padding)
     else:
         out = value
 
@@ -106,7 +107,7 @@ class Reconciler:
         control_number:'str',
         cid:'str',
         data:'str',
-        doc_type:'str' = '',
+        document_type:'str' = '',
         outcome:'str' = '',
         ) -> 'None':
         """ Writes one reconciliation event - the pair is the object name
@@ -118,14 +119,14 @@ class Reconciler:
         msg_id = _normalize_control_number(control_number)
 
         # The document type joins whatever JSON data the caller gave - callers passing
-        # a doc_type must pass JSON data or none at all.
-        if doc_type:
+        # a document_type must pass JSON data or none at all.
+        if document_type:
             if data:
                 details = loads(data)
             else:
                 details = {}
 
-            details['doc_type'] = doc_type
+            details['document_type'] = document_type
             data = dumps(details)
 
         self.audit_log.insert(AuditSource.X12, event_type, pair, cid=cid, msg_id=msg_id, outcome=outcome, data=data)
@@ -139,12 +140,12 @@ class Reconciler:
         control_number:'str',
         cid:'str' = '',
         data:'str' = '',
-        doc_type:'str' = '',
+        document_type:'str' = '',
         ) -> 'None':
         """ Records that an interchange left for the partner - the send half
         of the reconciliation pair.
         """
-        self._record(AuditEvent.Interchange_Sent, sender, receiver, control_number, cid, data, doc_type)
+        self._record(AuditEvent.Interchange_Sent, sender, receiver, control_number, cid, data, document_type)
 
 # ################################################################################################################################
 
@@ -155,11 +156,11 @@ class Reconciler:
         control_number:'str',
         cid:'str' = '',
         data:'str' = '',
-        doc_type:'str' = '',
+        document_type:'str' = '',
         ) -> 'None':
         """ Records that an interchange arrived from the partner.
         """
-        self._record(AuditEvent.Interchange_Received, sender, receiver, control_number, cid, data, doc_type)
+        self._record(AuditEvent.Interchange_Received, sender, receiver, control_number, cid, data, document_type)
 
 # ################################################################################################################################
 
@@ -206,15 +207,16 @@ class Reconciler:
         # An acknowledgment matches on the same pair and control number
         ack = event_table.alias('ack')
 
-        ack_exists = exists(
-            select(ack.c.id).where(and_(
-                ack.c.source == AuditSource.X12,
-                ack.c.event_type == AuditEvent.Ack_Received,
-                ack.c.object_name == event_table.c.object_name,
-                ack.c.msg_id == event_table.c.msg_id,
-            )))
+        ack_conditions = and_(
+            ack.c.source == AuditSource.X12,
+            ack.c.event_type == AuditEvent.Ack_Received,
+            ack.c.object_name == event_table.c.object_name,
+            ack.c.msg_id == event_table.c.msg_id,
+        )
+        ack_select = select(ack.c.id).where(ack_conditions)
+        ack_exists = exists(ack_select)
 
-        stmt = select(
+        statement = select(
             event_table.c.object_name,
             event_table.c.msg_id,
             event_table.c.event_time_iso,
@@ -227,7 +229,8 @@ class Reconciler:
         )).order_by(event_table.c.id)
 
         with self.engine.connect() as connection:
-            rows = connection.execute(stmt).fetchall()
+            result = connection.execute(statement)
+            rows = result.fetchall()
 
         # Our response to produce
         out:'outstanding_list' = []

@@ -78,11 +78,15 @@ def record_message_received(
     so a later reprocess can re-publish it, and the raw MIME body kept as delivery evidence.
     A reprocess of a stored message links back to the original event through the correlation id.
     """
-    pair = f'{as2_from.strip()}:{as2_to.strip()}'
+    as2_from = as2_from.strip()
+    as2_to = as2_to.strip()
+
+    pair = f'{as2_from}:{as2_to}'
     message_id = normalize_message_id(message_id)
 
-    data = dumps({'payload': payload, 'filename': filename, 'content_type': content_type, 'raw_mime': raw_mime,
-        'mic': mic, 'error': error})
+    details = {'payload': payload, 'filename': filename, 'content_type': content_type, 'raw_mime': raw_mime,
+        'mic': mic, 'error': error}
+    data = dumps(details)
 
     audit_log.insert(AuditSource.AS2, AuditEvent.Message_Received, pair, cid=cid, msg_id=message_id, correl_id=correl_id,
         outcome=outcome, data=data)
@@ -106,11 +110,15 @@ def record_mdn_sent(
     """ Records that an MDN went back to the partner - the receipt half of an inbound exchange,
     with the disposition it reported and the raw MDN bytes kept as delivery evidence.
     """
-    pair = f'{as2_from.strip()}:{as2_to.strip()}'
+    as2_from = as2_from.strip()
+    as2_to = as2_to.strip()
+
+    pair = f'{as2_from}:{as2_to}'
     message_id = normalize_message_id(message_id)
 
-    data = dumps({'disposition': disposition, 'modifier_kind': modifier_kind, 'modifier': modifier, 'mic': mic,
-        'raw_mime': raw_mime})
+    details = {'disposition': disposition, 'modifier_kind': modifier_kind, 'modifier': modifier, 'mic': mic,
+        'raw_mime': raw_mime}
+    data = dumps(details)
 
     audit_log.insert(AuditSource.AS2, AuditEvent.MDN_Sent, pair, cid=cid, msg_id=message_id, outcome=outcome, data=data)
 
@@ -164,8 +172,9 @@ def record_send_result(
 
     mdn_raw_mime = encode_raw_mime(result.response_body)
 
-    mdn_data = dumps({'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
-        'mic': mdn.mic, 'raw_mime': mdn_raw_mime})
+    mdn_details = {'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
+        'mic': mdn.mic, 'raw_mime': mdn_raw_mime}
+    mdn_data = dumps(mdn_details)
 
     reconciler.record_mdn_received(result.message_id, outcome=outcome, cid=cid, data=mdn_data)
 

@@ -19,6 +19,7 @@ from zato.common.api import AS2
 from zato.common.as2.inbound import StoredMDN
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.json_internal import dumps, loads
+from zato.common.typing_ import optional
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -31,6 +32,13 @@ if 0:
     datetime = datetime
     Engine = Engine
     strstrdict = strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+enginenone    = optional['Engine']
+storedmdnnone = optional['StoredMDN']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +83,7 @@ class DuplicateStore:
     and the angle brackets are already stripped by the inbound pipeline.
     """
 
-    def __init__(self, window_days:'int'=AS2.Default.Duplicate_Window_Days, engine:'Engine | None'=None) -> 'None':
+    def __init__(self, window_days:'int'=AS2.Default.Duplicate_Window_Days, engine:'enginenone'=None) -> 'None':
 
         self.window_days = window_days
 
@@ -93,11 +101,11 @@ class DuplicateStore:
 
 # ################################################################################################################################
 
-    def get(self, as2_from:'str', as2_to:'str', message_id:'str') -> 'StoredMDN | None':
+    def get(self, as2_from:'str', as2_to:'str', message_id:'str') -> 'storedmdnnone':
         """ Returns the stored MDN of an earlier delivery of the same message, or None
         when the message was never seen - the is_duplicate callable of the inbound pipeline.
         """
-        stmt = select(
+        statement = select(
             duplicate_table.c.status_code,
             duplicate_table.c.body,
             duplicate_table.c.headers,
@@ -108,7 +116,8 @@ class DuplicateStore:
         ))
 
         with self.engine.connect() as connection:
-            row = connection.execute(stmt).first()
+            result = connection.execute(statement)
+            row = result.first()
 
         # An unseen message is not a duplicate ..
         if row is None:
@@ -141,21 +150,23 @@ class DuplicateStore:
         """
         now = utcnow()
         created_iso = now.isoformat()
+        headers_json = dumps(headers)
 
-        insert_stmt = duplicate_table.insert().values(
+        insert = duplicate_table.insert()
+        insert_statement = insert.values(
             as2_from=as2_from,
             as2_to=as2_to,
             message_id=message_id,
             status_code=status_code,
             body=body,
-            headers=dumps(headers),
+            headers=headers_json,
             created_iso=created_iso,
         )
 
         # A constraint violation means another server already stored this very triple.
         try:
             with self.engine.begin() as connection:
-                _ = connection.execute(insert_stmt)
+                _ = connection.execute(insert_statement)
             out = True
         except IntegrityError:
             out = False
@@ -176,13 +187,15 @@ class DuplicateStore:
         cutoff = now - timedelta(days=self.window_days)
         cutoff_iso = cutoff.isoformat()
 
-        delete_stmt = duplicate_table.delete().where(duplicate_table.c.created_iso < cutoff_iso)
+        delete = duplicate_table.delete()
+        delete_statement = delete.where(duplicate_table.c.created_iso < cutoff_iso)
 
         with self.engine.begin() as connection:
-            result = connection.execute(delete_stmt)
+            result = connection.execute(delete_statement)
 
         if result.rowcount:
-            logger.info('AS2 duplicate store retention deleted %d row(s) older than %s', result.rowcount, cutoff_iso)
+            suffix = 'row' if result.rowcount == 1 else 'rows'
+            logger.info('AS2 duplicate store retention deleted %d %s older than %s', result.rowcount, suffix, cutoff_iso)
 
 # ################################################################################################################################
 # ################################################################################################################################

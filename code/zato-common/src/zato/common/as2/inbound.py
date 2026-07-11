@@ -18,6 +18,7 @@ from zato.common.as2.mdn import build_mdn, disposition_from_exception, MDNSignin
 from zato.common.as2.partnership import active_verification_certificates, match_partnership, unquote_as2_identifier
 from zato.common.as2.smime import compute_mic, compute_mic_over, decompress, decrypt, select_mic_algorithm, \
     serialize_part, SMIMEPart, verify
+from zato.common.typing_ import optional
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 
 # ################################################################################################################################
@@ -27,9 +28,9 @@ if 0:
     from cryptography.x509 import Certificate
     from zato.common.as2.mdn import Disposition, MDNRequest
     from zato.common.as2.partnership import Partnership, partnership_list
-    from zato.common.typing_ import callable_, strlist, strnone, strstrdict
+    from zato.common.typing_ import callnone, strlist, strnone, strstrdict
     from zato.common.util.xml_.keystore import Keystore
-    callable_ = callable_
+    callnone = callnone
     Certificate = Certificate
     Disposition = Disposition
     MDNRequest = MDNRequest
@@ -37,6 +38,16 @@ if 0:
     strlist = strlist
     strnone = strnone
     strstrdict = strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+#  Type aliases
+certificatenone     = optional['Certificate']
+dispositionnone     = optional['Disposition']
+keystorenone        = optional['Keystore']
+partnershipnone     = optional['Partnership']
+pendingasyncmdnnone = optional['PendingAsyncMDN']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,7 +126,7 @@ class InboundResult:
     ediint_features: str = ''
 
     # The partnership the message matched.
-    partnership: 'Partnership | None' = None
+    partnership: 'partnershipnone' = None
 
     # The MIC computed over the received content, in its wire form.
     mic: str = ''
@@ -124,7 +135,7 @@ class InboundResult:
     payloads: 'payload_list'
 
     # The certificate that signed the message, when it arrived signed.
-    signer_certificate: 'Certificate | None' = None
+    signer_certificate: 'certificatenone' = None
 
     # Whether the message was recognized as a replay - the stored MDN is re-transmitted
     # as it is and the payloads are not delivered a second time.
@@ -136,10 +147,10 @@ class InboundResult:
 
     # The disposition the MDN was built with - clean processing or the matching error,
     # kept on the result so the caller can record it as delivery evidence.
-    disposition: 'Disposition | None' = None
+    disposition: 'dispositionnone' = None
 
     # The MDN to deliver asynchronously, when the sender asked for one.
-    pending_async_mdn: 'PendingAsyncMDN | None' = None
+    pending_async_mdn: 'pendingasyncmdnnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -254,7 +265,7 @@ def _attach_mdn(
     request:'MDNRequest',
     disposition:'Disposition',
     mic:'str',
-    keystore:'Keystore | None',
+    keystore:'keystorenone',
     ) -> 'None':
     """ Builds the MDN a message calls for and places it on the result - on the HTTP response
     for a synchronous one, as a pending delivery for an asynchronous one. Positive and negative
@@ -322,16 +333,24 @@ def _process_layers(
         # An encrypted or compressed entity - both ride in application/pkcs7-mime ..
         if media_type == 'application/pkcs7-mime':
 
-            smime_type = parameters.get('smime-type', '')
+            if smime_type := parameters.get('smime-type'):
+                pass
+            else:
+                smime_type = ''
+
+            # An absent smime-type parameter means an encrypted entity,
+            # the one shape peers ship without the parameter.
+            is_enveloped = smime_type in _enveloped_smime_types
+            if not smime_type:
+                is_enveloped = True
 
             if smime_type == _compressed_smime_type:
                 if not compressed_content:
                     compressed_content = part.data
                 part = decompress(part)
 
-            # .. an absent smime-type parameter means an encrypted entity,
-            # the one shape peers ship without the parameter.
-            elif smime_type in _enveloped_smime_types or not smime_type:
+            # .. the encrypted entity is decrypted with our own key ..
+            elif is_enveloped:
                 part = decrypt(part, keystore)
                 if not decrypted_content:
                     decrypted_content = serialize_part(part, partnership.prevent_canonicalization)
@@ -387,7 +406,7 @@ def handle(
     headers:'strstrdict',
     partnerships:'partnership_list',
     keystore:'Keystore',
-    is_duplicate:'callable_ | None'=None,
+    is_duplicate:'callnone'=None,
     ) -> 'InboundResult':
     """ The transport-neutral inbound pipeline. Takes the raw HTTP body and headers of an incoming
     AS2 request and returns what to send back plus the delivered documents.
@@ -407,7 +426,8 @@ def handle(
     lowered:'strstrdict' = {}
 
     for name, value in headers.items():
-        lowered[name.lower()] = value
+        name = name.lower()
+        lowered[name] = value
 
     # What kind of MDN the sender asked for, straight from the headers.
     request = parse_mdn_request(lowered)

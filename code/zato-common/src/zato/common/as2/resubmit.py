@@ -38,12 +38,13 @@ if 0:
     from zato.common.as2.partnership import partnership_list
     from zato.common.as2.reconcile import MDNReconciler
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import callable_, dictlist, stranydict
+    from zato.common.typing_ import callable_, dictlist, stranydict, strnone
     callable_ = callable_
     dictlist = dictlist
     MDNReconciler = MDNReconciler
     partnership_list = partnership_list
     SendResult = SendResult
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +87,7 @@ class ReprocessResult:
 def load_event(event_id:'int') -> 'StoredEvent':
     """ Reads one audit event by its id, along with its parsed JSON data.
     """
-    stmt = select(
+    statement = select(
         event_table.c.id,
         event_table.c.cid,
         event_table.c.source,
@@ -99,7 +100,8 @@ def load_event(event_id:'int') -> 'StoredEvent':
     engine = get_audit_engine()
 
     with engine.connect() as connection:
-        row = connection.execute(stmt).first()
+        result = connection.execute(statement)
+        row = result.first()
 
     # There is nothing to resubmit if the event does not exist, e.g. retention already deleted it.
     if row is None:
@@ -139,7 +141,7 @@ def _get_stored_payload(event:'StoredEvent') -> 'str':
 
 # ################################################################################################################################
 
-def _get_stored_filename(event:'StoredEvent') -> 'str | None':
+def _get_stored_filename(event:'StoredEvent') -> 'strnone':
     """ Returns the filename stored alongside the payload - an empty one means
     none was preserved at the time the event was recorded.
     """
@@ -187,7 +189,7 @@ def resend(event:'StoredEvent', send:'callable_', reconciler:'MDNReconciler', ci
     as2_from, as2_to = event.object_name.split(':', 1)
 
     # Deliver the payload through the real pipeline - a fresh Message-ID is assigned inside ..
-    result = send(payload, filename)
+    out = send(payload, filename)
 
     # .. and the new attempt becomes its own event, linked to the original by its CID,
     # with the synchronous MDN recorded too when one rode back on the response.
@@ -198,14 +200,14 @@ def resend(event:'StoredEvent', send:'callable_', reconciler:'MDNReconciler', ci
         reconciler,
         as2_from,
         as2_to,
-        result,
+        out,
         payload=payload,
         filename=filename,
         cid=cid,
         correl_id=event.cid,
     )
 
-    return result
+    return out
 
 # ################################################################################################################################
 
