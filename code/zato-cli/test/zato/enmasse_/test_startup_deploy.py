@@ -20,6 +20,9 @@ from base64 import b64encode
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# Zato
+from zato.common.test.process_util import kill_process_tree
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -53,13 +56,7 @@ def _find_free_port():
 # ################################################################################################################################
 
 def _kill_proc(proc):
-    if proc and proc.poll() is None:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=5)
+    kill_process_tree(proc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,6 +163,7 @@ def _start_server(server_dir, port, broker_port, extra_env=None, extra_args=None
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
     output_lines = []

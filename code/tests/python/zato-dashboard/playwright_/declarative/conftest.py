@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
 import logging
 import os
 import re
@@ -26,6 +27,9 @@ from zato.common.json_internal import dumps, loads
 
 # The parent directory's helpers - the same lib the main Playwright conftest uses
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+
+# Zato
+from zato.common.test.process_util import kill_process_tree
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +55,16 @@ _Kill_Timeout        = 5
 # The scheduler's HTTP query API always binds on this fixed port
 _Scheduler_API_Port = 35100
 
+# Every process spawned by the fixture registers here so the atexit hook below can kill
+# them all even if Ctrl-C arrives in the middle of setup, before the fixture's own teardown runs.
+_processes_to_kill:'list' = []
+
+def _cleanup_at_exit() -> 'None':
+    for process in _processes_to_kill:
+        kill_process_tree(process)
+
+_ = atexit.register(_cleanup_at_exit)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -68,14 +82,11 @@ def _find_free_port() -> 'int':
 # ################################################################################################################################
 
 def _kill_process(process:'any_') -> 'None':
-    """ Terminates a subprocess, escalating to kill if it does not exit in time.
+    """ Kills a subprocess and all its descendants via its process group - the components
+    are launched through wrapper scripts and shells, so terminating the direct child alone
+    would leave the actual server or gunicorn workers running.
     """
-    if process and process.poll() is None:
-        process.terminate()
-        try:
-            _ = process.wait(timeout=_Kill_Timeout)
-        except subprocess.TimeoutExpired:
-            process.kill()
+    kill_process_tree(process)
 
 # ################################################################################################################################
 
@@ -155,7 +166,9 @@ def zato_dashboard() -> 'any_':
         ['redis-server', '--port', str(redis_port), '--save', '', '--appendonly', 'no'],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
+    _processes_to_kill.append(redis_process)
 
     _wait_for_tcp(redis_port)
     logger.info(f'[TIMING] redis ready: {time.monotonic() - time_start:.1f}s')
@@ -247,7 +260,9 @@ def zato_dashboard() -> 'any_':
         env=server_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
+    _processes_to_kill.append(server_process)
 
     time_after_server_start = time.monotonic()
 
@@ -269,7 +284,9 @@ def zato_dashboard() -> 'any_':
         env=scheduler_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
+    _processes_to_kill.append(scheduler_process)
 
     scheduler_thread = threading.Thread(
         target=_stream_output, args=(scheduler_process, 'SCHEDULER', time_after_server_start), daemon=True)
@@ -287,7 +304,9 @@ def zato_dashboard() -> 'any_':
         env=dashboard_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
+    _processes_to_kill.append(dashboard_process)
 
     dashboard_thread = threading.Thread(
         target=_stream_output, args=(dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)

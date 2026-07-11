@@ -26,6 +26,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.process_util import kill_process_tree
 
 # Make this directory importable so test modules can use the helpers defined below
 _suite_dir = os.path.dirname(__file__)
@@ -117,21 +118,11 @@ def wait_for_log_content(server_dir:'str', file_name:'str', needle:'str', timeou
 # ################################################################################################################################
 
 def _kill_process(process:'subprocess.Popen | None') -> 'None':
-    """ Terminates a subprocess, escalating to kill if it does not exit in time.
+    """ Kills a subprocess and all its descendants via its process group - the components
+    are launched through wrapper scripts and shells, so terminating the direct child alone
+    would leave the actual server or gunicorn workers running.
     """
-    if process:
-        if process.poll() is None:
-
-            # Try graceful termination first ..
-            process.terminate()
-
-            try:
-                process.wait(timeout=_Process_Kill_Timeout)
-
-            # .. escalate to kill if it did not exit.
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=_Process_Kill_Timeout)
+    kill_process_tree(process)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -297,6 +288,7 @@ def zato_server() -> 'any_':
         env=server_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
     _cleanup_refs['server_process'] = server_process
 
