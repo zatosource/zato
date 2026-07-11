@@ -42,8 +42,9 @@ class DeclarativeCallbackStore(Service):
 # ################################################################################################################################
 
 class InvokeRESTDeclarativeForTests(Service):
-    """ Invokes an outgoing REST connection through its declarative profile - self.rest[name].invoke()
-    with no arguments at all - on behalf of the declarative invocation tests.
+    """ Invokes an outgoing REST connection through its declarative profile on behalf of the
+    declarative invocation tests - either self.rest[name].invoke(), optionally with request data,
+    or an explicit self.rest[name].post(data) that merges with the profile.
     """
 
     name = 'test.rest.outconn.declarative-invoke'
@@ -66,7 +67,21 @@ class InvokeRESTDeclarativeForTests(Service):
         else:
             try:
                 outconn_name = request['outconn_name']
-                response = self.rest[outconn_name].invoke()
+                invoker = self.rest[outconn_name]
+
+                # Tests may pass explicit request data for the connection to send
+                if 'data' in request:
+                    data = request['data']
+                else:
+                    data = ''
+
+                # An explicit .post() merges with the declarative profile - the explicit
+                # method and body win - while .invoke() runs the profile itself.
+                if mode == 'post':
+                    response = invoker.post(data)
+                else:
+                    response = invoker.invoke(data)
+
                 out = {
                     'status_code': response.status_code,
                     'text': response.text,
