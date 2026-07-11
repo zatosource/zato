@@ -118,8 +118,8 @@ def create_declarative_outconn(
 
 class TestRESTOutconnDeclarative:
     """ Tests for the declarative invocation profile of outgoing REST connections - the tabbed UI,
-    no-argument invocations from services, JSONata evaluation, response mapping, callbacks,
-    scheduled invocations and health checks.
+    no-argument invocations from services, JSONata evaluation, response mapping, callbacks
+    and scheduled invocations. Health checks have their own module, test_health_check_generic.py.
     """
 
 # ################################################################################################################################
@@ -464,54 +464,6 @@ class TestRESTOutconnDeclarative:
         page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
         # Clean up
-        delete_outconn(page, outconn_id)
-
-# ################################################################################################################################
-
-    @pytest.mark.expect_log_errors('test.rest.outconn.declarative')
-    def test_health_check_pings_and_notifies(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        http_test_server:'HTTPTestServer',
-        ) -> 'None':
-        """ A connection with a health check configured is pinged by the scheduler and each outcome
-        is delivered to the callback service, including the response time and the health flag.
-        """
-
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        name = _Test_Name_Prefix + 'health.' + rand_string()
-        url_path = '/test/declarative/health/' + rand_string()
-
-        http_test_server.set_response(url_path, body='{"pong": true}')
-
-        # Create the connection with a one-second health check notifying on every outcome ..
-        outconn_id = create_declarative_outconn(
-            page, base_url, name, http_test_server.address,
-            {'url_path': url_path},
-            {
-                'health_check_run_every': '1',
-                'health_check_run_unit': 'seconds',
-                'health_check_notify_on': 'all',
-                'health_check_callback_type': 'service',
-                'health_check_callback_name': Callback_Store_Service,
-            })
-
-        # .. the scheduler pings the connection ..
-        _ = http_test_server.wait_for_request_count(1, timeout=60)
-
-        # .. and the callback receives a healthy outcome - the connection's own name
-        # is the marker since every outcome carries it.
-        entry = wait_for_callback_entry(name)
-
-        assert entry['conn_name'] == name, f'Expected the connection name in the outcome, got: {entry}'
-        assert entry['is_ok'] is True, f'Expected a healthy outcome, got: {entry}'
-        assert entry['error'] == '', f'Expected no error in a healthy outcome, got: {entry}'
-        assert entry['response_time_ms'] >= 0, f'Expected a response time, got: {entry}'
-
-        # Clean up - the health check would otherwise keep pinging every second
         delete_outconn(page, outconn_id)
 
 # ################################################################################################################################
