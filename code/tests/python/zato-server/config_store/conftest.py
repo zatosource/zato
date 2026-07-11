@@ -23,6 +23,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 
 def pytest_addoption(parser):
@@ -56,13 +57,7 @@ def _find_free_port():
 
 def _kill_server():
     global _server_proc
-    if _server_proc and _server_proc.poll() is None:
-        _server_proc.terminate()
-        try:
-            _server_proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            _server_proc.kill()
-            _server_proc.wait(timeout=5)
+    kill_process_tree(_server_proc)
     _server_proc = None
 
 # ################################################################################################################################
@@ -229,6 +224,7 @@ def zato_server(request):
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
     t3 = time.monotonic()

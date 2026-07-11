@@ -29,6 +29,7 @@ from zato.common.test.playwright_pubsub import create_amqp_channel, create_amqp_
     get_item_id, navigate_to_page, open_publish_overlay, publish_via_overlay
 from zato.common.test.rabbitmq_ import declare_and_bind, drain_queue, publish_to_exchange
 from zato.common.test.receiver import WebhookReceiver
+from zato.common.test.process_util import kill_process_tree
 from zato.common.util.api import new_cid
 
 # The broker fixture is resolved by pytest through this import
@@ -136,14 +137,9 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
     # Capture the environment before the process goes away ..
     server_environment = _read_process_environment(server_process.pid)
 
-    # .. stop the server ..
-    server_process.terminate()
-
-    try:
-        _ = server_process.wait(timeout=30)
-    except subprocess.TimeoutExpired:
-        server_process.kill()
-        _ = server_process.wait(timeout=30)
+    # .. stop the server along with its whole process group - terminating just
+    # the launcher would leave the actual server running and holding the port ..
+    kill_process_tree(server_process)
 
     # .. start a new one with the same environment ..
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
@@ -154,6 +150,7 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
         env=server_environment,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..

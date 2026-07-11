@@ -39,6 +39,9 @@ if 0:
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
 
+# How many gunicorn workers the dashboard runs with when the environment does not say otherwise
+_default_dashboard_workers = 2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -382,7 +385,12 @@ Examples:
             return
 
         bind_address = f'{host}:{port}'
-        workers = 8
+
+        # The number of gunicorn workers comes from the environment if it is set there
+        if workers := os.environ.get('Zato_Dashboard_Workers'):
+            workers = int(workers)
+        else:
+            workers = _default_dashboard_workers
 
         # Gunicorn PID file must match what `zato stop` expects: component_dir/pidfile
         pid_file = os.path.join(component_path, 'pidfile')
