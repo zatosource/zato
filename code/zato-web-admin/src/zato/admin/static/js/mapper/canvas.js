@@ -21,15 +21,25 @@
 
     var dragThresholdPixels = 4;
 
-    // How close the pointer must come to a line for it to light up.
-    var lineHoverRadiusPixels = 12;
-
-    // The sampling step along a line when measuring that distance.
+    // The sampling step along a line when measuring distances to it.
     var lineSampleStepPixels = 10;
+
+    // Interaction distances scale with the root font size, so they
+    // follow the user's font and display settings instead of being
+    // fixed pixel counts.
+    var rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+    // How close the pointer must come to a line for it to light up.
+    var lineHoverRadius = 0.75 * rootFontSize;
 
     // How far above the topmost line or below the bottommost one the
     // dimming starts to ease in.
-    var lineDimFadeDistancePixels = 48;
+    var lineDimFadeDistance = 3 * rootFontSize;
+
+    // How close the pointer must come to a row's anchor for the ghost
+    // line to snap onto it from the gutter - a gentler magnet than
+    // pointing at the row itself.
+    var ghostSnapRadius = 3 * rootFontSize;
 
     // The opacity the lines dim to while the pointer sits amid them.
     var lineOpacityDimmed = 0.35;
@@ -351,20 +361,34 @@
         }
 
 // ////////////////////////////////////////////////////////////////////////
-// Dragging - Pointer Events from a source tree row to a target one,
-// with a ghost following the pointer and the drop target highlighted.
+// Dragging - Pointer Events between the two trees, starting on either
+// side, with a ghost following the pointer and the drop row highlighted.
 // ////////////////////////////////////////////////////////////////////////
 
         var drag = null;
 
-        function clearDropHighlight() {
-            $(canvasConfig.targetBody).find('.mapper-tree-row-drop-target').removeClass('mapper-tree-row-drop-target');
+        // Each side's tree and the edge its anchors sit on - a drag
+        // may start on either side and drops onto the other one.
+        var sides = {
+            source: {body: canvasConfig.sourceBody, column: canvasConfig.sourceColumn, edge: 'right'},
+            target: {body: canvasConfig.targetBody, column: canvasConfig.targetColumn, edge: 'left'}
+        };
+
+        function oppositeOf(side) {
+            var out = side === 'source' ? 'target' : 'source';
+            return out;
         }
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // The target tree row under the pointer, if any.
-        function dropRowAt(clientX, clientY) {
+        function clearDropHighlight() {
+            $(container).find('.mapper-tree-row-drop-target').removeClass('mapper-tree-row-drop-target');
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        // The drop-side tree row under the pointer, if any.
+        function dropRowAt(clientX, clientY, dropSide) {
 
             var element = document.elementFromPoint(clientX, clientY);
             if (element === null) {
@@ -376,7 +400,7 @@
                 return null;
             }
 
-            if (!canvasConfig.targetBody.contains(row)) {
+            if (!sides[dropSide].body.contains(row)) {
                 return null;
             }
 
@@ -385,94 +409,263 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-        $(canvasConfig.sourceBody).on('pointerdown', '.mapper-tree-row', function(event) {
+        // The drop-side row the ghost line snaps onto - the row
+        // directly under the pointer, or the one whose anchor is close
+        // enough when the pointer floats in the gutter between the trees.
+        function snapRowAt(clientX, clientY, dropSide) {
 
-            // Only the primary button starts a drag.
-            if (event.button !== 0) {
+            var out = dropRowAt(clientX, clientY, dropSide);
+            if (out !== null) {
+                return out;
+            }
+
+            var columnRect = sides[dropSide].column.getBoundingClientRect();
+            var bodyRect = sides[dropSide].body.getBoundingClientRect();
+
+            // The anchors all sit on the column's facing edge, so the
+            // horizontal part of the distance is the same for each row.
+            var anchorX = sides[dropSide].edge === 'right' ? columnRect.right : columnRect.left;
+            var deltaX = clientX - anchorX;
+
+            var bestDistance = ghostSnapRadius;
+            var rows = sides[dropSide].body.querySelectorAll('.mapper-tree-row');
+
+            for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                var rect = rows[rowIdx].getBoundingClientRect();
+
+                // A collapsed row has no geometry to snap onto ..
+                if (rect.height === 0) {
+                    continue;
+                }
+
+                // .. and one scrolled out of the body has no anchor
+                // in view.
+                var centerY = rect.top + rect.height / 2;
+                if (centerY < bodyRect.top || centerY > bodyRect.bottom) {
+                    continue;
+                }
+
+                var deltaY = clientY - centerY;
+                var distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    out = rows[rowIdx];
+                }
+            }
+
+            return out;
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        // The ghost line a drag draws from its starting field to the
+        // pointer, snapping onto the drop-side row under it, together
+        // with its own endpoint dots.
+        var ghostLine = null;
+        var ghostDots = null;
+
+        function drawGhostLine(dragSide, dragPath, clientX, clientY, dropRow) {
+
+            var containerRect = container.getBoundingClientRect();
+
+            var dragSideInfo = sides[dragSide];
+            var startAnchor = anchorOf(dragSideInfo.body, dragSideInfo.column, dragPath, dragSideInfo.edge, containerRect);
+            if (startAnchor === null) {
                 return;
             }
 
-            var item = this.closest('.mapper-tree-item');
+            // The line ends at the pointer, unless a drop-side row
+            // sits under it - then it snaps onto that row's own anchor.
+            var endX = clientX - containerRect.left;
+            var endY = clientY - containerRect.top;
 
-            drag = {
-                row: this,
-                path: item.getAttribute('data-path'),
-                startX: event.clientX,
-                startY: event.clientY,
-                active: false,
-                ghost: null
-            };
-
-            this.setPointerCapture(event.originalEvent.pointerId);
-        });
-
-        $(canvasConfig.sourceBody).on('pointermove', '.mapper-tree-row', function(event) {
-
-            if (drag === null) {
-                return;
+            if (dropRow !== null) {
+                var dropSideInfo = sides[oppositeOf(dragSide)];
+                var dropPath = dropRow.closest('.mapper-tree-item').getAttribute('data-path');
+                var dropAnchor = anchorOf(dropSideInfo.body, dropSideInfo.column, dropPath, dropSideInfo.edge, containerRect);
+                if (dropAnchor !== null) {
+                    endX = dropAnchor.x;
+                    endY = dropAnchor.y;
+                }
             }
 
-            // The drag only becomes real past a small threshold,
-            // so plain clicks keep working.
-            if (!drag.active) {
-                var deltaX = Math.abs(event.clientX - drag.startX);
-                var deltaY = Math.abs(event.clientY - drag.startY);
-                if (deltaX < dragThresholdPixels && deltaY < dragThresholdPixels) {
+            if (ghostLine === null) {
+                ghostLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                ghostLine.setAttribute('class', 'mapper-canvas-line-ghost');
+
+                ghostDots = [];
+                for (var dotIdx = 0; dotIdx < 2; dotIdx++) {
+                    var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    dot.setAttribute('r', 3.5);
+                    dot.setAttribute('class', 'mapper-canvas-line-ghost');
+                    ghostDots.push(dot);
+                }
+            }
+
+            // Re-appending keeps the ghost on top and puts it back
+            // whenever a redraw has just emptied the layer.
+            svg.appendChild(ghostLine);
+            svg.appendChild(ghostDots[0]);
+            svg.appendChild(ghostDots[1]);
+
+            var middleX = (startAnchor.x + endX) / 2;
+            ghostLine.setAttribute('d',
+                'M ' + startAnchor.x + ' ' + startAnchor.y +
+                ' C ' + middleX + ' ' + startAnchor.y +
+                ', ' + middleX + ' ' + endY +
+                ', ' + endX + ' ' + endY);
+
+            ghostDots[0].setAttribute('cx', startAnchor.x);
+            ghostDots[0].setAttribute('cy', startAnchor.y);
+            ghostDots[1].setAttribute('cx', endX);
+            ghostDots[1].setAttribute('cy', endY);
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        function removeGhostLine() {
+
+            if (ghostLine !== null) {
+                $(ghostLine).remove();
+                $(ghostDots[0]).remove();
+                $(ghostDots[1]).remove();
+                ghostLine = null;
+                ghostDots = null;
+            }
+
+            clearDim();
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        // Wires the drag handlers onto one side's tree - a drag may
+        // start on either side, the drop lands on the other one, and
+        // the mapping always reads source to target whichever way the
+        // pointer traveled.
+        function bindDrag(dragSide) {
+
+            var body = sides[dragSide].body;
+            var dropSide = oppositeOf(dragSide);
+
+            $(body).on('pointerdown', '.mapper-tree-row', function(event) {
+
+                // Only the primary button starts a drag.
+                if (event.button !== 0) {
                     return;
                 }
 
-                drag.active = true;
+                var item = this.closest('.mapper-tree-item');
 
-                drag.ghost = document.createElement('div');
-                drag.ghost.className = 'mapper-drag-ghost';
-                drag.ghost.textContent = drag.path;
-                document.body.appendChild(drag.ghost);
+                drag = {
+                    side: dragSide,
+                    row: this,
+                    path: item.getAttribute('data-path'),
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    active: false,
+                    ghost: null
+                };
 
-                zato.mapper.log('canvas', 'drag starts', {source: drag.path});
-            }
+                this.setPointerCapture(event.originalEvent.pointerId);
+            });
 
-            drag.ghost.style.left = (event.clientX + 12) + 'px';
-            drag.ghost.style.top = (event.clientY + 12) + 'px';
+            $(body).on('pointermove', '.mapper-tree-row', function(event) {
 
-            clearDropHighlight();
-            var dropRow = dropRowAt(event.clientX, event.clientY);
-            if (dropRow !== null) {
-                $(dropRow).addClass('mapper-tree-row-drop-target');
-            }
-        });
+                if (drag === null) {
+                    return;
+                }
 
-        $(canvasConfig.sourceBody).on('pointerup pointercancel', '.mapper-tree-row', function(event) {
+                // The drag only becomes real past a small threshold,
+                // so plain clicks keep working.
+                if (!drag.active) {
+                    var deltaX = Math.abs(event.clientX - drag.startX);
+                    var deltaY = Math.abs(event.clientY - drag.startY);
+                    if (deltaX < dragThresholdPixels && deltaY < dragThresholdPixels) {
+                        return;
+                    }
 
-            if (drag === null) {
-                return;
-            }
+                    drag.active = true;
 
-            var wasActive = drag.active;
-            var sourcePath = drag.path;
+                    drag.ghost = document.createElement('div');
+                    drag.ghost.className = 'mapper-drag-ghost';
+                    drag.ghost.textContent = drag.path;
+                    document.body.appendChild(drag.ghost);
 
-            if (drag.ghost !== null) {
-                $(drag.ghost).remove();
-            }
-            clearDropHighlight();
-            drag = null;
+                    // Every existing line dims for as long as the ghost
+                    // line leads the way.
+                    clearFieldHover();
+                    svg.style.setProperty('--mapper-canvas-line-opacity', lineOpacityDimmed);
+                    svg.style.setProperty('--mapper-canvas-line-grayscale', lineGrayscaleDimmed);
 
-            if (!wasActive || event.type === 'pointercancel') {
-                return;
-            }
+                    zato.mapper.log('canvas', 'drag starts', {side: dragSide, path: drag.path});
+                }
 
-            // The click this pointerup releases must not toggle the
-            // row the drag started on.
-            zato.mapper.tree.suppressNextToggle = true;
+                drag.ghost.style.left = (event.clientX + 12) + 'px';
+                drag.ghost.style.top = (event.clientY + 12) + 'px';
 
-            var dropRow = dropRowAt(event.clientX, event.clientY);
-            if (dropRow === null) {
-                zato.mapper.log('canvas', 'drag ended outside the target tree', {source: sourcePath});
-                return;
-            }
+                clearDropHighlight();
+                clearLinkedRows();
+                var dropRow = snapRowAt(event.clientX, event.clientY, dropSide);
+                if (dropRow !== null) {
+                    $(dropRow).addClass('mapper-tree-row-drop-target');
 
-            var targetPath = dropRow.closest('.mapper-tree-item').getAttribute('data-path');
-            applyDrop(sourcePath, targetPath);
-        });
+                    // The drop candidate lights up with its whole
+                    // root-to-field path, like a hover would light it.
+                    lightRow(dropRow);
+                }
+
+                drawGhostLine(dragSide, drag.path, event.clientX, event.clientY, dropRow);
+            });
+
+            $(body).on('pointerup pointercancel', '.mapper-tree-row', function(event) {
+
+                if (drag === null) {
+                    return;
+                }
+
+                var wasActive = drag.active;
+                var dragPath = drag.path;
+
+                if (drag.ghost !== null) {
+                    $(drag.ghost).remove();
+                }
+                clearDropHighlight();
+                clearLinkedRows();
+                removeGhostLine();
+                drag = null;
+
+                if (!wasActive || event.type === 'pointercancel') {
+                    return;
+                }
+
+                // The click this pointerup releases must not toggle the
+                // row the drag started on.
+                zato.mapper.tree.suppressNextToggle = true;
+
+                // The drop lands wherever the ghost line snapped, so
+                // what the line showed is what the release does.
+                var dropRow = snapRowAt(event.clientX, event.clientY, dropSide);
+                if (dropRow === null) {
+                    zato.mapper.log('canvas', 'drag ended outside the other tree', {side: dragSide, path: dragPath});
+                    return;
+                }
+
+                var dropPath = dropRow.closest('.mapper-tree-item').getAttribute('data-path');
+
+                // Whichever side the drag started on, the mapping goes
+                // from the source field to the target one.
+                if (dragSide === 'source') {
+                    applyDrop(dragPath, dropPath);
+                }
+                else {
+                    applyDrop(dropPath, dragPath);
+                }
+            });
+        }
+
+        bindDrag('source');
+        bindDrag('target');
 
 // ////////////////////////////////////////////////////////////////////////
 // Source field menus - renaming a field, which propagates into every
@@ -536,7 +729,7 @@
         function nearestLineId(pointX, pointY) {
 
             var out = null;
-            var bestDistance = lineHoverRadiusPixels;
+            var bestDistance = lineHoverRadius;
 
             var paths = svg.querySelectorAll('path.mapper-canvas-line');
 
@@ -620,12 +813,12 @@
                 distance = pointY - band.bottom;
             }
 
-            if (distance >= lineDimFadeDistancePixels) {
+            if (distance >= lineDimFadeDistance) {
                 clearDim();
                 return;
             }
 
-            var closeness = 1 - distance / lineDimFadeDistancePixels;
+            var closeness = 1 - distance / lineDimFadeDistance;
             var opacity = lineOpacityResting - closeness * (lineOpacityResting - lineOpacityDimmed);
             var grayscale = closeness * lineGrayscaleDimmed;
 
@@ -668,6 +861,8 @@
                 clearLinkedRows();
             }
 
+            container.style.cursor = '';
+
             var hoveredElements = svg.querySelectorAll('.mapper-canvas-line-hovered');
             for (var elementIdx = 0; elementIdx < hoveredElements.length; elementIdx++) {
                 hoveredElements[elementIdx].classList.remove('mapper-canvas-line-hovered');
@@ -677,6 +872,11 @@
 // ////////////////////////////////////////////////////////////////////////
 
         $(container).on('mousemove', function(event) {
+
+            // A drag owns the lines - the ghost line dims them itself.
+            if (drag !== null && drag.active) {
+                return;
+            }
 
             // The dimming applies only inside the gutter - the trees
             // themselves keep their lines at full strength.
@@ -695,6 +895,9 @@
                 hoveredElements[elementIdx].classList.remove('mapper-canvas-line-hovered');
             }
             clearLinkedRows();
+
+            // A line under the pointer is clickable, so the cursor says so.
+            container.style.cursor = lineId === null ? '' : 'pointer';
 
             if (lineId !== null) {
                 var lineElements = svg.querySelectorAll('[data-line="' + lineId + '"]');
