@@ -60,15 +60,9 @@
     height: 14px;
 }
 
-/* Root rows have no parent above, so the first one starts its guide
-   at its own stub, and a lone root draws no guide at all. */
-.mapper-tree > .mapper-tree-item:first-child::after {
-    top: 14px;
-}
-
-.mapper-tree > .mapper-tree-item:first-child:last-child::after {
-    display: none;
-}
+/* The root rows hang off a virtual root above the tree - the first
+   row's guide runs up to the tree's top edge as if a parent sat
+   there, so a lone root keeps that stem too. */
 
 .mapper-tree-item-collapsed > .mapper-tree-children {
     display: none;
