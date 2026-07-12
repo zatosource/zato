@@ -119,6 +119,27 @@ path.mapper-canvas-line-hovered {
 }
 
 /* ------------------------------------------------------------ */
+/* Mapper - field hover                                          */
+/* ------------------------------------------------------------ */
+
+/* Hovering a field paints it - and every field at the other end of
+   its connections - with the linked-field gradient, badge-like rather
+   than button-like. The :hover variant keeps it over the plain row
+   hover background. */
+.mapper-tree-row-linked,
+.mapper-tree-row-linked:hover {
+    background: linear-gradient(to bottom, var(--mapper-background-linked-start), var(--mapper-background-linked-end));
+    box-shadow: var(--mapper-shadow-linked);
+}
+
+/* The lines of those connections keep their full strength while
+   every other line dims around them. */
+.mapper-canvas-line-attached {
+    opacity: 1;
+    filter: none;
+}
+
+/* ------------------------------------------------------------ */
 /* Mapper - mapped badges on the trees                           */
 /* ------------------------------------------------------------ */
 
