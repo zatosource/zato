@@ -10,18 +10,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
+# Redis
+import redis
+
 # Django
-from django.http import HttpResponse, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.json_internal import dumps
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# The Redis stream that the servers write log entries to
+_log_stream_key = 'zato.logs'
+
+# A cursor meaning "start from the very beginning of the stream"
+_stream_start_id = '0-0'
+
+# The most entries a single poll may return
+_max_entries_per_poll = 500
+
+# One client per worker process, redis-py clients are connection pools and are thread-safe
+_redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,108 +64,61 @@ def get_status(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def log_stream(req):
-
+@method_allowed('POST')
+def read_log_entries(req):
+    """ Single-shot endpoint for log streaming.
+    The client sends the id of the last stream entry it has seen, the server reads everything
+    newer than that from the capped Redis stream and returns it as one JSON document.
+    The client polls this endpoint periodically for as long as the page is open, so a worker
+    is only ever occupied for the duration of one read, never for the lifetime of the page.
+    """
     stream_logger = getLogger('zato.sse_stream')
-    stream_logger.info('log_stream: VIEW CALLED, client: {}'.format(req.META.get('REMOTE_ADDR')))
 
-    def event_stream():
+    try:
+        request_data = loads(req.body.decode('utf-8'))
+    except Exception:
+        stream_logger.error(f'read_log_entries: failed to parse request body: {format_exc()}')
+        return HttpResponseBadRequest('Invalid JSON in request body')
 
-        # Redis
-        import redis
-        import time
+    last_id = request_data['last_id']
 
-        redis_client = None
-        pubsub = None
+    # A client with no cursor starts at the current end of the stream, receiving only
+    # what is logged after its page opened - the same semantics the pubsub channel had.
+    if not last_id:
 
-        try:
-            stream_logger.info('log_stream: GENERATOR STARTED')
-            stream_logger.info('log_stream: attempting Redis connection')
+        newest = _redis_client.xrevrange(_log_stream_key, count=1)
 
-            redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            stream_logger.info('log_stream: Redis client created, testing connection')
+        if newest:
+            newest_entry = newest[0]
+            last_id = newest_entry[0]
+        else:
+            last_id = _stream_start_id
 
-            _ = redis_client.ping()
-            stream_logger.info('log_stream: Redis ping successful')
+        out = {'last_id': last_id, 'entries': []}
+        response = HttpResponse(dumps(out), content_type='application/json')
+        response['Cache-Control'] = 'no-cache'
 
-            pubsub = redis_client.pubsub()
-            stream_logger.info('log_stream: pubsub created')
+        return response
 
-            pubsub.subscribe('zato.logs')
-            stream_logger.info('log_stream: subscribed to zato.logs channel')
+    # Read everything that arrived after the client's cursor - the '(' prefix makes the range exclusive
+    raw_entries = _redis_client.xrange(_log_stream_key, min=f'({last_id}', count=_max_entries_per_poll)
 
-            yield ': connected\n\n'
-            stream_logger.info('log_stream: sent initial connected message')
-            stream_logger.info('log_stream: entering main message loop')
+    entries = []
 
-            last_keepalive = time.time()
-            last_keepalive_log = time.time()
-            message_count = 0
+    for entry_id, entry_fields in raw_entries:
+        log_entry = loads(entry_fields['data'])
+        entries.append(log_entry)
+        last_id = entry_id
 
-            keepalive_count = 0
-            while True:
-                current_time = time.time()
+    if entries:
+        entry_count = len(entries)
+        suffix = 'entry' if entry_count == 1 else 'entries'
+        stream_logger.info(f'read_log_entries: returning {entry_count} {suffix}, new last_id={last_id}')
 
-                if current_time - last_keepalive >= 5:
-                    keepalive_count += 1
-                    if current_time - last_keepalive_log >= 60:
-                        stream_logger.info('log_stream: yielding keepalive #{}, time since last: {}'.format(
-                            keepalive_count, current_time - last_keepalive))
-                        last_keepalive_log = current_time
-                    yield ': keepalive\n\n'
-                    last_keepalive = current_time
-
-                message = pubsub.get_message()
-                if message:
-                    stream_logger.info('log_stream: got message from pubsub, type: {}'.format(message.get('type')))
-                if message and message['type'] == 'message':
-                    message_count += 1
-                    log_data = message['data']
-                    stream_logger.info('log_stream: processing message #{}, data length: {}'.format(message_count, len(log_data)))
-
-                    import json
-                    try:
-                        parsed = json.loads(log_data)
-                        stream_logger.info('log_stream: message #{}, level={}, message preview={}'.format(
-                            message_count, parsed.get('level'), parsed.get('message', '')[:100]))
-                    except Exception:
-                        stream_logger.info('log_stream: yielding log message #{}'.format(message_count))
-
-                    stream_logger.info('log_stream: yielding message #{}'.format(message_count))
-                    yield 'data: {}\n\n'.format(log_data)
-                    last_keepalive = current_time
-                    stream_logger.info('log_stream: message #{} yielded successfully'.format(message_count))
-
-                time.sleep(0.1)
-
-        except GeneratorExit:
-            stream_logger.info('log_stream: GENERATOR EXIT (client disconnected)')
-            stream_logger.info('log_stream: total messages sent: {}'.format(message_count))
-        except Exception:
-            stream_logger.error('log_stream: EXCEPTION in generator: {}'.format(format_exc()))
-            stream_logger.info('log_stream: total messages before exception: {}'.format(message_count))
-        finally:
-            stream_logger.info('log_stream: FINALLY block, cleaning up')
-            if pubsub:
-                pubsub.unsubscribe('zato.logs')
-                pubsub.close()
-                stream_logger.info('log_stream: pubsub closed')
-            if redis_client:
-                redis_client.close()
-                stream_logger.info('log_stream: redis_client closed')
-
-            stream_logger.info('log_stream: GENERATOR ENDED')
-
-    stream_logger.info('log_stream: creating StreamingHttpResponse')
-    response = StreamingHttpResponse(
-        event_stream(), # type: ignore
-        content_type='text/event-stream'
-    )
+    out = {'last_id': last_id, 'entries': entries}
+    response = HttpResponse(dumps(out), content_type='application/json')
     response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    response['Content-Encoding'] = 'identity'
-    stream_logger.info('log_stream: returning response to client')
+
     return response
 
 # ################################################################################################################################

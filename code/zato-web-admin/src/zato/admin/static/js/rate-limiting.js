@@ -72,7 +72,7 @@
         $.fn.zato.rate_limiting.hide_dropdown();
 
         var dropdown = document.createElement('div');
-        dropdown.className = 'rate-limiting-suggestions';
+        dropdown.className = 'zato-dropdown-menu';
         dropdown.id = 'rate-limiting-dropdown-active';
 
         var filter = (filter_text || '').trim().toLowerCase();
@@ -105,13 +105,13 @@
             // Add separator between groups
             if(total_items > 0) {
                 var separator = document.createElement('div');
-                separator.className = 'rate-limiting-suggestion-separator';
+                separator.className = 'zato-dropdown-separator';
                 dropdown.appendChild(separator);
             }
 
             // Group header
             var header = document.createElement('div');
-            header.className = 'rate-limiting-suggestion-header';
+            header.className = 'zato-dropdown-header';
             header.textContent = group.group;
             dropdown.appendChild(header);
 
@@ -141,15 +141,15 @@
 
     $.fn.zato.rate_limiting.make_dropdown_item = function(item, on_select, keep_open) {
         var row = document.createElement('div');
-        row.className = 'rate-limiting-suggestion-item';
+        row.className = 'zato-dropdown-item';
 
         var value_span = document.createElement('span');
-        value_span.className = 'rate-limiting-suggestion-cidr';
+        value_span.className = 'zato-dropdown-item-value';
         value_span.textContent = item.value;
         row.appendChild(value_span);
 
         var label_span = document.createElement('span');
-        label_span.className = 'rate-limiting-suggestion-label';
+        label_span.className = 'zato-dropdown-item-label';
         label_span.textContent = item.label;
         row.appendChild(label_span);
 
@@ -219,7 +219,7 @@
     $.fn.zato.rate_limiting.close_dropdown_on_outside_click = function() {
         $(document).on('mousedown.rate_limiting', function(event) {
             var target = $(event.target);
-            if(!target.closest('.rate-limiting-suggestions').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-time-input')) {
+            if(!target.closest('.zato-dropdown-menu').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-time-input')) {
                 $.fn.zato.rate_limiting.hide_dropdown();
             }
         });

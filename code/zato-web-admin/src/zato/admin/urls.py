@@ -1373,8 +1373,8 @@ urlpatterns += [
         login_required(log_streaming.toggle_streaming), name='log-streaming-toggle'),
     url(r'^zato/log-streaming/status$',
         login_required(log_streaming.get_status), name='log-streaming-status'),
-    url(r'^zato/log-streaming/stream$',
-        login_required(log_streaming.log_stream), name='log-streaming-stream'),
+    url(r'^zato/log-streaming/read$',
+        login_required(log_streaming.read_log_entries), name='log-streaming-read'),
 ]
 
 urlpatterns += [

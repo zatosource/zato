@@ -137,7 +137,10 @@ CSP_CONNECT_SRC = ["'self'"]
 CSP_FORM_ACTION = ["'self'"]
 CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
 CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
-CSP_INCLUDE_NONCE_IN = ["'script-src'"]
+# Empty on purpose - templates still render nonce attributes but the nonce is not added to any directive yet.
+# It can only go into script-src once the inline onclick= handlers and javascript: links are migrated,
+# because a nonce in script-src makes browsers ignore 'unsafe-inline' which those still require.
+CSP_INCLUDE_NONCE_IN = []
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
