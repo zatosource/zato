@@ -1756,16 +1756,34 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def reload_config(self):
 
+        import traceback
+        logger.info('[DIAG] reload_config enter stack:\n%s', ''.join(traceback.format_stack()))
+
         # Optionally, log what we're doing ..
         if _needs_details:
             logger.debug('Config reloading')
 
-        # .. actually set up the configuration ..
-        self.set_up_config(self) # type: ignore
+        try:
 
-        # .. now reload it ..
-        self.config_manager.init()
-        self.config_manager.init_pubsub()
+            # .. actually set up the configuration ..
+            self.set_up_config(self) # type: ignore
+
+            logger.info('[DIAG] reload_config after set_up_config, before config_manager.init, ' \
+                'server.config_id=%s config_manager.config_store_id=%s out_plain_http_id=%s out_soap_id=%s',
+                hex(id(self.config)), hex(id(self.config_manager.config_store)),
+                hex(id(self.config.out_plain_http)), hex(id(self.config.out_soap)))
+
+            # .. now reload it ..
+            self.config_manager.init()
+            self.config_manager.init_pubsub()
+
+            logger.info('[DIAG] reload_config after config_manager.init')
+
+        except Exception:
+            from traceback import format_exc
+            logger.info('[DIAG] reload_config FAILED, out_plain_http_id=%s out_soap_id=%s, exc:\n%s',
+                hex(id(self.config.out_plain_http)), hex(id(self.config.out_soap)), format_exc())
+            raise
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()

@@ -55,11 +55,15 @@ def handle_config_event(msg:'anydict', context:'any_') -> 'ConfigEventResult':
         handler_name = f'on_config_event_{action_code}'
         func = getattr(context, handler_name, None)
 
+        logger.info('[DIAG] handle_config_event action=%s handler_found=%s msg.id=%s msg.name=%s',
+            action_code, bool(func), msg.get('id'), msg.get('name'))
+
         if func:
             msg = bunchify(msg)
             response = func(msg)
             result.response = response
             result.was_handled = True
+            logger.info('[DIAG] handle_config_event done action=%s', action_code)
         else:
             logger.warning('No handler: %s in context: %s -> %s', handler_name, context, msg)
 

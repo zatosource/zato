@@ -606,7 +606,13 @@ class DeleteMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'delete')
 
+                    logger.info('[DIAG] DeleteMeta.handle publishing action=%s id=%s name=%r label=%s',
+                        input.action, input.get('id'), input.get('name'), attrs.label)
+
                     self.config_dispatcher.publish(input)
+
+                    logger.info('[DIAG] DeleteMeta.handle published action=%s id=%s name=%r label=%s',
+                        input.action, input.get('id'), input.get('name'), attrs.label)
 
                     if attrs.delete_hook:
                         attrs.delete_hook(self, input, instance, attrs)
