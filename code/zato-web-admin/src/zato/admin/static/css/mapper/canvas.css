@@ -44,43 +44,6 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Mapper - line tooltip                                         */
-/* ------------------------------------------------------------ */
-
-/* One pair per line, the expression under them when the line
-   computes rather than copies. */
-.mapper-line-tooltip {
-    position: fixed;
-    z-index: 120;
-    max-width: 480px;
-    padding: var(--mapper-space-1) var(--mapper-space-2);
-    border-radius: var(--mapper-radius-small);
-    font-family: var(--mapper-font-family-mono);
-    font-size: var(--mapper-font-size-small);
-    color: var(--mapper-text-inverse);
-    background: var(--mapper-background-tooltip);
-    box-shadow: var(--mapper-shadow-raised);
-    pointer-events: none;
-}
-
-.mapper-line-tooltip-pair {
-    display: flex;
-    align-items: center;
-    gap: var(--mapper-space-1);
-}
-
-.mapper-line-tooltip-pair svg {
-    flex: none;
-    width: 12px;
-    height: 12px;
-    color: var(--mapper-text-inverse-muted);
-}
-
-.mapper-line-tooltip-expression {
-    color: var(--mapper-text-inverse-muted);
-}
-
-/* ------------------------------------------------------------ */
 /* Mapper - gutter hover                                         */
 /* ------------------------------------------------------------ */
 
@@ -106,32 +69,29 @@ path.mapper-canvas-line-attached {
     animation: mapper-canvas-line-flow 600ms linear infinite;
 }
 
-/* The rows the lit line connects light up with it - the colored
-   border on the edge its line leaves from, square-cornered, no
-   background fill. */
-.mapper-tree-row-connected-source,
-.mapper-tree-row-connected-target {
-    border-radius: 0;
-}
-
-.mapper-tree-row-connected-source {
-    box-shadow: inset -3px 0 0 var(--mapper-seablue-light2);
-}
-
-.mapper-tree-row-connected-target {
-    box-shadow: inset 3px 0 0 var(--mapper-seablue-light2);
-}
-
 /* ------------------------------------------------------------ */
 /* Mapper - field hover                                          */
 /* ------------------------------------------------------------ */
 
 /* Hovering a field paints it - and every field at the other end of
    its connections - with the linked-field gradient, badge-like rather
-   than button-like. The :hover variant keeps it over the plain row
-   hover background. */
+   than button-like. The :hover variant keeps the plain row hover
+   background out of the way. */
 .mapper-tree-row-linked,
 .mapper-tree-row-linked:hover {
+    background: none;
+}
+
+/* The gradient lives on an overlay inset from the row's top and
+   bottom edges, so two linked rows right above each other keep a
+   visible gap between their highlights. It sits under the row's
+   content inside the stacking context the row creates. */
+.mapper-tree-row-linked::before {
+    content: '';
+    position: absolute;
+    inset: 1px 0;
+    z-index: -1;
+    border-radius: var(--mapper-radius-small);
     background: linear-gradient(to bottom, var(--mapper-background-linked-start), var(--mapper-background-linked-end));
     box-shadow: var(--mapper-shadow-linked);
 }
