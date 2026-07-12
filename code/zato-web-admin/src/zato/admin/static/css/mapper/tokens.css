@@ -97,6 +97,13 @@
     --mapper-shadow-panel: 0 1px 3px rgba(1, 40, 69, 0.10);
     --mapper-shadow-raised: 0 4px 14px rgba(1, 40, 69, 0.18);
 
+    /* The highlight on a hovered field and on the fields at the
+       other end of its connections - the same gradient and depth
+       the page-prompt action links carry */
+    --mapper-background-linked-start: #ffd84a;
+    --mapper-background-linked-end: #ffc311;
+    --mapper-shadow-linked: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
     /* Type scale */
     --mapper-font-size-small: 12px;
     --mapper-font-size-base: 13px;

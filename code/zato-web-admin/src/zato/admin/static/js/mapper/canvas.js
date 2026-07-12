@@ -713,7 +713,10 @@
 
         function clearGutterHover() {
 
-            clearDim();
+            // The field hover owns the dimming while it is active.
+            if (!fieldHoverActive) {
+                clearDim();
+            }
             clearConnectedRows();
             hideLineTooltip();
 
@@ -772,6 +775,88 @@
         });
 
         $(container).on('mouseleave', clearGutterHover);
+
+// ////////////////////////////////////////////////////////////////////////
+// Field hover - the hovered field lights up together with every
+// field at the other end of its connections and the lines between them,
+// while all the other lines dim.
+// ////////////////////////////////////////////////////////////////////////
+
+        var fieldHoverActive = false;
+
+        function clearFieldHover() {
+
+            fieldHoverActive = false;
+            clearDim();
+
+            $(container).find('.mapper-tree-row-linked').removeClass('mapper-tree-row-linked');
+
+            var attachedElements = svg.querySelectorAll('.mapper-canvas-line-attached');
+            for (var elementIdx = 0; elementIdx < attachedElements.length; elementIdx++) {
+                attachedElements[elementIdx].classList.remove('mapper-canvas-line-attached');
+            }
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        function applyFieldHover(row, side) {
+
+            clearFieldHover();
+            fieldHoverActive = true;
+
+            row.classList.add('mapper-tree-row-linked');
+
+            var fieldPath = row.closest('.mapper-tree-item').getAttribute('data-path');
+
+            // The lines this field extends to or from - a field may sit
+            // on several connections at once, so all of them count.
+            var sideAttribute = side === 'source' ? 'data-source-path' : 'data-target-path';
+            var otherAttribute = side === 'source' ? 'data-target-path' : 'data-source-path';
+            var otherBody = side === 'source' ? canvasConfig.targetBody : canvasConfig.sourceBody;
+
+            var linePaths = svg.querySelectorAll('path[' + sideAttribute + '="' + fieldPath + '"]');
+
+            // An unconnected field lights up alone - there is nothing
+            // to dim against.
+            if (linePaths.length === 0) {
+                return;
+            }
+
+            // Every line dims first, then the attached ones come back
+            // to full strength through their own class.
+            svg.style.setProperty('--mapper-canvas-line-opacity', lineOpacityDimmed);
+            svg.style.setProperty('--mapper-canvas-line-grayscale', lineGrayscaleDimmed);
+
+            for (var lineIdx = 0; lineIdx < linePaths.length; lineIdx++) {
+                var linePath = linePaths[lineIdx];
+
+                // The line together with its endpoint dots.
+                var lineId = linePath.getAttribute('data-line');
+                var lineElements = svg.querySelectorAll('[data-line="' + lineId + '"]');
+                for (var lineElementIdx = 0; lineElementIdx < lineElements.length; lineElementIdx++) {
+                    lineElements[lineElementIdx].classList.add('mapper-canvas-line-attached');
+                }
+
+                // The field at the other end of this line.
+                var otherRow = treeRowAt(otherBody, linePath.getAttribute(otherAttribute));
+                if (otherRow !== null) {
+                    otherRow.classList.add('mapper-tree-row-linked');
+                }
+            }
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        $(canvasConfig.sourceBody).on('mouseenter', '.mapper-tree-row', function() {
+            applyFieldHover(this, 'source');
+        });
+
+        $(canvasConfig.targetBody).on('mouseenter', '.mapper-tree-row', function() {
+            applyFieldHover(this, 'target');
+        });
+
+        $(canvasConfig.sourceBody).on('mouseleave', '.mapper-tree-row', clearFieldHover);
+        $(canvasConfig.targetBody).on('mouseleave', '.mapper-tree-row', clearFieldHover);
 
 // ////////////////////////////////////////////////////////////////////////
 // Line interactions - a click selects the mapping row behind a line,
