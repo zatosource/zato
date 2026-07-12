@@ -35,7 +35,7 @@
     content: '';
     position: absolute;
     left: -9px;
-    top: 14px;
+    top: 12px;
     width: 17px;
     height: 1px;
     background: var(--mapper-border-light);
@@ -57,7 +57,7 @@
 .mapper-tree > .mapper-tree-item:last-child::after,
 .mapper-tree-children > .mapper-tree-item:last-child::after {
     bottom: auto;
-    height: 14px;
+    height: 12px;
 }
 
 /* The root rows hang off a virtual root above the tree - the first
@@ -93,8 +93,8 @@
 .mapper-tree-item:hover::after {
     background: linear-gradient(
         var(--mapper-color-path) 0,
-        var(--mapper-color-path) 14px,
-        var(--mapper-border-light) 14px
+        var(--mapper-color-path) 12px,
+        var(--mapper-border-light) 12px
     );
 }
 
@@ -102,12 +102,16 @@
     display: none;
 }
 
+/* The row is positioned above the guide pseudo-elements, so its
+   background always covers the lines leading up to it. */
 .mapper-tree-row {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: var(--mapper-space-2);
-    min-height: 28px;
-    padding: var(--mapper-space-1) var(--mapper-space-2);
+    min-height: 24px;
+    padding: 2px var(--mapper-space-2);
     border-radius: var(--mapper-radius-small);
     cursor: default;
     transition: background var(--mapper-motion-fast) ease;
