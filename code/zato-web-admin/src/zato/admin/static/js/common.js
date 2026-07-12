@@ -829,8 +829,8 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
 
     $.fn.zato.turn_selects_into_chosen(div_id);
 
-    // Start live form updates SSE if any configs are registered for this action,
-    // but skip if all configs use badge_picker handler (those start SSE after their async load)
+    // Start live form updates polling if any configs are registered for this action,
+    // but skip if all configs use badge_picker handler (those start polling after their async load)
     var _lfu_configs = $.fn.zato.live_form_updates._get_configs(action);
     var _all_badge_picker = _lfu_configs.length > 0;
     for(var _i = 0; _i < _lfu_configs.length; _i++) {
@@ -2770,25 +2770,29 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* Live Form Updates - Reusable SSE-based mechanism for pushing live data changes to open create/edit forms.                     */
+/* Live Form Updates - Reusable polling mechanism for applying live data changes to open create/edit forms.                      */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 ;(function() {
 
+    // Configuration for the polling loop
+    $.fn.zato.live_form_updates.config = {
+        poll_interval_ms: 1000,
+        url: '/zato/live-form-updates/'
+    };
+
     // Per-action (create/edit) registry of what object types each page cares about
     var _registry = {};
 
-    // Active EventSource connections, keyed by action
+    // Active polling loops, keyed by action
     var _connections = {};
 
-    // Close all SSE connections before page unload to prevent browser "interrupted" warnings
+    // Stop all polling loops before page unload
     $(window).on('beforeunload', function() {
-        for(var action in _connections) {
-            if(_connections[action] && _connections[action].evtSource) {
-                _connections[action].evtSource.close();
-            }
+        var actions = Object.keys(_connections);
+        for(var actionIdx = 0; actionIdx < actions.length; actionIdx++) {
+            $.fn.zato.live_form_updates.stop(actions[actionIdx]);
         }
-        _connections = {};
     });
 
     // ------------------------------------------------------------------------------------------------------------------------
@@ -2909,66 +2913,86 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             return;
         }
 
-        // Close any existing connection for this action
+        // Stop any existing polling loop for this action ..
         $.fn.zato.live_form_updates.stop(action);
 
+        // .. register the new loop ..
+        var connection = {
+            is_active: true,
+            is_first_response: true,
+            timer_id: null
+        };
+        _connections[action] = connection;
+
+        // .. and run the first poll right away.
+        $.fn.zato.live_form_updates._poll(action, connection);
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._poll = function(action, connection) {
+
+        // The loop may have been stopped while a previous poll was in flight
+        if(!connection.is_active) {
+            return;
+        }
+
+        // Snapshot what the page displays right now - the DOM itself is the client-side state,
+        // so each poll compares the server against what the user actually sees.
         var request_data = $.fn.zato.live_form_updates._build_request(action);
         var snapshot_json = JSON.stringify(request_data);
-        console.log('[live_form_updates] start: snapshot_json length=' + snapshot_json.length);
 
-        var url = '/zato/live-form-updates/?snapshot=' + encodeURIComponent(snapshot_json);
+        $.ajax({
+            type: 'POST',
+            url: $.fn.zato.live_form_updates.config.url,
+            data: snapshot_json,
+            contentType: 'application/json',
+            dataType: 'json',
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function(diffs) {
 
-        var evtSource = new EventSource(url);
-
-        _connections[action] = {
-            evtSource: evtSource,
-            is_first_message: true
-        };
-
-        evtSource.onopen = function() {
-            console.log('[live_form_updates] start: EventSource connected for action=' + action);
-        };
-
-        evtSource.onmessage = function(event) {
-            console.log('[live_form_updates] onmessage: action=' + action + ', data=' + event.data.substring(0, 200));
-            try {
-                var diffs = JSON.parse(event.data);
-                var conn = _connections[action];
-                var skip_puff = conn && conn.is_first_message;
-                if(skip_puff) {
-                    conn.is_first_message = false;
+                // Ignore a response that arrives after the loop was stopped
+                if(!connection.is_active) {
+                    return;
                 }
-                $.fn.zato.live_form_updates._apply_diffs(action, diffs, skip_puff);
-            }
-            catch(e) {
-                console.error('[live_form_updates] onmessage: JSON parse error', e);
-            }
-        };
 
-        evtSource.onerror = function(err) {
-            console.log('[live_form_updates] onerror: action=' + action + ', readyState=' + evtSource.readyState);
-            // readyState 2 = CLOSED; don't reconnect
-            if(evtSource.readyState === EventSource.CLOSED) {
-                console.log('[live_form_updates] onerror: EventSource closed for action=' + action);
+                var skip_puff = connection.is_first_response;
+                connection.is_first_response = false;
+
+                if(Object.keys(diffs).length) {
+                    console.log('[live_form_updates] poll: action=' + action + ', diff types=' + JSON.stringify(Object.keys(diffs)));
+                    $.fn.zato.live_form_updates._apply_diffs(action, diffs, skip_puff);
+                }
+            },
+            error: function(jqXHR, text_status) {
+                console.log('[live_form_updates] poll error: action=' + action + ', status=' + text_status);
+            },
+            complete: function() {
+
+                // Schedule the next poll only once this one has fully completed,
+                // so polls never overlap even when the server is slow.
+                if(connection.is_active) {
+                    connection.timer_id = setTimeout(function() {
+                        $.fn.zato.live_form_updates._poll(action, connection);
+                    }, $.fn.zato.live_form_updates.config.poll_interval_ms);
+                }
             }
-            // Prevent auto-reconnect by closing on error
-            evtSource.close();
-            delete _connections[action];
-        };
+        });
     };
 
     // ------------------------------------------------------------------------------------------------------------------------
 
     $.fn.zato.live_form_updates.stop = function(action) {
-        var conn = _connections[action];
-        if(conn) {
-            console.log('[live_form_updates] stop: closing EventSource for action=' + action);
-            if(conn.evtSource) {
-                conn.evtSource.close();
+        var connection = _connections[action];
+        if(connection) {
+            console.log('[live_form_updates] stop: stopping polling loop for action=' + action);
+            connection.is_active = false;
+            if(connection.timer_id) {
+                clearTimeout(connection.timer_id);
             }
             delete _connections[action];
         } else {
-            console.log('[live_form_updates] stop: no connection to close for action=' + action);
+            console.log('[live_form_updates] stop: no polling loop to stop for action=' + action);
         }
     };
 

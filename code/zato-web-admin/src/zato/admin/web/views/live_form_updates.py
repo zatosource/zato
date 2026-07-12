@@ -7,12 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import time
 from logging import getLogger
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponseBadRequest, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 
 # Zato
 from zato.admin.web.views import method_allowed
@@ -271,126 +270,52 @@ def _parse_request_data(request_data):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def stream(req):
-    """ SSE endpoint for live form updates.
-    The client opens an EventSource (GET) with the snapshot data as a query parameter.
-    The server then streams diffs as SSE events.
+@method_allowed('POST')
+def get_updates(req):
+    """ Single-shot endpoint for live form updates.
+    The client sends a snapshot of the items it currently displays, the server fetches the current
+    lists once, computes the diffs and returns them as JSON. The client polls this endpoint
+    periodically for as long as a create or edit dialog is open, so a worker is only ever occupied
+    for the duration of one fetch, never for the lifetime of the dialog.
     """
-    stream_logger = getLogger('zato.live_form_updates')
-
-    stream_logger.info('live_form_updates.stream: VIEW CALLED, client=%s, method=%s',
-        req.META.get('REMOTE_ADDR'), req.method)
+    updates_logger = getLogger('zato.live_form_updates')
 
     try:
-        snapshot_json = req.GET.get('snapshot', '{}')
-        stream_logger.info('live_form_updates.stream: snapshot length=%d', len(snapshot_json))
-        stream_logger.info('live_form_updates.stream: snapshot=%s', snapshot_json[:500])
+        snapshot_json = req.body.decode('utf-8')
         request_data = loads(snapshot_json)
     except Exception:
-        stream_logger.error('live_form_updates.stream: failed to parse snapshot: %s', format_exc())
-        return HttpResponseBadRequest('Invalid JSON in snapshot parameter')
+        updates_logger.error('live_form_updates.get_updates: failed to parse snapshot: %s', format_exc())
+        return HttpResponseBadRequest('Invalid JSON in request body')
 
-    initial_object_types = _parse_request_data(request_data)
-    stream_logger.info('live_form_updates.stream: parsed %d object types: %s',
-        len(initial_object_types), [ot for ot, _ in initial_object_types])
+    object_types = _parse_request_data(request_data)
 
-    if not initial_object_types:
-        stream_logger.error('live_form_updates.stream: no valid object types, returning 400')
+    if not object_types:
+        updates_logger.error('live_form_updates.get_updates: no valid object types, returning 400')
         return HttpResponseBadRequest('No valid object types provided')
 
-    for ot, items in initial_object_types:
-        stream_logger.info('live_form_updates.stream: object_type=%s, client_items_count=%d, sample_keys=%s',
-            ot, len(items), list(items.keys())[:5])
-
-    # Capture client and cluster_id before entering the generator,
-    # as the request object may not be available after the view returns.
     zato_client = req.zato.client
     cluster_id = req.zato.cluster_id
 
-    def event_stream():
+    # Compute the diff between what the client displays and what the server has now
+    all_diffs = {}
 
-        import sys as _sys
-        def _flush_log(msg):
-            stream_logger.info(msg)
-            for _handler in stream_logger.handlers:
-                _handler.flush()
-            _sys.stdout.flush()
-            _sys.stderr.flush()
+    for object_type, client_items in object_types:
+        config = OBJECT_TYPE_CONFIG[object_type]
+        label_fields = config['label_fields']
 
-        snapshots = {}
-        for object_type, client_items in initial_object_types:
-            snapshots[object_type] = client_items
+        current_list = _fetch_list(zato_client, cluster_id, object_type)
+        diff = _compute_diff(client_items, current_list, label_fields)
 
-        try:
-            _flush_log('live_form_updates.stream: about to yield connected comment')
-            yield ': connected\n\n'
-            _flush_log('live_form_updates.stream: yielded connected comment, returned from yield')
+        has_changes = diff['created'] or diff['deleted'] or diff['renamed']
 
-            iteration = 0
+        if has_changes:
+            updates_logger.info('live_form_updates.get_updates: DIFF for %s: created=%d, deleted=%d, renamed=%d',
+                object_type, len(diff['created']), len(diff['deleted']), len(diff['renamed']))
+            all_diffs[object_type] = diff
 
-            while True:
-                iteration += 1
-                all_diffs = {}
-
-                _flush_log('live_form_updates.stream: LOOP TOP iter=%d' % iteration)
-
-                for object_type, _ in initial_object_types:
-                    config = OBJECT_TYPE_CONFIG[object_type]
-                    label_fields = config['label_fields']
-
-                    _flush_log('live_form_updates.stream: iter=%d, about to fetch %s' % (iteration, object_type))
-                    current_list = _fetch_list(zato_client, cluster_id, object_type)
-                    _flush_log('live_form_updates.stream: iter=%d, fetched %s, got %d items' % (iteration, object_type, len(current_list)))
-
-                    if iteration <= 3:
-                        stream_logger.info('live_form_updates.stream: iter=%d, object_type=%s, server_items=%d, snapshot_items=%d',
-                            iteration, object_type, len(current_list), len(snapshots[object_type]))
-
-                    diff = _compute_diff(snapshots[object_type], current_list, label_fields)
-
-                    has_changes = diff['created'] or diff['deleted'] or diff['renamed']
-
-                    if has_changes:
-                        stream_logger.info('live_form_updates.stream: iter=%d, DIFF for %s: created=%d, deleted=%d, renamed=%d',
-                            iteration, object_type, len(diff['created']), len(diff['deleted']), len(diff['renamed']))
-                        all_diffs[object_type] = diff
-
-                        new_snapshot = {}
-                        for item in current_list:
-                            new_snapshot[item['_id']] = {f: item.get(f, '') for f in label_fields}
-                        snapshots[object_type] = new_snapshot
-
-                if all_diffs:
-                    msg = dumps(all_diffs)
-                    _flush_log('live_form_updates.stream: iter=%d, about to yield diff, length=%d' % (iteration, len(msg)))
-                    yield 'data: {}\n\n'.format(msg)
-                    _flush_log('live_form_updates.stream: iter=%d, yielded diff, returned from yield' % iteration)
-                else:
-                    _flush_log('live_form_updates.stream: iter=%d, about to yield ping' % iteration)
-                    yield ': ping\n\n'
-                    _flush_log('live_form_updates.stream: iter=%d, yielded ping, returned from yield' % iteration)
-
-                _flush_log('live_form_updates.stream: iter=%d, about to sleep 1s' % iteration)
-                time.sleep(1)
-                _flush_log('live_form_updates.stream: iter=%d, woke from sleep' % iteration)
-
-        except GeneratorExit:
-            stream_logger.info('live_form_updates.stream: client disconnected (GeneratorExit)')
-        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-            stream_logger.info('live_form_updates.stream: client disconnected (broken pipe)')
-        except Exception:
-            stream_logger.error('live_form_updates.stream: error in stream: %s', format_exc())
-
-    response = StreamingHttpResponse(
-        event_stream(), # type: ignore
-        content_type='text/event-stream'
-    )
+    response = HttpResponse(dumps(all_diffs), content_type='application/json')
     response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    response['Content-Encoding'] = 'identity'
 
-    stream_logger.info('live_form_updates.stream: returning StreamingHttpResponse')
     return response
 
 # ################################################################################################################################

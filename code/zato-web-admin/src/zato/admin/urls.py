@@ -1382,7 +1382,7 @@ urlpatterns += [
     # Live form updates
 
     url(r'^zato/live-form-updates/$',
-        login_required(live_form_updates.stream), name='live-form-updates'),
+        login_required(live_form_updates.get_updates), name='live-form-updates'),
 ]
 
 

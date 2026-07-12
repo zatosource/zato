@@ -115,7 +115,7 @@ $.fn.zato.groups.badge_picker.load = function(action, group_id) {
             console.log('[badge_picker] load: loaded ' + (items ? items.length : 0) + ' items for action=' + action);
             $.fn.zato.badge_picker.init(action, items || [], $.fn.zato.groups.badge_picker_config);
 
-            console.log('[badge_picker] load: re-starting SSE after badge load for action=' + action);
+            console.log('[badge_picker] load: re-starting live form updates after badge load for action=' + action);
             $.fn.zato.live_form_updates.start(action);
         } else {
             available_body.html('<span class="badge-zone-empty">Failed to load</span>');
