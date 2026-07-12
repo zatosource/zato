@@ -65,6 +65,7 @@ from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_Config
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1047,8 +1048,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         fire_redis = self._scheduler.new_redis_conn()
 
-        fire_stream = 'zato:scheduler:stream:fire'
-        timeout_stream = 'zato:scheduler:stream:timeout'
+        fire_stream = SchedulerStreamCtx.Fire_Stream
+        timeout_stream = SchedulerStreamCtx.Timeout_Stream
         group_name = 'server-fire'
         consumer_name = 'server-fire-0'
 
@@ -1114,7 +1115,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Listens for request_jobs messages from the scheduler and responds with a reload. """
         req_redis = self._scheduler.new_redis_conn()
 
-        request_stream = 'zato:scheduler:stream:request'
+        request_stream = SchedulerStreamCtx.Request_Stream
         group_name = 'server-request'
         consumer_name = 'server-request-0'
 
@@ -1221,7 +1222,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. report the outcome to the Rust scheduler ..
         try:
-            self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
+            self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run, error_traceback)
             logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
         except Exception:
             logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())

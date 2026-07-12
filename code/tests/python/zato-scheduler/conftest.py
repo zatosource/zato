@@ -44,6 +44,10 @@ _ZATO_PY = os.path.join(_ZATO_BASE, 'code', 'bin', 'python')
 
 _PASSWORD = 'test.invoke.' + CryptoManager.generate_hex_string()
 
+# A per-session Redis stream prefix so the server and scheduler started here never exchange
+# fire events or commands with any other Zato environment sharing the same Redis instance.
+_STREAM_PREFIX = 'zato:scheduler:test-' + CryptoManager.generate_hex_string()
+
 _REPORTS_DIR = os.path.join(_ZATO_BASE, 'code', 'tests', 'python', 'zato-scheduler', 'reports')
 
 _COVERAGE_SOURCE = os.path.join(
@@ -121,9 +125,27 @@ def _kill_scheduler():
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _delete_stream_keys():
+    """ Removes this session's namespaced scheduler streams from Redis so they do not accumulate across sessions.
+    """
+    from redis import Redis
+
+    redis_conn = Redis(host='localhost', port=6379, decode_responses=True)
+
+    try:
+        keys = redis_conn.keys(_STREAM_PREFIX + ':stream:*')
+        if keys:
+            redis_conn.delete(*keys)
+    except Exception:
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _cleanup():
     _kill_server()
     _kill_scheduler()
+    _delete_stream_keys()
     global _tmpdir
     if _tmpdir and os.path.isdir(_tmpdir):
         shutil.rmtree(_tmpdir, ignore_errors=True)
@@ -259,6 +281,7 @@ def zato_server(request):
     env = os.environ.copy()
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
+    env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
     env.pop('COVERAGE_PROCESS_START', None)
     if use_coverage:
         env['COVERAGE_PROCESS_START'] = coveragerc_path
@@ -304,6 +327,7 @@ def zato_server(request):
 
     scheduler_dir = os.path.join(_tmpdir, 'scheduler')
     scheduler_env = os.environ.copy()
+    scheduler_env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
     scheduler_env.pop('COVERAGE_PROCESS_START', None)
 
     _scheduler_proc = subprocess.Popen(
@@ -349,6 +373,7 @@ def zato_server(request):
 
     _kill_server()
     _kill_scheduler()
+    _delete_stream_keys()
 
     if use_coverage and cov_data_dir and coveragerc_path:
         time.sleep(2)
