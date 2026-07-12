@@ -803,6 +803,9 @@ class ServiceStore:
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
+                logger.info('[DIAG] _store_in_ram registered name=%r impl_name=%r service_id=%s pid=%s store_id=%s',
+                    item.name, item.impl_name, service_id, os.getpid(), hex(id(self)))
+
 # ################################################################################################################################
 
     def _store_services_in_odb(
@@ -1165,6 +1168,8 @@ class ServiceStore:
 
         # Exit early if we are not to process this file
         if self._should_ignore_file(file_name, base_dir):
+            logger.info('[DIAG] import_objects_from_file ignoring file_name=%r base_dir=%r pid=%s store_id=%s',
+                file_name, base_dir, os.getpid(), hex(id(self)))
             return to_process
 
         try:
@@ -1174,6 +1179,10 @@ class ServiceStore:
             logger.error(msg, file_name, format_exc())
         else:
             to_process.extend(visit_func(mod_info.module, is_internal, mod_info.file_name))
+            logger.info(
+                '[DIAG] import_objects_from_file file_name=%r module=%r visit_func=%s found=%s pid=%s store_id=%s',
+                file_name, mod_info.module.__name__, visit_func.__name__,
+                [elem.name for elem in to_process], os.getpid(), hex(id(self)))
         finally:
             return to_process
 

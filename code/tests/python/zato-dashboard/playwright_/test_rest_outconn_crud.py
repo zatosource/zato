@@ -51,10 +51,11 @@ _Cell_Validate_TLS = 12
 _Cell_Ping_Method = 13
 _Cell_Pool_Size = 14
 _Cell_Content_Type = 16
-_Cell_Edit = 17
-_Cell_Delete = 18
-_Cell_Ping = 19
-_Cell_Invoke = 20
+_Cell_Audit_Log = 17
+_Cell_Edit = 18
+_Cell_Delete = 19
+_Cell_Ping = 20
+_Cell_Invoke = 21
 
 # Defaults the create form arrives with
 _Default_Ping_Method = 'HEAD'

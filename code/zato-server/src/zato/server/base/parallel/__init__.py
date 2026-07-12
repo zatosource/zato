@@ -959,6 +959,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Touch all the hot-directory files to trigger their deployment
         py_files = get_python_files(self.hot_deploy_config.pickup_dir)
+        py_file_names = [elem['full_path'] for elem in py_files]
+        logger.info('[DIAG] boot pickup deploy pid=%s server_id=%s pickup_dir=%r files=%s',
+            os.getpid(), hex(id(self)), self.hot_deploy_config.pickup_dir, py_file_names)
         for item in py_files:
             _ = self.invoke('zato.hot-deploy.create', {
                 'payload': item['data'],

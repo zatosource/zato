@@ -555,6 +555,13 @@ class ServiceInvoker(Service):
 
         # No such service as given on input
         else:
+            store = self.server.service_store
+            self.logger.info(
+                '[DIAG] ServiceInvoker no such service name=%r pid=%s server_id=%s store_id=%s'
+                ' known_count=%s base_dir=%r bind_port_env=%r similar=%s',
+                service_name, os.getpid(), hex(id(self.server)), hex(id(store)),
+                len(store.name_to_impl_name), self.server.base_dir, os.environ.get('Zato_Config_Bind_Port'),
+                sorted(name for name in store.name_to_impl_name if 'outconn' in name or 'rest' in name))
             self.response.data_format = 'text/plain'
             raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
