@@ -64,12 +64,12 @@ impl SchedulerConfig {
 /// Waits for the server to send a `reload` command with initial jobs.
 ///
 /// Retries indefinitely, requesting jobs every 10 seconds until the server responds.
-fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &SchedulerShared) {
+fn wait_for_initial_reload(conn: &mut redis::Connection, keys: &redis_streams::StreamKeys, shared: &SchedulerShared) {
     let mut attempt: u64 = 0;
     loop {
         attempt += 1;
         tracing::info!("Requesting jobs from server (attempt {attempt})");
-        redis_streams::request_jobs(conn);
+        redis_streams::request_jobs(conn, keys);
 
         type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 
@@ -82,7 +82,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &SchedulerShare
             .arg("COUNT")
             .arg(10_u64)
             .arg("STREAMS")
-            .arg(redis_streams::COMMAND_STREAM)
+            .arg(&keys.command)
             .arg(">")
             .query(conn);
 
@@ -112,10 +112,10 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &SchedulerShare
                 tracing::info!("Startup command received: {command} correlation_id={correlation_id}");
 
                 if command == "reload" {
-                    redis_streams::process_startup_reload(conn, shared, &correlation_id, &payload);
+                    redis_streams::process_startup_reload(conn, keys, shared, &correlation_id, &payload);
 
                     let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                        .arg(redis_streams::COMMAND_STREAM)
+                        .arg(&keys.command)
                         .arg(redis_streams::CONSUMER_GROUP_NAME)
                         .arg(msg_id.as_str())
                         .query(conn);
@@ -127,7 +127,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &SchedulerShare
                 }
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                    .arg(redis_streams::COMMAND_STREAM)
+                    .arg(&keys.command)
                     .arg(redis_streams::CONSUMER_GROUP_NAME)
                     .arg(msg_id.as_str())
                     .query(conn);
@@ -169,12 +169,16 @@ async fn main() -> std::io::Result<()> {
         )
     })?;
 
-    redis_streams::ensure_consumer_group(&mut command_conn);
+    // All stream keys carry the per-environment prefix so that multiple
+    // environments sharing one Redis never steal each other's messages.
+    let stream_keys = redis_streams::StreamKeys::from_env();
+
+    redis_streams::ensure_consumer_group(&mut command_conn, &stream_keys);
 
     let shared = Arc::new(SchedulerShared::new());
 
     tracing::info!("Waiting for initial job reload from server");
-    wait_for_initial_reload(&mut command_conn, &shared);
+    wait_for_initial_reload(&mut command_conn, &stream_keys, &shared);
 
     let watchdog_registry = Arc::new(watchdog::WatchdogRegistry::new(Arc::clone(&shared)));
 
@@ -194,18 +198,20 @@ async fn main() -> std::io::Result<()> {
     watchdog::start_watchdog(Arc::clone(&watchdog_registry));
 
     let shared_for_commands = Arc::clone(&shared);
+    let keys_for_commands = stream_keys.clone();
     let command_thread = std::thread::Builder::new()
         .name("zato-cmd-listener".into())
         .spawn(move || {
-            redis_streams::command_listener_loop(&mut command_conn, shared_for_commands);
+            redis_streams::command_listener_loop(&mut command_conn, &keys_for_commands, shared_for_commands);
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn command listener: {err}")))?;
 
+    let keys_for_fire = stream_keys.clone();
     let fire_thread = std::thread::Builder::new()
         .name("zato-fire-pub".into())
         .spawn(move || {
             for batch in fire_receiver {
-                redis_streams::publish_fire_event(&mut fire_conn, &batch);
+                redis_streams::publish_fire_event(&mut fire_conn, &keys_for_fire, &batch);
             }
             tracing::info!("Fire publisher thread exiting");
         })

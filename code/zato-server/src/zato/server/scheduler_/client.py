@@ -36,11 +36,17 @@ logger = logging.getLogger(__name__)
 # The scheduler's HTTP query API binds on this port unless the environment overrides it
 _scheduler_http_port = os.environ.get('Zato_Scheduler_HTTP_Port', '35100')
 
+# All scheduler stream keys carry this per-environment prefix so that multiple Zato environments
+# sharing one Redis never consume each other's messages. The Rust scheduler binary reads the same variable.
+_stream_prefix = os.environ.get('Zato_Scheduler_Stream_Prefix', 'zato:scheduler')
+
 class ModuleCtx:
-    Command_Stream = 'zato:scheduler:stream:command'
-    Reply_Stream = 'zato:scheduler:stream:reply'
-    Fire_Stream = 'zato:scheduler:stream:fire'
-    Timeout_Stream = 'zato:scheduler:stream:timeout'
+    Stream_Prefix = _stream_prefix
+    Command_Stream = f'{_stream_prefix}:stream:command'
+    Reply_Stream = f'{_stream_prefix}:stream:reply'
+    Fire_Stream = f'{_stream_prefix}:stream:fire'
+    Timeout_Stream = f'{_stream_prefix}:stream:timeout'
+    Request_Stream = f'{_stream_prefix}:stream:request'
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'
     Http_Base = f'http://127.0.0.1:{_scheduler_http_port}'
@@ -181,12 +187,13 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def mark_complete(self, job_id:'int', outcome:'str', duration_ms:'int', current_run:'int') -> 'None':
+    def mark_complete(self, job_id:'int', outcome:'str', duration_ms:'int', current_run:'int', error:'str') -> 'None':
         self.invoke('mark_complete', {
             'job_id': job_id,
             'outcome': outcome,
             'duration_ms': duration_ms,
             'current_run': current_run,
+            'error': error,
         })
 
 # ################################################################################################################################

@@ -5,8 +5,11 @@
 
 //! Redis Streams integration for the standalone scheduler binary.
 //!
-//! Provides command ingestion from `zato:scheduler:stream:command` and
-//! fire event publishing to `zato:scheduler:stream:fire`.
+//! Provides command ingestion from the command stream and fire event
+//! publishing to the fire stream. All stream keys are namespaced by
+//! the `Zato_Scheduler_Stream_Prefix` environment variable so that
+//! multiple Zato environments sharing one Redis never consume each
+//! other's messages.
 
 use std::sync::Arc;
 
@@ -19,20 +22,11 @@ use crate::scheduler::SchedulerShared;
 use crate::types::FireBatch;
 use crate::{humanize_ms, reload_jobs};
 
-/// Redis stream key where the server publishes commands for the scheduler.
-pub const COMMAND_STREAM: &str = "zato:scheduler:stream:command";
+/// Environment variable holding the per-environment stream key prefix.
+pub const STREAM_PREFIX_ENV_VAR: &str = "Zato_Scheduler_Stream_Prefix";
 
-/// Redis stream key where the scheduler publishes fire events.
-pub const FIRE_STREAM: &str = "zato:scheduler:stream:fire";
-
-/// Redis stream key where the scheduler publishes timeout events.
-pub const TIMEOUT_STREAM: &str = "zato:scheduler:stream:timeout";
-
-/// Redis stream key where the scheduler publishes synchronous replies.
-pub const REPLY_STREAM: &str = "zato:scheduler:stream:reply";
-
-/// Redis stream key where the scheduler publishes requests for the server.
-pub const REQUEST_STREAM: &str = "zato:scheduler:stream:request";
+/// Default stream key prefix used when the environment does not set one.
+pub const DEFAULT_STREAM_PREFIX: &str = "zato:scheduler";
 
 /// Consumer group name used by the scheduler for the command stream.
 pub const CONSUMER_GROUP_NAME: &str = "scheduler";
@@ -43,24 +37,60 @@ pub const CONSUMER_INSTANCE_NAME: &str = "scheduler-0";
 /// Maximum number of entries in each stream before trimming.
 const STREAM_MAXLEN: usize = 100_000;
 
+/// Redis stream keys, all namespaced by the per-environment prefix.
+#[derive(Clone)]
+pub struct StreamKeys {
+
+    /// Stream where the server publishes commands for the scheduler.
+    pub command: String,
+
+    /// Stream where the scheduler publishes fire events.
+    pub fire: String,
+
+    /// Stream where the scheduler publishes timeout events.
+    pub timeout: String,
+
+    /// Stream where the scheduler publishes synchronous replies.
+    pub reply: String,
+
+    /// Stream where the scheduler publishes requests for the server.
+    pub request: String,
+}
+
+impl StreamKeys {
+
+    /// Builds stream keys from the `Zato_Scheduler_Stream_Prefix` environment variable.
+    pub fn from_env() -> Self {
+        // The prefix is genuinely optional - a standalone production environment runs with the default.
+        let prefix = std::env::var(STREAM_PREFIX_ENV_VAR).unwrap_or_else(|_| DEFAULT_STREAM_PREFIX.to_string());
+        Self {
+            command: format!("{prefix}:stream:command"),
+            fire: format!("{prefix}:stream:fire"),
+            timeout: format!("{prefix}:stream:timeout"),
+            reply: format!("{prefix}:stream:reply"),
+            request: format!("{prefix}:stream:request"),
+        }
+    }
+}
+
 /// Ensures the consumer group exists on the command stream.
 ///
 /// Creates the stream and group if they do not exist.
-pub fn ensure_consumer_group(conn: &mut redis::Connection) {
+pub fn ensure_consumer_group(conn: &mut redis::Connection, keys: &StreamKeys) {
     let result: Result<(), redis::RedisError> = redis::cmd("XGROUP")
         .arg("CREATE")
-        .arg(COMMAND_STREAM)
+        .arg(&keys.command)
         .arg(CONSUMER_GROUP_NAME)
         .arg("$")
         .arg("MKSTREAM")
         .query(conn);
 
     match result {
-        Ok(()) => tracing::info!("Created consumer group '{CONSUMER_GROUP_NAME}' on '{COMMAND_STREAM}'"),
+        Ok(()) => tracing::info!("Created consumer group '{CONSUMER_GROUP_NAME}' on '{}'", keys.command),
         Err(err) => {
             let msg = err.to_string();
             if msg.contains("BUSYGROUP") {
-                tracing::debug!("Consumer group '{CONSUMER_GROUP_NAME}' already exists on '{COMMAND_STREAM}'");
+                tracing::debug!("Consumer group '{CONSUMER_GROUP_NAME}' already exists on '{}'", keys.command);
             } else {
                 tracing::error!("Failed to create consumer group: {err}");
             }
@@ -70,9 +100,9 @@ pub fn ensure_consumer_group(conn: &mut redis::Connection) {
 
 /// Publishes a `request_jobs` message to the request stream, asking the server
 /// to send a reload command with jobs from ODB.
-pub fn request_jobs(conn: &mut redis::Connection) {
+pub fn request_jobs(conn: &mut redis::Connection, keys: &StreamKeys) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(REQUEST_STREAM)
+        .arg(&keys.request)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -82,7 +112,7 @@ pub fn request_jobs(conn: &mut redis::Connection) {
         .query(conn);
 
     match result {
-        Ok(_) => tracing::info!("Published request_jobs to '{REQUEST_STREAM}'"),
+        Ok(_) => tracing::info!("Published request_jobs to '{}'", keys.request),
         Err(err) => tracing::error!("Failed to publish request_jobs: {err}"),
     }
 }
@@ -90,19 +120,20 @@ pub fn request_jobs(conn: &mut redis::Connection) {
 /// Processes a reload command received during the startup wait phase.
 pub fn process_startup_reload(
     conn: &mut redis::Connection,
+    keys: &StreamKeys,
     shared: &crate::scheduler::SchedulerShared,
     correlation_id: &str,
     payload: &str,
 ) {
     handle_reload(shared, payload);
-    publish_reply(conn, correlation_id, "ok");
+    publish_reply(conn, keys, correlation_id, "ok");
 }
 
 /// Publishes a fire event to the fire stream via XADD.
-pub fn publish_fire_event(conn: &mut redis::Connection, batch: &FireBatch) {
+pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch: &FireBatch) {
     let payload = serde_json::to_string(batch).unwrap_or_default();
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(FIRE_STREAM)
+        .arg(&keys.fire)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -125,9 +156,16 @@ pub fn publish_fire_event(conn: &mut redis::Connection, batch: &FireBatch) {
 }
 
 /// Publishes a timeout event to the timeout stream via XADD.
-pub fn publish_timeout_event(conn: &mut redis::Connection, job_id: i64, current_run: u32, elapsed_ms: u64, error_msg: &str) {
+pub fn publish_timeout_event(
+    conn: &mut redis::Connection,
+    keys: &StreamKeys,
+    job_id: i64,
+    current_run: u32,
+    elapsed_ms: u64,
+    error_msg: &str,
+) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(TIMEOUT_STREAM)
+        .arg(&keys.timeout)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -148,9 +186,9 @@ pub fn publish_timeout_event(conn: &mut redis::Connection, job_id: i64, current_
 }
 
 /// Publishes a synchronous reply to the reply stream.
-fn publish_reply(conn: &mut redis::Connection, correlation_id: &str, status: &str) {
+fn publish_reply(conn: &mut redis::Connection, keys: &StreamKeys, correlation_id: &str, status: &str) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(REPLY_STREAM)
+        .arg(&keys.reply)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -169,8 +207,8 @@ fn publish_reply(conn: &mut redis::Connection, correlation_id: &str, status: &st
 /// Reads and processes commands from the command stream in a blocking loop.
 ///
 /// This function blocks on XREADGROUP and should be run on its own thread.
-pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<SchedulerShared>) {
-    tracing::info!("Command listener started on '{COMMAND_STREAM}'");
+pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, shared: Arc<SchedulerShared>) {
+    tracing::info!("Command listener started on '{}'", keys.command);
 
     loop {
         if shared.stop_flag.load(std::sync::atomic::Ordering::Relaxed) {
@@ -189,7 +227,7 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<Scheduler
             .arg("COUNT")
             .arg(10_u64)
             .arg("STREAMS")
-            .arg(COMMAND_STREAM)
+            .arg(&keys.command)
             .arg(">")
             .query(conn);
 
@@ -221,10 +259,10 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<Scheduler
                     }
                 }
 
-                process_command(conn, &shared, &command, &correlation_id, &payload);
+                process_command(conn, keys, &shared, &command, &correlation_id, &payload);
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                    .arg(COMMAND_STREAM)
+                    .arg(&keys.command)
                     .arg(CONSUMER_GROUP_NAME)
                     .arg(msg_id.as_str())
                     .query(conn);
@@ -237,7 +275,14 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<Scheduler
 }
 
 /// Dispatches a single command to the appropriate handler.
-fn process_command(conn: &mut redis::Connection, shared: &SchedulerShared, command: &str, correlation_id: &str, payload: &str) {
+fn process_command(
+    conn: &mut redis::Connection,
+    keys: &StreamKeys,
+    shared: &SchedulerShared,
+    command: &str,
+    correlation_id: &str,
+    payload: &str,
+) {
     tracing::info!("Command received: {command} correlation_id={correlation_id} payload={payload}");
     match command {
         "create_job" => handle_create_job(shared, payload),
@@ -248,13 +293,13 @@ fn process_command(conn: &mut redis::Connection, shared: &SchedulerShared, comma
         "append_log_entry" => handle_append_log_entry(shared, payload),
         "reload" => {
             handle_reload(shared, payload);
-            publish_reply(conn, correlation_id, "ok");
+            publish_reply(conn, keys, correlation_id, "ok");
         }
         "stop" => {
             tracing::info!("Received stop command");
             shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
             shared.condvar.notify_all();
-            publish_reply(conn, correlation_id, "ok");
+            publish_reply(conn, keys, correlation_id, "ok");
         }
         _ => {
             tracing::warn!("Unknown command: {command}");
@@ -289,6 +334,8 @@ struct MarkCompletePayload {
     duration_ms: u64,
     /// Run number being completed.
     current_run: u32,
+    /// Error details (traceback), empty when the run succeeded.
+    error: String,
 }
 
 /// Payload for append_log_entry command.
@@ -465,6 +512,10 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
             if rec.current_run == parsed.current_run {
                 rec.duration_ms = Some(parsed.duration_ms);
                 rec.outcome.clone_from(&parsed.outcome);
+                // The server sends an empty string on success - only a failed run carries a traceback.
+                if !parsed.error.is_empty() {
+                    rec.error = Some(parsed.error.clone());
+                }
                 rec.log_entries.push(LogEntry {
                     timestamp_iso: Utc::now().to_rfc3339(),
                     level: "SYSTEM".into(),
