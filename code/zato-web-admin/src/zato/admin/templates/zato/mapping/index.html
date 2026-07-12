@@ -5,6 +5,7 @@
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
 <link rel="stylesheet" type="text/css" href="/static/css/zato_action_button.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/outcome.css">
@@ -38,20 +39,6 @@
 
         <section id="mapper-panel-design" class="mapper-panel" role="tabpanel">
 
-            <div class="mapper-design-toolbar">
-                <input id="mapper-search-input" class="mapper-search-input" type="search"
-                    placeholder="Search fields and mappings" aria-label="Search fields and mappings">
-                <span id="mapper-search-count" class="mapper-search-count" aria-live="polite"></span>
-                <button id="mapper-search-previous" class="mapper-button zato-action-button" type="button" title="Previous match">&#9650;</button>
-                <button id="mapper-search-next" class="mapper-button zato-action-button" type="button" title="Next match">&#9660;</button>
-                <div id="mapper-tree-filters" class="mapper-tree-filters" role="group" aria-label="Tree filters"></div>
-                <div class="mapper-design-toolbar-operations">
-                    <button id="mapper-collapse-all" class="mapper-button zato-action-button" type="button">Collapse all</button>
-                    <button id="mapper-expand-mapped" class="mapper-button zato-action-button" type="button">Expand mapped</button>
-                    <button id="mapper-automap" class="mapper-button zato-action-button" type="button">Auto-map</button>
-                </div>
-            </div>
-
             <div class="mapper-design-areas">
 
             <div id="mapper-design-maps" class="mapper-design-maps">
@@ -61,13 +48,12 @@
 
                 <div id="mapper-schema-column-source" class="mapper-schema-column">
                     <div class="mapper-schema-column-header">
-                        <h2 class="mapper-schema-column-title">Source</h2>
-                        <span class="mapper-sample-count">samples
-                            <span id="mapper-sample-count-source" class="mapper-sample-count-value dashboard-outcome-badge">0</span>
+                        <button id="mapper-options-source" class="dashboard-outcome-badge mapper-options-button" type="button" data-side="source">Source<i data-lucide="chevron-down"></i></button>
+                        <span class="mapper-tree-search">
+                            <input id="mapper-tree-search-source" class="mapper-tree-search-input" type="text"
+                                placeholder="Search fields .." aria-label="Search source fields">
                         </span>
-                        <div id="mapper-schema-actions-source" class="mapper-schema-column-actions"></div>
                     </div>
-                    <div id="mapper-schema-notice-source" class="mapper-notice" hidden></div>
                     <div id="mapper-schema-body-source" class="mapper-schema-column-body"></div>
                     <div id="mapper-resize-edge-source" class="mapper-edge-resizer mapper-edge-resizer-right"
                         role="separator" aria-label="Resize panels" aria-orientation="vertical" tabindex="0"></div>
@@ -75,13 +61,12 @@
 
                 <div id="mapper-schema-column-target" class="mapper-schema-column">
                     <div class="mapper-schema-column-header">
-                        <h2 class="mapper-schema-column-title">Target</h2>
-                        <span class="mapper-sample-count">samples
-                            <span id="mapper-sample-count-target" class="mapper-sample-count-value dashboard-outcome-badge">0</span>
+                        <button id="mapper-options-target" class="dashboard-outcome-badge mapper-options-button" type="button" data-side="target">Target<i data-lucide="chevron-down"></i></button>
+                        <span class="mapper-tree-search">
+                            <input id="mapper-tree-search-target" class="mapper-tree-search-input" type="text"
+                                placeholder="Search fields .." aria-label="Search target fields">
                         </span>
-                        <div id="mapper-schema-actions-target" class="mapper-schema-column-actions"></div>
                     </div>
-                    <div id="mapper-schema-notice-target" class="mapper-notice" hidden></div>
                     <div id="mapper-schema-body-target" class="mapper-schema-column-body"></div>
                     <div id="mapper-resize-edge-target" class="mapper-edge-resizer mapper-edge-resizer-left"
                         role="separator" aria-label="Resize panels" aria-orientation="vertical" tabindex="0"></div>
@@ -211,6 +196,7 @@
 
 </div>
 
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/lucide/lucide.min.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/store2/store2.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>
@@ -225,6 +211,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/tabs.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/resizer.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/dialog.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/menu.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/review-dialog.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/schema-panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/highlight.js"></script>
@@ -236,7 +223,6 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/canvas.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/automap.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/refactor.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/reimport.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/search.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/detail-panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/mapper/preview.js"></script>

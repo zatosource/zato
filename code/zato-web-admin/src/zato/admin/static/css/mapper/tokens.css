@@ -43,9 +43,6 @@
     --mapper-background-warning: rgba(178, 106, 0, 0.10);
 
     /* Search highlights - every match and the current one */
-    --mapper-background-search-match: rgba(178, 106, 0, 0.16);
-    --mapper-background-search-current: rgba(178, 106, 0, 0.38);
-
     /* Type badge colors */
     --mapper-type-object: var(--mapper-seablue-light2);
     --mapper-type-array: #6a3fb5;

@@ -125,7 +125,9 @@
         // Autocomplete
         autocompleteMaxItems: 8,
 
-        // The tree filters, in the order their buttons render
+        // The tree filters, in the order the Options menus list them,
+        // and the menu group they sit under
+        treeFilterGroupLabel: 'Filter',
         treeFilters: [
             {name: 'all', label: 'All'},
             {name: 'mapped', label: 'Mapped'},
@@ -136,7 +138,14 @@
         defaultTreeFilter: 'all',
 
         // What the search counter says when nothing matches
-        searchNoMatchesLabel: 'No matches',
+        // The per-column Options menu - each item names an action
+        // the page dispatches on for that column's side.
+        schemaColumnMenu: [
+            {group: 'Tree', items: [
+                {name: 'collapse-all', label: 'Collapse all'},
+                {name: 'expand-mapped', label: 'Expand mapped'}
+            ]}
+        ],
 
         // Values treated as empty by the omit-if-empty and default semantics
         // are undefined, null and the empty string.

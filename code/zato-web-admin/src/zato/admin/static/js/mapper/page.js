@@ -179,26 +179,26 @@
             zato.mapper.schemaPanel.init({
                 side: side,
                 store: store,
-                body: document.getElementById('mapper-schema-body-' + side),
-                actions: document.getElementById('mapper-schema-actions-' + side),
-                sampleCountBadge: document.getElementById('mapper-sample-count-' + side),
-                notice: document.getElementById('mapper-schema-notice-' + side)
+                body: document.getElementById('mapper-schema-body-' + side)
             });
         }
     }
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A brand-new browser (no autosaved artifact at all) starts with the
-    // default examples on both sides, so the page is never blank. The
-    // seeded artifact is written straight into browser storage before the
-    // store starts, so it restores like any other autosave and leaves the
-    // undo stack empty.
+    // The page always starts with the hardcoded demo trees on both sides.
+    // Whatever the autosave holds, a side without a schema gets the demo
+    // one, so the columns are never blank. The seeded artifact is written
+    // straight into browser storage before the store starts, so it
+    // restores like any other autosave and leaves the undo stack empty.
     function seedDefaultArtifact() {
 
         var saved = window.store.get(config.artifactStorageKey);
         if (saved) {
-            return;
+            var parsed = JSON.parse(saved);
+            if (parsed.source_schema.root !== null && parsed.target_schema.root !== null) {
+                return;
+            }
         }
 
         var artifact = zato.mapper.store.newArtifact();
@@ -211,7 +211,7 @@
         artifact.samples.push({name: examples.target.name, side: 'target', payload: examples.target.payload});
 
         window.store.set(config.artifactStorageKey, zato.mapper.store.serialize(artifact));
-        zato.mapper.log('page', 'seeded the default examples', {source: examples.source.name, target: examples.target.name});
+        zato.mapper.log('page', 'seeded the demo trees', {source: examples.source.name, target: examples.target.name});
     }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -368,30 +368,78 @@
             }
         });
 
-        // The search, the filters and the tree operations all move rows
-        // around, so the lines redraw after each of them.
-        zato.mapper.search.init({
+        // The filters and the tree operations all move rows around,
+        // so the lines redraw after each of them.
+        var searchOperations = zato.mapper.search.init({
             store: store,
-            input: document.getElementById('mapper-search-input'),
-            countDisplay: document.getElementById('mapper-search-count'),
-            previousButton: document.getElementById('mapper-search-previous'),
-            nextButton: document.getElementById('mapper-search-next'),
-            filtersContainer: document.getElementById('mapper-tree-filters'),
-            collapseAllButton: document.getElementById('mapper-collapse-all'),
-            expandMappedButton: document.getElementById('mapper-expand-mapped'),
+            sourceTreeInput: document.getElementById('mapper-tree-search-source'),
+            targetTreeInput: document.getElementById('mapper-tree-search-target'),
             sourceBody: document.getElementById('mapper-schema-body-source'),
             targetBody: document.getElementById('mapper-schema-body-target'),
-            listContainer: document.getElementById('mapper-mapping-list'),
             onLayoutChanged: function() {
                 canvas.redraw();
             }
         });
 
-        // Auto-map over the whole schemas - the scoped variant lives on
-        // the canvas, one structure dropped onto another.
-        $('#mapper-automap').on('click', function() {
-            zato.mapper.automap.openReview({store: store, sourceScope: '', targetScope: ''});
+        // Each column's Options button opens the shared dropdown menu,
+        // its actions scoped to that column's tree.
+        var columnMenuActions = {
+            'collapse-all': searchOperations.collapseTree,
+            'expand-mapped': searchOperations.expandMappedTree
+        };
+
+        function buildColumnMenuGroups(side) {
+
+            var groups = [];
+
+            // The filter group first - the active filter is marked and
+            // picking one narrows this column's tree only.
+            var filterItems = [];
+            for (var filterIdx = 0; filterIdx < config.treeFilters.length; filterIdx++) {
+                var filter = config.treeFilters[filterIdx];
+
+                // The closure pins the filter name - the loop variable
+                // has moved on by the time the item is clicked.
+                filterItems.push({
+                    label: filter.label,
+                    selected: searchOperations.getFilter(side) === filter.name,
+                    onSelect: (function(filterName) {
+                        return function() {
+                            searchOperations.setFilter(side, filterName);
+                        };
+                    })(filter.name)
+                });
+            }
+            groups.push({group: config.treeFilterGroupLabel, items: filterItems});
+
+            for (var groupIdx = 0; groupIdx < config.schemaColumnMenu.length; groupIdx++) {
+                var group = config.schemaColumnMenu[groupIdx];
+
+                var items = [];
+                for (var itemIdx = 0; itemIdx < group.items.length; itemIdx++) {
+                    var item = group.items[itemIdx];
+
+                    items.push({label: item.label, selected: false, onSelect: (function(actionName) {
+                        return function() {
+                            zato.mapper.log('page', 'column menu action', {side: side, action: actionName});
+                            columnMenuActions[actionName](side);
+                        };
+                    })(item.name)});
+                }
+
+                groups.push({group: group.group, items: items});
+            }
+
+            return groups;
+        }
+
+        $('.mapper-options-button').on('click', function() {
+            var side = this.getAttribute('data-side');
+            zato.mapper.menu.toggle({anchor: this, groups: buildColumnMenuGroups(side)});
         });
+
+        // The chevron placeholders inside the buttons become inline SVGs.
+        lucide.createIcons({icons: lucide.icons});
 
         // Escape deselects the current row. An open context menu takes
         // the key first and closes instead.

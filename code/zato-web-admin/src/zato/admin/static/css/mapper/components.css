@@ -125,7 +125,7 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Mapper - search matches and tree filters                      */
+/* Mapper - tree filters                                         */
 /* ------------------------------------------------------------ */
 
 /* A field the active filter rules out disappears with its subtree. */
@@ -133,33 +133,41 @@
     display: none;
 }
 
-.mapper-search-match {
-    background: var(--mapper-background-search-match);
-}
-
-.mapper-search-current {
-    background: var(--mapper-background-search-current);
-    outline: 2px solid var(--mapper-color-conditioned);
-    outline-offset: -2px;
-}
-
 /* ------------------------------------------------------------ */
-/* Mapper - sample count badge                                   */
+/* Mapper - column options button                                */
 /* ------------------------------------------------------------ */
 
-.mapper-sample-count {
+/* The column title itself is the button opening the column's menu.
+   The geometry comes from the kit's dashboard-outcome-badge like on
+   every other badge, the mapper only adds its colors and the button
+   resets undoing what formalize.css puts on buttons - and the badge
+   looks exactly the same in every state, hover and click included. */
+.mapper-options-button,
+.mapper-options-button:hover,
+.mapper-options-button:focus,
+.mapper-options-button:focus-visible,
+.mapper-options-button:active {
     display: inline-flex;
     align-items: center;
     gap: var(--mapper-space-1);
-    font-size: var(--mapper-font-size-small);
-    color: var(--mapper-text-muted);
+    margin: 0;
+    border: none;
+    border-radius: 2px;
+    appearance: none;
+    font-family: var(--mapper-font-family);
+    font-weight: 600;
+    color: var(--mapper-type-object);
+    background: var(--mapper-type-background-object);
+    text-shadow: none;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
 }
 
-.mapper-sample-count-value {
-    min-width: 18px;
-    text-align: center;
-    color: var(--mapper-seablue-light2);
-    background: var(--mapper-type-background-object);
+.mapper-options-button svg {
+    width: 12px;
+    height: 12px;
+    color: var(--mapper-type-object);
 }
 
 /* ------------------------------------------------------------ */

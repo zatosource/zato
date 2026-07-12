@@ -1,8 +1,9 @@
 
 // Mapper kit - the mapping list.
-// The flat list of every mapping row - each row shows its target, its
-// expression, the value it evaluated to against the active sample and
-// its own error when it has one. Scopes render as groups with their
+// The flat list of every mapping row - each row reads from source to
+// target: the expression first, then the target it writes, then the
+// value it evaluated to against the active sample and its own error
+// when it has one. Scopes render as groups with their
 // child rows and a per-element picker for previewing one element at
 // a time. A mapping too complex to draw anywhere else is still always
 // visible here.
@@ -100,15 +101,20 @@
             item.setAttribute('data-scope-index', scopeIndex === null ? '' : scopeIndex);
             item.setAttribute('data-row-index', rowIndex);
 
-            var target = document.createElement('span');
-            target.className = 'mapper-row-target';
-            target.textContent = row.target === '' ? '(no target)' : row.target;
-            item.appendChild(target);
-
             var expression = document.createElement('span');
             expression.className = 'mapper-row-expression';
             expression.textContent = row.expression;
             item.appendChild(expression);
+
+            var arrow = document.createElement('span');
+            arrow.className = 'mapper-row-arrow';
+            arrow.textContent = '\u2192';
+            item.appendChild(arrow);
+
+            var target = document.createElement('span');
+            target.className = 'mapper-row-target';
+            target.textContent = row.target === '' ? '(no target)' : row.target;
+            item.appendChild(target);
 
             // The inline evaluated value or the row's own error.
             var result = rowResultOf(scopeIndex, rowIndex);
@@ -165,7 +171,7 @@
 
             var title = document.createElement('span');
             title.className = 'mapper-scope-title';
-            title.textContent = scope.target + ' \u2190 each ' + scope.source;
+            title.textContent = 'each ' + scope.source + ' \u2192 ' + scope.target;
             header.appendChild(title);
 
             // The element picker shows one element's child values at a time.
