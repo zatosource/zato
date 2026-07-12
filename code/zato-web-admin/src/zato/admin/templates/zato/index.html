@@ -281,6 +281,11 @@
                 <nav class="menu">
                     <div class="nav-container">
                         <ul class="first-level left">
+                            {% if 1 %}
+                            <li class="first-level" style="padding-left: 0.3rem">
+                                <a class="menu-link" href="{% url "mapping" %}?cluster={{ cluster_id|default:"1" }}">Mappings</a>
+                            </li>
+                            {% endif %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">Services &darr;</a>
                                 <ul>
@@ -288,11 +293,6 @@
                                     <li class="child"><a class="menu-link" href="{% url "service" %}?cluster={{ cluster_id|default:"1" }}">List services</a></li>
                                 </ul>
                             </li>
-                            {% if 0 %}
-                            <li class="first-level" style="padding-left: 0.3rem">
-                                <a class="menu-link" href="{% url "mapping" %}?cluster={{ cluster_id|default:"1" }}">Mappings</a>
-                            </li>
-                            {% endif %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
                                 <ul>
