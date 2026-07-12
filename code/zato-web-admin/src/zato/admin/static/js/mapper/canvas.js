@@ -3,8 +3,8 @@
 // Drag a source field onto a target field to create a mapping row.
 // Dropping a leaf under a repeating node onto a leaf under another
 // repeating node creates an iteration scope automatically and the
-// children map relatively. Every mapped field carries a compact badge
-// on its tree, and an SVG layer always draws every connection line.
+// children map relatively. An SVG layer always draws every
+// connection line.
 // While the pointer is over the gutter where the lines live, all of
 // them dim except the one under the pointer, which lights up with a
 // marching-ants animation. Lines are interactive: a click selects the
@@ -85,7 +85,7 @@
         var lastConnections = [];
 
 // ////////////////////////////////////////////////////////////////////////
-// Mapped badges
+// The SVG line layer
 // ////////////////////////////////////////////////////////////////////////
 
         function treeRowAt(body, path) {
@@ -99,89 +99,6 @@
             return out;
         }
 
-// ////////////////////////////////////////////////////////////////////////
-
-        function applyBadges(connections) {
-
-            $(container).find('.mapper-tree-mapped-badge').remove();
-
-            var sourceUsage = {};
-            var targetMarked = {};
-
-            for (var connectionIdx = 0; connectionIdx < connections.length; connectionIdx++) {
-                var connection = connections[connectionIdx];
-
-                // Every source path collects the connections that use it,
-                // so its badge can show the count and list them on a click.
-                for (var sourceIdx = 0; sourceIdx < connection.sources.length; sourceIdx++) {
-                    var usagePath = connection.sources[sourceIdx];
-                    if (sourceUsage[usagePath] === undefined) {
-                        sourceUsage[usagePath] = [];
-                    }
-                    sourceUsage[usagePath].push(connection);
-                }
-
-                if (connection.target !== '') {
-                    // A target written by several rows keeps the strongest
-                    // marks any of them carries.
-                    var marks = targetMarked[connection.target];
-                    if (marks === undefined) {
-                        marks = {computed: false, conditioned: false};
-                        targetMarked[connection.target] = marks;
-                    }
-                    marks.computed = marks.computed || connection.computed;
-                    marks.conditioned = marks.conditioned || connection.conditioned;
-                }
-            }
-
-            for (var sourcePath in sourceUsage) {
-                var sourceRow = treeRowAt(canvasConfig.sourceBody, sourcePath);
-                if (sourceRow !== null) {
-                    var usageCount = sourceUsage[sourcePath].length;
-                    var usageSuffix = usageCount === 1 ? ' mapping' : ' mappings';
-
-                    var sourceBadge = document.createElement('span');
-                    sourceBadge.className = 'dashboard-outcome-badge mapper-tree-mapped-badge mapper-tree-usage-badge';
-                    sourceBadge.textContent = usageCount;
-                    sourceBadge.title = 'Used by ' + usageCount + usageSuffix + ' - click for the list';
-                    sourceBadge.setAttribute('data-usage-path', sourcePath);
-                    sourceRow.appendChild(sourceBadge);
-                }
-            }
-
-            for (var targetPath in targetMarked) {
-                var targetRow = treeRowAt(canvasConfig.targetBody, targetPath);
-                if (targetRow !== null) {
-                    var targetBadge = document.createElement('span');
-                    targetBadge.className = 'mapper-tree-mapped-badge';
-
-                    var targetMarks = targetMarked[targetPath];
-
-                    // A formula badge tells computed apart from copied.
-                    if (targetMarks.computed) {
-                        targetBadge.className = 'mapper-tree-mapped-badge mapper-tree-mapped-badge-formula';
-                        targetBadge.textContent = '\u0192';
-                        targetBadge.title = 'Computed from an expression';
-                    }
-                    else {
-                        targetBadge.textContent = '\u25cf';
-                        targetBadge.title = 'Mapped';
-                    }
-
-                    // A conditioned target shows in the condition color,
-                    // the same one its line is drawn in.
-                    if (targetMarks.conditioned) {
-                        targetBadge.className = targetBadge.className + ' mapper-tree-mapped-badge-conditioned';
-                        targetBadge.title = targetBadge.title + ', with a condition';
-                    }
-
-                    targetRow.appendChild(targetBadge);
-                }
-            }
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-// The SVG line layer
 // ////////////////////////////////////////////////////////////////////////
 
         function anchorOf(body, column, path, edge, containerRect) {
@@ -307,7 +224,6 @@
         function redraw() {
 
             lastConnections = zato.mapper.connections.list(store.getArtifact());
-            applyBadges(lastConnections);
             drawLines(lastConnections);
         }
 
@@ -493,12 +409,6 @@
                 return;
             }
 
-            // A press on the usage badge is a click on the badge - the
-            // pointer capture a drag takes would swallow that click.
-            if ($(event.target).hasClass('mapper-tree-usage-badge')) {
-                return;
-            }
-
             var item = this.closest('.mapper-tree-item');
 
             drag = {
@@ -575,45 +485,6 @@
 
             var targetPath = dropRow.closest('.mapper-tree-item').getAttribute('data-path');
             applyDrop(sourcePath, targetPath);
-        });
-
-// ////////////////////////////////////////////////////////////////////////
-// Usage - clicking a source field's badge lists every mapping that
-// references the field, each entry opening its row.
-// ////////////////////////////////////////////////////////////////////////
-
-        $(canvasConfig.sourceBody).on('click', '.mapper-tree-usage-badge', function(event) {
-
-            // The badge acts on its own, the row underneath takes no click.
-            event.stopPropagation();
-
-            var usagePath = this.getAttribute('data-usage-path');
-
-            var items = [{header: 'Used by'}];
-
-            for (var connectionIdx = 0; connectionIdx < lastConnections.length; connectionIdx++) {
-                var connection = lastConnections[connectionIdx];
-                if (connection.sources.indexOf(usagePath) === -1) {
-                    continue;
-                }
-
-                // The scope's own line has no row to open, so it lists
-                // as a header describing the iteration it drives.
-                if (connection.selection === null) {
-                    items.push({header: connection.target + ' \u2190 each ' + usagePath});
-                    continue;
-                }
-
-                var referencingRow = rowOf(connection.selection);
-                items.push({
-                    label: connection.target + ' \u2190 ' + referencingRow.expression,
-                    onSelect: canvasConfig.onRowOpen.bind(null, connection.selection, '')
-                });
-            }
-
-            zato.mapper.log('canvas', 'usage badge clicked', {path: usagePath, references: items.length - 1});
-
-            zato.mapper.contextMenu.open({x: event.clientX, y: event.clientY, items: items});
         });
 
 // ////////////////////////////////////////////////////////////////////////

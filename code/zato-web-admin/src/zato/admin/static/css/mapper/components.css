@@ -38,15 +38,29 @@
 }
 
 .mapper-tree-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 14px;
     color: var(--mapper-text-muted);
-    text-align: center;
     cursor: pointer;
     user-select: none;
 }
 
 .mapper-tree-toggle:hover {
     color: var(--mapper-text-main);
+}
+
+/* One chevron-down SVG per container node - collapsing the item
+   rotates it to point right, no glyph swapping anywhere. */
+.mapper-tree-toggle svg {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--mapper-motion-fast) ease;
+}
+
+.mapper-tree-item-collapsed > .mapper-tree-row > .mapper-tree-toggle svg {
+    transform: rotate(-90deg);
 }
 
 .mapper-tree-toggle-spacer {
@@ -71,11 +85,19 @@
 
 /* The badge geometry comes from the kit's dashboard-outcome-badge,
    the mapper only adds its per-type colors. */
+/* The tree badges tone the kit's dashboard-outcome-badge down -
+   smaller, medium weight, nearly square - so a tree full of them
+   stays quiet. */
 .mapper-tree-type-badge,
 .mapper-tree-cardinality-badge,
 .mapper-tree-format-badge,
 .mapper-tree-optional-badge {
     white-space: nowrap;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
 }
 
 .mapper-tree-cardinality-badge {
@@ -85,7 +107,7 @@
 
 .mapper-tree-format-badge,
 .mapper-tree-optional-badge {
-    color: var(--mapper-text-muted);
+    color: var(--mapper-type-unknown);
     background: var(--mapper-type-background-unknown);
 }
 
@@ -356,7 +378,14 @@
 }
 
 .mapper-review-item-arrow {
+    display: inline-flex;
+    align-items: center;
     color: var(--mapper-text-muted);
+}
+
+.mapper-review-item-arrow svg {
+    width: 12px;
+    height: 12px;
 }
 
 .mapper-review-item-after {

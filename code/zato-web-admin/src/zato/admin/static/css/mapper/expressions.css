@@ -159,7 +159,14 @@
 }
 
 .mapper-row-arrow {
+    display: inline-flex;
+    align-items: center;
     color: var(--mapper-text-muted);
+}
+
+.mapper-row-arrow svg {
+    width: 12px;
+    height: 12px;
 }
 
 .mapper-row-expression {
@@ -236,9 +243,18 @@
 }
 
 .mapper-scope-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mapper-space-1);
     font-family: var(--mapper-font-family-mono);
     font-weight: 600;
     color: var(--mapper-type-array);
+}
+
+.mapper-scope-title svg {
+    width: 12px;
+    height: 12px;
+    color: var(--mapper-text-muted);
 }
 
 .mapper-scope-element-picker,

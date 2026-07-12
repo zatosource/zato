@@ -261,7 +261,7 @@
         for (var childIdx = 0; childIdx < children.length; childIdx++) {
             var child = children[childIdx];
             out.push({
-                label: child.target + ' \u2190 ' + child.source,
+                label: child.source + ' \u2192 ' + child.target,
                 note: child.matchKind,
                 suggestion: child
             });
@@ -292,14 +292,14 @@
 
             if (suggestion.kind === 'row') {
                 items.push({
-                    label: suggestion.target + ' \u2190 ' + suggestion.source,
+                    label: suggestion.source + ' \u2192 ' + suggestion.target,
                     note: suggestion.matchKind,
                     suggestion: suggestion
                 });
             }
             else if (suggestion.kind === 'scope') {
                 items.push({
-                    label: suggestion.target + ' \u2190 each ' + suggestion.source,
+                    label: 'each ' + suggestion.source + ' \u2192 ' + suggestion.target,
                     note: suggestion.matchKind,
                     children: buildChildItems(suggestion.children),
                     suggestion: suggestion
@@ -307,7 +307,7 @@
             }
             else {
                 items.push({
-                    label: suggestion.target + ' \u2190 each ' + suggestion.source,
+                    label: 'each ' + suggestion.source + ' \u2192 ' + suggestion.target,
                     note: 'existing iteration',
                     children: buildChildItems(suggestion.children),
                     suggestion: suggestion

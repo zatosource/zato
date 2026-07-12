@@ -51,13 +51,21 @@
             var cardinality = document.createElement('span');
             cardinality.className = 'dashboard-outcome-badge mapper-tree-cardinality-badge';
             cardinality.textContent = 'list';
+            cardinality.setAttribute('data-tippy-content', 'A repeating list - each of its elements has this shape');
             badges.appendChild(cardinality);
         }
 
         // .. every node carries a type badge ..
+        var typeLabel = typeLabelOf(node);
         var typeBadge = document.createElement('span');
         typeBadge.className = 'dashboard-outcome-badge mapper-tree-type-badge mapper-tree-type-' + typeClassOf(node);
-        typeBadge.textContent = typeLabelOf(node);
+        typeBadge.textContent = typeLabel;
+        if (node.kind === 'array') {
+            typeBadge.setAttribute('data-tippy-content', 'The type of each list element is ' + typeLabel);
+        }
+        else {
+            typeBadge.setAttribute('data-tippy-content', 'The type of this field is ' + typeLabel);
+        }
         badges.appendChild(typeBadge);
 
         // .. a format hint is display metadata next to the type ..
@@ -70,6 +78,7 @@
                 var format = document.createElement('span');
                 format.className = 'dashboard-outcome-badge mapper-tree-format-badge';
                 format.textContent = formatNode.format;
+                format.setAttribute('data-tippy-content', 'The values of this field use the ' + formatNode.format + ' format');
                 badges.appendChild(format);
             }
         }
@@ -79,6 +88,7 @@
             var optionalBadge = document.createElement('span');
             optionalBadge.className = 'dashboard-outcome-badge mapper-tree-optional-badge';
             optionalBadge.textContent = 'optional';
+            optionalBadge.setAttribute('data-tippy-content', 'An optional field - it may be absent from the data');
             badges.appendChild(optionalBadge);
         }
 
@@ -119,11 +129,14 @@
         var hasChildren = childFields.length > 0;
 
         // A container node gets a toggle, a leaf gets a spacer
-        // so names always line up.
+        // so names always line up. The chevron is one SVG the CSS
+        // rotates when the item collapses.
         var toggle = document.createElement('span');
         if (hasChildren) {
             toggle.className = 'mapper-tree-toggle';
-            toggle.textContent = '\u25be';
+            var chevron = document.createElement('i');
+            chevron.setAttribute('data-lucide', 'chevron-down');
+            toggle.appendChild(chevron);
         }
         else {
             toggle.className = 'mapper-tree-toggle-spacer';
@@ -152,11 +165,11 @@
 
             item.appendChild(childList);
 
-            // Clicking the toggle collapses or expands the children.
+            // Clicking the toggle collapses or expands the children -
+            // the collapsed class alone drives the chevron rotation.
             $(toggle).on('click', function(event) {
                 event.stopPropagation();
-                var isCollapsed = $(item).toggleClass('mapper-tree-item-collapsed').hasClass('mapper-tree-item-collapsed');
-                toggle.textContent = isCollapsed ? '\u25b8' : '\u25be';
+                $(item).toggleClass('mapper-tree-item-collapsed');
             });
         }
 
@@ -182,6 +195,11 @@
 
         $(container).empty();
         container.appendChild(list);
+
+        // The chevron placeholders become inline SVGs and every badge
+        // gets its explanatory tooltip.
+        lucide.createIcons();
+        tippy(container.querySelectorAll('[data-tippy-content]'), {theme: 'dark', arrow: true});
     };
 
 })(jQuery);
