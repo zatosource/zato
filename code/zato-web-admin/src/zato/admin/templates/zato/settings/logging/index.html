@@ -1,5 +1,9 @@
 {% extends "zato/settings/textarea-page.html" %}
 
+{% block textarea_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/logging.css">
+{% endblock %}
+
 {% block textarea_page_js %}
 <script type="text/javascript" src="/static/js/logging.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}

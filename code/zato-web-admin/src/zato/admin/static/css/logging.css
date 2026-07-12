@@ -1,0 +1,7 @@
+/* ------------------------------------------------------------ */
+/* Logging - textarea                                            */
+/* ------------------------------------------------------------ */
+
+.textarea-settings-container textarea#logging-config {
+    min-height: 250px;
+}

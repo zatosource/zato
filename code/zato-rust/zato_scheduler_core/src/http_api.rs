@@ -752,7 +752,7 @@ mod tests {
     async fn test_get_chart_data_empty() {
         let shared = make_shared(HashMap::new());
         let state = web::Data::new(AppState { shared });
-        let params = web::Query(ChartDataParams { since_iso: None });
+        let params = web::Query(ChartDataParams { since_iso: None, until_iso: None });
 
         let response = get_chart_data(state, params).await;
         assert_eq!(response.status(), 200);
@@ -771,7 +771,7 @@ mod tests {
 
         let shared = make_shared(jobs);
         let state = web::Data::new(AppState { shared });
-        let params = web::Query(ChartDataParams { since_iso: None });
+        let params = web::Query(ChartDataParams { since_iso: None, until_iso: None });
 
         let response = get_chart_data(state, params).await;
         assert_eq!(response.status(), 200);
@@ -795,7 +795,7 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn test_get_chart_data_since_iso_filters() {
+    async fn test_get_chart_data_fixed_window_filters() {
         let mut jobs = HashMap::new();
         let records = vec![
             make_record("2026-01-01T08:00:00+00:00", outcome::EXECUTED, 1),
@@ -807,6 +807,7 @@ mod tests {
         let state = web::Data::new(AppState { shared });
         let params = web::Query(ChartDataParams {
             since_iso: Some("2026-01-01T10:00:00+00:00".to_string()),
+            until_iso: Some("2026-01-01T13:00:00+00:00".to_string()),
         });
 
         let response = get_chart_data(state, params).await;
@@ -814,11 +815,45 @@ mod tests {
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
         let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
 
+        // Only the 12:00 record falls inside [10:00, 13:00), the 08:00 one is excluded.
         let mut total_ok: u64 = 0;
         for bucket in &data.buckets {
             total_ok += bucket.ok;
         }
         assert_eq!(total_ok, 1);
+
+        // The bucket grid spans exactly the fixed window, not the data extent.
+        assert_eq!(data.min_time_iso, "2026-01-01T10:00:00+00:00");
+        assert_eq!(data.max_time_iso, "2026-01-01T13:00:00+00:00");
+    }
+
+    #[actix_web::test]
+    async fn test_get_chart_data_since_only_does_not_filter() {
+        let mut jobs = HashMap::new();
+        let records = vec![
+            make_record("2026-01-01T08:00:00+00:00", outcome::EXECUTED, 1),
+            make_record("2026-01-01T12:00:00+00:00", outcome::EXECUTED, 2),
+        ];
+        jobs.insert(1, make_job_with_records(1, "test_job", records));
+
+        let shared = make_shared(jobs);
+        let state = web::Data::new(AppState { shared });
+        let params = web::Query(ChartDataParams {
+            since_iso: Some("2026-01-01T10:00:00+00:00".to_string()),
+            until_iso: None,
+        });
+
+        let response = get_chart_data(state, params).await;
+        let body = response.into_body();
+        let bytes = actix_web::body::to_bytes(body).await.unwrap();
+        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+
+        // Without until_iso there is no fixed window, so all records are counted.
+        let mut total_ok: u64 = 0;
+        for bucket in &data.buckets {
+            total_ok += bucket.ok;
+        }
+        assert_eq!(total_ok, 2);
     }
 
     #[actix_web::test]
