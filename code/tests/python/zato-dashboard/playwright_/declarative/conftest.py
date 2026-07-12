@@ -158,6 +158,11 @@ def zato_dashboard() -> 'any_':
 
     temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_declarative_test_')
 
+    logger.info(
+        '[DIAG] declarative zato_dashboard fixture pid=%s server_port=%s dashboard_port=%s broker_port=%s'
+        ' redis_port=%s temporary_dir=%r',
+        os.getpid(), server_port, dashboard_port, broker_port, redis_port, temporary_dir)
+
     # .. 0) start a dedicated Redis instance on its own port so tests never share
     # scheduler streams with any other environment on this machine, and wait until
     # it accepts connections - the scheduler binary exits if Redis is not up yet ..

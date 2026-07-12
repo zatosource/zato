@@ -59,7 +59,7 @@ class ZatoClient:
         else:
             body = b'{}'
 
-        logger.info('-> %s %s', service_name, body.decode())
+        logger.info('[DIAG] ZatoClient.invoke client_id=%s url=%r body=%s', hex(id(self)), url, body.decode())
 
         request = Request(url, data=body, method='POST')
         request.add_header('Authorization', f'Basic {self._auth}')

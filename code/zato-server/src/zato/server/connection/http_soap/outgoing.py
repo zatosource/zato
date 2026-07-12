@@ -512,6 +512,9 @@ class BaseHTTPSOAPWrapper:
     def ping(self, cid:'str', return_response:'bool'=False, log_verbose:'bool'=False, *, ping_path:'str'='/') -> 'any_':
         """ Pings a given HTTP/SOAP resource
         """
+        logger.info('[DIAG] wrapper.ping id=%s cid=%s name=%r address=%r ping_method=%r ping_path=%r session_id=%s pid=%s',
+            hex(id(self)), cid, self.config['name'], self.address, self.config['ping_method'], ping_path,
+            hex(id(self.session)), os.getpid())
         logger.info('Pinging:`%s`', self.config_no_sensitive)
 
         # Session object will write some info to it ..
