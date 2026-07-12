@@ -268,18 +268,8 @@ class Create(AdminService):
 
         file_name = os.path.join(work_dir, payload_name)
 
-        self.logger.info(
-            '[DIAG] hot-deploy _deploy_package pid=%s server_id=%s work_dir=%r file_name=%r'
-            ' file_exists=%s in_place=%s',
-            os.getpid(), hex(id(self.server)), work_dir, file_name,
-            os.path.exists(file_name), should_deploy_in_place)
-
         # Deploy some objects of interest from the file ..
         ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place)
-
-        self.logger.info(
-            '[DIAG] hot-deploy _deploy_package result file_name=%r models=%s services=%s service_ids=%s',
-            file_name, sorted(ctx.model_name_list), ctx.service_name_list, ctx.service_id_list)
 
         # We enter here if there were some models or services that we deployed ..
         if ctx.model_name_list or ctx.service_name_list:
@@ -368,12 +358,6 @@ class Create(AdminService):
         is_external = internal_path not in payload_name
         is_relative = not os.path.isabs(payload_name)
 
-        self.logger.info(
-            '[DIAG] hot-deploy Create.handle pid=%s server_id=%s store_id=%s payload_name=%r'
-            ' is_external=%s is_relative=%s payload_len=%s base_dir=%r',
-            os.getpid(), hex(id(self.server)), hex(id(self.server.service_store)), payload_name,
-            is_external, is_relative, len(payload or ''), self.server.base_dir)
-
         if is_external and is_relative:
 
             full_path = os.path.join(self.server.hot_deploy_config.pickup_dir, payload_name)
@@ -405,12 +389,7 @@ class Create(AdminService):
         while not self.server.config_dispatcher:
             sleep(0.2)
 
-        self.logger.info('[DIAG] hot-deploy Create.handle acquiring lock=%r ttl=%s block=%s pid=%s',
-            lock_name, ttl, block, os.getpid())
-
         with self.lock(lock_name, ttl, block):
-
-            self.logger.info('[DIAG] hot-deploy Create.handle lock acquired lock=%r pid=%s', lock_name, os.getpid())
 
             try:
                 self.backup_current_work_dir()
@@ -434,8 +413,7 @@ class Create(AdminService):
 
             except OSError as e:
                 if e.errno == ENOENT:
-                    self.logger.info('[DIAG] hot-deploy Create.handle swallowed ENOENT payload_name=%r pid=%s e:`%s`',
-                        payload_name, os.getpid(), format_exc())
+                    self.logger.debug('Caught ENOENT e:`%s`', format_exc())
                 else:
                     raise
 

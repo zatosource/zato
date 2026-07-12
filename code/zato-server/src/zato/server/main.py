@@ -94,11 +94,6 @@ warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 #
 # Needed for SQLAlchemy 1.4
 #
@@ -165,19 +160,13 @@ class ZatoApplication:
 
         # First, check if we have such a value among environment variables ..
         if value := os.environ.get(env_key):
-            logger.info('[DIAG] _get_config_value key=%r from env %r -> %r pid=%s id=%s',
-                config_key, env_key, value, os.getpid(), hex(id(self)))
             return value
 
         # .. we are here if there was no such environment variable ..
         # .. but maybe there is a config key on its own ..
         if value := self.config_main.get(config_key): # type: ignore
-            logger.info('[DIAG] _get_config_value key=%r from config_main -> %r pid=%s id=%s',
-                config_key, value, os.getpid(), hex(id(self)))
             return value # type: ignore
 
-        logger.info('[DIAG] _get_config_value key=%r not found in env nor config_main pid=%s id=%s',
-            config_key, os.getpid(), hex(id(self)))
         return None
 
 # ################################################################################################################################
@@ -249,9 +238,6 @@ class ZatoApplication:
 
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
-
-        logger.info('[DIAG] ZatoApplication.run binding HTTP server host=%r port=%s pid=%s id=%s server_id=%s base_dir=%r',
-            host, port, os.getpid(), hex(id(self)), hex(id(server)), server.base_dir)
 
         self._http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
 

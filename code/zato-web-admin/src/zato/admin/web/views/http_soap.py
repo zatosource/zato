@@ -441,14 +441,12 @@ def ping(req, id, cluster_id): # type: ignore
 
     if isinstance(response, HttpResponseServerError):
         err = response.content.decode('utf-8', 'replace')
-        logger.info('[DIAG] http_soap ping view id=%s server error=%r', id, err)
         return JsonResponse({
             'is_success': False,
             'info': err,
         })
 
     data = response.data
-    logger.info('[DIAG] http_soap ping view id=%s is_success=%s info=%r', id, data.is_success, data.info)
     return JsonResponse({
         'is_success': data.is_success,
         'info': data.info,

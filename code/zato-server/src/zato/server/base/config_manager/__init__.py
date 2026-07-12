@@ -2290,9 +2290,6 @@ class ConfigManager(_ConfigManagerBase):
 
     def on_config_event_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
 
-        logger.info('[DIAG] on_config_event_HOT_DEPLOY_CREATE_SERVICE pid=%s id=%s server_id=%s payload_name=%r payload_len=%s',
-            os.getpid(), hex(id(self)), hex(id(self.server)), msg.payload_name, len(msg.payload))
-
         # Uploads the service
         _ = self.on_config_event_hot_deploy(
             msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,

@@ -59,8 +59,6 @@ class ZatoClient:
         else:
             body = b'{}'
 
-        logger.info('[DIAG] ZatoClient.invoke client_id=%s url=%r body=%s', hex(id(self)), url, body.decode())
-
         request = Request(url, data=body, method='POST')
         request.add_header('Authorization', f'Basic {self._auth}')
         request.add_header('Content-Type', 'application/json')
