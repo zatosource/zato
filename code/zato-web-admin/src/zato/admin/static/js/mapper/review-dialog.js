@@ -24,7 +24,9 @@
 
         var arrow = document.createElement('span');
         arrow.className = 'mapper-review-item-arrow';
-        arrow.textContent = '\u2192';
+        var arrowIcon = document.createElement('i');
+        arrowIcon.setAttribute('data-lucide', 'arrow-right');
+        arrow.appendChild(arrowIcon);
         change.appendChild(arrow);
 
         var afterText = document.createElement('span');
@@ -245,6 +247,9 @@
         dialog.appendChild(buttons);
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
+
+        // The change-line arrow placeholders become inline SVGs.
+        lucide.createIcons();
 
         $(toggleAll).on('click', function() {
 

@@ -43,23 +43,24 @@
     --mapper-background-warning: rgba(178, 106, 0, 0.10);
 
     /* Search highlights - every match and the current one */
-    /* Type badge colors */
-    --mapper-type-object: var(--mapper-seablue-light2);
-    --mapper-type-array: #6a3fb5;
-    --mapper-type-string: #2e7d32;
-    --mapper-type-number: #b26a00;
-    --mapper-type-boolean: #ad1457;
-    --mapper-type-unknown: #6c757d;
-    --mapper-type-union: #6c757d;
+    /* Type badges carry no per-type color coding - one dark, readable
+       shade on one quiet background for all of them. */
+    --mapper-type-object: #3f4954;
+    --mapper-type-array: #3f4954;
+    --mapper-type-string: #3f4954;
+    --mapper-type-number: #3f4954;
+    --mapper-type-boolean: #3f4954;
+    --mapper-type-unknown: #3f4954;
+    --mapper-type-union: #3f4954;
 
     /* Type badge backgrounds */
-    --mapper-type-background-object: rgba(20, 87, 138, 0.10);
-    --mapper-type-background-array: rgba(106, 63, 181, 0.10);
-    --mapper-type-background-string: rgba(46, 125, 50, 0.10);
-    --mapper-type-background-number: rgba(178, 106, 0, 0.10);
-    --mapper-type-background-boolean: rgba(173, 20, 87, 0.10);
-    --mapper-type-background-unknown: rgba(108, 117, 125, 0.12);
-    --mapper-type-background-union: rgba(108, 117, 125, 0.12);
+    --mapper-type-background-object: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-array: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-string: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-number: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-boolean: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-unknown: rgba(108, 117, 125, 0.10);
+    --mapper-type-background-union: rgba(108, 117, 125, 0.10);
 
     /* Vertical room taken by the Dashboard chrome above the mapper -
        the top menu bar and the cluster color strip. */

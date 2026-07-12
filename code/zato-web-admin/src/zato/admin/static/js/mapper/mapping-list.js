@@ -108,7 +108,9 @@
 
             var arrow = document.createElement('span');
             arrow.className = 'mapper-row-arrow';
-            arrow.textContent = '\u2192';
+            var arrowIcon = document.createElement('i');
+            arrowIcon.setAttribute('data-lucide', 'arrow-right');
+            arrow.appendChild(arrowIcon);
             item.appendChild(arrow);
 
             var target = document.createElement('span');
@@ -171,7 +173,19 @@
 
             var title = document.createElement('span');
             title.className = 'mapper-scope-title';
-            title.textContent = 'each ' + scope.source + ' \u2192 ' + scope.target;
+
+            var sourceText = document.createElement('span');
+            sourceText.textContent = 'each ' + scope.source;
+            title.appendChild(sourceText);
+
+            var titleArrow = document.createElement('i');
+            titleArrow.setAttribute('data-lucide', 'arrow-right');
+            title.appendChild(titleArrow);
+
+            var targetText = document.createElement('span');
+            targetText.textContent = scope.target;
+            title.appendChild(targetText);
+
             header.appendChild(title);
 
             // The element picker shows one element's child values at a time.
@@ -264,6 +278,10 @@
             }
 
             container.appendChild(list);
+
+            // The row and scope-title arrow placeholders become
+            // inline SVGs.
+            lucide.createIcons();
         }
 
 // ////////////////////////////////////////////////////////////////////////

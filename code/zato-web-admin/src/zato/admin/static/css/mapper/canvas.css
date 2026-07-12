@@ -115,37 +115,6 @@ circle.mapper-canvas-line-conditioned {
 /* Mapper - mapped badges on the trees                           */
 /* ------------------------------------------------------------ */
 
-.mapper-tree-mapped-badge {
-    margin-left: var(--mapper-space-1);
-    font-size: var(--mapper-font-size-small);
-    color: var(--mapper-seablue-light3);
-}
-
-.mapper-tree-mapped-badge-formula {
-    font-weight: 700;
-    font-style: italic;
-    color: var(--mapper-type-array);
-}
-
-/* A conditioned target's badge matches its line's color. */
-.mapper-tree-mapped-badge-conditioned {
-    color: var(--mapper-color-conditioned);
-}
-
-/* A source field's badge counts its references and takes clicks -
-   its geometry comes from the kit's dashboard-outcome-badge. */
-.mapper-tree-usage-badge {
-    min-width: 18px;
-    text-align: center;
-    color: var(--mapper-text-inverse);
-    background: var(--mapper-seablue-light3);
-    cursor: pointer;
-}
-
-.mapper-tree-usage-badge:hover {
-    background: var(--mapper-seablue-light2);
-}
-
 /* ------------------------------------------------------------ */
 /* Mapper - dragging                                             */
 /* ------------------------------------------------------------ */

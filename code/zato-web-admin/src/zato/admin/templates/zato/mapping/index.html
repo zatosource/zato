@@ -4,6 +4,7 @@
 {% block html_title %}Mappings{% endblock %}
 
 {% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
 <link rel="stylesheet" type="text/css" href="/static/css/zato_action_button.css">
@@ -197,6 +198,8 @@
 </div>
 
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/lucide/lucide.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/store2/store2.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/hotkeys/hotkeys.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/sortable/Sortable.min.js"></script>

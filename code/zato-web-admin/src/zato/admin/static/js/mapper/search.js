@@ -13,11 +13,6 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    var expandedGlyph = '\u25be';
-    var collapsedGlyph = '\u25b8';
-
-// ////////////////////////////////////////////////////////////////////////
-
     // Initializes the filters, the per-column search and the tree
     // operations.
     // searchConfig:
@@ -43,14 +38,10 @@
 // Tree expansion - shared by the tree operations.
 // ////////////////////////////////////////////////////////////////////////
 
+        // The collapsed class alone drives the chevron rotation, so no
+        // glyph bookkeeping is needed here.
         function setItemCollapsed(item, isCollapsed) {
-
             $(item).toggleClass('mapper-tree-item-collapsed', isCollapsed);
-
-            var toggle = item.querySelector(':scope > .mapper-tree-row > .mapper-tree-toggle');
-            if (toggle !== null) {
-                toggle.textContent = isCollapsed ? collapsedGlyph : expandedGlyph;
-            }
         }
 
 // ////////////////////////////////////////////////////////////////////////
