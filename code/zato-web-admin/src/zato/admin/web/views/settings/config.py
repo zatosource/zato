@@ -183,6 +183,7 @@ python_packages_page_config['save_button_label'] = 'Save'
 python_packages_page_config['download_logs_label'] = 'Download full logs'
 python_packages_page_config['show_sidebar'] = False
 python_packages_page_config['show_restart_steps'] = True
+python_packages_page_config['show_allow_delete'] = True
 python_packages_page_config['panel_width'] = '55%'
 python_packages_page_config['restart_step_id'] = 'install'
 python_packages_page_config['restart_step_label'] = python_packages_page_config['step2_label']
@@ -205,6 +206,7 @@ env_variables_page_config['save_button_label'] = 'Save'
 env_variables_page_config['download_logs_label'] = ''
 env_variables_page_config['show_sidebar'] = False
 env_variables_page_config['show_restart_steps'] = False
+env_variables_page_config['show_allow_delete'] = True
 env_variables_page_config['panel_width'] = '55%'
 env_variables_page_config['restart_step_id'] = ''
 env_variables_page_config['restart_step_label'] = ''
@@ -212,6 +214,29 @@ env_variables_page_config['textarea_id'] = 'env-variables'
 env_variables_page_config['textarea_label'] = 'Variables'
 env_variables_page_config['textarea_placeholder'] = 'KEY=value, one per line, e.g.:\nMY_API_KEY=abc123\nDEBUG=1'
 env_variables_page_config['content_rows'] = []
+
+logging_page_config = {}
+logging_page_config['title'] = 'Logging'
+logging_page_config['api_prefix'] = '/zato/logging/'
+logging_page_config['step1_label'] = 'Saving'
+logging_page_config['step2_label'] = ''
+logging_page_config['check_button_label'] = 'Test'
+logging_page_config['action_button_label'] = 'Save'
+logging_page_config['version_section_title'] = 'Logging'
+logging_page_config['config_section_title'] = ''
+logging_page_config['logs_section_title'] = ''
+logging_page_config['save_button_label'] = 'Save'
+logging_page_config['download_logs_label'] = ''
+logging_page_config['show_sidebar'] = False
+logging_page_config['show_restart_steps'] = False
+logging_page_config['show_allow_delete'] = False
+logging_page_config['panel_width'] = '55%'
+logging_page_config['restart_step_id'] = ''
+logging_page_config['restart_step_label'] = ''
+logging_page_config['textarea_id'] = 'logging-config'
+logging_page_config['textarea_label'] = 'Loggers'
+logging_page_config['textarea_placeholder'] = 'logger=LEVEL, one per line, e.g.:\nzato=DEBUG\nroot=INFO'
+logging_page_config['content_rows'] = []
 
 sbom_page_config = {}
 sbom_page_config['title'] = 'CycloneDX SBOM'

@@ -51,6 +51,9 @@ default_services_allowed = (
     'zato.ping',
 )
 
+# The scheduler's HTTP query API binds on this port unless the environment overrides it
+_scheduler_http_port = os.environ.get('Zato_Scheduler_HTTP_Port', '35100')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -164,7 +167,7 @@ class GetMetrics(Service):
 
         scheduler_text = ''
         try:
-            with urlopen('http://127.0.0.1:35100/metrics', timeout=2) as resp:
+            with urlopen(f'http://127.0.0.1:{_scheduler_http_port}/metrics', timeout=2) as resp:
                 scheduler_text = resp.read().decode('utf-8')
         except Exception:
             pass

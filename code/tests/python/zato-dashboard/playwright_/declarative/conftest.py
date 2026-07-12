@@ -52,9 +52,6 @@ _Quickstart_Timeout  = 180
 _Ping_Poll_Interval  = 0.5
 _Kill_Timeout        = 5
 
-# The scheduler's HTTP query API always binds on this fixed port
-_Scheduler_API_Port = 35100
-
 # Every process spawned by the fixture registers here so the atexit hook below can kill
 # them all even if Ctrl-C arrives in the middle of setup, before the fixture's own teardown runs.
 _processes_to_kill:'list' = []
@@ -151,10 +148,11 @@ def zato_dashboard() -> 'any_':
     """
     time_start = time.monotonic()
 
-    server_port    = _find_free_port()
-    dashboard_port = _find_free_port()
-    broker_port    = _find_free_port()
-    redis_port     = _find_free_port()
+    server_port        = _find_free_port()
+    dashboard_port     = _find_free_port()
+    broker_port        = _find_free_port()
+    redis_port         = _find_free_port()
+    scheduler_api_port = _find_free_port()
 
     temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_declarative_test_')
 
@@ -173,10 +171,13 @@ def zato_dashboard() -> 'any_':
     _wait_for_tcp(redis_port)
     logger.info(f'[TIMING] redis ready: {time.monotonic() - time_start:.1f}s')
 
-    # All components that talk to the scheduler's Redis get these variables
-    scheduler_redis_env = {
+    # All components that talk to the scheduler get these variables - a dedicated Redis
+    # and a dedicated HTTP API port, so tests never cross paths with any other scheduler
+    # process on this machine, including stale ones leaked from aborted test sessions.
+    scheduler_env_config = {
         'Zato_Scheduler_Redis_Host': '127.0.0.1',
         'Zato_Scheduler_Redis_Port': str(redis_port),
+        'Zato_Scheduler_HTTP_Port': str(scheduler_api_port),
     }
 
     # .. 1) create a quickstart environment with both server and dashboard, pointing
@@ -252,7 +253,7 @@ def zato_dashboard() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env.update(scheduler_redis_env)
+    server_env.update(scheduler_env_config)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
@@ -277,7 +278,7 @@ def zato_dashboard() -> 'any_':
     scheduler_binary = os.path.join(_Zato_Base, 'code', 'bin', '_zato_scheduler')
 
     scheduler_env = os.environ.copy()
-    scheduler_env.update(scheduler_redis_env)
+    scheduler_env.update(scheduler_env_config)
 
     scheduler_process = subprocess.Popen(
         [scheduler_binary],
@@ -322,7 +323,7 @@ def zato_dashboard() -> 'any_':
 
         # The scheduler binds its HTTP query API only once it has received the initial
         # job reload from the server, so this wait must follow the server's.
-        _wait_for_http(f'http://{host}:{_Scheduler_API_Port}/api/get_job_summaries')
+        _wait_for_http(f'http://{host}:{scheduler_api_port}/api/get_job_summaries')
         logger.info(f'[TIMING] scheduler ready: {time.monotonic() - time_after_server_start:.1f}s')
 
         _wait_for_http(f'http://{host}:{dashboard_port}/accounts/login/')

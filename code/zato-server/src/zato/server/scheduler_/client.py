@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The scheduler's HTTP query API binds on this port unless the environment overrides it
+_scheduler_http_port = os.environ.get('Zato_Scheduler_HTTP_Port', '35100')
+
 class ModuleCtx:
     Command_Stream = 'zato:scheduler:stream:command'
     Reply_Stream = 'zato:scheduler:stream:reply'
@@ -40,7 +43,7 @@ class ModuleCtx:
     Timeout_Stream = 'zato:scheduler:stream:timeout'
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'
-    Http_Base = 'http://127.0.0.1:35100'
+    Http_Base = f'http://127.0.0.1:{_scheduler_http_port}'
     Reply_Timeout = 1.0
 
 # ################################################################################################################################

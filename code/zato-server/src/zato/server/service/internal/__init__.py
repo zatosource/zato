@@ -207,6 +207,9 @@ class ServerInvoker(AdminService):
             method = self.request.raw_request.get('method', '')
             http_accept = self.request.raw_request.get('http_accept', '')
             response = func(entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
+        elif func_name in ('test_logging', 'set_logging'):
+            text = self.request.raw_request['text']
+            response = func(text)
         elif func_name == 'get_bearer_token':
             from json import loads as json_loads
             security_id = self.request.raw_request.get('security_id', '')

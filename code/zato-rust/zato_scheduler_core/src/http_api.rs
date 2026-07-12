@@ -5,7 +5,8 @@
 
 //! HTTP query API served by actix-web for the Zato server to read scheduler state.
 //!
-//! All endpoints are GET-only, served on 127.0.0.1:35100, no authentication.
+//! All endpoints are GET-only, served on 127.0.0.1 on the port given by the
+//! `Zato_Scheduler_HTTP_Port` environment variable (35100 by default), no authentication.
 
 use std::sync::Arc;
 
@@ -24,15 +25,18 @@ struct AppState {
     shared: Arc<SchedulerShared>,
 }
 
-/// Starts the actix-web HTTP server on 127.0.0.1:35100.
+/// Default port for the HTTP query API when `Zato_Scheduler_HTTP_Port` is not set.
+pub const DEFAULT_HTTP_PORT: u16 = 35100;
+
+/// Starts the actix-web HTTP server on 127.0.0.1 on the given port.
 ///
 /// This function blocks until the server shuts down.
-pub async fn start_http_server(shared: Arc<SchedulerShared>) -> std::io::Result<()> {
+pub async fn start_http_server(shared: Arc<SchedulerShared>, http_port: u16) -> std::io::Result<()> {
     let state = web::Data::new(AppState { shared });
 
-    tracing::info!("Starting HTTP query API on 127.0.0.1:35100");
+    tracing::info!("Starting HTTP query API on 127.0.0.1:{http_port}");
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
             .route("/metrics", web::get().to(get_metrics))
@@ -44,9 +48,14 @@ pub async fn start_http_server(shared: Arc<SchedulerShared>) -> std::io::Result<
             .route("/api/get_run_detail", web::get().to(get_run_detail))
             .route("/api/get_log_entries", web::get().to(get_log_entries))
     })
-    .bind("127.0.0.1:35100")?
-    .run()
-    .await
+    .bind(("127.0.0.1", http_port))
+    // A failed bind means another process owns the port - the caller shuts the whole scheduler down.
+    .map_err(|err| {
+        tracing::error!("Cannot bind HTTP query API to 127.0.0.1:{http_port}: {err}");
+        err
+    })?;
+
+    server.run().await
 }
 
 /// Returns all scheduler metrics in Prometheus text exposition format.

@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 from zato.admin import settings
 from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, \
-    highlight as highlight_view, http_soap, live_form_updates, log_streaming, \
+    highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
@@ -1420,6 +1420,20 @@ urlpatterns += [
         login_required(env_variables.test), name='settings-env-variables-test'),
     url(r'^zato/env-variables/save$',
         login_required(env_variables.save), name='settings-env-variables-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - Logging
+
+    url(r'^zato/logging/$',
+        login_required(logging_.index), name='settings-logging'),
+    url(r'^zato/logging/test$',
+        login_required(logging_.test), name='settings-logging-test'),
+    url(r'^zato/logging/save$',
+        login_required(logging_.save), name='settings-logging-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################
