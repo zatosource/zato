@@ -368,6 +368,12 @@
             }
         });
 
+        // Collapsing or expanding a branch by clicking its row moves
+        // every row below it, so the lines redraw.
+        zato.mapper.tree.onLayoutChanged = function() {
+            canvas.redraw();
+        };
+
         // The filters and the tree operations all move rows around,
         // so the lines redraw after each of them.
         var searchOperations = zato.mapper.search.init({
