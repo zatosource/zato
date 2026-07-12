@@ -64,6 +64,22 @@
    row's guide runs up to the tree's top edge as if a parent sat
    there, so a lone root keeps that stem too. */
 
+/* Hovering a field lights up its whole path from the root: every
+   ancestor item is also :hover, so each one colors its own name,
+   toggle and connector stub. */
+.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-name {
+    color: var(--mapper-color-path);
+}
+
+.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-toggle {
+    border-color: var(--mapper-color-path);
+    color: var(--mapper-color-path);
+}
+
+.mapper-tree-item:hover::before {
+    background: var(--mapper-color-path);
+}
+
 .mapper-tree-item-collapsed > .mapper-tree-children {
     display: none;
 }
