@@ -155,39 +155,55 @@ class TestSchedulerFullPath:
 
     def test_04_fast_ok_history(self, client):
         job_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
-        assert isinstance(resp, list)
+        response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
+        rows = response['rows']
+        ok_records = []
 
-        ok_records = [r for r in resp if r['outcome'] == 'ok']
+        for record in rows:
+            if record['outcome'] == 'ok':
+                ok_records.append(record)
+
         assert len(ok_records) >= 3, f'Expected >= 3 ok records, got {len(ok_records)}'
 
     # ##############################################################################################################################
 
     def test_05_fast_ok_ran_multiple_times(self, client):
         job_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{JOB_SERVICE}.get-by-id', {'cluster_id': 1, 'id': job_id})
-        current_run = int(resp['current_run'])
-        assert current_run >= 3, f'Expected current_run >= 3, got {current_run}'
+        response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
+        total = response['total']
+        assert total >= 3, f'Expected total >= 3, got {total}'
 
     # ##############################################################################################################################
 
     def test_06_timeout_detected(self, client):
         job_id = self.__class__.created_ids[1]
-        resp = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
-        assert isinstance(resp, list)
+        response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
+        rows = response['rows']
+        timeouts = []
+        outcomes = []
 
-        timeouts = [r for r in resp if r['outcome'] == 'timeout']
-        assert len(timeouts) >= 1, f'Expected >= 1 timeout records, got {len(timeouts)}: {[r["outcome"] for r in resp]}'
+        for record in rows:
+            outcomes.append(record['outcome'])
+            if record['outcome'] == 'timeout':
+                timeouts.append(record)
+
+        assert len(timeouts) >= 1, f'Expected >= 1 timeout records, got {len(timeouts)}: {outcomes}'
 
     # ##############################################################################################################################
 
     def test_07_error_recorded(self, client):
         job_id = self.__class__.created_ids[2]
-        resp = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
-        assert isinstance(resp, list)
+        response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
+        rows = response['rows']
+        errors = []
+        outcomes = []
 
-        errors = [r for r in resp if r['outcome'] == 'error']
-        assert len(errors) >= 1, f'Expected >= 1 error records, got {len(errors)}: {[r["outcome"] for r in resp]}'
+        for record in rows:
+            outcomes.append(record['outcome'])
+            if record['outcome'] == 'error':
+                errors.append(record)
+
+        assert len(errors) >= 1, f'Expected >= 1 error records, got {len(errors)}: {outcomes}'
 
     # ##############################################################################################################################
 

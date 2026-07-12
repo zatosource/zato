@@ -111,6 +111,7 @@ class TestGetCurrentStateResponse:
     def test_08_chart_since_iso_filters(self, client) -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {
             'chart_since_iso': '2099-01-01T00:00:00+00:00',
+            'chart_until_iso': '2099-01-01T02:00:00+00:00',
         })
         chart_buckets = response['chart_buckets']
         total = 0

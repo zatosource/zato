@@ -183,8 +183,8 @@ class TestSchedulerJobsCRUD:
 
     def test_14_execute_job(self, client):
         item_id = self.__class__.created_ids[0]
-        resp = client.invoke(f'{SERVICE}.execute', {'id': item_id})
-        assert resp is not None
+        response = client.invoke(f'{SERVICE}.execute', {'job_id': item_id})
+        assert response is not None
 
     # ##############################################################################################################################
 
