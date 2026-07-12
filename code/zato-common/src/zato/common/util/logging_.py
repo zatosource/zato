@@ -41,7 +41,7 @@ _allowed_log_levels = {'TRACE1', 'NOTSET', 'DEBUG', 'INFO', 'WARN', 'WARNING', '
 _root_logger_name = 'root'
 
 # Loggers that are never returned to callers
-_loggers_to_ignore = {'bzr', 'future_stdlib', 'pyasn1', 'sh.command', 'zato_audit_pii', 'zato.depth_debug'}
+_loggers_to_ignore = {'bzr', 'future_stdlib', 'pyasn1', 'sh.command', 'zato_audit_pii', 'zato.depth_debug', 'pytds'}
 
 # Used when a caller submits an empty logging configuration
 _no_input_error = 'No loggers provided'
