@@ -32,7 +32,10 @@
     var lineDimFadeDistancePixels = 48;
 
     // The opacity the lines dim to while the pointer sits amid them.
-    var lineOpacityDimmed = 0.5;
+    var lineOpacityDimmed = 0.35;
+
+    // How far towards grayscale the lines drain at the same time.
+    var lineGrayscaleDimmed = 0.6;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -587,10 +590,11 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // Removing the inline property lets the token's resting
-        // opacity show through again.
+        // Removing the inline properties lets the tokens' resting
+        // values show through again.
         function clearDim() {
             svg.style.removeProperty('--mapper-canvas-line-opacity');
+            svg.style.removeProperty('--mapper-canvas-line-grayscale');
         }
 
 // ////////////////////////////////////////////////////////////////////////
@@ -623,7 +627,10 @@
 
             var closeness = 1 - distance / lineDimFadeDistancePixels;
             var opacity = lineOpacityResting - closeness * (lineOpacityResting - lineOpacityDimmed);
+            var grayscale = closeness * lineGrayscaleDimmed;
+
             svg.style.setProperty('--mapper-canvas-line-opacity', opacity);
+            svg.style.setProperty('--mapper-canvas-line-grayscale', grayscale);
         }
 
 // ////////////////////////////////////////////////////////////////////////

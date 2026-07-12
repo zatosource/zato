@@ -38,9 +38,11 @@
     --mapper-color-warning: #b26a00;
     --mapper-color-armed: #b8860b;
 
-    /* The resting opacity of the canvas lines - the JS eases it down
-       towards its dimmed floor as the pointer nears the lines */
+    /* The resting opacity and grayscale of the canvas lines - the JS
+       eases them towards their dimmed values as the pointer nears
+       the lines */
     --mapper-canvas-line-opacity: 0.9;
+    --mapper-canvas-line-grayscale: 0;
 
     /* The root-to-field path in a tree while the field is hovered */
     --mapper-color-path: #0a2a4d;
