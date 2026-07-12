@@ -18,13 +18,15 @@
 }
 
 /* Every line looks the same - one color, solid, no dashes - only a
-   hover tells one apart. The opacity property is the dimming dial the
-   JS turns with the pointer's vertical proximity to the lines. */
+   hover tells one apart. The opacity and grayscale properties are the
+   dimming dials the JS turns with the pointer's vertical proximity to
+   the lines. */
 .mapper-canvas-line {
     fill: none;
     stroke: var(--mapper-seablue-light3);
     stroke-width: 2;
     opacity: var(--mapper-canvas-line-opacity);
+    filter: grayscale(var(--mapper-canvas-line-grayscale));
 }
 
 .mapper-canvas-dot {
@@ -87,6 +89,7 @@
 .mapper-canvas-line-hovered {
     stroke: var(--mapper-seablue-light2);
     opacity: 1;
+    filter: none;
 }
 
 circle.mapper-canvas-line-hovered {
