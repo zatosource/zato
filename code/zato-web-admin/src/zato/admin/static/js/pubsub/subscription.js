@@ -83,6 +83,18 @@ function setupTriStateCheckbox(checkbox) {
 // Constants
 var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-select-table"><tr><td colspan="2"><span class="multi-select-message">Select a security definition to see available topics</span></td></tr></table>';
 
+// Monotonic token bumped every time a subscription dialog opens or closes. Each topic-loading
+// request captures the token in force when it is issued, and its response is applied only if the
+// token is still current. This discards responses that belong to a dialog session that has since
+// been closed or reopened, which the security-definition value comparison alone cannot catch
+// because a reopened form can coincidentally hold the same value the in-flight request was issued for.
+$.fn.zato.pubsub.subscription._topic_request_generation = 0;
+
+$.fn.zato.pubsub.subscription._bump_topic_request_generation = function() {
+    $.fn.zato.pubsub.subscription._topic_request_generation += 1;
+    return $.fn.zato.pubsub.subscription._topic_request_generation;
+};
+
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
         var template = '<PubSubSubscription id:{0} topic_link_list:{1} security:{2} pattern_matched:{3}>';
@@ -92,7 +104,16 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, instance_id, sec_base_id) {
+$.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, instance_id, sec_base_id, request_generation) {
+
+    // Discard a response whose dialog session has ended. The request captured the generation
+    // in force when it was issued, and if the dialog has since been closed and reopened the
+    // generation has moved on, so this response belongs to a session that no longer exists.
+    if(request_generation !== undefined) {
+        if(request_generation !== $.fn.zato.pubsub.subscription._topic_request_generation) {
+            return;
+        }
+    }
 
     // Handle different response formats
     var htmlContent;
@@ -101,7 +122,6 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     } else if (data && data.responseText) {
         htmlContent = data.responseText;
     } else {
-        var dataJson = JSON.stringify(data);
         return;
     }
 
@@ -239,8 +259,9 @@ $.fn.zato.pubsub.on_sec_def_changed = function() {
     if(sec_base_id) {
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
         $.fn.zato.post(url, function(data, status) {
-            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id);
+            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
         }, null, null, true);
     }
     else {
@@ -267,6 +288,10 @@ $(document).ready(function() {
 
     // Add open callbacks to both create and edit dialogs for proper initialization
     $('#create-div').dialog('option', 'open', function() {
+
+        // A new dialog session begins, so any topic-loading request from a previous session is stale.
+        $.fn.zato.pubsub.subscription._bump_topic_request_generation();
+
         // Clean up any previous state
         $('.loading-spinner').remove();
         $('#rest-endpoint-create, #push-service-create, #push-type-create').hide();
@@ -288,6 +313,10 @@ $(document).ready(function() {
     });
 
     $('#edit-div').dialog('option', 'open', function() {
+
+        // A new dialog session begins, so any topic-loading request from a previous session is stale.
+        $.fn.zato.pubsub.subscription._bump_topic_request_generation();
+
         var instance_id = $.fn.zato.pubsub.subscription._current_edit_instance_id;
         if (instance_id) {
             var instance = $.fn.zato.data_table.data[instance_id];
@@ -321,8 +350,9 @@ $(document).ready(function() {
             if(instance.sec_base_id) {
                 var cluster_id = $('#cluster_id').val();
                 var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+                var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
                 $.fn.zato.post(url, function(data, status) {
-                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id);
+                    $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
                 }, null, null, true);
             }
         }
@@ -1004,8 +1034,9 @@ $.fn.zato.pubsub.subscription._reload_create_topics = function() {
         var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#multi-select-div');
         var cluster_id = $('#cluster_id').val();
         var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', sec_base_id, cluster_id);
+        var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
         $.fn.zato.post(url, function(data, status) {
-            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id);
+            $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, null, sec_base_id, request_generation);
             $.fn.zato.pubsub.subscription._puff_changed_rows('#multi-select-div', old_values);
         }, null, null, true);
     }
@@ -1019,8 +1050,9 @@ $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
             var old_values = $.fn.zato.pubsub.subscription._snapshot_topic_values('#id_edit-multi-select-div');
             var cluster_id = $('#cluster_id').val();
             var url = String.format('/zato/pubsub/subscription/sec-def-topic-sub-list/{0}/cluster/{1}/', instance.sec_base_id, cluster_id);
+            var request_generation = $.fn.zato.pubsub.subscription._topic_request_generation;
             $.fn.zato.post(url, function(data, status) {
-                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id);
+                $.fn.zato.pubsub.populate_sec_def_topics_callback(data, status, instance_id, instance.sec_base_id, request_generation);
                 $.fn.zato.pubsub.subscription._puff_changed_rows('#id_edit-multi-select-div', old_values);
             }, null, null, true);
         }
