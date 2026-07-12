@@ -2,7 +2,6 @@ use std::time::Instant;
 
 use chrono::{Duration, Utc};
 
-use zato_scheduler_core::calendar::CalendarData;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{
@@ -28,8 +27,11 @@ fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 
@@ -218,30 +220,6 @@ fn test_collect_due_advances_next_fire() {
     let rj = state.jobs.get(&16).unwrap();
     assert!(rj.next_fire_utc.is_some());
     assert!(rj.next_fire_utc.unwrap() > old_fire);
-}
-
-#[test]
-fn test_collect_due_skips_holiday() {
-    let mut state = SchedulerState::new();
-
-    let today = Utc::now().date_naive();
-    let mut cal = CalendarData::new("test-cal".into());
-    cal.dates.insert(today);
-    state.calendars.insert("test-cal".into(), cal);
-
-    let mut job = make_interval_job(17, "cd8", 5);
-    job.calendar = Some("test-cal".into());
-    let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
-    state.jobs.insert(17, rj);
-
-    let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
-    assert!(batch.is_empty());
-
-    let rj = state.jobs.get(&17).unwrap();
-    let last = rj.history.back().unwrap();
-    assert_eq!(last.outcome, "skipped_holiday");
 }
 
 #[test]

@@ -25,13 +25,6 @@ doc = false
 bench = false
 
 [[bin]]
-name = "fuzz_is_excluded"
-path = "fuzz_targets/fuzz_is_excluded.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
 name = "fuzz_compute_interval_ms"
 path = "fuzz_targets/fuzz_compute_interval_ms.rs"
 test = false

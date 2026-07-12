@@ -20,8 +20,11 @@ fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 
@@ -42,8 +45,11 @@ fn make_one_time_job(id: i64, name: &str, start_date: &str) -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 

@@ -36,7 +36,6 @@ Each ExecutionRecord contains:
 3. timeout                   - exceeded max_execution_time_ms
 4. running                   - currently in flight
 5. skipped_already_in_flight - skipped because previous run still going
-6. skipped_holiday           - skipped because date is on a holiday calendar
 
 The filter wildcard "all" matches every outcome.
 

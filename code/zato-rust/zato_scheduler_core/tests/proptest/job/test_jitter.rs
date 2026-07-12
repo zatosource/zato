@@ -21,7 +21,6 @@ fn make_jitter_job(jitter_ms: u32) -> SchedulerJob {
         repeats: None,
         jitter_ms: Some(jitter_ms),
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
         on_success_service: None,
         on_success_job: None,

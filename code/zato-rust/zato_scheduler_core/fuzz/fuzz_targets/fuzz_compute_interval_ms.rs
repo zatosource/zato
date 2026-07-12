@@ -28,7 +28,6 @@ fuzz_target!(|data: &[u8]| {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
     };
 

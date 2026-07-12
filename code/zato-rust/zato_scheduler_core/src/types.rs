@@ -86,13 +86,11 @@ pub mod outcome {
     pub const ERROR: &str = "error";
     /// The job was skipped because a previous invocation is still in flight.
     pub const SKIPPED_ALREADY_IN_FLIGHT: &str = "skipped_already_in_flight";
-    /// The job was skipped because the date falls on a holiday calendar.
-    pub const SKIPPED_HOLIDAY: &str = "skipped_holiday";
     /// The job timed out.
     pub const TIMEOUT: &str = "timeout";
 
     /// All countable outcome labels, in the order used for summary dicts.
-    pub const COUNTABLE: &[&str] = &[EXECUTED, ERROR, TIMEOUT, RUNNING, SKIPPED_ALREADY_IN_FLIGHT, SKIPPED_HOLIDAY];
+    pub const COUNTABLE: &[&str] = &[EXECUTED, ERROR, TIMEOUT, RUNNING, SKIPPED_ALREADY_IN_FLIGHT];
 }
 
 /// A batch of fire information for a single job invocation.

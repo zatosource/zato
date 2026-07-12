@@ -26,7 +26,6 @@ fn make_job_from_bytes(data: &[u8], id: &str) -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
     }
 }

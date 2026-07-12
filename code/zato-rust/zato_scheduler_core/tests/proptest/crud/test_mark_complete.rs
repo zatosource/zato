@@ -21,7 +21,6 @@ fn make_job() -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
         on_success_service: None,
         on_success_job: None,

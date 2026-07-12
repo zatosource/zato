@@ -59,8 +59,7 @@ conftest._pre_start_service_files.extend([
 
 @pytest.fixture(scope='module')
 def client(zato_server):
-    base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
-    out = AdminClient(base_url, zato_server['password'])
+    out = AdminClient(zato_server['base_url'], zato_server['password'])
     return out
 
 # ################################################################################################################################

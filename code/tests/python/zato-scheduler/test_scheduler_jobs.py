@@ -19,7 +19,8 @@ SERVICE = 'zato.scheduler.job'
 
 @pytest.fixture(scope='module')
 def client(zato_server):
-    return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
+    out = ZatoClient(zato_server['base_url'], zato_server['password'])
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,7 +231,7 @@ class TestSchedulerJobsCRUD:
 # ################################################################################################################################
 
 class TestSchedulerJobsNewFields:
-    """Tests for new scheduler fields: jitter_ms, timezone, calendar, max_execution_time_ms."""
+    """Tests for new scheduler fields: jitter_ms, timezone, max_execution_time_ms."""
 
     created_ids = []
 

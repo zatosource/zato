@@ -9,7 +9,6 @@ use chrono::Utc;
 use parking_lot::{Condvar, Mutex};
 
 use crate::DeferredLog;
-use crate::calendar::CalendarData;
 use crate::deferred_log;
 use crate::job::{ExecutionRecord, LogEntry, RunningJob};
 use crate::types::{FireBatch, outcome};
@@ -25,8 +24,6 @@ const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 pub struct SchedulerState {
     /// Map of job id to its runtime representation.
     pub jobs: HashMap<i64, RunningJob>,
-    /// Holiday / exclusion calendars keyed by name.
-    pub calendars: HashMap<String, CalendarData>,
     /// Flag set whenever the state is mutated from outside the loop.
     pub dirty: bool,
 }
@@ -43,7 +40,6 @@ impl SchedulerState {
     pub fn new() -> Self {
         Self {
             jobs: HashMap::new(),
-            calendars: HashMap::new(),
             dirty: false,
         }
     }
@@ -259,7 +255,6 @@ pub fn collect_due_jobs(
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
     for job_id in job_ids {
-        let calendars_ref = &state.calendars;
         let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active {
@@ -293,17 +288,6 @@ pub fn collect_due_jobs(
             running_job.current_run,
             running_job.service,
         );
-
-        if running_job.is_holiday_today(calendars_ref) {
-            running_job.record_execution(ExecutionRecord::new(
-                &planned,
-                &actual,
-                outcome::SKIPPED_HOLIDAY,
-                running_job.current_run,
-            ));
-            running_job.advance_to_next(now);
-            continue;
-        }
 
         running_job.in_flight = true;
         running_job.in_flight_since = Some(Instant::now());
