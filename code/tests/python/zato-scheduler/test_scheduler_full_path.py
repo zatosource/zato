@@ -46,13 +46,13 @@ conftest._pre_start_service_files.extend([
 
     ('test_scheduler_file_appender.py', dedent('''\
         from zato.server.service import Service
-        import json
         from datetime import datetime, timezone
 
         class TestSchedulerFileAppender(Service):
             name = 'test-scheduler.file-appender'
             def handle(self):
-                extra = json.loads(self.request.raw_request)
+                # The server parses each job's extra data before invoking the service, so it arrives as a dict
+                extra = self.request.payload
                 with open(extra['path'], 'a') as f:
                     f.write(f'{extra["tag"]},{datetime.now(timezone.utc).isoformat()}\\n')
     ''')),
