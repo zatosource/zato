@@ -22,10 +22,6 @@
     --mapper-text-main: #1c2b36;
     --mapper-text-muted: var(--text-muted);
     --mapper-text-inverse: var(--white);
-    --mapper-text-inverse-muted: #b8c4cc;
-
-    /* The line tooltip surface */
-    --mapper-background-tooltip: #333;
 
     /* Borders */
     --mapper-border-light: var(--border-light);

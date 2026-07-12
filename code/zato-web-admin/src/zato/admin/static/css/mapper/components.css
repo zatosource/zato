@@ -66,31 +66,39 @@
 
 /* Hovering a field lights up its whole path from the root: every
    ancestor item is also :hover, so each one colors its own name,
-   toggle and connector stub. */
-.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-name {
+   toggle and connector stub. The pathed class is the same highlight
+   driven by the JS - the fields at the other end of a hovered field's
+   connections get it, together with all their ancestors, and several
+   paths may be lit at once. */
+.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-name,
+.mapper-tree-item-pathed > .mapper-tree-row > .mapper-tree-name {
     color: var(--mapper-color-path);
 }
 
-.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-toggle {
+.mapper-tree-item:hover > .mapper-tree-row > .mapper-tree-toggle,
+.mapper-tree-item-pathed > .mapper-tree-row > .mapper-tree-toggle {
     border-color: var(--mapper-color-path);
     color: var(--mapper-color-path);
 }
 
-.mapper-tree-item:hover::before {
+.mapper-tree-item:hover::before,
+.mapper-tree-item.mapper-tree-item-pathed::before {
     background: var(--mapper-color-path);
 }
 
 /* The vertical legs of the path. The line from a parent's toggle down
    to a hovered item is drawn by the guide segments of the siblings
    above it, so those color in full .. */
-.mapper-tree-item:has(~ .mapper-tree-item:hover)::after {
+.mapper-tree-item:has(~ .mapper-tree-item:hover)::after,
+.mapper-tree-item:has(~ .mapper-tree-item-pathed)::after {
     background: var(--mapper-color-path);
 }
 
 /* .. while an item on the hovered path colors its own guide only down
    to its stub - below the stub the guide leads to its next siblings,
    which are not on the path. */
-.mapper-tree-item:hover::after {
+.mapper-tree-item:hover::after,
+.mapper-tree-item.mapper-tree-item-pathed::after {
     background: linear-gradient(
         var(--mapper-color-path) 0,
         var(--mapper-color-path) 12px,

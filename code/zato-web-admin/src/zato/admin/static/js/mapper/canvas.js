@@ -635,90 +635,38 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // The rows a hovered line connects carry their own highlight,
-        // cleared here together in one place.
-        function clearConnectedRows() {
-            $(container).find('.mapper-tree-row-connected-source').removeClass('mapper-tree-row-connected-source');
-            $(container).find('.mapper-tree-row-connected-target').removeClass('mapper-tree-row-connected-target');
+        // Lights a row up together with its whole root-to-field path -
+        // the class stands in for :hover on the item and on every
+        // ancestor above it.
+        function lightRow(row) {
+
+            row.classList.add('mapper-tree-row-linked');
+
+            var pathedItem = row.closest('.mapper-tree-item');
+            while (pathedItem !== null) {
+                pathedItem.classList.add('mapper-tree-item-pathed');
+                pathedItem = pathedItem.parentElement.closest('.mapper-tree-item');
+            }
         }
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // The tooltip a hovered line shows: its source to target pairs,
-        // plus the expression when the line computes rather than copies.
-        var lineTooltip = document.createElement('div');
-        lineTooltip.className = 'mapper-line-tooltip';
-        lineTooltip.hidden = true;
-        document.body.appendChild(lineTooltip);
-
-        // The line whose content the tooltip currently holds - moves
-        // along the same line only reposition it.
-        var lineTooltipId = null;
-
-        function buildLineTooltip(connection) {
-
-            $(lineTooltip).empty();
-
-            // A scope line iterates rather than copies.
-            var prefix = connection.selection === null ? 'each ' : '';
-
-            for (var sourceIdx = 0; sourceIdx < connection.sources.length; sourceIdx++) {
-                var pair = document.createElement('div');
-                pair.className = 'mapper-line-tooltip-pair';
-
-                var sourceText = document.createElement('span');
-                sourceText.textContent = prefix + connection.sources[sourceIdx];
-                pair.appendChild(sourceText);
-
-                var arrowIcon = document.createElement('i');
-                arrowIcon.setAttribute('data-lucide', 'arrow-right');
-                pair.appendChild(arrowIcon);
-
-                var targetText = document.createElement('span');
-                targetText.textContent = connection.target;
-                pair.appendChild(targetText);
-
-                lineTooltip.appendChild(pair);
-            }
-
-            if (connection.computed) {
-                var expression = document.createElement('div');
-                expression.className = 'mapper-line-tooltip-expression';
-                expression.textContent = rowOf(connection.selection).expression;
-                lineTooltip.appendChild(expression);
-            }
-
-            // The arrow placeholders become inline SVGs.
-            lucide.createIcons();
-        }
-
-        function renderLineTooltip(lineId, clientX, clientY) {
-
-            if (lineId !== lineTooltipId) {
-                buildLineTooltip(connectionOfLineId(lineId));
-                lineTooltipId = lineId;
-            }
-
-            lineTooltip.hidden = false;
-            lineTooltip.style.left = (clientX + 14) + 'px';
-            lineTooltip.style.top = (clientY + 14) + 'px';
-        }
-
-        function hideLineTooltip() {
-            lineTooltip.hidden = true;
-            lineTooltipId = null;
+        // The lit rows and their paths, cleared together in one place.
+        function clearLinkedRows() {
+            $(container).find('.mapper-tree-row-linked').removeClass('mapper-tree-row-linked');
+            $(container).find('.mapper-tree-item-pathed').removeClass('mapper-tree-item-pathed');
         }
 
 // ////////////////////////////////////////////////////////////////////////
 
         function clearGutterHover() {
 
-            // The field hover owns the dimming while it is active.
+            // The field hover owns the dimming and the lit rows while
+            // it is active.
             if (!fieldHoverActive) {
                 clearDim();
+                clearLinkedRows();
             }
-            clearConnectedRows();
-            hideLineTooltip();
 
             var hoveredElements = svg.querySelectorAll('.mapper-canvas-line-hovered');
             for (var elementIdx = 0; elementIdx < hoveredElements.length; elementIdx++) {
@@ -746,31 +694,28 @@
             for (var elementIdx = 0; elementIdx < hoveredElements.length; elementIdx++) {
                 hoveredElements[elementIdx].classList.remove('mapper-canvas-line-hovered');
             }
-            clearConnectedRows();
+            clearLinkedRows();
 
-            if (lineId === null) {
-                hideLineTooltip();
-            }
-            else {
+            if (lineId !== null) {
                 var lineElements = svg.querySelectorAll('[data-line="' + lineId + '"]');
                 for (var lineElementIdx = 0; lineElementIdx < lineElements.length; lineElementIdx++) {
                     lineElements[lineElementIdx].classList.add('mapper-canvas-line-hovered');
                 }
 
-                // The rows the lit line connects light up with it.
+                // The rows at both ends of the lit line light up with
+                // their whole root-to-field paths, exactly like a
+                // field hover lights them.
                 var linePath = svg.querySelector('path[data-line="' + lineId + '"]');
 
-                var connectedSourceRow = treeRowAt(canvasConfig.sourceBody, linePath.getAttribute('data-source-path'));
-                if (connectedSourceRow !== null) {
-                    connectedSourceRow.classList.add('mapper-tree-row-connected-source');
+                var hoveredSourceRow = treeRowAt(canvasConfig.sourceBody, linePath.getAttribute('data-source-path'));
+                if (hoveredSourceRow !== null) {
+                    lightRow(hoveredSourceRow);
                 }
 
-                var connectedTargetRow = treeRowAt(canvasConfig.targetBody, linePath.getAttribute('data-target-path'));
-                if (connectedTargetRow !== null) {
-                    connectedTargetRow.classList.add('mapper-tree-row-connected-target');
+                var hoveredTargetRow = treeRowAt(canvasConfig.targetBody, linePath.getAttribute('data-target-path'));
+                if (hoveredTargetRow !== null) {
+                    lightRow(hoveredTargetRow);
                 }
-
-                renderLineTooltip(lineId, event.clientX, event.clientY);
             }
         });
 
@@ -788,8 +733,7 @@
 
             fieldHoverActive = false;
             clearDim();
-
-            $(container).find('.mapper-tree-row-linked').removeClass('mapper-tree-row-linked');
+            clearLinkedRows();
 
             var attachedElements = svg.querySelectorAll('.mapper-canvas-line-attached');
             for (var elementIdx = 0; elementIdx < attachedElements.length; elementIdx++) {
@@ -837,10 +781,12 @@
                     lineElements[lineElementIdx].classList.add('mapper-canvas-line-attached');
                 }
 
-                // The field at the other end of this line.
+                // The field at the other end of this line, with its
+                // whole root-to-field path lit the same way a direct
+                // hover would light it.
                 var otherRow = treeRowAt(otherBody, linePath.getAttribute(otherAttribute));
                 if (otherRow !== null) {
-                    otherRow.classList.add('mapper-tree-row-linked');
+                    lightRow(otherRow);
                 }
             }
         }
