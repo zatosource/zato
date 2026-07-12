@@ -107,9 +107,32 @@ path.mapper-canvas-line-attached {
 /* Mapper - dragging                                             */
 /* ------------------------------------------------------------ */
 
+/* The ghost line a drag draws from its source field to the pointer,
+   snapping onto the target row under it - it marches like a hovered
+   line and never dims with the rest. */
+.mapper-canvas-line-ghost {
+    fill: none;
+    stroke: var(--mapper-seablue-light2);
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
+    animation: mapper-canvas-line-flow 600ms linear infinite;
+}
+
+/* Its endpoint dots are solid like the real ones. */
+circle.mapper-canvas-line-ghost {
+    fill: var(--mapper-seablue-light2);
+    stroke: none;
+    stroke-dasharray: none;
+    animation: none;
+}
+
+/* The rows are drag handles, so nothing in them - names, badges -
+   ever gets text-selected by a drag. */
 .mapper-schema-column-body .mapper-tree-row {
     touch-action: none;
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .mapper-drag-ghost {
