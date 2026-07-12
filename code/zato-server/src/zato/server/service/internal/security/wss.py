@@ -216,9 +216,6 @@ class Delete(AdminService):
     input = 'id',
 
     def handle(self):
-
-        self.logger.info('[DIAG] wss.Delete.handle enter id=%s', self.request.input.id)
-
         with closing(self.odb.session()) as session:
             try:
                 auth = session.query(WSSecurity).\
@@ -230,8 +227,6 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-
-                self.logger.info('[DIAG] wss.Delete.handle committed id=%s name=%r', self.request.input.id, auth.name)
             except Exception:
                 self.logger.error('Could not delete the WS-Security definition, e:`%s`', format_exc())
                 session.rollback()
@@ -247,13 +242,7 @@ class Delete(AdminService):
 
                 self.request.input.username = auth.username
 
-                self.logger.info('[DIAG] wss.Delete.handle publishing WSS_DELETE id=%s name=%r',
-                    self.request.input.id, auth.name)
-
                 self.config_dispatcher.publish(self.request.input)
-
-                self.logger.info('[DIAG] wss.Delete.handle published WSS_DELETE id=%s name=%r',
-                    self.request.input.id, auth.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

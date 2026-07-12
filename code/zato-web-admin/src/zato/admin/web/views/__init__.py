@@ -680,11 +680,7 @@ class BaseCallView(BaseView):
             input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
             service_name = self.service_name or self.get_service_name()
-            logger.info('[DIAG] BaseCallView.__call__ invoking service=%s input_dict=%s view=%s',
-                service_name, input_dict, type(self).__name__)
             response = req.zato.client.invoke(service_name, input_dict)
-            logger.info('[DIAG] BaseCallView.__call__ response ok=%s service=%s view=%s',
-                response.ok, service_name, type(self).__name__)
             http_response = self.build_http_response(response)
             return http_response
         except Exception:

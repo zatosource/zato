@@ -77,7 +77,9 @@ updates_view = UpdatesView()
 @method_allowed('GET')
 def check_availability(req):
     try:
-        result = updater.check_latest_version()
+        # This runs on each dashboard page load, so it must not use git clone
+        # which takes 10+ seconds and blocks the single-threaded worker for that long.
+        result = updater.check_latest_version(allow_git_clone=False)
 
         if not result['success']:
             return json_response({'updates_available': False})

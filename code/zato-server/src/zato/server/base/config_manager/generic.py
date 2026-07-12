@@ -113,17 +113,10 @@ class Generic(ConfigManagerImpl):
 
     def _delete_generic_connection(self, msg:'stranydict') -> 'None':
 
-        import traceback
-        self.logger.info('[DIAG] _delete_generic_connection enter msg.id=%s msg.name=%r stack:\n%s',
-            msg.get('id'), msg.get('name'), ''.join(traceback.format_stack()))
-
         conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
-
-            self.logger.info('[DIAG] _delete_generic_connection found conn_dict name=%r type_=%r id=%s',
-                conn_dict.get('name'), conn_dict.get('type_'), conn_dict.get('id'))
 
             # Delete the connection object ..
             conn = conn_dict.conn # type: Wrapper
@@ -131,22 +124,14 @@ class Generic(ConfigManagerImpl):
             # .. provide the reason code if the connection type supports it ..
             has_delete_reasons = getattr(conn, 'has_delete_reasons', None)
 
-            self.logger.info('[DIAG] _delete_generic_connection before conn.delete name=%r has_delete_reasons=%s',
-                conn_dict.get('name'), has_delete_reasons)
-
             if has_delete_reasons:
                 conn.delete(reason=COMMON_GENERIC.DeleteReason)
             else:
                 conn.delete()
 
-            self.logger.info('[DIAG] _delete_generic_connection after conn.delete name=%r', conn_dict.get('name'))
-
             # .. and delete the connection from the configuration object.
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
-
-            self.logger.info('[DIAG] _delete_generic_connection removed from config name=%r remaining=%s',
-                conn_name, sorted(conn_value.keys()))
 
 # ################################################################################################################################
 
@@ -204,10 +189,6 @@ class Generic(ConfigManagerImpl):
         config_attr[msg_name] = item_dict
         conn_wrapper = wrapper(item_dict, self.server)
         config_attr[msg_name].conn = conn_wrapper
-
-        self.logger.info('[DIAG] _create_generic_connection built wrapper name=%r id=%s type_=%r is_starting=%s',
-            msg_name, item_dict.get('id'), item.type_, is_starting)
-
         config_attr[msg_name].conn.build_wrapper()
 
 # ################################################################################################################################
@@ -225,17 +206,12 @@ class Generic(ConfigManagerImpl):
             conn_dict, _ = self._find_conn_info(msg['id'])
             secret = conn_dict['secret']
 
-        self.logger.info('[DIAG] _edit_generic_connection msg.id=%s msg.name=%r old_name=%r type_=%r',
-            msg.get('id'), msg.get('name'), msg.get('old_name'), msg.get('type_'))
-
         # Delete the connection
         self._delete_generic_connection(msg)
 
         # Recreate it now but make sure to include the secret too
         msg['secret'] = secret
         self._create_generic_connection(msg, True, skip)
-
-        self.logger.info('[DIAG] _edit_generic_connection done msg.id=%s msg.name=%r', msg.get('id'), msg.get('name'))
 
 # ################################################################################################################################
 
