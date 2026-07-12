@@ -412,8 +412,7 @@ $.fn.zato.live_form_updates.register('create', [
     {object_type: 'service', target_select: '#id_service'},
     {
         object_type: 'security',
-        target_select: '#id_rest_security_id',
-        label_format: '{sec_type_name}/{name}'
+        target_select: '#id_rest_security_id'
     },
     {
         object_type: 'security_group',
@@ -430,8 +429,7 @@ $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'service', target_select: '#id_edit-service'},
     {
         object_type: 'security',
-        target_select: '#id_edit-rest_security_id',
-        label_format: '{sec_type_name}/{name}'
+        target_select: '#id_edit-rest_security_id'
     },
     {
         object_type: 'security_group',

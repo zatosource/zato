@@ -41,6 +41,13 @@ windows_disabled = [
     'zxc456'
 ]
 
+# Names of built-in security definitions that pub/sub pages never display
+PubSub_Excluded_Sec_Names = {
+    'Rule engine default user',
+    'admin.invoke',
+    'ide_publisher'
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -168,13 +175,6 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
         'cluster_id': request.zato.cluster_id,
     })
 
-    # Define names to filter out
-    filtered_names = {
-        'Rule engine default user',
-        'admin.invoke',
-        'ide_publisher'
-    }
-
     # Get already used security definitions based on context
     choices = []
     used_sec_ids = set()
@@ -213,7 +213,7 @@ def get_pubsub_security_definitions(request:'any_', form_type:'str'='edit', cont
 
     for item in response.data:
         is_not_used = item['id'] not in used_sec_ids
-        is_not_filtered = item['name'] not in filtered_names
+        is_not_filtered = item['name'] not in PubSub_Excluded_Sec_Names
         is_not_zato = not item['name'].startswith('zato')
 
         if is_not_used and is_not_filtered and is_not_zato:

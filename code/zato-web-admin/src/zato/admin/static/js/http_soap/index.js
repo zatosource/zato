@@ -865,16 +865,14 @@ $.fn.zato.http_soap.invoke = function(id) {
     var create_configs = [
         {
             object_type: 'security',
-            target_select: '#id_security',
-            label_format: '{sec_type_name}/{name}'
+            target_select: '#id_security'
         }
     ];
 
     var edit_configs = [
         {
             object_type: 'security',
-            target_select: '#id_edit-security',
-            label_format: '{sec_type_name}/{name}'
+            target_select: '#id_edit-security'
         }
     ];
 

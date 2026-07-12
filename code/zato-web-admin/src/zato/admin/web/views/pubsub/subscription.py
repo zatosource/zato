@@ -436,7 +436,7 @@ def _build_topic_checkbox_html(all_topics:'set', cluster_id:'str') -> 'str':
             checkbox_id = f'topic_checkbox_{topic_id}'
             html_parts.append('<tr>')
             html_parts.append('<td>')
-            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" name="topic_name" value="{topic_name}" />')
+            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" data-id="{topic_id}" name="topic_name" value="{topic_name}" />')
             html_parts.append('</td>')
             html_parts.append('<td>')
             html_parts.append(f'<label for="{checkbox_id}">')

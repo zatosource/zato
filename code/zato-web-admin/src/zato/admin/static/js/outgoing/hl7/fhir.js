@@ -124,11 +124,11 @@ $.fn.zato.outgoing.hl7.fhir.delete_ = function(id) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.live_form_updates.register('create', [
-    {object_type: 'security', target_select: '#id_security_id', label_format: '{sec_type_name}/{name}'}
+    {object_type: 'security', target_select: '#id_security_id'}
 ]);
 
 $.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'security', target_select: '#id_edit-security_id', label_format: '{sec_type_name}/{name}'}
+    {object_type: 'security', target_select: '#id_edit-security_id'}
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

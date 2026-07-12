@@ -1028,14 +1028,15 @@ $.fn.zato.pubsub.subscription._reload_edit_topics = function() {
 };
 
 $.fn.zato.live_form_updates.register('create', [
-    {object_type: 'security_basic', target_select: '#id_sec_base_id'},
+    {object_type: 'security_pubsub_subscription', target_select: '#id_sec_base_id'},
     {object_type: 'service', target_select: '#id_push_service_name'},
     {object_type: 'rest_outconn', target_select: '#id_rest_push_endpoint_id'},
     {object_type: 'pubsub_topic', handler: 'multi_checkbox', container: '#multi-select-div', reload_callback: function() { $.fn.zato.pubsub.subscription._reload_create_topics(); }}
 ]);
 
+// The edit form shows the security definition as a link with a hidden input,
+// so there is no security select to update live there.
 $.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'},
     {object_type: 'service', target_select: '#id_edit-push_service_name'},
     {object_type: 'rest_outconn', target_select: '#id_edit-rest_push_endpoint_id'},
     {object_type: 'pubsub_topic', handler: 'multi_checkbox', container: '#id_edit-multi-select-div', reload_callback: function() { $.fn.zato.pubsub.subscription._reload_edit_topics(); }}

@@ -167,7 +167,7 @@
             var descriptionLower = (item.description || '').toLowerCase();
 
             html += '<tr class="multi-checkbox-row" data-checkbox-id="' + checkboxId + '" data-link-text="' + linkTextLower + '" data-description="' + descriptionLower + '">';
-            html += '<td><input type="checkbox" id="' + checkboxId + '" name="' + inputName + '" value="' + item.id + '" class="tri-state' + disabledClass + '"' + checkedAttr + '></td>';
+            html += '<td><input type="checkbox" id="' + checkboxId + '" data-id="' + item.id + '" name="' + inputName + '" value="' + item.id + '" class="tri-state' + disabledClass + '"' + checkedAttr + '></td>';
             html += '<td>';
 
             if (item.link) {

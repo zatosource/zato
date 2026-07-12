@@ -1874,6 +1874,7 @@ $.fn.zato.populate_multi_checkbox = function(
             "type": "checkbox",
             "id": checkbox_id,
             "name": checkbox_name_field,
+            "data-id": item[id_field],
         });
 
         var toggle = $("<label/>", {
@@ -2854,7 +2855,10 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         var items = {};
         $(container_selector).find('input[type="checkbox"]').each(function() {
             var $cb = $(this);
-            var id = $cb.attr('id') || '';
+
+            // The data-id attribute carries the server-side object id, which is what the server
+            // keys its own list by - the DOM element id is only a page-local artifact.
+            var id = $cb.attr('data-id');
             var name_cell = $cb.closest('tr').find('a');
             var label = name_cell.length ? name_cell.text() : '';
             if(id) {
@@ -3065,16 +3069,14 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             changed = true;
         }
 
-        // Handle renames
+        // Handle renames. The server formats _label exactly the way the page displays items,
+        // so applying it verbatim keeps the snapshot and the server list convergent.
         if(diff.renamed && diff.renamed.length) {
             for(var i = 0; i < diff.renamed.length; i++) {
                 var rename = diff.renamed[i];
                 var $opt = $select.find('option[value="' + rename._id + '"]');
                 if($opt.length) {
-                    var new_label = config.label_format
-                        ? $.fn.zato.live_form_updates._format_label(config.label_format, rename.item || rename.new_labels)
-                        : (rename.new_labels.name || rename.item.name || '');
-                    $opt.text(new_label);
+                    $opt.text(rename.item._label);
                     if(!skip_puff) {
                         $.fn.zato.live_form_updates._puff($opt);
                     }
@@ -3087,11 +3089,15 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         if(diff.created && diff.created.length) {
             for(var i = 0; i < diff.created.length; i++) {
                 var item = diff.created[i];
-                var value = item._id || '';
-                var label = config.label_format
-                    ? $.fn.zato.live_form_updates._format_label(config.label_format, item)
-                    : (item.name || item._id || '');
-                var $new_opt = $('<option/>').val(value).text(label);
+
+                // The page may have populated this option itself while the poll was in flight,
+                // e.g. selects filled via their own AJAX call right after a dialog opens.
+                var $existing = $select.find('option[value="' + item._id + '"]');
+                if($existing.length) {
+                    continue;
+                }
+
+                var $new_opt = $('<option/>').val(item._id).text(item._label);
                 $select.append($new_opt);
                 if(!skip_puff) {
                     $.fn.zato.live_form_updates._puff($new_opt);
@@ -3107,14 +3113,6 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 $.fn.zato.live_form_updates._puff($select.closest('td'));
             }
         }
-    };
-
-    // ------------------------------------------------------------------------------------------------------------------------
-
-    $.fn.zato.live_form_updates._format_label = function(format, item) {
-        return format.replace(/\{(\w+)\}/g, function(match, key) {
-            return item[key] !== undefined ? item[key] : match;
-        });
     };
 
     // ------------------------------------------------------------------------------------------------------------------------
@@ -3157,8 +3155,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                         .find('.security-badge[data-id="' + rename._id + '"]');
                 }
                 if($badge.length) {
-                    var new_name = rename.new_labels.name || rename.item.name || '';
-                    $badge.find('.security-badge-name').text(new_name);
+                    $badge.find('.security-badge-name').text(rename.item._label);
                     if(!skip_puff) {
                         $.fn.zato.live_form_updates._puff($badge);
                     }
@@ -3195,13 +3192,17 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
     $.fn.zato.live_form_updates._apply_multi_checkbox_diff = function(action, config, diff, skip_puff) {
 
-        if(config.reload_callback && (
-            (diff.created && diff.created.length) ||
-            (diff.deleted && diff.deleted.length) ||
-            (diff.renamed && diff.renamed.length)
-        )) {
-            config.reload_callback();
+        // Re-render only when the diff differs from what the previous poll reported. Some pages
+        // deliberately display a subset of the server's list (e.g. topics matching a security
+        // definition's patterns), so their diff is never empty - but as long as it stays the same,
+        // nothing changed on the server and there is nothing to reload.
+        var diff_json = JSON.stringify(diff);
+        if(diff_json === config._last_diff_json) {
+            return;
         }
+        config._last_diff_json = diff_json;
+
+        config.reload_callback();
     };
 
     // ------------------------------------------------------------------------------------------------------------------------
