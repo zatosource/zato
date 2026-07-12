@@ -18,9 +18,6 @@ from zato.common.util.api import get_current_user
 
 logger = logging.getLogger(__name__)
 
-logger_bzr = logging.getLogger('bzr')
-logger_bzr.setLevel(logging.WARN)
-
 logger_sh = logging.getLogger('sh.command')
 logger_sh.setLevel(logging.WARN)
 
