@@ -682,16 +682,27 @@ class ConnectorAMQP(Connector):
             self.is_connected = False
 
     def _start_amqp(self):
+
+        # AMQP connectors start optimistically - channel consumers run their own reconnect loops
+        # and producers connect when a message is published, so the connector reports itself
+        # as connected and the test connection below only checks if the broker is reachable right now.
         self.is_connected = True
 
         # The connector itself has no consumer cid, so the test connection gets its own one for logging
         cid = new_cid_queue_consumer()
 
         test_conn:'KombuAMQPConnection' = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
-        _ = test_conn.connect()
-        self.is_connected = test_conn.connected
 
-        close_connection(cid, test_conn)
+        try:
+            _ = test_conn.connect()
+        except Exception as e:
+
+            # An unreachable broker is not an error at this point - consumers and producers
+            # will connect on their own once it becomes available.
+            logger.info(f'[{cid}] AMQP broker not reachable now for connector `{self.name}` -> ' + \
+                f'`{self.get_log_details()}` -> {e!r}')
+        else:
+            close_connection(cid, test_conn)
 
 # ################################################################################################################################
 

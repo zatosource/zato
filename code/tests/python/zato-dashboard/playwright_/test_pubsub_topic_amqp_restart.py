@@ -264,8 +264,9 @@ class TestPubSubTopicAMQPRestart:
         _shared_state['channel_queue'] = channel_queue
         _shared_state['channel_binding_key'] = channel_binding_key
 
-        # .. reload the topics page after the restart and find the topic's row id again ..
-        navigate_to_page(page, base_url, _Topic_Page_Url)
+        # .. reload the topics page after the restart, filtered by the topic's name because
+        # .. the list is paginated and the topic may not be on the first page otherwise ..
+        navigate_to_page(page, base_url, f'{_Topic_Page_Url}&query={topic_name}')
         item_id = get_item_id(page, topic_name)
 
         # .. publish through the overlay ..
