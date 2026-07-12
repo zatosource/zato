@@ -294,6 +294,12 @@
                             </li>
                             {% endif %}
                             <li class="first-level" >
+                                <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "channel-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-mcp">MCP</a></li>
+                                </ul>
+                            </li>
+                            <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">EDI &darr;</a>
                                 <ul>
                                     <li class="child">
@@ -333,16 +339,12 @@
                                     <li class="child">
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">IBM MQ</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Kafka</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-mcp">MCP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
@@ -351,8 +353,6 @@
                                     <li>
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
@@ -364,8 +364,6 @@
                                                 </ul>
                                             </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ibm-mq">IBM MQ</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Kafka</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
@@ -376,10 +374,41 @@
                                             {% if 0 %}
                                             <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP RFC</a></li>
                                             {% endif %}
-                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-soap" %}?cluster={{ cluster_id|default:"1" }}">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">Message queues &rarr;</a>
+                                        <ul>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">AMQP &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                </ul>
+                                            </li>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">IBM MQ &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ibm-mq">Outgoing</a></li>
+                                                </ul>
+                                            </li>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">Kafka &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-kafka">Outgoing</a></li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">File transfer &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
                                         </ul>
                                     </li>
                                     <li class="child">
@@ -387,6 +416,12 @@
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">SMTP</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">Search &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
                                         </ul>
                                     </li>
                                 </ul>
@@ -406,9 +441,14 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Microsoft Fabric</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Microsoft Power Automate</a></li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">Microsoft &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud 365</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a></li>
+                                        </ul>
+                                    </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
                             </li>
