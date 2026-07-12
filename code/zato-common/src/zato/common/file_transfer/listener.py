@@ -393,7 +393,6 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
             if response.ok:
                 logger.info('Deployed -> %s', event_path)
-                logger.info('[DIAG] listener deploy url=%r status=%s response=%r', url, response.status_code, response.text)
             else:
                 logger.warning('Deploy failed (%s) -> %s: %s', response.status_code, event_path, response.text)
 

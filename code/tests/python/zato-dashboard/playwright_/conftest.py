@@ -185,9 +185,6 @@ def zato_dashboard() -> 'any_':
     temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_test_')
     _cleanup_refs['temporary_dir'] = temporary_dir
 
-    logger.info('[DIAG] zato_dashboard fixture pid=%s server_port=%s dashboard_port=%s broker_port=%s temporary_dir=%r',
-        os.getpid(), server_port, dashboard_port, broker_port, temporary_dir)
-
     # .. 1) create a quickstart environment with both server and dashboard ..
 
     quickstart_env = os.environ.copy()
@@ -354,9 +351,6 @@ def zato_dashboard() -> 'any_':
     listener_thread.start()
 
     logger.info('[TIMING] file pickup listener started, pid=%s', listener_process.pid)
-
-    logger.info('[DIAG] zato_dashboard fixture ready server_pid=%s dashboard_pid=%s listener_pid=%s server_port=%s',
-        server_process.pid, dashboard_process.pid, listener_process.pid, server_port)
 
     yield {
         'host': host,
@@ -568,7 +562,10 @@ def soap_test_server_mtls() -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
+# Module-scoped on purpose - a session-scoped client would be cached against whichever
+# zato_dashboard override resolved it first (e.g. the declarative suite's own server),
+# making later tests from other directories talk to the wrong server.
+@pytest.fixture(scope='module')
 def api_client(zato_dashboard:'anydict') -> 'ZatoClient':
     """ Provides a ZatoClient for server-side API calls.
     """

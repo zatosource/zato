@@ -137,9 +137,6 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
     # Capture the environment before the process goes away ..
     server_environment = _read_process_environment(server_process.pid)
 
-    logger.info('[DIAG] _restart_server stopping old server pid=%s port=%s bind_port_env=%r',
-        server_process.pid, server_port, server_environment.get('Zato_Config_Bind_Port'))
-
     # .. stop the server along with its whole process group - terminating just
     # the launcher would leave the actual server running and holding the port ..
     kill_process_tree(server_process)
@@ -148,15 +145,19 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
     zato_bin = os.path.join(zato_base, 'code', 'bin', 'zato')
 
+    restarted_log_path = os.path.join(tempfile.gettempdir(), f'zato_restarted_server_{server_port}.log')
+    restarted_log_file = open(restarted_log_path, 'wb')
+
     new_process = subprocess.Popen(
         [zato_bin, 'start', server_dir, '--fg'],
         env=server_environment,
-        stdout=subprocess.DEVNULL,
+        stdout=restarted_log_file,
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
 
-    logger.info('[DIAG] _restart_server started new server pid=%s port=%s', new_process.pid, server_port)
+    logger.info('[_restart_server] started new server pid=%s port=%s stdout=%r',
+        new_process.pid, server_port, restarted_log_path)
 
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..
     zato_dashboard['server_process'] = new_process

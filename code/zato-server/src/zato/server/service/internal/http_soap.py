@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from contextlib import closing
 from time import time
 from traceback import format_exc
@@ -1393,18 +1392,11 @@ class Ping(AdminService):
             self.response.payload.id = self.request.input.id
 
             wrapper = config_dict.get(item.name)
-            self.logger.info(
-                '[DIAG] http-soap Ping.handle input_id=%s local_id=%s name=%r transport=%r pid=%s server_id=%s'
-                ' config_dict_id=%s wrapper_id=%s wrapper_type=%s ping_path=%r',
-                input_id, local_id, item.name, item.transport, os.getpid(), hex(id(self.server)),
-                hex(id(config_dict)), hex(id(wrapper)), type(wrapper).__name__, self.request.input.ping_path)
 
             try:
                 result = wrapper.ping(self.cid, ping_path=self.request.input.ping_path)
                 is_success = True
             except Exception as e:
-                self.logger.info('[DIAG] http-soap Ping.handle exception name=%r type=%s args=%r traceback:\n%s',
-                    item.name, type(e).__name__, e.args, format_exc())
                 result = e.args[0]
                 is_success = False
             finally:
