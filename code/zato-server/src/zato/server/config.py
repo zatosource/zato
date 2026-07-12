@@ -56,6 +56,9 @@ class ConfigDict:
         self.name = name    # type: unicode
         self._impl = _bunch # type: Bunch
         self.lock = RLock()
+        if name in ('out_plain_http', 'out_soap'):
+            logger.info('[DIAG] ConfigDict.__init__ id=%s name=%s stack:\n%s',
+                hex(id(self)), name, ''.join(format_stack()))
 
 # ################################################################################################################################
 
@@ -73,6 +76,10 @@ class ConfigDict:
             if not key:
                 logger.info('ConfigDict.set: empty key after strip, original=%r, stack:\n%s',
                     original_key, ''.join(format_stack()))
+            if self.name in ('out_plain_http', 'out_soap'):
+                value_keys = sorted(value.keys()) if isinstance(value, dict) else value
+                logger.info('[DIAG] ConfigDict.set id=%s dict_name=%s key=%r value_keys=%s stack:\n%s',
+                    hex(id(self)), self.name, key, value_keys, ''.join(format_stack()))
             self._impl[key] = value
 
     __setitem__ = set
@@ -93,6 +100,9 @@ class ConfigDict:
     def __delitem__(self, key):
         with self.lock:
             key = key.strip()
+            if self.name in ('out_plain_http', 'out_soap'):
+                logger.info('[DIAG] ConfigDict.__delitem__ id=%s dict_name=%s key=%r stack:\n%s',
+                    hex(id(self)), self.name, key, ''.join(format_stack()))
             del self._impl[key]
 
 # ################################################################################################################################
@@ -214,6 +224,10 @@ class ConfigDict:
         """
         config_dict = ConfigDict(name)
         config_dict._impl = impl_class()
+
+        if name in ('out_plain_http', 'out_soap'):
+            logger.info('[DIAG] ConfigDict.from_query id=%s name=%s stack:\n%s',
+                hex(id(config_dict)), name, ''.join(format_stack()))
 
         if query_data:
             query, attrs = query_data

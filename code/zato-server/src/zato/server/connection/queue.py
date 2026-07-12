@@ -210,6 +210,9 @@ class ConnectionQueue:
             num_attempts = 0
             self.is_building_conn_queue = True
 
+            self.logger.info('[DIAG] _build_queue enter id=%s conn_name=%r conn_id=%r qsize=%s max=%s',
+                hex(id(self)), self.conn_name, self.conn_id, self.queue.qsize(), self.queue_max_size)
+
             while self.should_keep_connecting():
 
                 # If we have reached the limits of attempts ..
@@ -241,8 +244,17 @@ class ConnectionQueue:
                         self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address_masked, self.queue_build_cap,
                         utcnow() + timedelta(seconds=self.queue_build_cap))
 
+                    self.logger.info('[DIAG] _build_queue long sleep start conn_name=%r conn_id=%r cap=%s qsize=%s ' \
+                        'keep_connecting=%s in_progress=%s',
+                        self.conn_name, self.conn_id, self.queue_build_cap, self.queue.qsize(),
+                        self.keep_connecting, self.in_progress_count)
+
                     # Sleep for a predetermined time
                     gevent.sleep(self.queue_build_cap)
+
+                    self.logger.info('[DIAG] _build_queue long sleep end conn_name=%r conn_id=%r qsize=%s ' \
+                        'keep_connecting=%s connection_exists=%s',
+                        self.conn_name, self.conn_id, self.queue.qsize(), self.keep_connecting, self.connection_exists())
 
                     # Spawn additional greenlets to fill up the queue but make sure not to spawn
                     # more greenlets than there are slots in the queue still available.
@@ -256,6 +268,11 @@ class ConnectionQueue:
             if self.should_keep_connecting():
                 self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
                     self.address_masked, self.conn_name)
+
+                self.logger.info(
+                    '[DIAG] _build_queue exit branch=obtained conn_name=%r conn_id=%r qsize=%s full=%s ' \
+                    'keep_connecting=%s stopped_flag_not_set=True',
+                    self.conn_name, self.conn_id, self.queue.qsize(), self.queue.full(), self.keep_connecting)
             else:
 
                 # What we log will depend on whether we have already built a queue of connections or not ..
@@ -270,6 +287,9 @@ class ConnectionQueue:
                 # .. indicate that we are not going to continue ..
                 self.is_building_conn_queue = False
                 self.queue_building_stopped = True
+
+                self.logger.info('[DIAG] _build_queue exit branch=stopped conn_name=%r conn_id=%r qsize=%s full=%s',
+                    self.conn_name, self.conn_id, self.queue.qsize(), self.queue.full())
 
             # If we are here, we are no longer going to build the queue, e.g. if it already fully built.
             self.is_building_conn_queue = False
@@ -450,6 +470,15 @@ class Wrapper:
     def delete(self, reason:'strnone'=None) -> 'None':
         """ Deletes all connections from queue and sets a flag that disallows this client to connect again.
         """
+        import traceback
+        self.logger.info(
+            '[DIAG] Wrapper.delete enter wrapper_id=%s client_id=%s conn_name=%r conn_id=%r reason=%r ' \
+            'is_building=%s stopped=%s qsize=%s in_progress=%s keep_connecting=%s stack:\n%s',
+            hex(id(self)), hex(id(self.client)),
+            self.client.conn_name, self.client.conn_id, reason, self.client.is_building_conn_queue,
+            self.client.queue_building_stopped, self.client.queue.qsize(), self.client.in_progress_count,
+            self.client.keep_connecting, ''.join(traceback.format_stack()))
+
         with self.update_lock:
 
             # Tell the client that it is to stop connecting and that it will be deleted in a moment
@@ -462,12 +491,25 @@ class Wrapper:
             # Delete connections that are already established
             self.delete_queue_connections(reason)
 
+            self.logger.info('[DIAG] Wrapper.delete after queue cleanup conn_name=%r is_building=%s stopped=%s qsize=%s',
+                self.client.conn_name, self.client.is_building_conn_queue, self.client.queue_building_stopped,
+                self.client.queue.qsize())
+
             # In case the client was in the process of building a queue of connections,
             # wait until it has stopped doing it.
             if self.client.is_building_conn_queue:
+                wait_iters = 0
                 while not self.client.queue_building_stopped:
                     sleep(1)
-                    if not self.client.connection_exists():
+                    wait_iters += 1
+                    connection_exists = self.client.connection_exists()
+                    self.logger.info(
+                        '[DIAG] Wrapper.delete wait iter=%s conn_name=%r conn_id=%r connection_exists=%s ' \
+                        'is_building=%s stopped=%s qsize=%s in_progress=%s',
+                        wait_iters, self.client.conn_name, self.client.conn_id, connection_exists,
+                        self.client.is_building_conn_queue, self.client.queue_building_stopped,
+                        self.client.queue.qsize(), self.client.in_progress_count)
+                    if not connection_exists:
                         return
                     else:
                         self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
@@ -478,6 +520,9 @@ class Wrapper:
             self.client.keep_connecting = True
             self.client.queue_building_stopped = False
             self.client.is_building_conn_queue = False
+
+        self.logger.info('[DIAG] Wrapper.delete exit wrapper_id=%s client_id=%s conn_name=%r conn_id=%r',
+            hex(id(self)), hex(id(self.client)), self.client.conn_name, self.client.conn_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -57,8 +57,8 @@ $.fn.zato.email.imap.field_descriptions = {
     'id_filter_criteria': 'OData filter selecting which messages to download,<br>e.g. isRead ne true.<br>Used with Microsoft 365 mailboxes only.',
     'id_scheduler_run_every': 'How often the mailbox is polled for new messages.<br>Leave empty if services read the mailbox on their own<br>and no automatic polling is needed.',
     'id_scheduler_start_date': 'When the first polling run takes place.<br>Subsequent runs follow the interval above.',
-    'id_scheduler_service': 'Service invoked for messages found during polling.<br>It receives each message\'s subject, body<br>and attachments on input.',
-    'id_scheduler_invoke_with': 'Whether the service is invoked once per whole message<br>or once for each of a message\'s attachments.',
+    'id_scheduler_service': 'Service invoked for messages and attachments found during polling.',
+    'id_scheduler_invoke_with': 'Whether the service is invoked once per whole message or once for each of a message\'s attachments.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////

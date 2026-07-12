@@ -288,8 +288,32 @@
                                     <li class="child"><a class="menu-link" href="{% url "service" %}?cluster={{ cluster_id|default:"1" }}">List services</a></li>
                                 </ul>
                             </li>
+                            {% if 0 %}
                             <li class="first-level" style="padding-left: 0.3rem">
                                 <a class="menu-link" href="{% url "mapping" %}?cluster={{ cluster_id|default:"1" }}">Mappings</a>
+                            </li>
+                            {% endif %}
+                            <li class="first-level" >
+                                <a class="menu-link"  style="padding-left: 0.3rem" href="#">EDI &darr;</a>
+                                <ul>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">AS2 &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">Connections</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "as2-keystore" %}?cluster={{ cluster_id|default:"1" }}">Keystore</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "b2b-control-numbers" %}?cluster={{ cluster_id|default:"1" }}">Control numbers</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "b2b-reports" %}?cluster={{ cluster_id|default:"1" }}">Reports</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="child">
+                                        <a class="menu-link" href="#">AS4 &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-as4" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                        </ul>
+                                    </li>
+
+                                </ul>
                             </li>
                             <li class="first-level" style="padding-left: 0.3rem">
                                 <a class="menu-link" href="#">Security &darr;</a>
@@ -310,7 +334,6 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "channel-as4" %}?cluster={{ cluster_id|default:"1" }}">AS4</a></li>
                                             <li class="child">
                                                 <a class="menu-link" href="#">HL7 &rarr;</a>
                                                 <ul>
@@ -329,16 +352,6 @@
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
-                                            <li class="child">
-                                                <a class="menu-link" href="#">AS2 &rarr;</a>
-                                                <ul>
-                                                    <li class="child"><a class="menu-link" href="{% url "out-as2" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-as2">Connections</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "as2-keystore" %}?cluster={{ cluster_id|default:"1" }}">Keystore</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "b2b-control-numbers" %}?cluster={{ cluster_id|default:"1" }}">Control numbers</a></li>
-                                                    <li class="child"><a class="menu-link" href="{% url "b2b-reports" %}?cluster={{ cluster_id|default:"1" }}">Reports</a></li>
-                                                </ul>
-                                            </li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-as4" %}?cluster={{ cluster_id|default:"1" }}">AS4</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
@@ -516,7 +529,9 @@
 
                         </ul>
                         <ul class="first-level right">
+                            {% if 0 %}
                             <li class="first-level right"><a class="menu-link" href="/zato/">News</a></li>
+                            {% endif %}
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/4.1/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/blog/">Blog</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://www.linkedin.com/company/zatosource/">LinkedIn</a></li>
