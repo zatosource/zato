@@ -9,12 +9,65 @@
     list-style: none;
 }
 
-/* The guide line runs under the parent's toggle box, so the tree
-   reads as a tree - the margin puts it at the toggle's center. */
+/* Classic tree connectors, at the root level like anywhere deeper.
+   Each row gets an elbow: a vertical guide running under the parent's
+   toggle box (or along the tree's left edge for root rows) and a
+   horizontal stub from that guide to the row's own toggle or spacer.
+   The last child stops its vertical guide at its own stub, closing
+   the branch. */
+.mapper-tree {
+    padding-left: 9px;
+}
+
 .mapper-tree-children {
     margin-left: 15px;
     padding-left: 9px;
-    border-left: 1px solid var(--mapper-border-light);
+}
+
+.mapper-tree > .mapper-tree-item,
+.mapper-tree-children > .mapper-tree-item {
+    position: relative;
+}
+
+/* The horizontal stub, at the vertical center of the row. */
+.mapper-tree > .mapper-tree-item::before,
+.mapper-tree-children > .mapper-tree-item::before {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 14px;
+    width: 17px;
+    height: 1px;
+    background: var(--mapper-border-light);
+}
+
+/* The vertical guide, spanning the whole item .. */
+.mapper-tree > .mapper-tree-item::after,
+.mapper-tree-children > .mapper-tree-item::after {
+    content: '';
+    position: absolute;
+    left: -9px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--mapper-border-light);
+}
+
+/* .. except on the last child, where it ends at the stub. */
+.mapper-tree > .mapper-tree-item:last-child::after,
+.mapper-tree-children > .mapper-tree-item:last-child::after {
+    bottom: auto;
+    height: 14px;
+}
+
+/* Root rows have no parent above, so the first one starts its guide
+   at its own stub, and a lone root draws no guide at all. */
+.mapper-tree > .mapper-tree-item:first-child::after {
+    top: 14px;
+}
+
+.mapper-tree > .mapper-tree-item:first-child:last-child::after {
+    display: none;
 }
 
 .mapper-tree-item-collapsed > .mapper-tree-children {
