@@ -37,14 +37,17 @@
     /* Conditioned mappings - their lines and badges share this color */
     --mapper-color-conditioned: #b26a00;
 
+    /* The root-to-field path in a tree while the field is hovered */
+    --mapper-color-path: #0a2a4d;
+
     /* State backgrounds */
     --mapper-background-success: rgba(46, 125, 50, 0.10);
     --mapper-background-error: rgba(198, 40, 40, 0.08);
     --mapper-background-warning: rgba(178, 106, 0, 0.10);
 
     /* Search highlights - every match and the current one */
-    /* Type badges carry no per-type color coding - one dark, readable
-       shade on one quiet background for all of them. */
+    /* Type badges carry no per-type color coding - one shared shade
+       on one shared background for all of them. */
     --mapper-type-object: #3f4954;
     --mapper-type-array: #3f4954;
     --mapper-type-string: #3f4954;
