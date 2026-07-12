@@ -8,6 +8,14 @@
 
     zato.mapper.tree = {};
 
+    // Assigned by the page bootstrap so collapsing or expanding a
+    // branch redraws the connection lines, whose rows have just moved.
+    zato.mapper.tree.onLayoutChanged = null;
+
+    // Set by the canvas when a drag ends, so the click the drag
+    // releases does not also toggle the row it started on.
+    zato.mapper.tree.suppressNextToggle = false;
+
 // ////////////////////////////////////////////////////////////////////////
 
     function typeLabelOf(node) {
@@ -165,11 +173,19 @@
 
             item.appendChild(childList);
 
-            // Clicking the toggle collapses or expands the children -
-            // the collapsed class alone drives the chevron rotation.
-            $(toggle).on('click', function(event) {
-                event.stopPropagation();
+            // Clicking anywhere on a container row - the name included -
+            // collapses or expands its children. The collapsed class
+            // alone drives the chevron rotation.
+            $(row).on('click', function() {
+
+                // The click a drag releases is not a toggle.
+                if (zato.mapper.tree.suppressNextToggle) {
+                    zato.mapper.tree.suppressNextToggle = false;
+                    return;
+                }
+
                 $(item).toggleClass('mapper-tree-item-collapsed');
+                zato.mapper.tree.onLayoutChanged();
             });
         }
 

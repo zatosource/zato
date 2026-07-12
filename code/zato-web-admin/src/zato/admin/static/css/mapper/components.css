@@ -9,8 +9,12 @@
     list-style: none;
 }
 
+/* The guide line runs under the parent's toggle box, so the tree
+   reads as a tree - the margin puts it at the toggle's center. */
 .mapper-tree-children {
-    padding-left: var(--mapper-space-4);
+    margin-left: 15px;
+    padding-left: 9px;
+    border-left: 1px solid var(--mapper-border-light);
 }
 
 .mapper-tree-item-collapsed > .mapper-tree-children {
@@ -37,18 +41,26 @@
     outline-offset: -2px;
 }
 
+/* The toggle is a proper little control - a bordered box holding
+   the chevron - not a bare floating glyph. */
 .mapper-tree-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--mapper-border-strong);
+    border-radius: 3px;
+    background: var(--mapper-background-panel);
     color: var(--mapper-text-muted);
     cursor: pointer;
     user-select: none;
 }
 
-.mapper-tree-toggle:hover {
+.mapper-tree-row:hover .mapper-tree-toggle {
     color: var(--mapper-text-main);
+    background: var(--mapper-background-inset);
 }
 
 /* One chevron-down SVG per container node - collapsing the item
@@ -64,7 +76,8 @@
 }
 
 .mapper-tree-toggle-spacer {
-    width: 14px;
+    flex: none;
+    width: 16px;
 }
 
 .mapper-tree-name {

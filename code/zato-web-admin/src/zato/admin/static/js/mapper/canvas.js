@@ -477,6 +477,10 @@
                 return;
             }
 
+            // The click this pointerup releases must not toggle the
+            // row the drag started on.
+            zato.mapper.tree.suppressNextToggle = true;
+
             var dropRow = dropRowAt(event.clientX, event.clientY);
             if (dropRow === null) {
                 zato.mapper.log('canvas', 'drag ended outside the target tree', {source: sourcePath});
