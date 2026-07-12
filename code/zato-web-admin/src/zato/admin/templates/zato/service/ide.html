@@ -211,9 +211,7 @@ Ctrl+K for full history"></textarea></form>
 
 
     window.addEventListener('beforeunload', function() {
-        if ($.fn.zato.log_streaming.eventSource) {
-            $.fn.zato.log_streaming.eventSource.close();
-        }
+        $.fn.zato.log_streaming.stop_streaming();
     });
 
     setTimeout(function() {

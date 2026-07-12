@@ -10,7 +10,6 @@ let Copy_Tooltip_Timeout = 1000;
         'Synchronous XMLHttpRequest',
         'setCapture',
         'releaseCapture',
-        'Content-Security-Policy',
         'ace.js',
         'Element.setCapture',
         'Element.releaseCapture',
@@ -18,8 +17,7 @@ let Copy_Tooltip_Timeout = 1000;
     ];
 
     var suppressedErrors = [
-        'log-streaming',
-        'EventSource'
+        'log-streaming'
     ];
 
     var originalWarn = console.warn;

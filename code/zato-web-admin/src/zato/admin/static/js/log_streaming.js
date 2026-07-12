@@ -3,11 +3,9 @@
 
     var suppressedErrors = [
         'log-streaming',
-        'EventSource',
         'interrupted while the page was loading',
         "can't establish a connection",
-        'Loading failed for the <script>',
-        'Content-Security-Policy'
+        'Loading failed for the <script>'
     ];
 
     var originalError = console.error;
@@ -29,7 +27,12 @@
             return s;
         },
 
-        eventSource: null,
+        config: {
+            poll_interval_ms: 1000,
+            url: '/zato/log-streaming/read'
+        },
+
+        connection: null,
 
         get_status: function() {
             var self = this;
@@ -73,22 +76,8 @@
             });
         },
 
-        start_streaming: function() {
+        render_entry: function(log_entry) {
             var self = this;
-
-            console.debug('start_streaming: called');
-
-            if (self.eventSource) {
-                console.debug('start_streaming: already active, returning');
-                return;
-            }
-
-            console.debug('start_streaming: creating EventSource for /zato/log-streaming/stream');
-            self.eventSource = new EventSource('/zato/log-streaming/stream');
-
-            self.eventSource.onopen = function(event) {
-                console.debug('start_streaming: EventSource connection opened', event);
-            };
 
             var isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
 
@@ -101,72 +90,114 @@
                 return hours + ':' + minutes + ':' + seconds + '.' + milliseconds;
             }
 
-            self.eventSource.onmessage = function(event) {
-                console.debug('onmessage: received event, data length:', event.data ? event.data.length : 0);
-                if (event.data && event.data !== '{}') {
-                    console.debug('onmessage: parsing data:', event.data.substring(0, 100));
-                    try {
-                        var log_entry = JSON.parse(event.data);
-                        console.debug('onmessage: parsed log_entry, level:', log_entry.level, 'message preview:', log_entry.message.substring(0, 50));
-                        var level = log_entry.level.trim();
-                        var message = log_entry.message;
+            var level = log_entry.level.trim();
+            var message = log_entry.message;
 
-                        var timestamp = isFirefox ? '' : getTimestamp() + ' ';
-                        
-                        var firefoxExtra = isFirefox ? ' font-family: monospace; display: inline-block; width: 70px; text-align: center;' : '';
+            var timestamp = isFirefox ? '' : getTimestamp() + ' ';
 
-                        var levelStyle = '';
-                        if (level === 'DEBUG') {
-                            levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
-                        } else if (level === 'INFO') {
-                            levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
-                        } else if (level === 'WARNING') {
-                            levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; font-weight: bold;' + firefoxExtra;
-                        } else if (level === 'ERROR' || level === 'CRITICAL') {
-                            levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
-                        }
+            var firefoxExtra = isFirefox ? ' font-family: monospace; display: inline-block; width: 70px; text-align: center;' : '';
 
-                        if (message.indexOf('\n') !== -1 && !isFirefox) {
-                            var lines = message.split('\n');
-                            var firstLine = lines[0];
+            var levelStyle = '';
+            if (level === 'DEBUG') {
+                levelStyle = 'background: #e9ecef; color: #495057; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
+            } else if (level === 'INFO') {
+                levelStyle = 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
+            } else if (level === 'WARNING') {
+                levelStyle = 'background: #fff3cd; color: #664d03; padding: 1px 4px; border-radius: 2px; font-weight: bold;' + firefoxExtra;
+            } else if (level === 'ERROR' || level === 'CRITICAL') {
+                levelStyle = 'background: #f8d7da; color: #721c24; padding: 1px 4px; border-radius: 2px;' + firefoxExtra;
+            }
 
-                            console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine, levelStyle, '');
-                            console.log(message);
-                            console.groupEnd();
-                        } else {
-                            console.info(timestamp + '%c' + level + '%c - ' + message, levelStyle, '');
-                        }
-                    } catch (e) {
-                        console.error('[ZATO LOG] Parse error:', e);
-                        console.debug('[ZATO LOG] Raw:', event.data);
+            if (message.indexOf('\n') !== -1 && !isFirefox) {
+                var lines = message.split('\n');
+                var firstLine = lines[0];
+
+                console.groupCollapsed(timestamp + '%c' + level + '%c - ' + firstLine, levelStyle, '');
+                console.log(message);
+                console.groupEnd();
+            } else {
+                console.info(timestamp + '%c' + level + '%c - ' + message, levelStyle, '');
+            }
+        },
+
+        poll: function(connection) {
+            var self = this;
+
+            // The loop may have been stopped while a previous poll was in flight
+            if (!connection.is_active) {
+                return;
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: self.config.url,
+                data: JSON.stringify({'last_id': connection.last_id}),
+                contentType: 'application/json',
+                dataType: 'json',
+                headers: {
+                    'X-CSRFToken': $.cookie('csrftoken')
+                },
+                success: function(data) {
+
+                    // Ignore a response that arrives after the loop was stopped
+                    if (!connection.is_active) {
+                        return;
                     }
-                } else {
-                    console.debug('onmessage: skipping empty or {} data');
+
+                    connection.last_id = data.last_id;
+
+                    for (var entryIdx = 0; entryIdx < data.entries.length; entryIdx++) {
+                        self.render_entry(data.entries[entryIdx]);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.debug('poll: error:', status, error);
+                },
+                complete: function() {
+
+                    // Schedule the next poll only once this one has fully completed,
+                    // so polls never overlap even when the server is slow.
+                    if (connection.is_active) {
+                        connection.timer_id = setTimeout(function() {
+                            self.poll(connection);
+                        }, self.config.poll_interval_ms);
+                    }
                 }
+            });
+        },
+
+        start_streaming: function() {
+            var self = this;
+
+            console.debug('start_streaming: called');
+
+            if (self.connection) {
+                console.debug('start_streaming: already active, returning');
+                return;
+            }
+
+            self.connection = {
+                is_active: true,
+                last_id: '',
+                timer_id: null
             };
 
-            self.eventSource.onerror = function(error) {
-                console.error('start_streaming: error event', error);
-                console.debug('start_streaming: readyState:', self.eventSource.readyState);
-                console.debug('start_streaming: error type:', error.type);
-                console.debug('start_streaming: calling stop_streaming');
-                self.stop_streaming();
-            };
-
-            console.debug('start_streaming: EventSource created, readyState:', self.eventSource.readyState);
+            self.poll(self.connection);
         },
 
         stop_streaming: function() {
             var self = this;
 
             console.debug('stop_streaming: called');
-            if (self.eventSource) {
-                console.debug('stop_streaming: closing EventSource, readyState:', self.eventSource.readyState);
-                self.eventSource.close();
-                self.eventSource = null;
-                console.debug('stop_streaming: EventSource closed and nulled');
+            if (self.connection) {
+                self.connection.is_active = false;
+                if (self.connection.timer_id) {
+                    clearTimeout(self.connection.timer_id);
+                }
+                self.connection = null;
+                console.debug('stop_streaming: poll loop stopped');
             } else {
-                console.debug('stop_streaming: no EventSource to close');
+                console.debug('stop_streaming: no poll loop to stop');
             }
         },
 

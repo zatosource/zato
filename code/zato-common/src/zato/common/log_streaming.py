@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many entries the log stream may hold - older ones are trimmed away by Redis itself.
+max_log_stream_entries = 1000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class RedisHandler(logging.Handler):
 
     def __init__(self, channel='zato.logs', redis_host='localhost', redis_port=6379, redis_db=0):
@@ -84,10 +90,12 @@ class RedisHandler(logging.Handler):
 
             client = self._get_redis_client()
             json_data = json.dumps(log_entry)
-            redis_logger.debug('RedisHandler.emit: publishing to channel={}, json_data length={}'.format(
+            redis_logger.debug('RedisHandler.emit: adding to stream={}, json_data length={}'.format(
                 self.channel, len(json_data)))
-            result = client.publish(self.channel, json_data)
-            redis_logger.debug('RedisHandler.emit: publish result (subscribers)={}'.format(result))
+
+            # A capped stream, unlike pubsub, retains entries so readers can poll for them later
+            result = client.xadd(self.channel, {'data': json_data}, maxlen=max_log_stream_entries, approximate=True)
+            redis_logger.debug('RedisHandler.emit: xadd result (entry id)={}'.format(result))
 
         except Exception:
             from traceback import format_exc

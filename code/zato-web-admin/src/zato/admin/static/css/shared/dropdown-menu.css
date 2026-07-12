@@ -1,0 +1,71 @@
+/* ------------------------------------------------------------ */
+/* Dropdown menu - anchored menu shared across pages             */
+/* ------------------------------------------------------------ */
+
+.zato-dropdown-menu {
+    position: absolute;
+    z-index: 10000;
+    background: #ffffff;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px #00000026;
+    min-width: 220px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.zato-dropdown-header {
+    padding: 4px 10px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #999999;
+    user-select: none;
+}
+
+.zato-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.1s;
+}
+
+.zato-dropdown-item:hover {
+    background: #f0f4f8;
+}
+
+.zato-dropdown-item-value {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-weight: 500;
+    color: #1a56a8;
+}
+
+.zato-dropdown-item-label {
+    color: #666666;
+    font-size: 11px;
+    text-transform: capitalize;
+}
+
+.zato-dropdown-item-text {
+    color: #2c3e50;
+    font-size: 12px;
+}
+
+.zato-dropdown-item-selected {
+    background: #f0f4f8;
+}
+
+.zato-dropdown-item-selected .zato-dropdown-item-text {
+    font-weight: 600;
+}
+
+.zato-dropdown-separator {
+    height: 1px;
+    background: #e9ecef;
+    margin: 4px 0;
+}
