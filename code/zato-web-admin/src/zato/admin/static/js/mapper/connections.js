@@ -35,8 +35,8 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Returns [{sources, target, computed, conditioned, selection}] -
-    // one entry per mapping row, with absolute paths on both sides.
+    // Returns [{sources, target, computed, selection}] - one entry
+    // per mapping row, with absolute paths on both sides.
     zato.mapper.connections.list = function(artifact) {
 
         var sourcePaths = zato.mapper.schema.listPaths(artifact.source_schema.root);
@@ -51,7 +51,6 @@
                 sources: sources,
                 target: row.target,
                 computed: sources.length !== 1 || row.expression !== sources[0],
-                conditioned: row.condition !== '',
                 selection: {scopeIndex: null, rowIndex: rowIdx}
             });
         }
@@ -64,7 +63,6 @@
                 sources: [scope.source],
                 target: scope.target,
                 computed: false,
-                conditioned: false,
                 selection: null
             });
 
@@ -89,7 +87,6 @@
                     sources: absoluteSources,
                     target: scope.target + '.' + childRow.target,
                     computed: relativeSources.length !== 1 || childRow.expression !== relativeSources[0],
-                    conditioned: childRow.condition !== '',
                     selection: {scopeIndex: scopeIdx, rowIndex: childIdx}
                 });
             }

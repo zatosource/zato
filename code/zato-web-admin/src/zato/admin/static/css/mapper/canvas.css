@@ -17,41 +17,19 @@
     pointer-events: none;
 }
 
+/* Every line looks the same - one color, solid, no dashes - only a
+   hover tells one apart. The opacity property is the dimming dial the
+   JS turns with the pointer's vertical proximity to the lines. */
 .mapper-canvas-line {
     fill: none;
     stroke: var(--mapper-seablue-light3);
     stroke-width: 2;
-    opacity: 0.9;
-}
-
-/* A computed line (an expression beyond a plain copy) is dashed,
-   telling it apart from copies before any hover or selection. */
-path.mapper-canvas-line-computed {
-    stroke-dasharray: 4 4;
-}
-
-.mapper-canvas-line-selected {
-    stroke: var(--mapper-seablue-light2);
-    stroke-width: 3;
-    opacity: 1;
-    stroke-dasharray: 6 4;
-    animation: mapper-canvas-line-flow 600ms linear infinite;
-}
-
-/* A conditioned line keeps its own color even while selected,
-   the same color its target badge carries. */
-.mapper-canvas-line-conditioned {
-    stroke: var(--mapper-color-conditioned);
-}
-
-circle.mapper-canvas-line-conditioned {
-    fill: var(--mapper-color-conditioned);
+    opacity: var(--mapper-canvas-line-opacity);
 }
 
 .mapper-canvas-dot {
     fill: var(--mapper-seablue-light2);
     stroke: none;
-    animation: none;
 }
 
 @keyframes mapper-canvas-line-flow {
@@ -64,33 +42,59 @@ circle.mapper-canvas-line-conditioned {
 }
 
 /* ------------------------------------------------------------ */
-/* Mapper - gutter hover dimming                                 */
+/* Mapper - line tooltip                                         */
 /* ------------------------------------------------------------ */
 
-/* While the pointer is over the gutter, every line and dot fades
-   into the background .. */
-.mapper-canvas-lines.mapper-canvas-dimmed .mapper-canvas-line {
-    opacity: 0.2;
+/* One pair per line, the expression under them when the line
+   computes rather than copies. */
+.mapper-line-tooltip {
+    position: fixed;
+    z-index: 120;
+    max-width: 480px;
+    padding: var(--mapper-space-1) var(--mapper-space-2);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family-mono);
+    font-size: var(--mapper-font-size-small);
+    color: var(--mapper-text-inverse);
+    background: var(--mapper-background-tooltip);
+    box-shadow: var(--mapper-shadow-raised);
+    pointer-events: none;
 }
 
-/* .. the selected line never dims - it is the one being worked on .. */
-.mapper-canvas-lines.mapper-canvas-dimmed .mapper-canvas-line-selected {
-    opacity: 1;
+.mapper-line-tooltip-pair {
+    display: flex;
+    align-items: center;
+    gap: var(--mapper-space-1);
 }
 
-/* .. except the line under the pointer, which lights up together
-   with its endpoint dots .. */
-.mapper-canvas-lines.mapper-canvas-dimmed .mapper-canvas-line-hovered {
+.mapper-line-tooltip-pair svg {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    color: var(--mapper-text-inverse-muted);
+}
+
+.mapper-line-tooltip-expression {
+    color: var(--mapper-text-inverse-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Mapper - gutter hover                                         */
+/* ------------------------------------------------------------ */
+
+/* The line under the pointer lights up together with its endpoint
+   dots, at full strength whatever the dimming around it .. */
+.mapper-canvas-line-hovered {
     stroke: var(--mapper-seablue-light2);
     opacity: 1;
 }
 
-.mapper-canvas-lines.mapper-canvas-dimmed circle.mapper-canvas-line-hovered {
+circle.mapper-canvas-line-hovered {
     fill: var(--mapper-seablue-light2);
 }
 
 /* .. and it flows with marching ants while it is lit. */
-.mapper-canvas-lines.mapper-canvas-dimmed path.mapper-canvas-line-hovered {
+path.mapper-canvas-line-hovered {
     stroke-dasharray: 6 4;
     animation: mapper-canvas-line-flow 600ms linear infinite;
 }

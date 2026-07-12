@@ -80,6 +80,24 @@
     background: var(--mapper-color-path);
 }
 
+/* The vertical legs of the path. The line from a parent's toggle down
+   to a hovered item is drawn by the guide segments of the siblings
+   above it, so those color in full .. */
+.mapper-tree-item:has(~ .mapper-tree-item:hover)::after {
+    background: var(--mapper-color-path);
+}
+
+/* .. while an item on the hovered path colors its own guide only down
+   to its stub - below the stub the guide leads to its next siblings,
+   which are not on the path. */
+.mapper-tree-item:hover::after {
+    background: linear-gradient(
+        var(--mapper-color-path) 0,
+        var(--mapper-color-path) 14px,
+        var(--mapper-border-light) 14px
+    );
+}
+
 .mapper-tree-item-collapsed > .mapper-tree-children {
     display: none;
 }
@@ -428,8 +446,18 @@
 }
 
 .mapper-review-item-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--mapper-space-1);
     font-family: var(--mapper-font-family-mono);
     font-size: var(--mapper-font-size-base);
+}
+
+.mapper-review-item-label svg {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    color: var(--mapper-text-muted);
 }
 
 .mapper-review-item-note {

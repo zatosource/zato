@@ -59,21 +59,13 @@
             var cardinality = document.createElement('span');
             cardinality.className = 'dashboard-outcome-badge mapper-tree-cardinality-badge';
             cardinality.textContent = 'list';
-            cardinality.setAttribute('data-tippy-content', 'A repeating list - each of its elements has this shape');
             badges.appendChild(cardinality);
         }
 
         // .. every node carries a type badge ..
-        var typeLabel = typeLabelOf(node);
         var typeBadge = document.createElement('span');
         typeBadge.className = 'dashboard-outcome-badge mapper-tree-type-badge mapper-tree-type-' + typeClassOf(node);
-        typeBadge.textContent = typeLabel;
-        if (node.kind === 'array') {
-            typeBadge.setAttribute('data-tippy-content', 'The type of each list element is ' + typeLabel);
-        }
-        else {
-            typeBadge.setAttribute('data-tippy-content', 'The type of this field is ' + typeLabel);
-        }
+        typeBadge.textContent = typeLabelOf(node);
         badges.appendChild(typeBadge);
 
         // .. a format hint is display metadata next to the type ..
