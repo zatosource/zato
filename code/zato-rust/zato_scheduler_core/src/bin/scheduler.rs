@@ -6,8 +6,9 @@
 //! Standalone Zato scheduler binary.
 //!
 //! Communicates with the Zato server via Redis Streams for commands and
-//! fire events, and serves an HTTP query API on 127.0.0.1:35100 for the
-//! server to read scheduler state (job summaries, history, log entries).
+//! fire events, and serves an HTTP query API on 127.0.0.1 (port from
+//! `Zato_Scheduler_HTTP_Port`, 35100 by default) for the server to read
+//! scheduler state (job summaries, history, log entries).
 
 use std::sync::Arc;
 
@@ -26,6 +27,8 @@ struct SchedulerConfig {
     redis_port: u16,
     /// Redis password (empty string if not set).
     redis_password: String,
+    /// Port for the HTTP query API on 127.0.0.1.
+    http_port: u16,
     /// Tracing log level filter.
     log_level: String,
 }
@@ -40,6 +43,10 @@ impl SchedulerConfig {
                 .and_then(|val| val.parse::<u16>().ok())
                 .unwrap_or(6379),
             redis_password: std::env::var("Zato_Scheduler_Redis_Password").unwrap_or_default(),
+            http_port: std::env::var("Zato_Scheduler_HTTP_Port")
+                .ok()
+                .and_then(|val| val.parse::<u16>().ok())
+                .unwrap_or(http_api::DEFAULT_HTTP_PORT),
             log_level: std::env::var("Zato_Scheduler_Log_Level").unwrap_or_else(|_| "info".to_string()),
         }
     }
@@ -205,10 +212,14 @@ async fn main() -> std::io::Result<()> {
         .map_err(|err| std::io::Error::other(format!("Failed to spawn fire publisher: {err}")))?;
 
     let shared_for_http = Arc::clone(&shared);
-    let http_result = http_api::start_http_server(shared_for_http).await;
+    let http_result = http_api::start_http_server(shared_for_http, config.http_port).await;
 
     shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
     shared.condvar.notify_all();
+
+    // Drop the sender held in shared state - otherwise the fire publisher's
+    // receiver loop never ends and the join below blocks forever.
+    *shared.fire_sender.lock() = None;
 
     scheduler_thread.join().ok();
     command_thread.join().ok();

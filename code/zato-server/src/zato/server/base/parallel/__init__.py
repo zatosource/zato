@@ -52,6 +52,7 @@ from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
+from zato.common.util.logging_ import get_logging_levels, set_logging_levels, test_logging_levels
 from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
 from zato.hl7.common import add_config_location as hl7_add_config_location
@@ -1787,6 +1788,24 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. finally, log what happened.
         logger.info('Config loaded OK')
+
+# ################################################################################################################################
+
+    def get_logging(self) -> 'strdict':
+        out = get_logging_levels()
+        return out
+
+# ################################################################################################################################
+
+    def test_logging(self, text:'str') -> 'strdict':
+        out = test_logging_levels(text)
+        return out
+
+# ################################################################################################################################
+
+    def set_logging(self, text:'str') -> 'strdict':
+        out = set_logging_levels(text)
+        return out
 
 # ################################################################################################################################
 
