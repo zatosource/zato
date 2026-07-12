@@ -1031,10 +1031,8 @@ function updatePatternTypeOptions(formType) {
 // Live form updates registration
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Only the create form has a security select - the edit form displays the definition
+// as a link with a hidden input, so there is nothing to update live there.
 $.fn.zato.live_form_updates.register('create', [
-    {object_type: 'security_basic', target_select: '#id_sec_base_id'}
-]);
-
-$.fn.zato.live_form_updates.register('edit', [
-    {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'}
+    {object_type: 'security_pubsub_permission', target_select: '#id_sec_base_id'}
 ]);

@@ -124,12 +124,12 @@ $.fn.zato.channel.hl7.rest.delete_ = function(id) {
 
 $.fn.zato.live_form_updates.register('create', [
     {object_type: 'service', target_select: '#id_service'},
-    {object_type: 'security', target_select: '#id_security_id', label_format: '{sec_type_name}/{name}'}
+    {object_type: 'security', target_select: '#id_security_id'}
 ]);
 
 $.fn.zato.live_form_updates.register('edit', [
     {object_type: 'service', target_select: '#id_edit-service'},
-    {object_type: 'security', target_select: '#id_edit-security_id', label_format: '{sec_type_name}/{name}'}
+    {object_type: 'security', target_select: '#id_edit-security_id'}
 ]);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
