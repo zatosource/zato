@@ -152,13 +152,18 @@
 }
 
 .mapper-row-target {
+    margin-right: auto;
     font-family: var(--mapper-font-family-mono);
     font-weight: 600;
     white-space: nowrap;
 }
 
+.mapper-row-arrow {
+    color: var(--mapper-text-muted);
+}
+
 .mapper-row-expression {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     font-family: var(--mapper-font-family-mono);

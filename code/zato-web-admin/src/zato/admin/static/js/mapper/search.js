@@ -1,11 +1,9 @@
 
-// Mapper kit - search, filters and tree operations.
-// One search box covers both trees and the expression text of every
-// mapping row, with match highlighting and arrow-key navigation that
-// expands collapsed branches on its way to a hit. The filter buttons
-// narrow both trees to mapped, unmapped, required or invalid fields,
-// and the tree operations collapse everything or expand exactly the
-// mapped branches.
+// Mapper kit - per-column search, filters and tree operations.
+// Each column carries its own search box narrowing just its tree,
+// and its own filter (picked from the column's menu) for mapped,
+// unmapped, required or invalid fields. The per-side tree operations
+// (collapse all, expand mapped) live in the same menu.
 
 (function($) {
 
@@ -20,36 +18,29 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Initializes the search, the filters and the tree operations.
+    // Initializes the filters, the per-column search and the tree
+    // operations.
     // searchConfig:
     //   store:              the artifact store
-    //   input:              the search text input
-    //   countDisplay:       the element showing 'n of m'
-    //   previousButton:     steps to the previous match
-    //   nextButton:         steps to the next match
-    //   filtersContainer:   the element the filter buttons render into
-    //   collapseAllButton:  collapses every branch of both trees
-    //   expandMappedButton: expands exactly the branches with mappings
+    //   sourceTreeInput:    the source column's own search box
+    //   targetTreeInput:    the target column's own search box
     //   sourceBody:         the source tree body
     //   targetBody:         the target tree body
-    //   listContainer:      the mapping list container
     //   onLayoutChanged:    called whenever visibility or expansion
     //                       changed row positions, so lines redraw
+    // Returns {collapseTree, expandMappedTree, setFilter, getFilter},
+    // each taking one side.
     zato.mapper.search.init = function(searchConfig) {
 
         var store = searchConfig.store;
-        var input = searchConfig.input;
-        var countDisplay = searchConfig.countDisplay;
 
         var treeBodies = [searchConfig.sourceBody, searchConfig.targetBody];
 
-        var query = '';
-        var filterName = config.defaultTreeFilter;
-        var matches = [];
-        var currentIdx = 0;
+        var filterNames = {source: config.defaultTreeFilter, target: config.defaultTreeFilter};
+        var treeQueries = {source: '', target: ''};
 
 // ////////////////////////////////////////////////////////////////////////
-// Tree expansion - shared by search navigation and the tree operations.
+// Tree expansion - shared by the tree operations.
 // ////////////////////////////////////////////////////////////////////////
 
         function setItemCollapsed(item, isCollapsed) {
@@ -175,8 +166,10 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // The matching paths for the active filter on one side.
+        // The matching paths for one side's active filter.
         function filterMatches(artifact, mappedPaths, side) {
+
+            var filterName = filterNames[side];
 
             var out = {};
             var root = artifact[side + '_schema'].root;
@@ -220,22 +213,49 @@
 
         function applyFilter() {
 
-            var bodyIdx;
-
-            // No filter shows everything again.
-            if (filterName === 'all') {
-                for (bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
-                    $(treeBodies[bodyIdx]).find('.mapper-filter-hidden').removeClass('mapper-filter-hidden');
-                }
-                return;
-            }
-
             var artifact = store.getArtifact();
             var mappedPaths = mappedPathsOf(zato.mapper.connections.list(artifact));
 
-            for (bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
+            for (var bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
                 var side = config.sides[bodyIdx];
-                var matching = filterMatches(artifact, mappedPaths, side);
+                var body = treeBodies[bodyIdx];
+
+                var filterActive = filterNames[side] !== 'all';
+                var loweredTreeQuery = treeQueries[side].toLowerCase();
+                var queryActive = loweredTreeQuery !== '';
+
+                // Nothing narrows this side, so everything shows again.
+                if (!filterActive && !queryActive) {
+                    $(body).find('.mapper-filter-hidden').removeClass('mapper-filter-hidden');
+                    continue;
+                }
+
+                var filterMatching = filterActive ? filterMatches(artifact, mappedPaths, side) : null;
+
+                // A field stays when it passes both the filter and the
+                // column's own search box.
+                var items = body.querySelectorAll('.mapper-tree-item');
+                var matching = {};
+                var itemIdx;
+                var item;
+
+                for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
+                    item = items[itemIdx];
+                    var path = item.getAttribute('data-path');
+
+                    if (filterActive && !filterMatching[path]) {
+                        continue;
+                    }
+
+                    if (queryActive) {
+                        var name = item.querySelector(':scope > .mapper-tree-row .mapper-tree-name').textContent;
+                        if (name.toLowerCase().indexOf(loweredTreeQuery) === -1) {
+                            continue;
+                        }
+                    }
+
+                    matching[path] = true;
+                }
 
                 // A match keeps its ancestors visible, so the tree
                 // still reads as a tree.
@@ -247,9 +267,8 @@
                     }
                 }
 
-                var items = treeBodies[bodyIdx].querySelectorAll('.mapper-tree-item');
-                for (var itemIdx = 0; itemIdx < items.length; itemIdx++) {
-                    var item = items[itemIdx];
+                for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
+                    item = items[itemIdx];
                     var isHidden = !visible[item.getAttribute('data-path')];
                     $(item).toggleClass('mapper-filter-hidden', isHidden);
                 }
@@ -257,237 +276,54 @@
         }
 
 // ////////////////////////////////////////////////////////////////////////
-// Search - field names on both trees plus the target and expression
-// text of every mapping row.
-// ////////////////////////////////////////////////////////////////////////
-
-        function clearSearchClasses() {
-
-            var containers = [searchConfig.sourceBody, searchConfig.targetBody, searchConfig.listContainer];
-
-            for (var containerIdx = 0; containerIdx < containers.length; containerIdx++) {
-                $(containers[containerIdx]).find('.mapper-search-match').removeClass('mapper-search-match');
-                $(containers[containerIdx]).find('.mapper-search-current').removeClass('mapper-search-current');
-            }
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        function collectMatches() {
-
-            var out = [];
-            var loweredQuery = query.toLowerCase();
-
-            // Tree fields match on their names ..
-            for (var bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
-                var side = config.sides[bodyIdx];
-                var items = treeBodies[bodyIdx].querySelectorAll('.mapper-tree-item');
-
-                for (var itemIdx = 0; itemIdx < items.length; itemIdx++) {
-                    var item = items[itemIdx];
-
-                    // A field the active filter hides cannot be a hit.
-                    if (item.closest('.mapper-filter-hidden') !== null) {
-                        continue;
-                    }
-
-                    var row = item.querySelector(':scope > .mapper-tree-row');
-                    var name = row.querySelector('.mapper-tree-name').textContent;
-
-                    if (name.toLowerCase().indexOf(loweredQuery) !== -1) {
-                        out.push({element: row, item: item, label: side + ' tree: ' + item.getAttribute('data-path')});
-                    }
-                }
-            }
-
-            // .. mapping rows match on their whole visible text.
-            var listRows = searchConfig.listContainer.querySelectorAll('.mapper-row');
-            for (var rowIdx = 0; rowIdx < listRows.length; rowIdx++) {
-                var listRow = listRows[rowIdx];
-
-                if (listRow.textContent.toLowerCase().indexOf(loweredQuery) !== -1) {
-                    var target = listRow.querySelector('.mapper-row-target').textContent;
-                    var expression = listRow.querySelector('.mapper-row-expression').textContent;
-                    out.push({element: listRow, item: null, label: 'mapping row: ' + target + ' \u2190 ' + expression});
-                }
-            }
-
-            return out;
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        function matchLabels() {
-
-            var out = [];
-            for (var matchIdx = 0; matchIdx < matches.length; matchIdx++) {
-                out.push(matches[matchIdx].label);
-            }
-
-            return out;
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        function renderCount() {
-
-            if (query === '') {
-                countDisplay.textContent = '';
-            }
-            else if (matches.length === 0) {
-                countDisplay.textContent = config.searchNoMatchesLabel;
-            }
-            else {
-                countDisplay.textContent = (currentIdx + 1) + ' of ' + matches.length;
-            }
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        // Marks one match as current, expanding its branch and
-        // scrolling it into view when asked to.
-        function setCurrent(newIdx, scroll) {
-
-            var previous = matches[currentIdx];
-            if (previous !== undefined) {
-                previous.element.classList.remove('mapper-search-current');
-            }
-
-            currentIdx = newIdx;
-
-            var match = matches[currentIdx];
-            match.element.classList.add('mapper-search-current');
-
-            // A hit inside a collapsed branch expands its way there.
-            if (match.item !== null) {
-                expandAncestors(match.item);
-            }
-
-            if (scroll) {
-                match.element.scrollIntoView({block: 'nearest'});
-            }
-
-            renderCount();
-            searchConfig.onLayoutChanged();
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        // Recomputes and re-highlights every match. A fresh search
-        // starts at the first hit, a re-application after a re-render
-        // keeps the position clamped in place.
-        function applySearch(fresh) {
-
-            clearSearchClasses();
-            matches = [];
-
-            if (query === '') {
-                renderCount();
-                return;
-            }
-
-            matches = collectMatches();
-
-            // Every tree match expands its branch right away, so every
-            // hit the counter reports is on screen, not folded away ..
-            for (var expandIdx = 0; expandIdx < matches.length; expandIdx++) {
-                if (matches[expandIdx].item !== null) {
-                    expandAncestors(matches[expandIdx].item);
-                    setItemCollapsed(matches[expandIdx].item, false);
-                }
-            }
-
-            // .. and whatever still has no geometry - a row under an
-            // inactive side tab - cannot be shown, so it is no match.
-            var visibleMatches = [];
-            for (var visibleIdx = 0; visibleIdx < matches.length; visibleIdx++) {
-                if (matches[visibleIdx].element.offsetParent !== null) {
-                    visibleMatches.push(matches[visibleIdx]);
-                }
-            }
-            matches = visibleMatches;
-
-            for (var matchIdx = 0; matchIdx < matches.length; matchIdx++) {
-                matches[matchIdx].element.classList.add('mapper-search-match');
-            }
-
-            if (fresh) {
-                zato.mapper.log('search', 'query results', {query: query, total: matches.length, matches: matchLabels()});
-            }
-
-            if (matches.length === 0) {
-                renderCount();
-                searchConfig.onLayoutChanged();
-                return;
-            }
-
-            if (fresh) {
-                currentIdx = 0;
-            }
-            if (currentIdx >= matches.length) {
-                currentIdx = matches.length - 1;
-            }
-
-            setCurrent(currentIdx, fresh);
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
-        function stepCurrent(direction) {
-
-            if (matches.length === 0) {
-                return;
-            }
-
-            var newIdx = (currentIdx + direction + matches.length) % matches.length;
-
-            zato.mapper.log('search', 'match navigation', {query: query, index: newIdx + 1, total: matches.length, match: matches[newIdx].label});
-            setCurrent(newIdx, true);
-        }
-
-// ////////////////////////////////////////////////////////////////////////
 // Tree operations
 // ////////////////////////////////////////////////////////////////////////
 
-        function collapseAll() {
+        var bodiesBySide = {source: searchConfig.sourceBody, target: searchConfig.targetBody};
 
-            for (var bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
-                var items = treeBodies[bodyIdx].querySelectorAll('.mapper-tree-item');
+        function collapseBody(body) {
 
-                for (var itemIdx = 0; itemIdx < items.length; itemIdx++) {
-                    var item = items[itemIdx];
-                    if (item.querySelector(':scope > .mapper-tree-children') !== null) {
-                        setItemCollapsed(item, true);
-                    }
+            var items = body.querySelectorAll('.mapper-tree-item');
+
+            for (var itemIdx = 0; itemIdx < items.length; itemIdx++) {
+                var item = items[itemIdx];
+                if (item.querySelector(':scope > .mapper-tree-children') !== null) {
+                    setItemCollapsed(item, true);
                 }
             }
+        }
 
-            zato.mapper.log('search', 'collapsed all branches', {});
+        function collapseTree(side) {
+
+            collapseBody(bodiesBySide[side]);
+
+            zato.mapper.log('search', 'collapsed one tree', {side: side});
             searchConfig.onLayoutChanged();
         }
 
 // ////////////////////////////////////////////////////////////////////////
 
-        // Collapses everything, then expands exactly the branches
-        // holding mapped fields on either side.
-        function expandMapped() {
+        // Expands exactly the branches holding mapped fields of one body,
+        // everything else in it staying collapsed.
+        function expandMappedBody(body, side) {
 
-            collapseAll();
+            collapseBody(body);
 
             var mappedPaths = mappedPathsOf(zato.mapper.connections.list(store.getArtifact()));
 
-            for (var bodyIdx = 0; bodyIdx < treeBodies.length; bodyIdx++) {
-                var side = config.sides[bodyIdx];
-
-                for (var mappedPath in mappedPaths[side]) {
-                    var item = treeItemAt(treeBodies[bodyIdx], mappedPath);
-                    if (item !== null) {
-                        expandAncestors(item);
-                    }
+            for (var mappedPath in mappedPaths[side]) {
+                var item = treeItemAt(body, mappedPath);
+                if (item !== null) {
+                    expandAncestors(item);
                 }
             }
+        }
 
-            zato.mapper.log('search', 'expanded the mapped branches', {});
+        function expandMappedTree(side) {
+
+            expandMappedBody(bodiesBySide[side], side);
+
+            zato.mapper.log('search', 'expanded the mapped branches of one tree', {side: side});
             searchConfig.onLayoutChanged();
         }
 
@@ -495,95 +331,56 @@
 // Wiring
 // ////////////////////////////////////////////////////////////////////////
 
-        function buildFilterButtons() {
+        function setFilter(side, name) {
 
-            for (var filterIdx = 0; filterIdx < config.treeFilters.length; filterIdx++) {
-                var filter = config.treeFilters[filterIdx];
+            filterNames[side] = name;
 
-                var button = document.createElement('button');
-                button.className = 'mapper-button zato-action-button mapper-filter-button';
-                if (filter.name === filterName) {
-                    button.className = 'mapper-button zato-action-button mapper-filter-button mapper-filter-button-active';
-                }
-                button.type = 'button';
-                button.textContent = filter.label;
-                button.setAttribute('data-filter', filter.name);
-
-                searchConfig.filtersContainer.appendChild(button);
-            }
-        }
-
-        buildFilterButtons();
-
-// ////////////////////////////////////////////////////////////////////////
-
-        $(searchConfig.filtersContainer).on('click', '.mapper-filter-button', function() {
-
-            filterName = this.getAttribute('data-filter');
-
-            zato.mapper.log('search', 'filter changed', {filter: filterName});
-
-            $(searchConfig.filtersContainer).find('.mapper-filter-button-active').removeClass('mapper-filter-button-active');
-            $(this).addClass('mapper-filter-button-active');
+            zato.mapper.log('search', 'filter changed', {side: side, filter: name});
 
             applyFilter();
-            applySearch(true);
             searchConfig.onLayoutChanged();
-        });
+        }
 
 // ////////////////////////////////////////////////////////////////////////
 
-        $(input).on('input', function() {
-            query = input.value.trim();
-            applySearch(true);
-        });
+        // Each column's own search box narrows just its tree, composing
+        // with whatever filter that column has active.
+        function wireTreeSearch(side, input) {
 
-        // Enter and the vertical arrows move between matches while
-        // the input keeps focus.
-        $(input).on('keydown', function(event) {
+            $(input).on('input', function() {
 
-            if (event.key === 'Enter' || event.key === 'ArrowDown') {
-                event.preventDefault();
-                stepCurrent(event.shiftKey && event.key === 'Enter' ? -1 : 1);
-            }
-            else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                stepCurrent(-1);
-            }
-        });
+                treeQueries[side] = input.value.trim();
 
-        $(searchConfig.nextButton).on('click', function() {
-            stepCurrent(1);
-        });
+                zato.mapper.log('search', 'tree query changed', {side: side, query: treeQueries[side]});
 
-        $(searchConfig.previousButton).on('click', function() {
-            stepCurrent(-1);
-        });
+                applyFilter();
+                searchConfig.onLayoutChanged();
+            });
+        }
 
-        $(searchConfig.collapseAllButton).on('click', collapseAll);
-        $(searchConfig.expandMappedButton).on('click', expandMapped);
+        wireTreeSearch('source', searchConfig.sourceTreeInput);
+        wireTreeSearch('target', searchConfig.targetTreeInput);
 
 // ////////////////////////////////////////////////////////////////////////
 
         // Store changes re-render the trees, wiping classes - the filter
-        // and the highlights re-apply on top of the fresh DOM.
+        // re-applies on top of the fresh DOM.
         store.subscribe(function() {
             applyFilter();
-            applySearch(false);
         });
-
-        // The mapping list also re-renders whenever preview results
-        // arrive, outside any store notification - the observer puts
-        // the row highlights back. Class changes are attribute
-        // mutations, so watching child lists only can never loop.
-        var observer = new MutationObserver(function() {
-            if (query !== '') {
-                applySearch(false);
-            }
-        });
-        observer.observe(searchConfig.listContainer, {childList: true, subtree: true});
 
         applyFilter();
+
+        // The per-side tree operations and filters, used by the column
+        // Options menus.
+        return {
+            collapseTree: collapseTree,
+            expandMappedTree: expandMappedTree,
+            setFilter: setFilter,
+            getFilter: function(side) {
+                return filterNames[side];
+            }
+        };
     };
 
 })(jQuery);

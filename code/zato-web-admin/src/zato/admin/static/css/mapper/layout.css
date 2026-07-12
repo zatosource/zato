@@ -104,65 +104,6 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Mapper - design tab toolbar                                   */
-/* ------------------------------------------------------------ */
-
-.mapper-design-toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--mapper-space-2);
-    margin-bottom: var(--mapper-space-4);
-}
-
-.mapper-search-input {
-    width: 240px;
-    padding: var(--mapper-space-1) var(--mapper-space-2);
-    border: 1px solid var(--mapper-border-strong);
-    border-radius: var(--mapper-radius-small);
-    font-family: var(--mapper-font-family);
-    font-size: var(--mapper-font-size-base);
-    color: var(--mapper-text-main);
-    background: var(--mapper-background-panel);
-}
-
-.mapper-search-input:focus-visible {
-    outline: 2px solid var(--mapper-color-focus);
-    outline-offset: 1px;
-}
-
-.mapper-search-count {
-    min-width: 72px;
-    font-size: var(--mapper-font-size-small);
-    color: var(--mapper-text-muted);
-}
-
-.mapper-tree-filters {
-    display: flex;
-    gap: var(--mapper-space-1);
-    margin-left: var(--mapper-space-4);
-}
-
-/* The kit's action button sets its gradient with !important, so the
-   active state needs the same weight to shine through. */
-.mapper-filter-button-active {
-    color: var(--mapper-text-inverse);
-    font-weight: 600;
-    border-color: var(--mapper-seablue-light1);
-    background: var(--mapper-seablue-light2) !important;
-}
-
-.mapper-filter-button-active:hover {
-    border-color: var(--mapper-seablue-light2);
-    background: var(--mapper-seablue-light3) !important;
-}
-
-.mapper-design-toolbar-operations {
-    display: flex;
-    gap: var(--mapper-space-2);
-    margin-left: auto;
-}
-
-/* ------------------------------------------------------------ */
 /* Mapper - design tab, two schema columns                       */
 /* ------------------------------------------------------------ */
 
@@ -189,10 +130,6 @@
 
 .mapper-schema-column-header {
     display: flex;
-
-    /* The columns share the width with the side area, so the action
-       buttons wrap instead of painting over the neighbouring panels. */
-    flex-wrap: wrap;
     align-items: center;
     gap: var(--mapper-space-2);
     padding: var(--mapper-space-2) var(--mapper-space-3);
@@ -205,12 +142,47 @@
     font-weight: 600;
 }
 
-.mapper-schema-column-actions {
+/* ------------------------------------------------------------ */
+/* Mapper - per-column tree search                               */
+/* ------------------------------------------------------------ */
+
+.mapper-tree-search {
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--mapper-space-2);
-    margin-left: auto;
+    align-items: center;
+    flex: 1;
     min-width: 0;
+}
+
+/* The appearance reset strips the browser's own search-field chrome
+   and its rounded corners. */
+.mapper-tree-search-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    padding: 1px var(--mapper-space-2);
+    line-height: 1.3;
+    border: 1px solid var(--mapper-border-light);
+    border-radius: var(--mapper-radius-small);
+    font-family: var(--mapper-font-family);
+    font-size: 11px;
+    color: var(--mapper-text-main);
+    background: var(--mapper-background-panel);
+    outline: none;
+    box-shadow: none;
+    transition: border-color var(--mapper-motion-fast) ease;
+}
+
+/* The box-shadow reset undoes the formalize.css focus glow. */
+.mapper-tree-search-input:focus,
+.mapper-tree-search-input:focus-visible {
+    border-color: var(--mapper-color-focus);
+    outline: none;
+    box-shadow: none;
+}
+
+.mapper-tree-search-input::placeholder {
+    color: var(--mapper-text-muted);
 }
 
 .mapper-schema-column-body {
