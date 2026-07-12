@@ -84,20 +84,24 @@
 /* Mapper - gutter hover                                         */
 /* ------------------------------------------------------------ */
 
-/* The line under the pointer lights up together with its endpoint
-   dots, at full strength whatever the dimming around it .. */
-.mapper-canvas-line-hovered {
+/* The line under the pointer - and every line attached to a hovered
+   field - lights up together with its endpoint dots, at full strength
+   whatever the dimming around it .. */
+.mapper-canvas-line-hovered,
+.mapper-canvas-line-attached {
     stroke: var(--mapper-seablue-light2);
     opacity: 1;
     filter: none;
 }
 
-circle.mapper-canvas-line-hovered {
+circle.mapper-canvas-line-hovered,
+circle.mapper-canvas-line-attached {
     fill: var(--mapper-seablue-light2);
 }
 
 /* .. and it flows with marching ants while it is lit. */
-path.mapper-canvas-line-hovered {
+path.mapper-canvas-line-hovered,
+path.mapper-canvas-line-attached {
     stroke-dasharray: 6 4;
     animation: mapper-canvas-line-flow 600ms linear infinite;
 }
@@ -132,12 +136,8 @@ path.mapper-canvas-line-hovered {
     box-shadow: var(--mapper-shadow-linked);
 }
 
-/* The lines of those connections keep their full strength while
-   every other line dims around them. */
-.mapper-canvas-line-attached {
-    opacity: 1;
-    filter: none;
-}
+/* The lines of those connections light up and march like hovered
+   ones - the shared rules live in the gutter hover section above. */
 
 /* ------------------------------------------------------------ */
 /* Mapper - mapped badges on the trees                           */
