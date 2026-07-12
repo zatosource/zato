@@ -185,8 +185,6 @@ pub struct RunningJob {
     pub timezone: Option<Timezone>,
     /// String representation of the timezone.
     pub timezone_str: Option<String>,
-    /// Name of the holiday calendar to honour.
-    pub calendar: Option<String>,
     /// Kill threshold for long-running invocations (ms).
     pub max_execution_time_ms: u64,
     /// Service to invoke when the job completes successfully.
@@ -284,7 +282,6 @@ impl RunningJob {
             jitter_ms: job.jitter_ms,
             timezone,
             timezone_str: tz_str,
-            calendar: job.calendar.clone(),
             max_execution_time_ms: max_exec,
             on_success_service: job.on_success_service.clone(),
             on_success_job: job.on_success_job.clone(),
@@ -313,7 +310,6 @@ impl RunningJob {
         self.service = ServiceName(job.service.clone());
         self.extra.clone_from(&job.extra);
         self.job_type = JobType::from(job.job_type.as_str());
-        self.calendar.clone_from(&job.calendar);
         self.max_execution_time_ms =
             clamp_max_execution_time(job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS), &job.name);
         self.repeats = job.repeats;
@@ -454,18 +450,6 @@ impl RunningJob {
         self.history.push_back(record);
     }
 
-    /// Returns `true` if today is a holiday according to the job's calendar.
-    #[must_use]
-    pub fn is_holiday_today(&self, calendars: &std::collections::HashMap<String, super::calendar::CalendarData>) -> bool {
-        let Some(ref cal_name) = self.calendar else { return false };
-        let Some(cal) = calendars.get(cal_name) else { return false };
-        let today: chrono::NaiveDate = self
-            .timezone
-            .as_ref()
-            .map_or_else(|| Utc::now().date_naive(), |zone| Utc::now().with_timezone(zone).date_naive());
-        cal.is_excluded(today)
-    }
-
     /// Public wrapper around `sync_instant_from_utc`.
     pub fn sync_instant_from_utc_pub(&mut self, now: DateTime<Utc>) {
         self.sync_instant_from_utc(now);
@@ -576,7 +560,6 @@ mod tests {
             repeats: None,
             jitter_ms: None,
             timezone: None,
-            calendar: None,
             max_execution_time_ms: None,
             on_success_service: None,
             on_success_job: None,

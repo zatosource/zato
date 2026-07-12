@@ -72,7 +72,8 @@ conftest._pre_start_service_files.extend([
 
 @pytest.fixture(scope='module')
 def client(zato_server):
-    return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
+    out = ZatoClient(zato_server['base_url'], zato_server['password'])
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

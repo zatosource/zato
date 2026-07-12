@@ -28,7 +28,6 @@ Cache               = 'cache'
 Email_SMTP          = 'email_smtp'
 Email_IMAP          = 'email_imap'
 Scheduler           = 'scheduler'
-Holiday_Calendar    = 'holiday_calendar'
 LDAP                = 'ldap'
 Confluence          = 'confluence'
 Jira                = 'jira'
@@ -61,7 +60,6 @@ All_Sections = frozenset([
     Email_SMTP,
     Email_IMAP,
     Scheduler,
-    Holiday_Calendar,
     LDAP,
     Confluence,
     Jira,

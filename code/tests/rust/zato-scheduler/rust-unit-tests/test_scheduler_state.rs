@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use zato_scheduler_core::calendar::CalendarData;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{SchedulerShared, SchedulerState};
@@ -24,8 +22,11 @@ fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
         repeats: None,
         jitter_ms: None,
         timezone: None,
-        calendar: None,
         max_execution_time_ms: None,
+        on_success_service: None,
+        on_success_job: None,
+        on_error_service: None,
+        on_error_job: None,
     }
 }
 
@@ -37,7 +38,6 @@ fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
 fn test_new_state_is_empty() {
     let state = SchedulerState::new();
     assert!(state.jobs.is_empty());
-    assert!(state.calendars.is_empty());
     assert!(!state.dirty);
 }
 
@@ -59,14 +59,6 @@ fn test_remove_job() {
     state.jobs.insert(2, rj);
     state.jobs.remove(&2);
     assert!(state.jobs.is_empty());
-}
-
-#[test]
-fn test_insert_calendar() {
-    let mut state = SchedulerState::new();
-    let cal = CalendarData::new("test-cal".into());
-    state.calendars.insert("test-cal".into(), cal);
-    assert_eq!(state.calendars.len(), 1);
 }
 
 // ################################################################
@@ -151,25 +143,4 @@ fn test_multiple_jobs_independent() {
     assert_eq!(state.jobs.len(), 4);
     assert!(!state.jobs.contains_key(&3));
     assert!(state.jobs.contains_key(&1));
-}
-
-// ################################################################
-// Holiday calendar integration with jobs
-// ################################################################
-
-#[test]
-fn test_job_holiday_check_no_calendar() {
-    let job = make_interval_job(20, "hol1", 10);
-    let rj = RunningJob::from_scheduler_job(&job);
-    let cals = HashMap::new();
-    assert!(!rj.is_holiday_today(&cals));
-}
-
-#[test]
-fn test_job_holiday_check_missing_calendar_name() {
-    let mut job = make_interval_job(21, "hol2", 10);
-    job.calendar = Some("nonexistent".into());
-    let rj = RunningJob::from_scheduler_job(&job);
-    let cals = HashMap::new();
-    assert!(!rj.is_holiday_today(&cals));
 }

@@ -335,14 +335,17 @@ def zato_server(request):
         _kill_scheduler()
         raise
 
-    yield {
+    server_info = {
         'host': host,
         'port': port,
+        'base_url': f'http://{host}:{port}',
         'password': _PASSWORD,
         'server_dir': server_dir,
         'scheduler_dir': scheduler_dir,
         'tmpdir': _tmpdir,
     }
+
+    yield server_info
 
     _kill_server()
     _kill_scheduler()

@@ -34,7 +34,7 @@ from zato.server.service.internal import AdminService
 _service_name_prefix = 'zato.scheduler.job.'
 _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
-_new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms',
+_new_params = ('jitter_ms', 'timezone', 'max_execution_time_ms',
     'on_success_service', 'on_success_job', 'on_error_service', 'on_error_job')
 
 # This one is stored in the job's opaque attributes only - it points back to the IMAP connection
@@ -344,7 +344,7 @@ class _CreateEdit(_SchedulerAdmin):
     input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
         Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
-        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
+        '-jitter_ms', '-timezone', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
         '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind'
     output = '-id', '-name', '-cron_definition'
@@ -360,7 +360,7 @@ class _Get(_SchedulerAdmin):
     """
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
-        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms', \
+        '-jitter_ms', '-timezone', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
         '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind'
 
@@ -671,81 +671,6 @@ class GetLogEntries(_SchedulerAdmin):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_cal_service_prefix = 'zato.scheduler.holiday-calendar.'
-
-class _HolidayCalendarAdmin(AdminService):
-    """ Base class for holiday calendar administration services.
-    """
-    pass
-
-# ################################################################################################################################
-
-class HolidayCalendarGetList(_HolidayCalendarAdmin):
-    """ Returns a list of all holiday calendars.
-    """
-    name = _cal_service_prefix + 'get-list'
-
-    input = Int('-cur_page'), Bool('-paginate'), '-query'
-    output = 'id', 'name', '-description'
-
-    def handle(self):
-        items = []
-        self.response.payload = items
-
-# ################################################################################################################################
-
-class HolidayCalendarGetByID(_HolidayCalendarAdmin):
-    """ Returns a holiday calendar by its ID.
-    """
-    name = _cal_service_prefix + 'get-by-id'
-
-    input = 'id',
-    output = 'id', 'name', '-description', '-dates', '-weekdays'
-
-    def handle(self):
-        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
-
-# ################################################################################################################################
-
-class HolidayCalendarCreate(_HolidayCalendarAdmin):
-    """ Creates a new holiday calendar.
-    """
-    name = _cal_service_prefix + 'create'
-
-    input = 'name', '-description', '-dates', '-weekdays'
-    output = 'id', 'name'
-
-    def handle(self):
-        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
-
-# ################################################################################################################################
-
-class HolidayCalendarEdit(_HolidayCalendarAdmin):
-    """ Updates a holiday calendar.
-    """
-    name = _cal_service_prefix + 'edit'
-
-    input = 'id', 'name', '-description', '-dates', '-weekdays'
-    output = 'id', 'name'
-
-    def handle(self):
-        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
-
-# ################################################################################################################################
-
-class HolidayCalendarDelete(_HolidayCalendarAdmin):
-    """ Deletes a holiday calendar.
-    """
-    name = _cal_service_prefix + 'delete'
-
-    input = 'id',
-
-    def handle(self):
-        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetCurrentState(_SchedulerAdmin):
     """ Returns the current state of all scheduler jobs and their execution history.
     """
@@ -838,7 +763,6 @@ class GetCurrentState(_SchedulerAdmin):
                 'timeout': 0,
                 'running': 0,
                 'skipped_already_in_flight': 0,
-                'skipped_holiday': 0,
             }
             execution_outcomes = {'ok', 'error', 'timeout'}
             total_executions = 0

@@ -1,4 +1,4 @@
-//! Data types for scheduler job and calendar definitions.
+//! Data types for scheduler job definitions.
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -88,9 +88,6 @@ pub struct SchedulerJob {
     /// IANA timezone for schedule evaluation.
     #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
     pub timezone: Option<String>,
-    /// Name of the holiday calendar to skip.
-    #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
-    pub calendar: Option<String>,
     /// Kill threshold for long-running invocations (ms).
     #[serde(default, deserialize_with = "deserialize_optional_number_or_string")]
     pub max_execution_time_ms: Option<u64>,
@@ -106,15 +103,4 @@ pub struct SchedulerJob {
     /// Scheduler job to execute when the job raises an exception.
     #[serde(default, deserialize_with = "deserialize_optional_empty_string")]
     pub on_error_job: Option<String>,
-}
-
-/// A named set of holidays and weekday rules.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HolidayCalendar {
-    /// Human-readable calendar description.
-    pub description: Option<String>,
-    /// Specific dates to skip (ISO format strings parsed into `NaiveDate`).
-    pub dates: Vec<String>,
-    /// Weekday numbers (0=Mon .. 6=Sun) on which jobs should not fire.
-    pub weekdays: Vec<u8>,
 }

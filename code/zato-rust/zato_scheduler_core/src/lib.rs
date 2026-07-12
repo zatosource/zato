@@ -3,16 +3,13 @@
 
 use std::time::Duration;
 
-/// Calendar holiday support.
-pub mod calendar;
-
 /// Execution-history serialization helpers.
 pub mod history;
 
 /// Running-job state machine.
 pub mod job;
 
-/// Data-transfer objects for job and calendar definitions.
+/// Data-transfer objects for job definitions.
 pub mod model;
 
 /// Core scheduler loop and helpers.
@@ -33,7 +30,6 @@ pub mod http_api;
 /// Prometheus metrics for the scheduler process.
 pub mod metrics;
 
-use calendar::CalendarData;
 use job::RunningJob;
 
 /// Collects log messages while the state mutex is held so they can be
@@ -147,21 +143,5 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
             );
             state.jobs.insert(job_id, running_job);
         }
-    }
-}
-
-/// Replaces the calendar map in scheduler state with newly loaded calendars.
-pub fn reload_calendars(state: &mut scheduler::SchedulerState, new_cals: std::collections::HashMap<String, crate::model::HolidayCalendar>) {
-    state.calendars.clear();
-    for (name, cal) in new_cals {
-        let mut calendar_data = CalendarData::new(name.clone());
-        for date_str in &cal.dates {
-            if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                calendar_data.dates.insert(date);
-            }
-        }
-        calendar_data.weekdays.clone_from(&cal.weekdays);
-        calendar_data.description.clone_from(&cal.description);
-        state.calendars.insert(name, calendar_data);
     }
 }
