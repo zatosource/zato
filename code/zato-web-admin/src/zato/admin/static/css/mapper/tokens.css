@@ -22,6 +22,10 @@
     --mapper-text-main: #1c2b36;
     --mapper-text-muted: var(--text-muted);
     --mapper-text-inverse: var(--white);
+    --mapper-text-inverse-muted: #b8c4cc;
+
+    /* The line tooltip surface */
+    --mapper-background-tooltip: #333;
 
     /* Borders */
     --mapper-border-light: var(--border-light);
@@ -34,8 +38,9 @@
     --mapper-color-warning: #b26a00;
     --mapper-color-armed: #b8860b;
 
-    /* Conditioned mappings - their lines and badges share this color */
-    --mapper-color-conditioned: #b26a00;
+    /* The resting opacity of the canvas lines - the JS eases it down
+       towards its dimmed floor as the pointer nears the lines */
+    --mapper-canvas-line-opacity: 0.9;
 
     /* The root-to-field path in a tree while the field is hovered */
     --mapper-color-path: #0a2a4d;

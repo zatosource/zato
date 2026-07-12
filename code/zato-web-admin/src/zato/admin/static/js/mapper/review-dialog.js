@@ -57,7 +57,26 @@
 
         var labelText = document.createElement('span');
         labelText.className = 'mapper-review-item-label';
-        labelText.textContent = item.label;
+
+        // An item carries either a source-to-target pair, drawn with
+        // an SVG arrow between the two, or one plain label.
+        if (item.source !== undefined) {
+            var sourceText = document.createElement('span');
+            sourceText.textContent = item.source;
+            labelText.appendChild(sourceText);
+
+            var arrowIcon = document.createElement('i');
+            arrowIcon.setAttribute('data-lucide', 'arrow-right');
+            labelText.appendChild(arrowIcon);
+
+            var targetText = document.createElement('span');
+            targetText.textContent = item.target;
+            labelText.appendChild(targetText);
+        }
+        else {
+            labelText.textContent = item.label;
+        }
+
         label.appendChild(labelText);
 
         if (item.note !== '') {

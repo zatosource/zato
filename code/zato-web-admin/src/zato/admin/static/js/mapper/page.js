@@ -291,15 +291,12 @@
             }
         });
 
-        var canvas;
-
         mappingList = zato.mapper.mappingList.init({
             store: store,
             container: document.getElementById('mapper-mapping-list'),
             addButton: document.getElementById('mapper-add-mapping'),
             onSelect: function(selection) {
                 detailPanel.setSelection(selection);
-                canvas.redraw();
             }
         });
 
@@ -340,7 +337,7 @@
             }
         }
 
-        canvas = zato.mapper.canvas.init({
+        var canvas = zato.mapper.canvas.init({
             store: store,
             container: document.querySelector('.mapper-design-columns'),
             sourceColumn: document.getElementById('mapper-schema-column-source'),
@@ -348,10 +345,6 @@
             sourceBody: document.getElementById('mapper-schema-body-source'),
             targetBody: document.getElementById('mapper-schema-body-target'),
             svg: document.getElementById('mapper-canvas-lines'),
-            getSelected: function() {
-                var out = mappingList.getSelected();
-                return out;
-            },
             onRowCreated: function(selection) {
                 openRow(selection, '');
             },

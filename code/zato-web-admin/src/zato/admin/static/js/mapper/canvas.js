@@ -5,9 +5,10 @@
 // repeating node creates an iteration scope automatically and the
 // children map relatively. An SVG layer always draws every
 // connection line.
-// While the pointer is over the gutter where the lines live, all of
-// them dim except the one under the pointer, which lights up with a
-// marching-ants animation. Lines are interactive: a click selects the
+// While the pointer is over the gutter where the lines live, they dim
+// gradually - the closer the pointer comes to them vertically, the
+// dimmer they get - except the one under the pointer, which lights up
+// with a marching-ants animation. Lines are interactive: a click selects the
 // mapping row a line belongs to, a right-click opens a menu over it,
 // and right-clicking a target field offers wrapping its expression in
 // a function or setting a constant value on an unmapped field.
@@ -25,6 +26,13 @@
 
     // The sampling step along a line when measuring that distance.
     var lineSampleStepPixels = 10;
+
+    // How far above the topmost line or below the bottommost one the
+    // dimming starts to ease in.
+    var lineDimFadeDistancePixels = 48;
+
+    // The opacity the lines dim to while the pointer sits amid them.
+    var lineOpacityDimmed = 0.5;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -60,7 +68,6 @@
     //   sourceBody:    the source tree body
     //   targetBody:    the target tree body
     //   svg:           the SVG element of the line layer
-    //   getSelected:   function() - the mapping list selection or null
     //   onRowCreated:  called with {scopeIndex, rowIndex} after a drop
     //   onRowOpen:     called with ({scopeIndex, rowIndex}, field) when a
     //                  line or a menu entry asks for the row - field is
@@ -135,18 +142,6 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-        function isSelectionEqual(first, second) {
-
-            if (first === null || second === null) {
-                return false;
-            }
-
-            var out = first.scopeIndex === second.scopeIndex && first.rowIndex === second.rowIndex;
-            return out;
-        }
-
-// ////////////////////////////////////////////////////////////////////////
-
         function drawLines(connections) {
 
             $(svg).empty();
@@ -154,8 +149,6 @@
             var containerRect = container.getBoundingClientRect();
             svg.setAttribute('width', containerRect.width);
             svg.setAttribute('height', containerRect.height);
-
-            var selected = canvasConfig.getSelected();
 
             for (var connectionIdx = 0; connectionIdx < connections.length; connectionIdx++) {
                 var connection = connections[connectionIdx];
@@ -180,20 +173,7 @@
                         ', ' + middleX + ' ' + targetAnchor.y +
                         ', ' + targetAnchor.x + ' ' + targetAnchor.y);
 
-                    var lineClass = 'mapper-canvas-line';
-
-                    // A computed line is dashed, a conditioned one changes
-                    // color - both are visible before any selection.
-                    if (connection.computed) {
-                        lineClass = lineClass + ' mapper-canvas-line-computed';
-                    }
-                    if (connection.conditioned) {
-                        lineClass = lineClass + ' mapper-canvas-line-conditioned';
-                    }
-                    if (isSelectionEqual(connection.selection, selected)) {
-                        lineClass = lineClass + ' mapper-canvas-line-selected';
-                    }
-                    path.setAttribute('class', lineClass);
+                    path.setAttribute('class', 'mapper-canvas-line');
 
                     // The id ties a line to its endpoint dots, and the paths
                     // let the gutter hover light up the rows it connects.
@@ -211,7 +191,7 @@
                         dot.setAttribute('cx', anchors[anchorIdx].x);
                         dot.setAttribute('cy', anchors[anchorIdx].y);
                         dot.setAttribute('r', 3.5);
-                        dot.setAttribute('class', lineClass + ' mapper-canvas-dot');
+                        dot.setAttribute('class', 'mapper-canvas-line mapper-canvas-dot');
                         dot.setAttribute('data-line', lineId);
                         svg.appendChild(dot);
                     }
@@ -515,8 +495,13 @@
 
 // ////////////////////////////////////////////////////////////////////////
 // Gutter hover - while the pointer is over the strip between the trees,
-// every line dims except the one closest to the pointer.
+// the lines dim with vertical proximity to them, except the one closest
+// to the pointer.
 // ////////////////////////////////////////////////////////////////////////
+
+        // The resting opacity the token declares - the ceiling the
+        // dimming eases back to as the pointer moves away.
+        var lineOpacityResting = parseFloat(getComputedStyle(svg).getPropertyValue('--mapper-canvas-line-opacity'));
 
         // Whether a viewport x coordinate falls into the strip between
         // the two trees - the only place lines react to the pointer.
@@ -574,6 +559,75 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
+        // The vertical band the lines occupy - everything between the
+        // topmost one and the bottommost one, in container coordinates.
+        function lineBand() {
+
+            var paths = svg.querySelectorAll('path.mapper-canvas-line');
+            if (paths.length === 0) {
+                return null;
+            }
+
+            var top = Infinity;
+            var bottom = -Infinity;
+
+            for (var pathIdx = 0; pathIdx < paths.length; pathIdx++) {
+                var box = paths[pathIdx].getBBox();
+                if (box.y < top) {
+                    top = box.y;
+                }
+                if (box.y + box.height > bottom) {
+                    bottom = box.y + box.height;
+                }
+            }
+
+            var out = {top: top, bottom: bottom};
+            return out;
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        // Removing the inline property lets the token's resting
+        // opacity show through again.
+        function clearDim() {
+            svg.style.removeProperty('--mapper-canvas-line-opacity');
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
+        // Eases the dimming in with vertical proximity to the lines -
+        // strongest while the pointer is level with any of them, none
+        // once it is further than the fade distance above the topmost
+        // one or below the bottommost one.
+        function applyDim(pointY) {
+
+            var band = lineBand();
+            if (band === null) {
+                clearDim();
+                return;
+            }
+
+            // How far the pointer is from the band - zero inside it.
+            var distance = 0;
+            if (pointY < band.top) {
+                distance = band.top - pointY;
+            }
+            else if (pointY > band.bottom) {
+                distance = pointY - band.bottom;
+            }
+
+            if (distance >= lineDimFadeDistancePixels) {
+                clearDim();
+                return;
+            }
+
+            var closeness = 1 - distance / lineDimFadeDistancePixels;
+            var opacity = lineOpacityResting - closeness * (lineOpacityResting - lineOpacityDimmed);
+            svg.style.setProperty('--mapper-canvas-line-opacity', opacity);
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
         // The rows a hovered line connects carry their own highlight,
         // cleared here together in one place.
         function clearConnectedRows() {
@@ -583,10 +637,78 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
+        // The tooltip a hovered line shows: its source to target pairs,
+        // plus the expression when the line computes rather than copies.
+        var lineTooltip = document.createElement('div');
+        lineTooltip.className = 'mapper-line-tooltip';
+        lineTooltip.hidden = true;
+        document.body.appendChild(lineTooltip);
+
+        // The line whose content the tooltip currently holds - moves
+        // along the same line only reposition it.
+        var lineTooltipId = null;
+
+        function buildLineTooltip(connection) {
+
+            $(lineTooltip).empty();
+
+            // A scope line iterates rather than copies.
+            var prefix = connection.selection === null ? 'each ' : '';
+
+            for (var sourceIdx = 0; sourceIdx < connection.sources.length; sourceIdx++) {
+                var pair = document.createElement('div');
+                pair.className = 'mapper-line-tooltip-pair';
+
+                var sourceText = document.createElement('span');
+                sourceText.textContent = prefix + connection.sources[sourceIdx];
+                pair.appendChild(sourceText);
+
+                var arrowIcon = document.createElement('i');
+                arrowIcon.setAttribute('data-lucide', 'arrow-right');
+                pair.appendChild(arrowIcon);
+
+                var targetText = document.createElement('span');
+                targetText.textContent = connection.target;
+                pair.appendChild(targetText);
+
+                lineTooltip.appendChild(pair);
+            }
+
+            if (connection.computed) {
+                var expression = document.createElement('div');
+                expression.className = 'mapper-line-tooltip-expression';
+                expression.textContent = rowOf(connection.selection).expression;
+                lineTooltip.appendChild(expression);
+            }
+
+            // The arrow placeholders become inline SVGs.
+            lucide.createIcons();
+        }
+
+        function renderLineTooltip(lineId, clientX, clientY) {
+
+            if (lineId !== lineTooltipId) {
+                buildLineTooltip(connectionOfLineId(lineId));
+                lineTooltipId = lineId;
+            }
+
+            lineTooltip.hidden = false;
+            lineTooltip.style.left = (clientX + 14) + 'px';
+            lineTooltip.style.top = (clientY + 14) + 'px';
+        }
+
+        function hideLineTooltip() {
+            lineTooltip.hidden = true;
+            lineTooltipId = null;
+        }
+
+// ////////////////////////////////////////////////////////////////////////
+
         function clearGutterHover() {
 
-            svg.classList.remove('mapper-canvas-dimmed');
+            clearDim();
             clearConnectedRows();
+            hideLineTooltip();
 
             var hoveredElements = svg.querySelectorAll('.mapper-canvas-line-hovered');
             for (var elementIdx = 0; elementIdx < hoveredElements.length; elementIdx++) {
@@ -605,9 +727,9 @@
                 return;
             }
 
-            svg.classList.add('mapper-canvas-dimmed');
-
             var containerRect = container.getBoundingClientRect();
+            applyDim(event.clientY - containerRect.top);
+
             var lineId = nearestLineId(event.clientX - containerRect.left, event.clientY - containerRect.top);
 
             var hoveredElements = svg.querySelectorAll('.mapper-canvas-line-hovered');
@@ -616,7 +738,10 @@
             }
             clearConnectedRows();
 
-            if (lineId !== null) {
+            if (lineId === null) {
+                hideLineTooltip();
+            }
+            else {
                 var lineElements = svg.querySelectorAll('[data-line="' + lineId + '"]');
                 for (var lineElementIdx = 0; lineElementIdx < lineElements.length; lineElementIdx++) {
                     lineElements[lineElementIdx].classList.add('mapper-canvas-line-hovered');
@@ -634,6 +759,8 @@
                 if (connectedTargetRow !== null) {
                     connectedTargetRow.classList.add('mapper-tree-row-connected-target');
                 }
+
+                renderLineTooltip(lineId, event.clientX, event.clientY);
             }
         });
 
