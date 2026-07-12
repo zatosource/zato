@@ -568,7 +568,7 @@ class Updater:
             logger.error('_get_current_branch: exception: {}'.format(format_exc()))
         return self.config.github_branch
 
-    def check_latest_version(self) -> 'dict':
+    def check_latest_version(self, allow_git_clone:'bool'=True) -> 'dict':
         """ Checks the latest version from GitHub.
         """
         commit_sha = None
@@ -589,6 +589,17 @@ class Updater:
             commit_date = data['commit']['committer']['date']
 
         except HTTPError as e:
+
+            # The git clone path takes 10+ seconds and blocks the calling worker for that long,
+            # so callers that run on each page load (e.g. the dashboard updates badge) disable it
+            # and simply report that the check did not succeed.
+            if not allow_git_clone:
+                logger.info(f'check_latest_version: GitHub API error: {e}, git clone not allowed here')
+                return {
+                    'success': False,
+                    'error': 'Failed to check latest version'
+                }
+
             logger.warning(f'check_latest_version: GitHub API error: {e}, using git clone')
 
             temp_dir = tempfile.mkdtemp()

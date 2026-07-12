@@ -112,7 +112,11 @@ def _delete_connection(page:'Page', item_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.cloud.microsoft_365.delete_("{item_id}")')
     page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
-    time.sleep(0.5)
+
+    # The server-side delete waits for the connection queue builder to stop,
+    # which takes over a second, so wait until the row is actually removed
+    # instead of sleeping for a fixed period.
+    page.wait_for_selector(f'#tr_{item_id}', state='detached', timeout=10000)
 
 # ################################################################################################################################
 

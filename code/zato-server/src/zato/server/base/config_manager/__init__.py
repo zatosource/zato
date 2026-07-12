@@ -670,9 +670,6 @@ class ConfigManager(_ConfigManagerBase):
 
         for config_dict, config_data in config_dicts:
 
-            logger.info('[DIAG] init_http_soap config_dict_id=%s building wrapper for name=%r config_dict.name=%r',
-                hex(id(config_dict)), config_data.config.get('name'), config_dict.name)
-
             wrapper = self._http_soap_wrapper_from_config(config_data.config, has_sec_config=has_sec_config)
             config_data.conn = wrapper
 
@@ -837,10 +834,6 @@ class ConfigManager(_ConfigManagerBase):
     ) -> 'None':
         """ A common method for updating auth-related configuration.
         """
-        import traceback
-        logger.info('[DIAG] _update_auth enter action_name=%s sec_type=%s msg.name=%s msg.id=%s stack:\n%s',
-            action_name, sec_type, msg.get('name'), msg.get('id'), ''.join(traceback.format_stack()))
-
         with self.update_lock:
 
             handler = getattr(self.request_dispatcher.url_data, 'on_config_event_' + action_name)
@@ -849,22 +842,9 @@ class ConfigManager(_ConfigManagerBase):
             for transport in ['plain_http', 'soap']:
                 config_dict = getattr(self.config_store, 'out_' + transport)
 
-                conn_names = config_dict.copy_keys()
-                logger.info('[DIAG] _update_auth config_dict_id=%s config_store_id=%s transport=%s conn_names=%s',
-                    hex(id(config_dict)), hex(id(self.config_store)), transport, conn_names)
-
-                for conn_name in conn_names:
-
-                    entry = config_dict[conn_name]
-                    entry_keys = sorted(entry.keys()) if hasattr(entry, 'keys') else entry
-                    logger.info('[DIAG] _update_auth conn_name=%r entry_keys=%s has_conn=%s',
-                        conn_name, entry_keys, 'conn' in entry)
+                for conn_name in config_dict.copy_keys():
 
                     config = config_dict[conn_name]['config']
-
-                    if 'conn' not in entry:
-                        logger.info('[DIAG] _update_auth MISSING conn key, conn_name=%r config=%s', conn_name, config)
-
                     wrapper = config_dict[conn_name]['conn']
 
                     if config['sec_type'] == sec_type:
@@ -891,8 +871,6 @@ class ConfigManager(_ConfigManagerBase):
     def _visit_wrapper_delete(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_') -> 'None':
         """ Deletes a wrapper.
         """
-        logger.info('[DIAG] _visit_wrapper_delete wrapper.name=%r wrapper.security_name=%r msg.name=%r transport=%r',
-            wrapper.config['name'], wrapper.config['security_name'], msg['name'], wrapper.config['transport'])
         config_dict = getattr(self.config_store, 'out_' + wrapper.config['transport'])
         if wrapper.config['security_name'] == msg['name']:
             del config_dict[wrapper.config['name']]
@@ -1833,7 +1811,6 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_WSS_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes a WS-Security definition.
         """
-        logger.info('[DIAG] SECURITY_WSS_DELETE msg=%s', dict(msg))
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.WSS,
                 self._visit_wrapper_delete)
 
@@ -2130,9 +2107,6 @@ class ConfigManager(_ConfigManagerBase):
     ) -> 'None':
         """ Deletes a wrapper-based connection's config and closes its underlying wrapper.
         """
-        logger.info('[DIAG] _delete_config_close_wrapper config_dict_id=%s name=%r conn_type=%r config_dict.name=%r keys=%s',
-            hex(id(config_dict)), name, conn_type, config_dict.name, config_dict.copy_keys())
-
         # Delete the connection first, if it exists at all ..
         try:
             try:
@@ -2160,10 +2134,6 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an outgoing HTTP/SOAP connection.
         """
-        import traceback
-        logger.info('[DIAG] OUTGOING_HTTP_SOAP_CREATE_EDIT name=%r old_name=%r transport=%r sec_type=%r stack:\n%s',
-            msg['name'], msg.get('old_name'), msg['transport'], msg.get('sec_type'), ''.join(traceback.format_stack()))
-
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
@@ -2181,9 +2151,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # Store mapping of ID -> name
         config_dict.set_key_id_data(msg)
-
-        logger.info('[DIAG] OUTGOING_HTTP_SOAP_CREATE_EDIT done config_dict_id=%s name=%r entry_keys=%s',
-            hex(id(config_dict)), msg['name'], sorted(config_dict[msg['name']].keys()))
 
     def on_config_event_OUTGOING_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
