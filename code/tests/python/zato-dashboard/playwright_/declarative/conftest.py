@@ -253,6 +253,12 @@ def zato_dashboard() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
+
+    # The queue bridge listeners must use this session's dedicated Redis too - otherwise they poll
+    # the shared default one, where any other session's quickstart create wipes the zato:* keys,
+    # deleting their streams and consumer groups while this server is still running.
+    server_env['Zato_Queue_Bridge_Redis_Port'] = str(redis_port)
+
     server_env.update(scheduler_env_config)
     server_env.pop('COVERAGE_PROCESS_START', None)
 

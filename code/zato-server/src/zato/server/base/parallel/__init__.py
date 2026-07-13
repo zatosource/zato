@@ -44,7 +44,7 @@ from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.common.rules.api import RulesManager
-from zato.common.typing_ import cast_, intnone, optional
+from zato.common.typing_ import cast_, intnone, optional, tuple_
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
@@ -106,10 +106,15 @@ redis_logger = logging.getLogger('zato_redis')
 
 megabyte = 10 ** 6
 
+floatpair = tuple_[float, float]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
+
+# How often, at most, a still-failing queue bridge listener logs a reminder (in seconds).
+_queue_bridge_error_log_interval = 60.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1433,6 +1438,59 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def _ensure_queue_bridge_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
+        """ Creates a queue bridge stream and its consumer group idempotently.
+        """
+        try:
+            _ = redis_conn.xgroup_create(stream, group_name, id='$', mkstream=True)
+        except Exception as exc:
+
+            # The group already exists, which is fine - anything else is a real error.
+            if 'BUSYGROUP' not in str(exc):
+                raise
+
+# ################################################################################################################################
+
+    def _handle_queue_bridge_listener_error(
+        self,
+        listener_name:'str',
+        exception:'Exception',
+        redis_conn:'any_',
+        stream:'str',
+        group_name:'str',
+        error_since:'float',
+        last_logged:'float',
+        ) -> 'floatpair':
+        """ Handles an error from a queue bridge listener loop. Logs the full traceback when the condition starts,
+        then only a one-line reminder at most once a minute, and recreates the stream and group if they were deleted,
+        e.g. by another process that cleared this Redis database.
+        """
+        now = monotonic()
+
+        # Log the full traceback when the condition starts ..
+        if not error_since:
+            error_since = now
+            last_logged = now
+            logger.warning('Error in queue bridge %s listener: %s', listener_name, format_exc())
+
+        # .. and only a one-line reminder at most once a minute afterwards ..
+        elif now - last_logged >= _queue_bridge_error_log_interval:
+            last_logged = now
+            elapsed = int(now - error_since)
+            logger.warning('Queue bridge %s listener still failing after %ss: %s', listener_name, elapsed, exception)
+
+        # .. if the stream or group no longer exists, recreate it so the listener heals itself.
+        if 'NOGROUP' in str(exception):
+            try:
+                self._ensure_queue_bridge_group(redis_conn, stream, group_name)
+            except Exception:
+                # Redis may be temporarily unavailable - the next loop iteration will try again.
+                pass
+
+        return error_since, last_logged
+
+# ################################################################################################################################
+
     def _start_queue_bridge_request_listener(self) -> 'None':
         """ Listens for request_config messages from the queue bridge and responds with a reload.
         The bridge sends them when it starts after this server is already up, e.g. when it is restarted.
@@ -1443,14 +1501,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         group_name = 'server-request'
         consumer_name = 'server-request-0'
 
-        try:
-            _ = request_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
-        except Exception as exc:
-            if 'BUSYGROUP' not in str(exc):
-                raise
+        self._ensure_queue_bridge_group(request_redis, request_stream, group_name)
 
         def _request_listener_loop() -> 'None':
             logger.info('Queue bridge request listener loop entering')
+
+            error_since = 0.0
+            last_logged = 0.0
+
             while True:
                 try:
                     result = request_redis.xreadgroup(
@@ -1460,6 +1518,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         count=10,
                         block=5000,
                     )
+
+                    # We are able to read from the stream again, so the error condition, if any, has cleared.
+                    if error_since:
+                        logger.info('Queue bridge request listener recovered')
+                        error_since = 0.0
 
                     if not result:
                         continue
@@ -1472,8 +1535,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                                 self._reload_queue_bridge()
                             _ = request_redis.xack(stream_name, group_name, msg_id)
 
-                except Exception:
-                    logger.warning('Error in queue bridge request listener: %s', format_exc())
+                except Exception as exc:
+                    error_since, last_logged = self._handle_queue_bridge_listener_error(
+                        'request', exc, request_redis, request_stream, group_name, error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_request_listener_loop)
@@ -1492,13 +1556,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         group_name = 'server-recv'
         consumer_name = 'server-recv-0'
 
-        try:
-            _ = recv_redis.xgroup_create(recv_stream, group_name, id='$', mkstream=True)
-        except Exception as exc:
-            if 'BUSYGROUP' not in str(exc):
-                raise
+        self._ensure_queue_bridge_group(recv_redis, recv_stream, group_name)
 
         def _recv_listener_loop() -> 'None':
+
+            error_since = 0.0
+            last_logged = 0.0
+
             while True:
                 try:
                     result = recv_redis.xreadgroup(
@@ -1508,6 +1572,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         count=10,
                         block=1000,
                     )
+
+                    # We are able to read from the stream again, so the error condition, if any, has cleared.
+                    if error_since:
+                        logger.info('Queue bridge recv listener recovered')
+                        error_since = 0.0
 
                     if not result:
                         continue
@@ -1547,8 +1616,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
                             _ = recv_redis.xack(stream_name, group_name, msg_id)
 
-                except Exception:
-                    logger.warning('Error in queue bridge recv listener: %s', format_exc())
+                except Exception as exc:
+                    error_since, last_logged = self._handle_queue_bridge_listener_error(
+                        'recv', exc, recv_redis, recv_stream, group_name, error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_recv_listener_loop)
