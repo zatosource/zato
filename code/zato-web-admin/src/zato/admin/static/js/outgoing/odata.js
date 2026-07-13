@@ -31,7 +31,8 @@ $(document).ready(function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.odata.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to invoke the OData API.',
+    'id_name': 'A unique name for this connection.<br>Services look it up by this name<br>to invoke the ' +
+        $.fn.zato.outgoing.odata.config.label + ' API.',
     'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
     'id_odata_version': 'OData protocol version the remote API speaks,<br>4.0 or 2.0. SAP systems commonly use 2.0.',
     'id_pool_size': 'How many client connections the pool keeps<br>for concurrent requests to this API.<br>Default is 1.',
@@ -50,7 +51,8 @@ $.fn.zato.outgoing.odata.field_descriptions = {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.odata.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing OData connection', null);
+    var label = $.fn.zato.outgoing.odata.config.label;
+    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing ' + label + ' connection', null);
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
@@ -59,7 +61,8 @@ $.fn.zato.outgoing.odata.create = function() {
 }
 
 $.fn.zato.outgoing.odata.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing OData connection', id);
+    var label = $.fn.zato.outgoing.odata.config.label;
+    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing ' + label + ' connection', id);
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
@@ -117,8 +120,9 @@ $.fn.zato.outgoing.odata.data_table.new_row = function(item, data, include_tr) {
 }
 
 $.fn.zato.outgoing.odata.delete_ = function(id) {
+    var label = $.fn.zato.outgoing.odata.config.label;
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing OData connection `{0}` deleted',
-        'Are you sure you want to delete outgoing OData connection `{0}`?',
+        'Outgoing ' + label + ' connection `{0}` deleted',
+        'Are you sure you want to delete outgoing ' + label + ' connection `{0}`?',
         true);
 }

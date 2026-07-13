@@ -12,7 +12,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.api import ODATA
+from zato.common.api import ODATA, ODATA_Subtype
 from zato.common.odata.client import ODataClient
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
@@ -56,6 +56,11 @@ outconn_odata_int_config_keys = ('page_size', 'timeout', 'pool_size')
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_odata_bool_config_keys = ('needs_csrf_token',)
+
+# SAP outconns run on the same implementation - only the subtype defaults differ.
+outconn_sap_config_defaults:'dict[str, object]' = dict(outconn_odata_config_defaults)
+outconn_sap_config_defaults['odata_version'] = ODATA_Subtype['sap']['odata_version']
+outconn_sap_config_defaults['needs_csrf_token'] = ODATA_Subtype['sap']['needs_csrf_token']
 
 # ################################################################################################################################
 # ################################################################################################################################

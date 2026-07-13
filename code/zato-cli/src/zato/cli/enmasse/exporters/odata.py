@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import GENERIC, ODATA
+from zato.common.api import GENERIC, ODATA, ODATA_Subtype
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -51,24 +51,33 @@ Field_Defaults = {
 # ################################################################################################################################
 
 class ODataExporter:
+    """ One exporter serves every subtype of the OData implementation - the exporter is registered
+    once per subtype, e.g. under the odata key and under the sap key.
+    """
 
-    def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
+    def __init__(self, exporter:'EnmasseYAMLExporter', subtype:'str') -> 'None':
         self.exporter = exporter
+        self.subtype = ODATA_Subtype[subtype]
+
+        # Values equal to the subtype defaults are not exported.
+        self.field_defaults = dict(Field_Defaults)
+        self.field_defaults['needs_csrf_token'] = self.subtype['needs_csrf_token']
 
     def export(self, session: 'SASession', cluster_id: 'int') -> 'odata_def_list':
-        """ Exports OData connection definitions.
+        """ Exports connection definitions of this exporter's subtype.
         """
-        logger.info('Exporting OData connection definitions')
+        label = self.subtype['label']
+        logger.info('Exporting %s connection definitions', label)
 
-        # Get OData connections from database using the generic connection query
-        db_odata = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_ODATA)
+        # Get the connections from database using the generic connection query
+        db_odata = connection_list(session, cluster_id, self.subtype['type_'])
 
         if not db_odata:
-            logger.info('No OData connection definitions found in DB')
+            logger.info('No %s connection definitions found in DB', label)
             return []
 
         odata_connections = to_json(db_odata, return_as_dict=True)
-        logger.debug('Processing %d OData connection definitions', len(odata_connections))
+        logger.debug('Processing %d %s connection definitions', len(odata_connections), label)
 
         exported_odata = []
 
@@ -95,13 +104,13 @@ class ODataExporter:
             for field in Optional_Fields:
                 value = row.get(field)
                 if value:
-                    default = Field_Defaults[field]
+                    default = self.field_defaults[field]
                     if value != default:
                         item[field] = value
 
             exported_odata.append(item)
 
-        logger.info('Successfully prepared %d OData connection definitions for export', len(exported_odata))
+        logger.info('Successfully prepared %d %s connection definitions for export', len(exported_odata), label)
         return exported_odata
 
 # ################################################################################################################################
