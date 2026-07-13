@@ -415,6 +415,25 @@ odata:
     scopes: https://api.businesscentral.dynamics.com/.default
     client_secret: Zato_Enmasse_Env.Enmasse_OData_Client_Secret
 
+sap:
+
+  - name: enmasse.sap.1
+    address: https://example.com/sap/opu/odata/sap/API_BUSINESS_PARTNER/
+    odata_version: '2.0'
+    auth_type: basic
+    username: enmasse.sap.user.1
+    needs_csrf_token: true
+    secret: Zato_Enmasse_Env.Enmasse_SAP_Secret
+
+  - name: enmasse.sap.2
+    address: https://api4.successfactors.com/odata/v2/
+    odata_version: '2.0'
+    auth_type: oauth2
+    token_url: https://api4.successfactors.com/oauth/token
+    tenant_id: test-company
+    client_id: enmasse-sap-client-1
+    client_secret: Zato_Enmasse_Env.Enmasse_SAP_Client_Secret
+
 sql:
 
   - name: enmasse.sql.1

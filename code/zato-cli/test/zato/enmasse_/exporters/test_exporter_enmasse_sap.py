@@ -31,8 +31,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseODataExporter(TestCase):
-    """ Tests exporting OData connection definitions to YAML-compatible dicts using enmasse.
+class TestEnmasseSAPExporter(TestCase):
+    """ Tests exporting SAP connection definitions to YAML-compatible dicts using enmasse.
     """
 
     def setUp(self) -> 'None':
@@ -42,9 +42,10 @@ class TestEnmasseODataExporter(TestCase):
         _ = self.temp_file.write(template_complex_01.encode('utf-8'))
         self.temp_file.close()
 
-        # Importer is needed to set up the database state for export tests
+        # Importer is needed to set up the database state for export tests,
+        # SAP is a subtype of the OData implementation so the same importer class handles it.
         self.importer = EnmasseYAMLImporter()
-        self.odata_importer = ODataImporter(self.importer, 'odata')
+        self.sap_importer = ODataImporter(self.importer, 'sap')
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -69,44 +70,44 @@ class TestEnmasseODataExporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_odata_export(self):
+    def test_sap_export(self):
         self._setup_test_environment()
 
-        # 1. Get OData connection definitions from the YAML template
-        odata_list_from_yaml = self.yaml_config['odata']
+        # 1. Get SAP connection definitions from the YAML template
+        sap_list_from_yaml = self.yaml_config['sap']
 
         # 2. Import these definitions into the database to have something to export
         _ = self.importer.get_cluster(self.session) # Ensure importer has cluster context
-        created_odata_connections, _ = self.odata_importer.sync_definitions(odata_list_from_yaml, self.session)
+        created_sap_connections, _ = self.sap_importer.sync_definitions(sap_list_from_yaml, self.session)
 
-        self.assertTrue(len(created_odata_connections) > 0, 'No OData connections were created.')
+        self.assertTrue(len(created_sap_connections) > 0, 'No SAP connections were created.')
 
         # 3. Initialize the exporter and export the data
         yaml_exporter = EnmasseYAMLExporter()
         exported_data = yaml_exporter.export_to_dict(self.session)
 
-        self.assertIn('odata', exported_data, 'Exporter did not produce an "odata" section.')
-        exported_odata_list = exported_data['odata']
+        self.assertIn('sap', exported_data, 'Exporter did not produce a "sap" section.')
+        exported_sap_list = exported_data['sap']
 
         # 4. Compare exported data with the original YAML data
-        self.assertEqual(len(exported_odata_list), len(odata_list_from_yaml),
-                         'Number of exported OData connections does not match original YAML.')
+        self.assertEqual(len(exported_sap_list), len(sap_list_from_yaml),
+                         'Number of exported SAP connections does not match original YAML.')
 
         # Create dictionaries keyed by name for easier comparison
-        yaml_odata_by_name = {item['name']: item for item in odata_list_from_yaml}
-        exported_odata_by_name = {item['name']: item for item in exported_odata_list}
+        yaml_sap_by_name = {item['name']: item for item in sap_list_from_yaml}
+        exported_sap_by_name = {item['name']: item for item in exported_sap_list}
 
-        for name, yaml_def in yaml_odata_by_name.items():
+        for name, yaml_def in yaml_sap_by_name.items():
 
-            self.assertIn(name, exported_odata_by_name, f'OData connection "{name}" from YAML not found in export.')
-            exported_def = exported_odata_by_name[name]
+            self.assertIn(name, exported_sap_by_name, f'SAP connection "{name}" from YAML not found in export.')
+            exported_def = exported_sap_by_name[name]
 
             # Compare fields that are expected to be exported by ODataExporter
             for field in ['name', 'address', 'odata_version', 'auth_type', 'username', 'token_url', 'tenant_id',
                 'client_id', 'scopes']:
                 if field in yaml_def and yaml_def[field] is not None:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field),
-                                     f'Mismatch for "{field}" in OData connection "{name}"')
+                                     f'Mismatch for "{field}" in SAP connection "{name}"')
 
 # ################################################################################################################################
 # ################################################################################################################################
