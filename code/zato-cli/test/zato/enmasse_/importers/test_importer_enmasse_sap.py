@@ -31,15 +31,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseODataFromYAML(TestCase):
-    """ Tests importing OData connection definitions from YAML files using enmasse.
+class TestEnmasseSAPFromYAML(TestCase):
+    """ Tests importing SAP connection definitions from YAML files using enmasse.
     """
 
     def setUp(self) -> 'None':
         # Server path for database connection
         self.server_path = default_server_base_dir
 
-        # Create a temporary file using the existing template which already contains OData definitions
+        # Create a temporary file using the existing template which already contains SAP definitions
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
         _ = self.temp_file.write(template_complex_01.encode('utf-8'))
         self.temp_file.close()
@@ -47,8 +47,8 @@ class TestEnmasseODataFromYAML(TestCase):
         # Initialize the importer
         self.importer = EnmasseYAMLImporter()
 
-        # Initialize OData importer
-        self.odata_importer = ODataImporter(self.importer, 'odata')
+        # SAP is a subtype of the OData implementation so the same importer class handles it
+        self.sap_importer = ODataImporter(self.importer, 'sap')
 
         # Parse the YAML file
         self.yaml_config = cast_('stranydict', None)
@@ -75,103 +75,103 @@ class TestEnmasseODataFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_odata_definition_creation(self):
-        """ Test creating OData connection definitions from YAML.
+    def test_sap_definition_creation(self):
+        """ Test creating SAP connection definitions from YAML.
         """
         self._setup_test_environment()
 
         # Get definitions from YAML
-        odata_defs = self.yaml_config['odata']
+        sap_defs = self.yaml_config['sap']
 
-        # Process all OData definitions
-        created, updated = self.odata_importer.sync_definitions(odata_defs, self.session)
+        # Process all SAP definitions
+        created, updated = self.sap_importer.sync_definitions(sap_defs, self.session)
 
         # Should have created 2 definitions
         self.assertEqual(len(created), 2)
         self.assertEqual(len(updated), 0)
 
-        # Verify the basic-auth V2 connection was created correctly
-        odata_v2 = self.session.query(GenericConn).filter_by(
-            name='enmasse.odata.1',
-            type_=GENERIC.CONNECTION.TYPE.OUTCONN_ODATA
+        # Verify the basic-auth connection was created correctly, under the SAP type, not the OData one
+        sap_basic = self.session.query(GenericConn).filter_by(
+            name='enmasse.sap.1',
+            type_=GENERIC.CONNECTION.TYPE.OUTCONN_SAP
         ).one()
 
-        self.assertEqual(odata_v2.address, 'https://example.com/sap/opu/odata/sap/API_SALES_ORDER_SRV/')
-        self.assertEqual(odata_v2.username, 'enmasse.odata.user.1')
-        self.assertTrue(hasattr(odata_v2, 'secret'))
+        self.assertEqual(sap_basic.address, 'https://example.com/sap/opu/odata/sap/API_BUSINESS_PARTNER/')
+        self.assertEqual(sap_basic.username, 'enmasse.sap.user.1')
+        self.assertTrue(hasattr(sap_basic, 'secret'))
 
-        # Verify the OAuth2 V4 connection was created correctly
-        odata_v4 = self.session.query(GenericConn).filter_by(
-            name='enmasse.odata.2',
-            type_=GENERIC.CONNECTION.TYPE.OUTCONN_ODATA
+        # Verify the OAuth2 connection was created correctly
+        sap_oauth2 = self.session.query(GenericConn).filter_by(
+            name='enmasse.sap.2',
+            type_=GENERIC.CONNECTION.TYPE.OUTCONN_SAP
         ).one()
 
-        self.assertEqual(odata_v4.address, 'https://example.com/v2.0/test-tenant/sandbox/api/v2.0/')
+        self.assertEqual(sap_oauth2.address, 'https://api4.successfactors.com/odata/v2/')
 
 # ################################################################################################################################
 
-    def test_odata_update(self):
-        """ Test updating existing OData connection definitions.
+    def test_sap_update(self):
+        """ Test updating existing SAP connection definitions.
         """
         self._setup_test_environment()
 
-        # First, get the OData definition from YAML and create it
-        odata_defs = self.yaml_config['odata']
-        odata_def = odata_defs[0]
+        # First, get the SAP definition from YAML and create it
+        sap_defs = self.yaml_config['sap']
+        sap_def = sap_defs[0]
 
-        # Create the OData definition
-        instance = self.odata_importer.create_definition(odata_def, self.session)
+        # Create the SAP definition
+        instance = self.sap_importer.create_definition(sap_def, self.session)
         self.session.commit()
-        original_address = odata_def['address']
+        original_address = sap_def['address']
         self.assertEqual(instance.address, original_address)
 
         # Prepare an update definition based on the existing one
         update_def = {
-            'name': odata_def['name'],
+            'name': sap_def['name'],
             'id': instance.id,
-            'address': 'https://updated.example.com/odata/',
-            'username': 'enmasse.odata.user.updated',
+            'address': 'https://updated.example.com/sap/opu/odata/',
+            'username': 'enmasse.sap.user.updated',
         }
 
-        # Update the OData definition
-        updated_instance = self.odata_importer.update_definition(update_def, self.session)
+        # Update the SAP definition
+        updated_instance = self.sap_importer.update_definition(update_def, self.session)
         self.session.commit()
 
         # Verify the update was applied
-        self.assertEqual(updated_instance.address, 'https://updated.example.com/odata/')
-        self.assertEqual(updated_instance.username, 'enmasse.odata.user.updated')
+        self.assertEqual(updated_instance.address, 'https://updated.example.com/sap/opu/odata/')
+        self.assertEqual(updated_instance.username, 'enmasse.sap.user.updated')
 
         # Make sure other fields were preserved
-        self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_ODATA)
+        self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_SAP)
 
 # ################################################################################################################################
 
-    def test_complete_odata_import_flow(self):
-        """ Test the complete flow of importing OData connection definitions from a YAML file.
+    def test_complete_sap_import_flow(self):
+        """ Test the complete flow of importing SAP connection definitions from a YAML file.
         """
         self._setup_test_environment()
 
-        # Process all OData definitions from the YAML
-        odata_list = self.yaml_config['odata']
-        odata_created, odata_updated = self.odata_importer.sync_definitions(odata_list, self.session)
+        # Process all SAP definitions from the YAML
+        sap_list = self.yaml_config['sap']
+        sap_created, sap_updated = self.sap_importer.sync_definitions(sap_list, self.session)
 
-        # Update importer's OData definitions
-        self.importer.odata_defs = self.odata_importer.connection_defs
+        # Update importer's SAP definitions
+        self.importer.sap_defs = self.sap_importer.connection_defs
 
-        # Verify OData definitions were created
-        self.assertEqual(len(odata_created), 2)
-        self.assertEqual(len(odata_updated), 0)
+        # Verify SAP definitions were created
+        self.assertEqual(len(sap_created), 2)
+        self.assertEqual(len(sap_updated), 0)
 
-        # Verify the OData definitions dictionary was populated
-        self.assertEqual(len(self.odata_importer.connection_defs), 2)
+        # Verify the SAP definitions dictionary was populated
+        self.assertEqual(len(self.sap_importer.connection_defs), 2)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.odata_defs), 2)
+        self.assertEqual(len(self.importer.sap_defs), 2)
 
         # Try importing the same definitions again - should result in updates, not creations
-        odata_created2, odata_updated2 = self.odata_importer.sync_definitions(odata_list, self.session)
-        self.assertEqual(len(odata_created2), 0)
-        self.assertEqual(len(odata_updated2), 2)
+        sap_created2, sap_updated2 = self.sap_importer.sync_definitions(sap_list, self.session)
+        self.assertEqual(len(sap_created2), 0)
+        self.assertEqual(len(sap_updated2), 2)
 
 # ################################################################################################################################
 # ################################################################################################################################

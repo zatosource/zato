@@ -215,15 +215,15 @@ class ODataConnectionTestCase(TestCase):
 # ################################################################################################################################
 
 class ODataFacadeTestCase(TestCase):
-    """ Tests for ODataFacade dict-like access.
+    """ Tests for ODataFacade dict-like access - the same facade class serves every subtype
+    of the OData implementation, e.g. self.odata and self.sap.
     """
 
     def test_getitem_returns_connection(self):
-        config_manager = MagicMock()
-        config_manager.outconn_odata = {'test-conn': MagicMock()}
+        outconn_odata = {'test-conn': MagicMock()}
 
         facade = ODataFacade()
-        facade.init(config_manager)
+        facade.init(outconn_odata)
 
         connection = facade['test-conn']
 
@@ -232,14 +232,25 @@ class ODataFacadeTestCase(TestCase):
 # ################################################################################################################################
 
     def test_getitem_raises_on_missing(self):
-        config_manager = MagicMock()
-        config_manager.outconn_odata = {}
-
         facade = ODataFacade()
-        facade.init(config_manager)
+        facade.init({})
 
         with self.assertRaises(KeyError):
             _ = facade['nonexistent']
+
+# ################################################################################################################################
+
+    def test_getitem_returns_connection_for_sap(self):
+
+        # The SAP facade is the same class initialized from the SAP connection config dict
+        outconn_sap = {'test-sap-conn': MagicMock()}
+
+        facade = ODataFacade()
+        facade.init(outconn_sap)
+
+        connection = facade['test-sap-conn']
+
+        self.assertIsInstance(connection, ODataConnection)
 
 # ################################################################################################################################
 # ################################################################################################################################
