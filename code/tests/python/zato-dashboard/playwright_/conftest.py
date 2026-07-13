@@ -103,7 +103,7 @@ def _kill_process(process:'subprocess.Popen | None') -> 'None':
 def _cleanup() -> 'None':
     """ Cleans up all test processes and the temporary directory.
     """
-    for key in ('listener_process', 'server_process', 'dashboard_process'):
+    for key in ('listener_process', 'server_process', 'dashboard_process', 'queue_bridge_redis_process'):
         _kill_process(_cleanup_refs[key])
         _cleanup_refs[key] = None
 
@@ -122,6 +122,24 @@ def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
     report = outcome.get_result()
     if report.failed:
         _cleanup_refs['has_failures'] = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _wait_for_tcp_port(port:'int', timeout:'int' = _Server_Wait_Timeout) -> 'None':
+    """ Polls a TCP port until it accepts connections, or raises after timeout.
+    """
+
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(('127.0.0.1', port), timeout=1):
+                return
+        except OSError:
+            time.sleep(_Ping_Poll_Interval)
+
+    raise Exception(f'Port {port} did not accept connections within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,8 +200,25 @@ def zato_dashboard() -> 'any_':
     dashboard_port = _find_free_port()
     broker_port    = _find_free_port()
 
+    # The queue bridge needs its own Redis on its own port - servers left over from other
+    # test sessions in the same run also connect to the default localhost:6379 and would
+    # steal recv events from the shared consumer groups there.
+    queue_bridge_redis_port = _find_free_port()
+
     temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_test_')
     _cleanup_refs['temporary_dir'] = temporary_dir
+
+    # .. 0) start the dedicated Redis for the queue bridge and wait until it accepts connections ..
+
+    queue_bridge_redis_process = subprocess.Popen(
+        ['redis-server', '--port', str(queue_bridge_redis_port), '--save', '', '--appendonly', 'no'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    _cleanup_refs['queue_bridge_redis_process'] = queue_bridge_redis_process
+
+    _wait_for_tcp_port(queue_bridge_redis_port)
 
     # .. 1) create a quickstart environment with both server and dashboard ..
 
@@ -261,6 +296,7 @@ def zato_dashboard() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
+    server_env['Zato_Queue_Bridge_Redis_Port'] = str(queue_bridge_redis_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
     # SFTP tests copy a private key to this path after the server has already started
@@ -364,6 +400,7 @@ def zato_dashboard() -> 'any_':
         'server_process': server_process,
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
+        'queue_bridge_redis_port': queue_bridge_redis_port,
         'sftp_key_env_name': _SFTP_Key_Env_Name,
         'sftp_key_path': sftp_key_path,
     }
@@ -379,6 +416,10 @@ def zato_dashboard() -> 'any_':
     # .. stop dashboard ..
     _kill_process(dashboard_process)
     _cleanup_refs['dashboard_process'] = None
+
+    # .. stop the queue bridge Redis ..
+    _kill_process(queue_bridge_redis_process)
+    _cleanup_refs['queue_bridge_redis_process'] = None
 
     # .. remove the temporary directory only if all tests passed.
     if _cleanup_refs.get('has_failures'):

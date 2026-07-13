@@ -44,6 +44,7 @@ $(document).ready(function() {
 $.fn.zato.email.imap.field_descriptions = {
     'id_name': 'A unique name for this IMAP connection.<br>Used to identify it in services, logs and the dashboard.',
     'id_is_active': 'Whether this connection can be used.<br>Services cannot look up an inactive connection.',
+    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded<br>in the audit log. On by default.',
     'id_server_type': 'What kind of server this is - generic IMAP<br>for any standard server or Microsoft 365<br>for cloud mailboxes accessed with OAuth2.',
     'id_username': 'User or e-mail address the connection logs in as,<br>e.g. mailbox@example.com.<br>The password or secret is set separately<br>with the link in the connection\'s row.',
     'id_host': 'Hostname of the IMAP server to connect to,<br>e.g. imap.example.com.<br>Used with generic IMAP servers only.',
@@ -89,6 +90,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true
+    var is_audit_log_active = item.is_audit_log_active == true;
     var username = item.username ? item.username : "<span class='form_hint'>(None)</span>";
 
     if(item.server_type == "microsoft-365") {
@@ -165,6 +167,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
 
     // 11
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id ? item.scheduler_job_id : "");
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {
         row += '</tr>';

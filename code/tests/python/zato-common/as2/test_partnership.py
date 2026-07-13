@@ -95,6 +95,7 @@ def _partnership_config() -> 'any_':
         'force_base64': False,
         'prevent_canonicalization': False,
         'warn_on_duplicate_filename': False,
+        'is_audit_log_active': True,
 
         'http_timeout_seconds': 0,
         'chunked_threshold_bytes': 0,

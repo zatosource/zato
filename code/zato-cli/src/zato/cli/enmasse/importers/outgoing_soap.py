@@ -173,6 +173,7 @@ class OutgoingSOAPImporter:
 
         connection_extra_field_defaults = {
             'validate_tls': True,
+            'is_audit_log_active': True,
         }
 
         outgoing = HTTPSOAP()

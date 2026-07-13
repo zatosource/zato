@@ -30,7 +30,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
-_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'use_mtom')
+_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'use_mtom', 'is_audit_log_active')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -221,6 +221,9 @@ class ChannelSOAPImporter:
         # Rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # The audit log is on unless the YAML definition turns it off
+        opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
 
         return opaque_attrs
 

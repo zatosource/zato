@@ -14,7 +14,6 @@ from io import BytesIO
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from cryptography.x509 import load_der_x509_certificate
 
 # lxml
@@ -35,6 +34,10 @@ from zato.common.soap.security.wss import Mode
 from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # ################################################################################################################################
+
+from certs import certificate_pem_path, private_key_pem_path
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 _ns_cdc = 'urn:cdc:iisb:2011'
@@ -42,43 +45,31 @@ _ns_cdc = 'urn:cdc:iisb:2011'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _key_pem(key):
-    out = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode('ascii')
-    return out
-
-# ################################################################################################################################
-
-def _cert_pem(certificate):
-    out = certificate.public_bytes(Encoding.PEM).decode('ascii')
-    return out
-
-# ################################################################################################################################
-
 def _sender_x509(parties, sign, encrypt):
-    """ The X.509 security config an outgoing connection presents - our key material
+    """ The X.509 security config an outgoing connection presents - paths to our key material
     plus the receiver's certificate.
     """
     out = {
         'mode': Mode.X509,
         'sign': sign,
         'encrypt': encrypt,
-        'signing_key': _key_pem(parties.sender.signing_key),
-        'signing_certificate_chain': _cert_pem(parties.sender.signing_certificate),
-        'peer_certificate': _cert_pem(parties.receiver.signing_certificate),
+        'signing_key': private_key_pem_path(parties.sender.signing_key),
+        'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+        'peer_certificate': certificate_pem_path(parties.receiver.signing_certificate),
     }
     return out
 
 # ################################################################################################################################
 
 def _receiver_x509(parties, sign, encrypt):
-    """ The X.509 config the server enforces - our decryption key plus the sender's pinned certificate.
+    """ The X.509 config the server enforces - paths to our decryption key plus the sender's pinned certificate.
     """
     out = {
         'mode': Mode.X509,
         'sign': sign,
         'encrypt': encrypt,
-        'decryption_key': _key_pem(parties.receiver.decryption_key),
-        'peer_certificate': _cert_pem(parties.sender.signing_certificate),
+        'decryption_key': private_key_pem_path(parties.receiver.decryption_key),
+        'peer_certificate': certificate_pem_path(parties.sender.signing_certificate),
     }
     return out
 
@@ -299,7 +290,7 @@ class TestSignedSAML:
 
     def test_signed_assertion_independently_verified(self, soap_server, parties):
         channel = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example', 'sign': True,
-            'trust_anchors': _cert_pem(parties.ca_certificate)}
+            'trust_anchors': certificate_pem_path(parties.ca_certificate)}
         soap_server.configure('/xua-signed', enforce_wss=channel)
 
         config = {
@@ -310,8 +301,8 @@ class TestSignedSAML:
                 'issuer': 'urn:qhin:example',
                 'subject': 'CN=Dr Smith,O=Example Hospital',
                 'sign': True,
-                'signing_key': _key_pem(parties.sender.signing_key),
-                'signing_certificate_chain': _cert_pem(parties.sender.signing_certificate),
+                'signing_key': private_key_pem_path(parties.sender.signing_key),
+                'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
             },
         }
         client = SOAPClient(config)
@@ -340,7 +331,7 @@ class TestSignedSAML:
 
     def test_tampered_signed_assertion_rejected(self, soap_server, parties):
         channel = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example', 'sign': True,
-            'trust_anchors': _cert_pem(parties.ca_certificate)}
+            'trust_anchors': certificate_pem_path(parties.ca_certificate)}
 
         # A definition that pins a different issuer name than the message carries is refused.
         wrong_issuer_channel = dict(channel, issuer='urn:qhin:other')
@@ -354,8 +345,8 @@ class TestSignedSAML:
                 'issuer': 'urn:qhin:example',
                 'subject': 'CN=Dr Smith',
                 'sign': True,
-                'signing_key': _key_pem(parties.sender.signing_key),
-                'signing_certificate_chain': _cert_pem(parties.sender.signing_certificate),
+                'signing_key': private_key_pem_path(parties.sender.signing_key),
+                'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
             },
         }
         client = SOAPClient(config)

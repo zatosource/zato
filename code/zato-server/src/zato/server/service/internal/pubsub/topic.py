@@ -22,7 +22,7 @@ from zato.common.odb.query import pubsub_subscription_topic_names, pubsub_topic_
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Service
+from zato.server.service import Boolean, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -84,7 +84,7 @@ class GetList(AdminService):
 
     input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count', '-backend_type', \
-        '-amqp_outconn_name', '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name'
+        '-amqp_outconn_name', '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
 
     def get_data(self, session:'any_') -> 'any_':
         result = self._search(pubsub_topic_list, session, self.request.input.cluster_id, None, False)
@@ -119,12 +119,15 @@ class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
     input = 'name', 'is_active', '-cluster_id', '-description', '-backend_type', '-amqp_outconn_name', \
-        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name'
+        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
         cluster_id = self.server.cluster_id
+
+        # The audit log is enabled unless it was turned off explicitly
+        input.is_audit_log_active = input.get('is_audit_log_active', True)
 
         # Validate topic name
         validate_topic_name(input.name)
@@ -163,22 +166,20 @@ class Create(AdminService):
                 raise
             else:
 
-                # Note that built-in topics don't require any notifications on creation.
-                # This is because the broker only cares about topics that have subscribers
-                # and at this point this topic has none. AMQP-backed topics are different,
-                # servers need to know about them upfront so publish calls can be routed
-                # to the AMQP broker and the inbound channel override can be applied.
-                if input.backend_type == PubSub.Backend_Type.AMQP:
+                # All servers are notified about every new topic so they can register
+                # its audit log state, and AMQP-backed topics additionally need
+                # their publish calls routed to the AMQP broker along with
+                # the inbound channel override, which is why the backend fields go out too.
+                pubsub_msg = Bunch()
+                pubsub_msg.cid = self.cid
+                pubsub_msg.action = PUBSUB.TOPIC_CREATE.value
+                pubsub_msg.topic_name = input.name
+                pubsub_msg.is_audit_log_active = input.is_audit_log_active
 
-                    pubsub_msg = Bunch()
-                    pubsub_msg.cid = self.cid
-                    pubsub_msg.action = PUBSUB.TOPIC_CREATE.value
-                    pubsub_msg.topic_name = input.name
+                for name in _backend_fields:
+                    pubsub_msg[name] = input[name]
 
-                    for name in _backend_fields:
-                        pubsub_msg[name] = input[name]
-
-                    self.config_dispatcher.publish(pubsub_msg)
+                self.config_dispatcher.publish(pubsub_msg)
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -190,13 +191,16 @@ class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
     input = 'name', 'is_active', '-id', '-cluster_id', '-description', '-backend_type', '-amqp_outconn_name', \
-        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name'
+        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
         input_id = input.get('id')
         cluster_id = self.server.cluster_id
+
+        # The audit log is enabled unless it was turned off explicitly
+        input.is_audit_log_active = input.get('is_audit_log_active', True)
 
         # Validate topic name
         validate_topic_name(input.name)
@@ -230,7 +234,11 @@ class Edit(AdminService):
 
                 # Snapshot backend fields before they are overwritten so the config event
                 # can tell servers what to undo, e.g. which channel override to restore.
-                old_backend = _get_backend_config_from_opaque(parse_instance_opaque_attr(topic))
+                old_opaque = parse_instance_opaque_attr(topic)
+                old_backend = _get_backend_config_from_opaque(old_opaque)
+
+                # The previous audit log state is needed to detect toggles
+                old_is_audit_log_active = old_opaque.get('is_audit_log_active')
 
                 set_instance_opaque_attrs(topic, input)
 
@@ -248,9 +256,10 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Notify the broker if the name, active status or backend configuration changed ..
+                # Notify the broker if the name, active status, audit log state or backend configuration changed ..
                 name_changed = input.name != old_name
                 active_changed = input.is_active != old_is_active
+                audit_changed = input.is_audit_log_active != old_is_audit_log_active
                 backend_changed = False
 
                 for name in _backend_fields:
@@ -258,7 +267,7 @@ class Edit(AdminService):
                         backend_changed = True
                         break
 
-                has_changes = name_changed or active_changed or backend_changed
+                has_changes = name_changed or active_changed or audit_changed or backend_changed
 
                 if has_changes:
 
@@ -268,6 +277,7 @@ class Edit(AdminService):
                     pubsub_msg.new_topic_name = input.name
                     pubsub_msg.old_topic_name = old_name
                     pubsub_msg.is_active = input.is_active
+                    pubsub_msg.is_audit_log_active = input.is_audit_log_active
 
                     # Carry both the new backend fields and the previous channel name
                     # so servers can move the channel override if needed.

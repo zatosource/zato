@@ -134,6 +134,10 @@ class BaseHTTPSOAPWrapper:
         is_wrapper_name = self.config['name'].startswith(tuple(Wrapper_Name_Prefix_List))
         self.needs_audit = (server is not None) and (not self.config['is_internal']) and (not is_wrapper_name)
 
+        # A connection whose audit log was turned off explicitly does not write events either
+        if self.needs_audit:
+            self.needs_audit = self.config['is_audit_log_active']
+
         if self.needs_audit:
             self.audit_log = AuditLog(server.name)
 

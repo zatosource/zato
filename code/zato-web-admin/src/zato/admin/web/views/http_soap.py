@@ -122,6 +122,7 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
         'cluster_id': params['cluster_id'],
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
+        'is_audit_log_active': bool(params.get(prefix + 'is_audit_log_active')),
         'host': params.get(prefix + 'host'),
         'url_path': params.get(prefix + 'url_path', '/'),
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),

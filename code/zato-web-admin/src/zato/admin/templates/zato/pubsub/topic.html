@@ -122,6 +122,7 @@
             'amqp_exchange',
             'amqp_routing_key',
             'amqp_channel_name',
+            'is_audit_log_active',
         ]
     }
     </script>
@@ -176,6 +177,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -216,6 +218,7 @@
                         <td class='ignore'>{{ item.amqp_exchange }}</td>
                         <td class='ignore'>{{ item.amqp_routing_key }}</td>
                         <td class='ignore'>{{ item.amqp_channel_name }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -237,6 +240,15 @@
                         <tr>
                             <td style="vertical-align:middle; width:14%"><label for="id_name">Name</label></td>
                             <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label for="id_is_audit_log_active">
+                                    Audit log
+                                    {{ create_form.is_audit_log_active }}
+                                </label>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle"><label for="id_description">Description</label></td>
@@ -286,6 +298,15 @@
                         <tr>
                             <td style="vertical-align:middle; width:14%"><label for="id_edit-name">Name</label></td>
                             <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label for="id_edit-is_audit_log_active">
+                                    Audit log
+                                    {{ edit_form.is_audit_log_active }}
+                                </label>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle"><label for="id_edit-description">Description</label></td>

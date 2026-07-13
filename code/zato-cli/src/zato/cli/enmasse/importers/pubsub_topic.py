@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.common.odb.model import PubSubTopic, to_json
@@ -90,6 +91,9 @@ class PubSubTopicImporter:
         instance.description = definition.get('description', '')
         instance.is_active = definition.get('is_active', True)
 
+        # The audit log is on unless the YAML definition turns it off
+        definition['is_audit_log_active'] = definition.get('is_audit_log_active', True)
+
         set_instance_opaque_attrs(instance, definition)
         session.add(instance)
         session.commit()
@@ -107,6 +111,9 @@ class PubSubTopicImporter:
         instance.name = definition['name']
         instance.description = definition.get('description', '')
         instance.is_active = definition.get('is_active', True)
+
+        # The audit log is on unless the YAML definition turns it off
+        definition['is_audit_log_active'] = definition.get('is_audit_log_active', True)
 
         set_instance_opaque_attrs(instance, definition)
         session.commit()
@@ -138,6 +145,18 @@ class PubSubTopicImporter:
         db_is_active = db_def.get('is_active', True)
         if yaml_is_active != db_is_active:
             logger.info('is_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
+            return True
+
+        # Compare the audit log flag - it lives in the opaque attributes and an absent flag means it is on
+        yaml_is_audit_log_active = yaml_def.get('is_audit_log_active', True)
+
+        db_is_audit_log_active = True
+        if opaque1 := db_def.get('opaque1'):
+            opaque = loads(opaque1)
+            db_is_audit_log_active = opaque.get('is_audit_log_active', True)
+
+        if yaml_is_audit_log_active != db_is_audit_log_active:
+            logger.info('is_audit_log_active differs: YAML=%s, DB=%s', yaml_is_audit_log_active, db_is_audit_log_active)
             return True
 
         return False

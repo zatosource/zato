@@ -85,6 +85,7 @@
 
             // 11
             'scheduler_job_id',
+            'is_audit_log_active',
         ]
     }
     </script>
@@ -168,6 +169,7 @@
 
                         {% comment %} 11 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -248,6 +250,7 @@
 
                         {% comment %} 11 {% endcomment %}
                         <td class='ignore'>{{ item.scheduler_job_id|default:"" }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -280,6 +283,11 @@
                             <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
+                            </label>
+                            |
+                            <label for="{{ create_form.is_audit_log_active.id_for_label }}">
+                                Audit log
+                                {{ create_form.is_audit_log_active }}
                             </label>
                             |
                             <label for="{{ create_form.server_type.id_for_label }}">
@@ -438,6 +446,11 @@
                             <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
+                            </label>
+                            |
+                            <label for="{{ edit_form.is_audit_log_active.id_for_label }}">
+                                Audit log
+                                {{ edit_form.is_audit_log_active }}
                             </label>
                             |
                             <label for="{{ edit_form.server_type.id_for_label }}">

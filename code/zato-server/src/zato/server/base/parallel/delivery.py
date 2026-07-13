@@ -279,6 +279,10 @@ class RedisPushDelivery:
         if not backend.audit_log:
             return
 
+        # The topic's audit log may have been turned off explicitly.
+        if message['topic_name'] in backend.audit_disabled_topics:
+            return
+
         # Map the delivery outcome to an event type ..
         if delivered:
             event_type = AuditEvent.Delivered

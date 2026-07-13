@@ -126,6 +126,7 @@ class TestEnmasseOutgoingAS2FromYAML(TestCase):
         self.assertTrue(opaque['sign'])
         self.assertTrue(opaque['encrypt'])
         self.assertTrue(opaque['verify_tls'])
+        self.assertTrue(opaque['is_audit_log_active'])
 
 # ################################################################################################################################
 
@@ -155,6 +156,7 @@ class TestEnmasseOutgoingAS2FromYAML(TestCase):
         self.assertFalse(opaque['sign'])
         self.assertFalse(opaque['encrypt'])
         self.assertFalse(opaque['verify_tls'])
+        self.assertFalse(opaque['is_audit_log_active'])
 
         # .. while the ones it does not mention keep their defaults.
         self.assertFalse(opaque['compress'])

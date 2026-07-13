@@ -24,7 +24,7 @@ from zato.common.odb.model import IMAP, Job
 from zato.common.odb.query import email_imap_list
 from zato.common.util.imap_scheduler import interval_from_unit, update_imap_scheduler_fields
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -48,10 +48,10 @@ broker_message_prefix = 'IMAP_'
 list_func = email_imap_list
 create_edit_input_optional_extra = ['server_type', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria',
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
-    'scheduler_job_id']
+    'scheduler_job_id', Boolean('is_audit_log_active')]
 output_optional_extra = ['server_type', 'server_type_human', AsIs('tenant_id'), AsIs('client_id'), 'filter_criteria',
     'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', 'scheduler_invoke_with',
-    'scheduler_job_id']
+    'scheduler_job_id', Boolean('is_audit_log_active')]
 
 # ################################################################################################################################
 
@@ -123,6 +123,9 @@ def _validate_scheduler_config(service:'Service', input:'Bunch') -> 'None':
 # ################################################################################################################################
 
 def pre_opaque_attrs_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_') -> 'None':
+
+    # The audit log is enabled unless it was turned off explicitly
+    input.is_audit_log_active = input.get('is_audit_log_active', True)
 
     # An empty job ID on input must not overwrite the one stored previously - the authoritative value
     # is written back after the linked job is synchronized, once this request is committed.

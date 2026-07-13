@@ -120,6 +120,9 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         opaque = loads(outgoing.opaque1)
         self.assertFalse(opaque['validate_tls'])
 
+        # The template turns the audit log off for this connection
+        self.assertIs(opaque['is_audit_log_active'], False)
+
 # ################################################################################################################################
 
     def test_outgoing_soap_creation_with_opaque_fields(self):
@@ -155,6 +158,9 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
         # Body-credential mappings are stored the way the Dashboard stores them - as a JSON string.
         body_credentials = loads(opaque['body_credentials'])
         self.assertEqual(body_credentials, [{'name': 'username'}, {'name': 'password', 'position': 2}])
+
+        # A connection without the flag in YAML has the audit log on
+        self.assertIs(opaque['is_audit_log_active'], True)
 
 # ################################################################################################################################
 

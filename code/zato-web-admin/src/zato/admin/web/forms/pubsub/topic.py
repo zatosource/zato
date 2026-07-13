@@ -87,6 +87,7 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     description = forms.CharField(widget=forms.Textarea(attrs={'style':'width:90%; height:80px'}), required=False)
 
     backend_type = forms.ChoiceField(
@@ -121,6 +122,7 @@ class EditForm(CreateForm):
     """ Form for editing a pub/sub topic.
     """
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

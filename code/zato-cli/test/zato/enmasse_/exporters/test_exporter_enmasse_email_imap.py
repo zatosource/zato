@@ -116,6 +116,12 @@ class TestEnmasseEmailIMAPExporter(TestCase):
             # The linked job ID is internal and must never be exported
             self.assertNotIn('scheduler_job_id', exported_def, f'scheduler_job_id was exported for IMAP connection "{name}"')
 
+            # The audit log flag is exported only when the YAML turned it off
+            if yaml_def.get('is_audit_log_active') is False:
+                self.assertIs(exported_def['is_audit_log_active'], False, f'is_audit_log_active not exported for "{name}"')
+            else:
+                self.assertNotIn('is_audit_log_active', exported_def, f'is_audit_log_active was exported for "{name}"')
+
             # Verify password is not exported
             self.assertNotIn('password', exported_def, f'Password was exported for IMAP connection "{name}"')
 

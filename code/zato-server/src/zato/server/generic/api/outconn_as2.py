@@ -108,6 +108,9 @@ outconn_as2_config_defaults:'dict[str, object]' = {
     'prevent_canonicalization': False,
     'warn_on_duplicate_filename': False,
 
+    # Whether this connection's exchanges are recorded in the audit log.
+    'is_audit_log_active': True,
+
     # A zero means the partnership's own numeric default stays in place.
     'http_timeout_seconds': 0,
     'chunked_threshold_bytes': 0,
@@ -144,7 +147,8 @@ outconn_as2_int_config_keys = ('http_timeout_seconds', 'chunked_threshold_bytes'
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_as2_bool_config_keys = ('sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed',
-    'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename')
+    'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename',
+    'is_audit_log_active')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,6 +199,10 @@ class _AS2Connection:
         # A string payload serializes itself into bytes - X12 and EDIFACT objects arrive this way.
         if isinstance(payload, str):
             payload = payload.encode('utf8')
+
+        # A connection whose audit log was turned off explicitly records no events either
+        if needs_audit:
+            needs_audit = self.partnership.is_audit_log_active
 
         logger.info('AS2 out -> %s; name:%s; cid:%s', self.partnership.endpoint_url, self.name, cid)
 

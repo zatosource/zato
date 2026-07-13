@@ -35,6 +35,8 @@ $.fn.zato.pubsub.topic.fieldDescriptions = {
     'id_description': 'An optional, free-form description.<br>' +
         $.fn.zato.pubsub.topic.highlight('It has no effect on how messages flow') + '.',
 
+    'id_is_audit_log_active': 'Whether this topic\'s messages are recorded<br>in the audit log. On by default.',
+
     'id_backend_type': 'Where messages of this topic live.<br>' +
         'Built-in keeps them inside Zato.<br>' +
         'AMQP hands them over to an external broker.<br>' +
@@ -193,6 +195,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true
+    var is_audit_log_active = item.is_audit_log_active == true;
 
     // Build the backend badge from the topic's backend type ..
     var config = $.fn.zato.pubsub.topic.config;
@@ -223,6 +226,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.amqp_exchange);
     row += String.format("<td class='ignore'>{0}</td>", item.amqp_routing_key);
     row += String.format("<td class='ignore'>{0}</td>", item.amqp_channel_name);
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {
         row += '</tr>';

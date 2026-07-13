@@ -147,6 +147,10 @@ class ChannelSOAPExporter:
             if rate_limiting := channel_row.get('rate_limiting'):
                 exported_channel['rate_limiting'] = rate_limiting
 
+            # The audit log is on by default so only the off state is exported
+            if channel_row.get('is_audit_log_active') is False:
+                exported_channel['is_audit_log_active'] = False
+
             exported_channels.append(exported_channel)
 
         logger.info('Successfully prepared %d SOAP channel definitions for export', len(exported_channels))

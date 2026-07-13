@@ -85,7 +85,8 @@ class ChannelImporter:
 
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting'] and key in db_def and db_def[key] != value:
+                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active'] \
+                        and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
@@ -104,6 +105,10 @@ class ChannelImporter:
 
                 # Check rate_limiting
                 if self._rate_limiting_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check the audit log flag
+                if self._audit_log_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -196,6 +201,28 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
+    def _audit_log_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if the audit log flag needs update - an absent flag means it is on.
+        """
+        yaml_value = item.get('is_audit_log_active', True)
+
+        db_value = True
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_value = opaque.get('is_audit_log_active', True)
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+
+        if yaml_value != db_value:
+            logger.info('is_audit_log_active changed for channel %s: yaml=%s db=%s', item['name'], yaml_value, db_value)
+            return True
+
+        return False
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
         """ Convert security group names to IDs.
         """
@@ -253,7 +280,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting']:
+            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active']:
                 setattr(channel, key, value)
 
         if security_item:
@@ -277,6 +304,9 @@ class ChannelImporter:
         # Handle rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # The audit log is on unless the YAML definition turns it off
+        opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)
@@ -305,7 +335,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting']:
+            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active']:
                 setattr(channel, key, value)
 
         # Handle security definition
@@ -341,6 +371,9 @@ class ChannelImporter:
         # Handle rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # The audit log is on unless the YAML definition turns it off
+        opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)

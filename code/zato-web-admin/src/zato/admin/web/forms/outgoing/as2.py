@@ -90,6 +90,7 @@ class CreateForm(forms.Form):
     # Main
     name = forms.CharField(widget=forms.TextInput(attrs=_text_attrs))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     endpoint_url = forms.CharField(initial='https://', widget=forms.TextInput(attrs=_text_attrs))
     as2_from = forms.CharField(widget=forms.TextInput(attrs=_text_attrs))
     as2_to = forms.CharField(widget=forms.TextInput(attrs=_text_attrs))
@@ -161,6 +162,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

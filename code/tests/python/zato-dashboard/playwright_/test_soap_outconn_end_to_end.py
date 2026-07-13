@@ -40,16 +40,6 @@ _Propagation_Poll_Interval = 1.0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_pem(path:'str') -> 'str':
-    """ Reads PEM material from a file into the string a definition or an endpoint keeps.
-    """
-    with open(path) as pem_file:
-        out = pem_file.read()
-
-    return out
-
-# ################################################################################################################################
-
 def _invoke_with_retry(page:'Page', base_url:'str', outconn_name:'str', operation:'str', **kwargs:'any_') -> 'anydict':
     """ Invokes an outgoing connection through the pre-deployed service, driven from
     the IDE in the browser, retrying while the connection configured a moment ago
@@ -205,12 +195,8 @@ class TestSOAPOutconnEndToEnd:
 
         wait_for_soap_invoker_service(page, base_url)
 
-        # Real signing material - a CA-signed certificate and its key.
+        # Real signing material - a CA-signed certificate and its key, kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        signing_key_pem = _read_pem(material.client_key_path)
-        signing_cert_pem = _read_pem(material.client_certificate_path)
-        ca_pem = _read_pem(material.ca_path)
 
         name = _Test_Name_Prefix + 'saml'
         issuer = 'urn:issuer:' + name
@@ -223,17 +209,17 @@ class TestSOAPOutconnEndToEnd:
             'mode': 'saml',
             'issuer': issuer,
             'sign': True,
-            'trust_anchors': ca_pem,
+            'trust_anchors': material.ca_path,
         })
 
-        # Create the SAML definition in the browser, signing on, with its material ..
+        # Create the SAML definition in the browser, signing on, with the paths to its material ..
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'saml', {
             'issuer': issuer,
             'subject': 'CN=Test Subject',
             'audience': audience,
             'sign': True,
-            'signing_key': signing_key_pem,
-            'signing_certificate_chain': signing_cert_pem,
+            'signing_key': material.client_key_path,
+            'signing_certificate_chain': material.client_certificate_path,
         })
 
         # .. create the connection with that definition attached ..
@@ -275,11 +261,8 @@ class TestSOAPOutconnEndToEnd:
 
         wait_for_soap_invoker_service(page, base_url)
 
-        # Real signing material - a CA-signed certificate and its key.
+        # Real signing material - a CA-signed certificate and its key, kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        signing_key_pem = _read_pem(material.client_key_path)
-        signing_cert_pem = _read_pem(material.client_certificate_path)
 
         name = _Test_Name_Prefix + 'x509-signed'
 
@@ -289,15 +272,15 @@ class TestSOAPOutconnEndToEnd:
             'mode': 'x509',
             'sign': True,
             'encrypt': False,
-            'peer_certificate': signing_cert_pem,
+            'peer_certificate': material.client_certificate_path,
         })
 
-        # Create the X.509 definition in the browser, signing on, with its material ..
+        # Create the X.509 definition in the browser, signing on, with the paths to its material ..
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': True,
             'encrypt': False,
-            'signing_key': signing_key_pem,
-            'signing_certificate_chain': signing_cert_pem,
+            'signing_key': material.client_key_path,
+            'signing_certificate_chain': material.client_certificate_path,
         })
 
         # .. create the connection with that definition attached ..
@@ -333,11 +316,8 @@ class TestSOAPOutconnEndToEnd:
 
         wait_for_soap_invoker_service(page, base_url)
 
-        # Real encryption material - the endpoint's own key pair.
+        # Real encryption material - the endpoint's own key pair, kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        endpoint_key_pem = _read_pem(material.server_key_path)
-        endpoint_cert_pem = _read_pem(material.server_certificate_path)
 
         name = _Test_Name_Prefix + 'x509-encrypted'
 
@@ -347,14 +327,14 @@ class TestSOAPOutconnEndToEnd:
             'mode': 'x509',
             'sign': False,
             'encrypt': True,
-            'decryption_key': endpoint_key_pem,
+            'decryption_key': material.server_key_path,
         })
 
-        # Create the X.509 definition in the browser, encryption on, with the endpoint's certificate ..
+        # Create the X.509 definition in the browser, encryption on, with the path to the endpoint's certificate ..
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': False,
             'encrypt': True,
-            'peer_certificate': endpoint_cert_pem,
+            'peer_certificate': material.server_certificate_path,
         })
 
         # .. create the connection with that definition attached ..
@@ -398,14 +378,8 @@ class TestSOAPOutconnEndToEnd:
         wait_for_soap_invoker_service(page, base_url)
 
         # Real crypto material - the connection's own key pair and the endpoint's,
-        # both chaining up to the same test CA.
+        # both chaining up to the same test CA, all kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        signing_key_pem = _read_pem(material.client_key_path)
-        signing_cert_pem = _read_pem(material.client_certificate_path)
-        endpoint_key_pem = _read_pem(material.server_key_path)
-        endpoint_cert_pem = _read_pem(material.server_certificate_path)
-        ca_pem = _read_pem(material.ca_path)
 
         name = _Test_Name_Prefix + 'x509-full'
 
@@ -415,17 +389,17 @@ class TestSOAPOutconnEndToEnd:
             'mode': 'x509',
             'sign': True,
             'encrypt': True,
-            'decryption_key': endpoint_key_pem,
-            'trust_anchors': ca_pem,
+            'decryption_key': material.server_key_path,
+            'trust_anchors': material.ca_path,
         })
 
-        # Create the X.509 definition in the browser, signing and encryption on, with all its material ..
+        # Create the X.509 definition in the browser, signing and encryption on, with the paths to all its material ..
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': True,
             'encrypt': True,
-            'signing_key': signing_key_pem,
-            'signing_certificate_chain': signing_cert_pem,
-            'peer_certificate': endpoint_cert_pem,
+            'signing_key': material.client_key_path,
+            'signing_certificate_chain': material.client_certificate_path,
+            'peer_certificate': material.server_certificate_path,
         })
 
         # .. create the connection with that definition attached ..

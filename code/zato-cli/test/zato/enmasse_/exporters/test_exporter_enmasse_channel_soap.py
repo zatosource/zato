@@ -150,6 +150,10 @@ class TestEnmasseChannelSOAPExporter(TestCase):
             if 'rate_limiting' in channel_def:
                 channel_required['rate_limiting'] = channel_def['rate_limiting']
 
+            # The audit log flag is exported only when it is off
+            if channel_def.get('is_audit_log_active') is False:
+                channel_required['is_audit_log_active'] = False
+
             # Add this channel's requirements to our dictionary
             required_channel_fields[channel_name] = channel_required
 
@@ -175,6 +179,9 @@ class TestEnmasseChannelSOAPExporter(TestCase):
         # The channel without MTOM must not export the toggle at all
         channel_1 = [channel for channel in exported_channels if channel['name'] == 'enmasse.channel.soap.1'][0]
         self.assertNotIn('use_mtom', channel_1)
+
+        # A channel with the audit log on does not export the flag at all
+        self.assertNotIn('is_audit_log_active', channel_1)
 
 # ################################################################################################################################
 
