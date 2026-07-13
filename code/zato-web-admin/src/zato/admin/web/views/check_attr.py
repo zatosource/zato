@@ -24,9 +24,6 @@ def check_attr_exists(req):
     attr_name = req.POST['attr_name']
     value = req.POST['value']
 
-    # [DIAG-9] Log what the browser sent to the dashboard backend
-    logger.debug('[DIAG-9] check_attr_exists view: POST=%s', dict(req.POST.items()))
-
     # An optional scoping filter, present only for checks that are unique within a sub-group
     # (e.g. a username is unique per sec_type rather than globally) ..
     filter_name = req.POST.get('filter_name', '')
@@ -49,8 +46,6 @@ def check_attr_exists(req):
         'method': method,
         'http_accept': http_accept,
     })
-    # [DIAG-10] Log what the server invoker returned, including whether the call itself succeeded
-    logger.debug('[DIAG-10] check_attr_exists view: ok=%s, data=%s', response.ok, response.data)
 
     data = response.data
     if isinstance(data, dict):

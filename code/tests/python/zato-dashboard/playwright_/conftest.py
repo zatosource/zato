@@ -560,15 +560,7 @@ def logged_in_page(
     page.on('close', _on_page_close)
     context.on('close', _on_context_close)
 
-    # .. capture browser console messages tagged with DIAG ..
-    def _on_console(msg:'any_') -> 'None':
-        text = msg.text
-        if 'DIAG' in text:
-            logger.info(f'[BROWSER] {test_name}: {text}')
-
-    page.on('console', _on_console)
-
-    # .. also capture all response errors from the dashboard ..
+    # .. capture all response errors from the dashboard ..
     def _on_response(response:'any_') -> 'None':
         if response.status >= 400:
             logger.warning(f'[HTTP] {test_name}: {response.status} {response.url}')
