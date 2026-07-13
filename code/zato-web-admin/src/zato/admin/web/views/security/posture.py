@@ -32,10 +32,7 @@ _highlight_close = '</span>'
 _toggle_html = (
     '<div class="how-it-works-posture-toggle">'
         '<span class="how-it-works-posture-toggle-label">Toggle</span>'
-        '<label class="toggle-switch how-it-works-toggle-switch">'
-            '<input type="checkbox" class="how-it-works-posture-toggle-input">'
-            '<span class="toggle-slider"></span>'
-        '</label>'
+        '<input type="checkbox" class="how-it-works-posture-toggle-input">'
     '</div>'
 )
 

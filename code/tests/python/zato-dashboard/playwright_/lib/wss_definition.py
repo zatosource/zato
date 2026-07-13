@@ -140,7 +140,7 @@ def fill_wss_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None':
 
             page.fill(f'#id_{prefix}{field_name}', options[field_name])
 
-    # .. checkboxes are checked via JS because toggle-switch styling covers the inputs ..
+    # .. checkboxes are checked via JS so the state is set directly regardless of the slider styling ..
     for field_name in _Checkbox_Fields:
         if field_name in options:
             checked = 'true' if options[field_name] else 'false'

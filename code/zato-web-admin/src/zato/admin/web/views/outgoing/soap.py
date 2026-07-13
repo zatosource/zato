@@ -89,7 +89,8 @@ class Index(_Index):
     output_required = 'id', 'name', 'is_active', 'is_internal'
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
-        'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + _invocation_field_names
+        'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key', \
+        'is_audit_log_active') + _invocation_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -142,8 +143,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'host'
-    input_optional = ('is_active', 'url_path', 'soap_action', 'soap_version', 'security_id', 'validate_tls', \
-        'ping_method', 'timeout', 'content_type', 'serialization_type', \
+    input_optional = ('is_active', 'is_audit_log_active', 'url_path', 'soap_action', 'soap_version', 'security_id', \
+        'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
         _invocation_field_names + ('callback_service', 'callback_topic', 'callback_rest') + \
         ('health_check_callback_service', 'health_check_callback_topic', 'health_check_callback_rest')
@@ -170,7 +171,7 @@ class _CreateEdit(CreateEdit):
                 scheduler_start_date, self.req.zato.user_profile).isoformat()
 
         # Checkboxes arrive as 'on' or not at all - the backend expects real booleans.
-        for name in ('use_ws_addressing', 'use_mtom'):
+        for name in ('use_ws_addressing', 'use_mtom', 'is_audit_log_active'):
             input_dict[name] = bool(input_dict.get(name))
 
         # The callback name comes from whichever widget matches the callback type selected

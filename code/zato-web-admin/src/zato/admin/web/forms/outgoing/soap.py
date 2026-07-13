@@ -30,6 +30,7 @@ class CreateForm(forms.Form):
     # Main
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(initial='https://', widget=forms.TextInput(attrs={'style':'width:100%'}))
     url_path = forms.CharField(required=False, initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_action = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -119,6 +120,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

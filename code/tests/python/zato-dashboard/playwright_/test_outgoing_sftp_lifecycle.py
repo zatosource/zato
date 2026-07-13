@@ -79,7 +79,7 @@ def _create_connection(
 
     # .. the slider is on by default, which means it only ever needs to be clicked to turn it off ..
     if not strict_host_key_checking:
-        page.click('#create-div .toggle-slider')
+        page.click('#id_strict_host_key_checking')
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
@@ -154,7 +154,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-address', 'sftp.edited.example.com:22022')
     page.fill('#id_edit-username', 'sftp-user-edited')
     page.fill('#id_edit-private_key', 'My_Edited_SFTP_Key_File')
-    page.click('#edit-div .toggle-slider')
+    page.click('#id_edit-strict_host_key_checking')
 
     _submit_edit_form(page)
 
@@ -260,7 +260,7 @@ class TestOutgoingSFTPLifecycle:
         page.fill('#id_edit-name', edited_name)
         page.fill('#id_edit-address', 'sftp.edited.example.com:22022')
         page.fill('#id_edit-username', 'sftp-user-edited')
-        page.click('#edit-div .toggle-slider')
+        page.click('#id_edit-strict_host_key_checking')
 
         _submit_edit_form(page)
 

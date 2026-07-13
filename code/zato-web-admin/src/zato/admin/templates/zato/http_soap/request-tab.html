@@ -19,7 +19,7 @@ serialized by JS to the form's hidden JSON fields before the form is submitted.
     </tr>
 
     <tr>
-        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_query_string">Query string</label></td>
+        <td class="request-config-label"><label for="id_{{ field_prefix }}request_query_string">Query string</label></td>
         <td class="request-config-cell">
             {{ form.request_query_string }}
             <table class="request-param-table">
@@ -38,7 +38,7 @@ serialized by JS to the form's hidden JSON fields before the form is submitted.
     </tr>
 
     <tr>
-        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_path_params">Path params</label></td>
+        <td class="request-config-label"><label for="id_{{ field_prefix }}request_path_params">Path params</label></td>
         <td class="request-config-cell">
             {{ form.request_path_params }}
             <table class="request-param-table">
@@ -57,7 +57,7 @@ serialized by JS to the form's hidden JSON fields before the form is submitted.
     </tr>
 
     <tr>
-        <td style="vertical-align:top;padding-top:12px"><label for="id_{{ field_prefix }}request_headers">Headers</label></td>
+        <td class="request-config-label"><label for="id_{{ field_prefix }}request_headers">Headers</label></td>
         <td class="request-config-cell">
             {{ form.request_headers }}
             <table class="request-param-table">

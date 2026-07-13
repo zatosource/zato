@@ -166,9 +166,13 @@ def fill_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'security_value' in options:
         set_select_value(page, f'#id_{prefix}security', options['security_value'])
 
-    # .. and the active checkbox.
+    # .. the active checkbox ..
     if 'is_active' in options:
         page.set_checked(f'#id_{prefix}is_active', options['is_active'])
+
+    # .. and the audit log checkbox.
+    if 'is_audit_log_active' in options:
+        page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])
 
 # ################################################################################################################################
 # ################################################################################################################################

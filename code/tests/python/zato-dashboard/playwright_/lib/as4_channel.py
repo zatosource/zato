@@ -163,7 +163,7 @@ def fill_as4_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'N
     if 'security_value' in options:
         set_select_value(page, f'#id_{prefix}security_id', options['security_value'])
 
-    # .. checkboxes, checked via JS because toggle-switch styling covers the inputs ..
+    # .. checkboxes, checked via JS so the state is set directly regardless of the slider styling ..
     for field_name in _Checkbox_Fields:
         if field_name in options:
             checked = 'true' if options[field_name] else 'false'

@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
 {% endblock %}
@@ -220,7 +219,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_as4_profile">Profile</label></td>
@@ -261,7 +260,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_as4_use_discovery">Use discovery</label></td>
-                                <td><label class="toggle-switch">{{ create_form.as4_use_discovery }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.as4_use_discovery }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_as4_sml_domain">SML domain</label></td>
@@ -364,7 +363,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-as4_profile">Profile</label></td>
@@ -405,7 +404,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-as4_use_discovery">Use discovery</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.as4_use_discovery }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.as4_use_discovery }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-as4_sml_domain">SML domain</label></td>

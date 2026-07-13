@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
@@ -251,7 +250,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_service">Service</label></td>
@@ -259,11 +258,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_use_rest">Use REST</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.use_rest }}</td>
                             </tr>
                             <tr class="rest-field" style="display:none">
                                 <td><label for="id_rest_only">REST only?</label></td>
-                                <td><label class="toggle-switch">{{ create_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.rest_only }}</td>
                             </tr>
                             <tr class="rest-field" style="display:none">
                                 <td><label for="id_rest_url_path">URL path</label></td>
@@ -292,7 +291,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_is_default">Default</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_default }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_default }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_msh3_sending_app">Sending app</label></td>
@@ -333,7 +332,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_use_msh18_encoding">Use MSH-18 encoding</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.use_msh18_encoding }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_default_character_encoding">Encoding</label></td>
@@ -362,47 +361,47 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:30%"><label for="id_normalize_line_endings">Normalize line endings</label></td>
-                                <td><label class="toggle-switch">{{ create_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.normalize_line_endings }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_force_standard_delimiters">Force standard delimiters</label></td>
-                                <td><label class="toggle-switch">{{ create_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.force_standard_delimiters }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_repair_truncated_msh">Repair truncated MSH</label></td>
-                                <td><label class="toggle-switch">{{ create_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.repair_truncated_msh }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_split_concatenated_messages">Split concatenated messages</label></td>
-                                <td><label class="toggle-switch">{{ create_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.split_concatenated_messages }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
-                                <td><label class="toggle-switch">{{ create_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.normalize_obx2_value_type }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
-                                <td><label class="toggle-switch">{{ create_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.replace_invalid_obx2_value_type }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
-                                <td><label class="toggle-switch">{{ create_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.normalize_invalid_escape_sequences }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
-                                <td><label class="toggle-switch">{{ create_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.normalize_obx8_abnormal_flags }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
-                                <td><label class="toggle-switch">{{ create_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.normalize_quadruple_quoted_empty }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_allow_short_encoding_characters">Pad short encoding characters</label></td>
-                                <td><label class="toggle-switch">{{ create_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.allow_short_encoding_characters }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_fix_off_by_one_field_index">Fix off-by-one field index</label></td>
-                                <td><label class="toggle-switch">{{ create_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.fix_off_by_one_field_index }}</td>
                             </tr>
                         </table>
                     </div>
@@ -424,11 +423,11 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:9%"><label for="id_should_return_errors">Return errors</label></td>
-                                <td><label class="toggle-switch">{{ create_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.should_return_errors }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_should_log_messages">Log I/O</label></td>
-                                <td><label class="toggle-switch">{{ create_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.should_log_messages }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_logging_level">Log level</label></td>
@@ -475,7 +474,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-service">Service</label></td>
@@ -483,11 +482,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-use_rest">Use REST</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.use_rest }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.use_rest }}</td>
                             </tr>
                             <tr class="rest-field" style="display:none">
                                 <td><label for="id_edit-rest_only">REST only?</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.rest_only }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.rest_only }}</td>
                             </tr>
                             <tr class="rest-field" style="display:none">
                                 <td><label for="id_edit-rest_url_path">URL path</label></td>
@@ -516,7 +515,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_edit-is_default">Default</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_default }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_default }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-msh3_sending_app">Sending app</label></td>
@@ -557,7 +556,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_edit-use_msh18_encoding">Use MSH-18 encoding</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.use_msh18_encoding }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.use_msh18_encoding }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-default_character_encoding">Encoding</label></td>
@@ -586,47 +585,47 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:30%"><label for="id_edit-normalize_line_endings">Normalize line endings</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.normalize_line_endings }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.normalize_line_endings }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-force_standard_delimiters">Force standard delimiters</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.force_standard_delimiters }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.force_standard_delimiters }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-repair_truncated_msh">Repair truncated MSH</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.repair_truncated_msh }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.repair_truncated_msh }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-split_concatenated_messages">Split concatenated messages</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.split_concatenated_messages }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.split_concatenated_messages }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.normalize_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.normalize_obx2_value_type }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.replace_invalid_obx2_value_type }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.replace_invalid_obx2_value_type }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.normalize_invalid_escape_sequences }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.normalize_invalid_escape_sequences }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.normalize_obx8_abnormal_flags }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.normalize_obx8_abnormal_flags }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.normalize_quadruple_quoted_empty }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.normalize_quadruple_quoted_empty }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-allow_short_encoding_characters">Pad short encoding characters</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.allow_short_encoding_characters }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.allow_short_encoding_characters }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-fix_off_by_one_field_index">Fix off-by-one field index</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.fix_off_by_one_field_index }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.fix_off_by_one_field_index }}</td>
                             </tr>
                         </table>
                     </div>
@@ -648,11 +647,11 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:9%"><label for="id_edit-should_return_errors">Return errors</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.should_return_errors }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.should_return_errors }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-should_log_messages">Log I/O</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.should_log_messages }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.should_log_messages }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-logging_level">Log level</label></td>

@@ -190,15 +190,11 @@ $.fn.zato.http_soap.add_param_row = function(action, kind, key, value, mode) {
     var row = $('<tr class="request-param-row"></tr>');
 
     var jsonata_cell = $('<td class="request-param-jsonata-cell"></td>');
-    var jsonata_toggle = $('<label class="toggle-switch" title="Evaluate the value as JSONata"></label>');
-    var jsonata_checkbox = $('<input type="checkbox" class="request-param-jsonata">');
+    var jsonata_checkbox = $('<input type="checkbox" class="request-param-jsonata" title="Evaluate the value as JSONata">');
     if(mode === 'jsonata') {
         jsonata_checkbox.prop('checked', true);
     }
-    var jsonata_slider = $('<span class="toggle-slider"></span>');
-    jsonata_toggle.append(jsonata_checkbox);
-    jsonata_toggle.append(jsonata_slider);
-    jsonata_cell.append(jsonata_toggle);
+    jsonata_cell.append(jsonata_checkbox);
 
     var key_cell = $('<td class="request-param-key-cell"></td>');
     var key_input = $('<input type="text" class="request-param-key" placeholder="Name">');

@@ -41,8 +41,9 @@ _Select_Fields = ('content_type', 'sign_algorithm', 'encryption_algorithm', 'mdn
     'http_transfer_mode', 'as2_version', 'content_transfer_encoding')
 
 # Checkbox fields toggled by boolean options
-_Checkbox_Fields = ('is_active', 'sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed',
-    'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename')
+_Checkbox_Fields = ('is_active', 'is_audit_log_active', 'sign', 'encrypt', 'compress', 'compress_before_signing',
+    'mdn_signed', 'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization',
+    'warn_on_duplicate_filename')
 
 # The forms are tabbed and a text field is only fillable while its tab is active
 _Field_To_Tab = {
@@ -170,7 +171,7 @@ def fill_as2_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> 'N
         if field_name in options:
             set_select_value(page, f'#id_{prefix}{field_name}', options[field_name])
 
-    # .. checkboxes, checked via JS because toggle-switch styling covers the inputs ..
+    # .. checkboxes, checked via JS so the state is set directly regardless of the slider styling ..
     for field_name in _Checkbox_Fields:
         if field_name in options:
             checked = 'true' if options[field_name] else 'false'
