@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}OData outconns{% endblock %}
+{% block html_title %}{{ subtype.label }} outconns{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -26,7 +26,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 
-    {% comment %} OData {% endcomment %}
+    {% comment %} OData - one implementation serves every subtype, the page config below says which one this is {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.outgoing.odata.config = {
+        label: '{{ subtype.label }}'
+    };
+    </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/odata.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -78,14 +83,14 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing OData connections</h2>
+            <h2 class="zato">Outgoing {{ subtype.label }} connections</h2>
 
-{% with has_generic="1" generic_type="outconn-odata" %}
+{% with has_generic="1" generic_type=subtype.type_ %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.outgoing.odata.create()">Create a new outgoing OData connection</a>
+            <a href="javascript:$.fn.zato.outgoing.odata.create()">Create a new outgoing {{ subtype.label }} connection</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -177,7 +182,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "out-odata-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url create_url %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:12%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
@@ -281,7 +286,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "out-odata-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url edit_url %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>
@@ -387,7 +392,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "out-odata-change-password" %}" method="post" id="change_password-form">
+                <form novalidate action="{% url change_password_url %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:13%">Name</td>

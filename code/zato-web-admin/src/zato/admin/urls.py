@@ -48,7 +48,6 @@ from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
-from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
@@ -509,17 +508,37 @@ urlpatterns += [
     # .. OData
 
     url(r'^zato/outgoing/odata/$',
-        login_required(out_odata.Index()), name=out_odata.Index.url_name),
+        login_required(out_odata.Index('odata')), name='out-odata'),
     url(r'^zato/outgoing/odata/create/$',
-        login_required(out_odata.Create()), name=out_odata.Create.url_name),
+        login_required(out_odata.Create('odata')), name='out-odata-create'),
     url(r'^zato/outgoing/odata/edit/$',
-        login_required(out_odata.Edit()), name=out_odata.Edit.url_name),
+        login_required(out_odata.Edit('odata')), name='out-odata-edit'),
     url(r'^zato/outgoing/odata/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_odata.Delete()), name=out_odata.Delete.url_name),
+        login_required(out_odata.Delete('odata')), name='out-odata-delete'),
     url(r'^zato/outgoing/odata/change-password/$',
         login_required(out_odata.change_password), name='out-odata-change-password'),
     url(r'^zato/outgoing/odata/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_odata.ping), name='out-odata-ping'),
+        login_required(out_odata.ping), {'subtype': 'odata'}, name='out-odata-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. SAP - runs on the OData implementation, mounted as its own page
+
+    url(r'^zato/outgoing/sap/$',
+        login_required(out_odata.Index('sap')), name='out-sap'),
+    url(r'^zato/outgoing/sap/create/$',
+        login_required(out_odata.Create('sap')), name='out-sap-create'),
+    url(r'^zato/outgoing/sap/edit/$',
+        login_required(out_odata.Edit('sap')), name='out-sap-edit'),
+    url(r'^zato/outgoing/sap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odata.Delete('sap')), name='out-sap-delete'),
+    url(r'^zato/outgoing/sap/change-password/$',
+        login_required(out_odata.change_password), name='out-sap-change-password'),
+    url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odata.ping), {'subtype': 'sap'}, name='out-sap-ping'),
     ]
 
 # ################################################################################################################################
@@ -671,26 +690,6 @@ urlpatterns += [
         login_required(out_odoo.change_password), name='out-odoo-change-password'),
     url(r'^zato/outgoing/odoo/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_odoo.ping), name='out-odoo-ping'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. SAP RFC
-
-    url(r'^zato/outgoing/sap/$',
-        login_required(out_sap.Index()), name=out_sap.Index.url_name),
-    url(r'^zato/outgoing/sap/create/$',
-        login_required(out_sap.Create()), name=out_sap.Create.url_name),
-    url(r'^zato/outgoing/sap/edit/$',
-        login_required(out_sap.Edit()), name=out_sap.Edit.url_name),
-    url(r'^zato/outgoing/sap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sap.Delete()), name=out_sap.Delete.url_name),
-    url(r'^zato/outgoing/sap/change-password/$',
-        login_required(out_sap.change_password), name='out-sap-change-password'),
-    url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sap.ping), name='out-sap-ping'),
     ]
 
 # ################################################################################################################################
