@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from pathlib import Path
+
 # Zato
 from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.security.saml import add_assertion, add_attribute, get_assertion, new_assertion, sign_assertion, \
@@ -43,34 +46,39 @@ All_Modes = (Mode.UsernameToken, Mode.X509, Mode.SAML)
 # ################################################################################################################################
 
 def keystore_from_config(config:'stranydict') -> 'Keystore':
-    """ Builds a keystore out of the PEM material a WS-Security definition holds.
+    """ Builds a keystore out of the PEM files a WS-Security definition points to.
     """
 
     # Our response to produce
     out = new_keystore()
 
     # Our own signing key with its certificate chain ..
-    if signing_key := config.get('signing_key'):
-        out.signing_key = load_private_key_pem(signing_key.encode('utf-8'))
+    if signing_key_path := config.get('signing_key'):
+        pem_data = Path(signing_key_path).read_bytes()
+        out.signing_key = load_private_key_pem(pem_data)
 
-    if signing_certificate_chain := config.get('signing_certificate_chain'):
-        out.signing_certificate_chain = load_certificates_pem(signing_certificate_chain.encode('utf-8'))
+    if signing_certificate_chain_path := config.get('signing_certificate_chain'):
+        pem_data = Path(signing_certificate_chain_path).read_bytes()
+        out.signing_certificate_chain = load_certificates_pem(pem_data)
 
     # .. our own decryption key - with RSA it is usually the signing key again
     # .. but a definition may keep a separate one ..
-    if decryption_key := config.get('decryption_key'):
-        out.decryption_key = load_private_key_pem(decryption_key.encode('utf-8'))
+    if decryption_key_path := config.get('decryption_key'):
+        pem_data = Path(decryption_key_path).read_bytes()
+        out.decryption_key = load_private_key_pem(pem_data)
 
     # .. the other side's certificate, used both to encrypt to them and to pin their signatures ..
-    if peer_certificate := config.get('peer_certificate'):
-        certificates = load_certificates_pem(peer_certificate.encode('utf-8'))
+    if peer_certificate_path := config.get('peer_certificate'):
+        pem_data = Path(peer_certificate_path).read_bytes()
+        certificates = load_certificates_pem(pem_data)
         peer = certificates[0]
         out.peer_encryption_certificate = peer
         out.peer_signing_certificate = peer
 
     # .. and the CA certificates their signing certificates may chain up to instead of pinning.
-    if trust_anchors := config.get('trust_anchors'):
-        out.trust_anchors = load_certificates_pem(trust_anchors.encode('utf-8'))
+    if trust_anchors_path := config.get('trust_anchors'):
+        pem_data = Path(trust_anchors_path).read_bytes()
+        out.trust_anchors = load_certificates_pem(pem_data)
 
     return out
 

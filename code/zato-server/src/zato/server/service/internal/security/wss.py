@@ -36,7 +36,7 @@ _mode_fields = (
     # UsernameToken - whether the password goes out in digest form.
     Boolean('-use_digest'),
 
-    # X.509 and SAML - what to do and the PEM material to do it with.
+    # X.509 and SAML - what to do and the paths to the PEM files to do it with.
     Boolean('-sign'), Boolean('-encrypt'),
     '-signing_key', '-signing_certificate_chain', '-decryption_key', '-peer_certificate', '-trust_anchors',
 

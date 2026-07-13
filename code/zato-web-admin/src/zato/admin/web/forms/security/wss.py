@@ -19,8 +19,8 @@ _mode_choices = [
     ('saml', 'SAML'),
 ]
 
-# The PEM fields share one widget shape - a small monospace textarea.
-_pem_widget = forms.Textarea(attrs={'style':'width:100%; font-family:monospace; font-size:11px', 'rows':4})
+# The PEM path fields share one widget shape - a full-width text input.
+_path_widget = forms.TextInput(attrs={'style':'width:100%'})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,11 +44,11 @@ class CreateForm(forms.Form):
     # Crypto material
     sign = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     encrypt = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    signing_key = forms.CharField(required=False, widget=_pem_widget)
-    signing_certificate_chain = forms.CharField(required=False, widget=_pem_widget)
-    decryption_key = forms.CharField(required=False, widget=_pem_widget)
-    peer_certificate = forms.CharField(required=False, widget=_pem_widget)
-    trust_anchors = forms.CharField(required=False, widget=_pem_widget)
+    signing_key = forms.CharField(required=False, widget=_path_widget)
+    signing_certificate_chain = forms.CharField(required=False, widget=_path_widget)
+    decryption_key = forms.CharField(required=False, widget=_path_widget)
+    peer_certificate = forms.CharField(required=False, widget=_path_widget)
+    trust_anchors = forms.CharField(required=False, widget=_path_widget)
 
 # ################################################################################################################################
 # ################################################################################################################################
