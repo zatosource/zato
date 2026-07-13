@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/outgoing/sftp/?cluster=1'
+_Page_Url_Pattern = '/zato/outgoing/sftp/?cluster=1&type_=outconn-sftp'
 
 _Test_Name_Prefix = 'test.sftp.' + CryptoManager.generate_hex_string(32) + '.'
 
