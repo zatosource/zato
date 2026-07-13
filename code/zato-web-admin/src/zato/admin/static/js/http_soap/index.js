@@ -414,6 +414,7 @@ $.fn.zato.http_soap.field_descriptions = {
 
     'id_name': 'A unique name for this endpoint.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this endpoint accepts messages.<br>Requests to inactive endpoints are rejected.',
+    'id_is_audit_log_active': 'Whether this endpoint\'s traffic is recorded<br>in the audit log. On by default.',
     'id_url_path': 'URL path this endpoint listens on,<br>e.g. /services/endpoint.',
     'id_service': 'The service invoked for each message<br>this endpoint receives.',
     'id_security': 'Security definition each incoming message<br>must satisfy, e.g. WS-Security<br>or Basic Auth.',
@@ -555,6 +556,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     var audit_object_type_label = '';
     var is_active = item.is_active == true;
+    var is_audit_log_active = item.is_audit_log_active == true;
     var merge_url_params_req = item.merge_url_params_req == true;
 
     var cluster_id = $(document).getUrlParam('cluster');
@@ -651,9 +653,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format("<td class='ignore'>{0}</td>", data.service);
     }
 
-    /* 14, 15, 16 */
+    /* 14, 15, 15a, 16 */
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
     if(is_channel) {

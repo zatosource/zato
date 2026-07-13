@@ -176,6 +176,11 @@ class Partnership:
     inbound_topic:   str = ''
     inbound_service: str = ''
 
+    # Whether this partnership's exchanges are recorded in the audit log. Turning this off
+    # also disables MDN reconciliation and duplicate detection for the partnership,
+    # because both features read what the audit log stored.
+    is_audit_log_active: bool = True
+
 # ################################################################################################################################
 # ################################################################################################################################
 

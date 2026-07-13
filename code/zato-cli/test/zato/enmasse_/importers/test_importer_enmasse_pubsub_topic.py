@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import tempfile
+from json import loads
 from unittest import TestCase, main
 
 # Zato
@@ -101,6 +102,14 @@ class TestEnmassePubSubTopicFromYAML(TestCase):
         topic3 = self.session.query(PubSubTopic).filter_by(name='enmasse.topic.3').one()  # type: ignore
         self.assertEqual(topic3.description, 'Optional description for topic 3')
         self.assertTrue(topic3.is_active)
+
+        # The audit log flag lives in the opaque attributes - the template turns it off
+        # for topic.2 while topic.1 relies on the default of it being on.
+        opaque_1 = loads(topic1.opaque1)
+        self.assertIs(opaque_1['is_audit_log_active'], True)
+
+        opaque_2 = loads(topic2.opaque1)
+        self.assertIs(opaque_2['is_audit_log_active'], False)
 
 # ################################################################################################################################
 

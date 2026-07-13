@@ -97,6 +97,10 @@ class OutgoingRESTExporter:
 
             export_invocation_fields(exported_conn, opaque, Invocation_Fields_REST)
 
+            # The audit log is on by default so only the off state is exported
+            if opaque.get('is_audit_log_active') is False:
+                exported_conn['is_audit_log_active'] = False
+
             exported_outgoing.append(exported_conn)
 
         logger.info('Successfully prepared %d outgoing REST connection definitions for export', len(exported_outgoing))

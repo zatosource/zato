@@ -287,7 +287,7 @@ class TestEnmasseCLI(TestCase):
             self.assertEqual(wss['mode'], 'username_token')
             self.assertTrue(wss['use_digest'])
 
-            # An X.509 definition survives with its switches and all of its PEM material
+            # An X.509 definition survives with its switches and all of its PEM file paths
             wss_x509 = exported_security['enmasse.wss.2']
             wss_x509_input = input_security['enmasse.wss.2']
             self.assertEqual(wss_x509['mode'], 'x509')

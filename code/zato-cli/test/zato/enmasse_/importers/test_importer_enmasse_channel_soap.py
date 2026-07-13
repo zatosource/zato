@@ -154,6 +154,19 @@ class TestEnmasseChannelSOAPFromYAML(TestCase):
         self.assertEqual(len(opaque['rate_limiting']), 1)
         self.assertEqual(opaque['rate_limiting'][0]['cidr_list'], ['0.0.0.0/0'])
 
+        # The template turns the audit log off for this channel
+        self.assertIs(opaque['is_audit_log_active'], False)
+
+        # A channel without the flag in YAML has it on
+        channel_1 = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.channel.soap.1',
+            connection=CONNECTION.CHANNEL,
+            transport=URL_TYPE.SOAP
+        ).one()
+
+        opaque_1 = loads(channel_1.opaque1)
+        self.assertIs(opaque_1['is_audit_log_active'], True)
+
 # ################################################################################################################################
 
     def test_channel_soap_reimport_detects_no_changes(self):

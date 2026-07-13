@@ -231,10 +231,18 @@ class AS2ChannelRuntime:
             is_duplicate=self.duplicates.get,
         )
 
+        # A partnership whose audit log was turned off explicitly records no events,
+        # while a request that matched no partnership is always recorded.
+        if out.partnership:
+            needs_audit = out.partnership.is_audit_log_active
+        else:
+            needs_audit = True
+
         # The arrival and the MDN that went back are recorded as non-repudiation evidence -
         # a replay records nothing new because its first delivery already did.
-        audit_log = self._get_audit_log()
-        record_inbound_result(audit_log, out, body, cid)
+        if needs_audit:
+            audit_log = self._get_audit_log()
+            record_inbound_result(audit_log, out, body, cid)
 
         # A replay gets the stored MDN back, byte for byte - nothing is routed.
         if out.is_duplicate:
@@ -251,9 +259,12 @@ class AS2ChannelRuntime:
         self._route(cid, out)
 
         # .. remember the message so a replay is detectable - only successfully processed
-        # messages are remembered, a failed one stays reprocessable ..
+        # messages are remembered, a failed one stays reprocessable, and a partnership
+        # whose audit log is off keeps nothing, since the duplicate store lives
+        # in the same database the audit log does ..
         if out.message_id:
-            _ = self.duplicates.store(out.as2_from, out.as2_to, out.message_id, out.status_code, out.body, out.headers)
+            if needs_audit:
+                _ = self.duplicates.store(out.as2_from, out.as2_to, out.message_id, out.status_code, out.body, out.headers)
 
         # .. an asynchronous MDN is delivered in the background, after the inbound POST is answered ..
         if out.pending_async_mdn:

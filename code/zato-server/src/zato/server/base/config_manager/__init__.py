@@ -596,6 +596,9 @@ class ConfigManager(_ConfigManagerBase):
             'content_type':config.content_type,
             'validate_tls':config.validate_tls,
 
+            # Whether this connection's traffic goes to the audit log - it arrives as an opaque attribute
+            'is_audit_log_active':config.get('is_audit_log_active'),
+
             # SOAP-specific and mutual-TLS details - they arrive as opaque attributes
             # and are absent from connections created before these fields existed.
             'use_ws_addressing':config.get('use_ws_addressing'),
@@ -1297,8 +1300,9 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _sync_pubsub_topics(self) -> 'None':
-        """ Loads AMQP-backed topics from ODB into the in-memory backend registry
-        and applies channel overrides for topics that reference an AMQP channel.
+        """ Loads AMQP-backed topics from ODB into the in-memory backend registry,
+        applies channel overrides for topics that reference an AMQP channel
+        and registers topics whose audit log was turned off.
         """
         from contextlib import closing
         from zato.common.odb.model import PubSubTopic
@@ -1316,6 +1320,10 @@ class ConfigManager(_ConfigManagerBase):
             for row in rows:
 
                 opaque = parse_instance_opaque_attr(row)
+
+                # A topic whose audit log was turned off explicitly writes no audit events
+                if opaque.get('is_audit_log_active') is False:
+                    self.server.pubsub_redis.set_topic_audit_flag(row.name, False)
 
                 # Topics without opaque attributes predate backend types and are built-in,
                 # and built-in topics never have registry entries.
@@ -2583,20 +2591,25 @@ class ConfigManager(_ConfigManagerBase):
 
     def on_config_event_PUBSUB_TOPIC_CREATE(self, msg:'bunch_') -> 'None':
 
-        # Only AMQP-backed topics are announced at creation time so this handler
-        # always adds a registry entry and applies the channel override if one is needed.
-        backend_config = {
-            'backend_type': msg.backend_type,
-            'amqp_outconn_name': msg.amqp_outconn_name,
-            'amqp_exchange': msg.amqp_exchange,
-            'amqp_routing_key': msg.amqp_routing_key,
-            'amqp_channel_name': msg.amqp_channel_name,
-            'original_service_name': '',
-        }
-        self._topic_backends[msg.topic_name] = backend_config
+        # Every new topic announces its audit log state ..
+        self.server.pubsub_redis.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
 
-        if backend_config['amqp_channel_name']:
-            self._apply_amqp_channel_override(backend_config)
+        # .. and AMQP-backed topics additionally get a registry entry
+        # .. along with the channel override if one is needed.
+        if msg.backend_type == PubSub.Backend_Type.AMQP:
+
+            backend_config = {
+                'backend_type': msg.backend_type,
+                'amqp_outconn_name': msg.amqp_outconn_name,
+                'amqp_exchange': msg.amqp_exchange,
+                'amqp_routing_key': msg.amqp_routing_key,
+                'amqp_channel_name': msg.amqp_channel_name,
+                'original_service_name': '',
+            }
+            self._topic_backends[msg.topic_name] = backend_config
+
+            if backend_config['amqp_channel_name']:
+                self._apply_amqp_channel_override(backend_config)
 
 # ################################################################################################################################
 
@@ -2605,6 +2618,11 @@ class ConfigManager(_ConfigManagerBase):
         old_name = msg.old_topic_name
         new_name = msg.new_topic_name
         is_active = getattr(msg, 'is_active', None)
+
+        # Re-register the audit log state under the topic's current name,
+        # which also covers renames since the old name is forgotten first.
+        self.server.pubsub_redis.delete_topic_audit_flag(old_name)
+        self.server.pubsub_redis.set_topic_audit_flag(new_name, msg.is_audit_log_active)
 
         # Handle name change ..
         if old_name != new_name:
@@ -2729,6 +2747,9 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
 
         topic_name = msg.topic_name
+
+        # .. forget about the topic's audit log state ..
+        self.server.pubsub_redis.delete_topic_audit_flag(topic_name)
 
         # .. update in-memory pattern matcher ..
         matcher = self.server.pubsub_pattern_matcher

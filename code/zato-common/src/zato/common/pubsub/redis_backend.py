@@ -455,6 +455,10 @@ class RedisPubSubBackend:
         else:
             self.audit_log = None
 
+        # Names of topics whose audit log was turned off explicitly - publications,
+        # receptions and deliveries involving these topics write no audit events.
+        self.audit_disabled_topics:'strset' = set()
+
         self.lua_subscribe:'str'                     = cast_('str', self.redis.script_load(_lua_subscribe)) # noqa: E222
         self.lua_unsubscribe_and_clean_pending:'str' = cast_('str', self.redis.script_load(_lua_unsubscribe_and_clean_pending))
         self.lua_clean_up_after_ack:'str'            = cast_('str', self.redis.script_load(_lua_clean_up_after_ack)) # noqa: E222
@@ -476,6 +480,24 @@ class RedisPubSubBackend:
         """
         out = self._get_stream_key(topic_name)
         return out
+
+# ################################################################################################################################
+
+    def set_topic_audit_flag(self, topic_name:'str', is_audit_log_active:'bool') -> 'None':
+        """ Registers whether a topic's audit log is on or off.
+        """
+        if is_audit_log_active:
+            self.audit_disabled_topics.discard(topic_name)
+        else:
+            self.audit_disabled_topics.add(topic_name)
+
+# ################################################################################################################################
+
+    def delete_topic_audit_flag(self, topic_name:'str') -> 'None':
+        """ Forgets about a topic's audit log state, e.g. because the topic was deleted or renamed.
+        """
+        self.audit_disabled_topics.discard(topic_name)
+
 
 # ################################################################################################################################
 
@@ -643,31 +665,32 @@ class RedisPubSubBackend:
         else:
             self.disk_store.delete(data_ref)
 
-        # .. record the publish in the audit log ..
+        # .. record the publish in the audit log, unless the topic's audit log is off ..
         if self.audit_log:
+            if topic_name not in self.audit_disabled_topics:
 
-            # These are all optional on input so they are normalized to strings here.
-            if cid is None:
-                cid = ''
-            if correl_id is None:
-                correl_id = ''
-            if ext_client_id is None:
-                ext_client_id = ''
-            if publisher is None:
-                publisher = ''
+                # These are all optional on input so they are normalized to strings here.
+                if cid is None:
+                    cid = ''
+                if correl_id is None:
+                    correl_id = ''
+                if ext_client_id is None:
+                    ext_client_id = ''
+                if publisher is None:
+                    publisher = ''
 
-            self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
-                cid=cid,
-                msg_id=message_id,
-                correl_id=correl_id,
-                ext_client_id=ext_client_id,
-                pub_time_iso=pub_time_iso,
-                endpoint=publisher,
-                size=len(serialized_data),
-                priority=priority,
-                outcome=AuditOutcome.OK,
-                data=serialized_data,
-            )
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
+                    cid=cid,
+                    msg_id=message_id,
+                    correl_id=correl_id,
+                    ext_client_id=ext_client_id,
+                    pub_time_iso=pub_time_iso,
+                    endpoint=publisher,
+                    size=len(serialized_data),
+                    priority=priority,
+                    outcome=AuditOutcome.OK,
+                    data=serialized_data,
+                )
 
         # .. update the publish counter and return the result.
         counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
@@ -1020,24 +1043,26 @@ class RedisPubSubBackend:
             _ = self.ack_message(stream_name, sub_key, redis_message_id, data_ref)
 
             # .. record the pull-based reception in the audit log, using the CID stored
-            # .. at publish time so the reception cross-references the publish ..
+            # .. at publish time so the reception cross-references the publish,
+            # .. unless the topic's audit log is off ..
             if self.audit_log:
+                if message['topic_name'] not in self.audit_disabled_topics:
 
-                # Messages published before CIDs were carried inside them have no CID stored.
-                message_cid = message.get('cid')
-                if message_cid is None:
-                    message_cid = ''
+                    # Messages published before CIDs were carried inside them have no CID stored.
+                    message_cid = message.get('cid')
+                    if message_cid is None:
+                        message_cid = ''
 
-                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
-                    cid=message_cid,
-                    msg_id=message['msg_id'],
-                    pub_time_iso=pub_time_iso,
-                    sub_key=sub_key,
-                    size=data_size,
-                    priority=message['priority'],
-                    outcome=AuditOutcome.OK,
-                    data=data_raw,
-                )
+                    self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
+                        cid=message_cid,
+                        msg_id=message['msg_id'],
+                        pub_time_iso=pub_time_iso,
+                        sub_key=sub_key,
+                        size=data_size,
+                        priority=message['priority'],
+                        outcome=AuditOutcome.OK,
+                        data=data_raw,
+                    )
 
             # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])

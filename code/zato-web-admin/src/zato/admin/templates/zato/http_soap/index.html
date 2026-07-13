@@ -121,9 +121,10 @@
                 'service',
             {% endif %}
 
-            // 14, 15, 16
+            // 14, 15, 15a, 16
             'id',
             'is_active',
+            'is_audit_log_active',
             'security',
 
             // 17, 18, 19
@@ -291,9 +292,10 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                         {% endif %}
 
-                        <!-- 14, 15, 16 -->
+                        <!-- 14, 15, 15a, 16 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} id {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} is_active {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} is_audit_log_active {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} security {% endcomment %}
 
                         <!-- 17, 18, 19 -->
@@ -447,9 +449,10 @@
                             <td class='ignore'>{{ item.service_name }}</td>
                         {% endif %}
 
-                        <!-- 14, 15, 16 -->
+                        <!-- 14, 15, 15a, 16 -->
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
 
                         <!-- 17, 18, 19 -->
@@ -590,6 +593,11 @@
                                 <label for="id_is_active">
                                     Active
                                     {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_is_audit_log_active">
+                                    Audit log
+                                    {{ create_form.is_audit_log_active }}
                                 </label>
                                 {% if transport == 'plain_http' %}
                                     |
@@ -870,6 +878,11 @@
                                 <label for="id_edit-is_active">
                                     Active
                                     {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_edit-is_audit_log_active">
+                                    Audit log
+                                    {{ edit_form.is_audit_log_active }}
                                 </label>
                                 |
                                 <label for="{{ edit_form.data_format.id_for_label }}">

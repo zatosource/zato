@@ -128,6 +128,9 @@ class TestEnmasseOutgoingAS2Exporter(TestCase):
         # .. an active connection does not say so explicitly ..
         self.assertNotIn('is_active', conn)
 
+        # .. a connection with the audit log on does not export the flag ..
+        self.assertNotIn('is_audit_log_active', conn)
+
         # .. and the private keys are never exported.
         self.assertNotIn('as2_signing_key', conn)
         self.assertNotIn('as2_decryption_key', conn)
@@ -163,6 +166,7 @@ class TestEnmasseOutgoingAS2Exporter(TestCase):
         self.assertFalse(conn['sign'])
         self.assertFalse(conn['encrypt'])
         self.assertFalse(conn['verify_tls'])
+        self.assertFalse(conn['is_audit_log_active'])
 
         # .. while the ones at their defaults stay out of the export ..
         self.assertNotIn('compress', conn)

@@ -129,6 +129,7 @@
             'prevent_canonicalization',
             'warn_on_duplicate_filename',
             'pool_size',
+            'is_audit_log_active',
         ]
     }
     </script>
@@ -230,6 +231,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -307,6 +309,7 @@
                         <td class='ignore'>{{ item.prevent_canonicalization|yesno:'True,False' }}</td>
                         <td class='ignore'>{{ item.warn_on_duplicate_filename|yesno:'True,False' }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
                     </tr>
                 {% endfor %}
@@ -346,6 +349,10 @@
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
                                 <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_audit_log_active">Audit log</label></td>
+                                <td><label class="toggle-switch">{{ create_form.is_audit_log_active }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_endpoint_url">Endpoint URL</label></td>
@@ -592,6 +599,10 @@
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
                                 <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_audit_log_active">Audit log</label></td>
+                                <td><label class="toggle-switch">{{ edit_form.is_audit_log_active }}<span class="toggle-slider"></span></label></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-endpoint_url">Endpoint URL</label></td>

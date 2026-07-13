@@ -122,16 +122,6 @@ def _invoke_expecting_fault(client:'SOAPClient', operation:'str', message:'SOAPM
 
 # ################################################################################################################################
 
-def _read_pem(path:'str') -> 'str':
-    """ Reads PEM material from a file into the string a definition or a client keeps.
-    """
-    with open(path) as pem_file:
-        out = pem_file.read()
-
-    return out
-
-# ################################################################################################################################
-
 def _invoke_outconn_with_retry(page:'Page', base_url:'str', outconn_name:'str', operation:'str', **kwargs:'any_') -> 'anydict':
     """ Invokes an outgoing connection through the pre-deployed service, driven from the IDE
     in the browser, retrying while the pair configured a moment ago propagates to the server.
@@ -431,11 +421,8 @@ class TestSOAPChannelEndToEnd:
 
         wait_for_channel_fixture_services(page, base_url)
 
-        # Real signing material - a CA-signed certificate and its key for the counterparty.
+        # Real signing material - a CA-signed certificate and its key for the counterparty, kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        counterparty_key_pem = _read_pem(material.client_key_path)
-        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
 
         name = _Test_Name_Prefix + 'wss-x509-signed'
         url_path = '/' + name
@@ -444,7 +431,7 @@ class TestSOAPChannelEndToEnd:
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': True,
             'encrypt': False,
-            'peer_certificate': counterparty_certificate_pem,
+            'peer_certificate': material.client_certificate_path,
         })
 
         # .. and the channel enforces it.
@@ -465,8 +452,8 @@ class TestSOAPChannelEndToEnd:
                 'mode': 'x509',
                 'sign': True,
                 'encrypt': False,
-                'signing_key': counterparty_key_pem,
-                'signing_certificate_chain': counterparty_certificate_pem,
+                'signing_key': material.client_key_path,
+                'signing_certificate_chain': material.client_certificate_path,
             },
         })
 
@@ -506,20 +493,18 @@ class TestSOAPChannelEndToEnd:
 
         wait_for_channel_fixture_services(page, base_url)
 
-        # Real decryption material - the channel's own key and its certificate the counterparty encrypts to.
+        # Real decryption material - the channel's own key and its certificate the counterparty encrypts to,
+        # kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        channel_key_pem = _read_pem(material.server_key_path)
-        channel_certificate_pem = _read_pem(material.server_certificate_path)
 
         name = _Test_Name_Prefix + 'wss-x509-encrypted'
         url_path = '/' + name
 
-        # The definition holds the channel's own decryption key ..
+        # The definition holds the path to the channel's own decryption key ..
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': False,
             'encrypt': True,
-            'decryption_key': channel_key_pem,
+            'decryption_key': material.server_key_path,
         })
 
         # .. and the channel with the registry service reads the decrypted body.
@@ -544,7 +529,7 @@ class TestSOAPChannelEndToEnd:
                 'mode': 'x509',
                 'sign': False,
                 'encrypt': True,
-                'peer_certificate': channel_certificate_pem,
+                'peer_certificate': material.server_certificate_path,
             },
         })
 
@@ -585,14 +570,8 @@ class TestSOAPChannelEndToEnd:
         wait_for_channel_fixture_services(page, base_url)
 
         # Real crypto material - the channel's own key pair and the counterparty's,
-        # both chaining up to the same test CA.
+        # both chaining up to the same test CA, all kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        channel_key_pem = _read_pem(material.server_key_path)
-        channel_certificate_pem = _read_pem(material.server_certificate_path)
-        counterparty_key_pem = _read_pem(material.client_key_path)
-        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
-        ca_pem = _read_pem(material.ca_path)
 
         name = _Test_Name_Prefix + 'wss-x509-full'
         url_path = '/' + name
@@ -601,8 +580,8 @@ class TestSOAPChannelEndToEnd:
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'x509', {
             'sign': True,
             'encrypt': True,
-            'decryption_key': channel_key_pem,
-            'trust_anchors': ca_pem,
+            'decryption_key': material.server_key_path,
+            'trust_anchors': material.ca_path,
         })
 
         # .. and the channel enforces it.
@@ -623,9 +602,9 @@ class TestSOAPChannelEndToEnd:
                 'mode': 'x509',
                 'sign': True,
                 'encrypt': True,
-                'signing_key': counterparty_key_pem,
-                'signing_certificate_chain': counterparty_certificate_pem,
-                'peer_certificate': channel_certificate_pem,
+                'signing_key': material.client_key_path,
+                'signing_certificate_chain': material.client_certificate_path,
+                'peer_certificate': material.server_certificate_path,
             },
         })
 
@@ -641,18 +620,15 @@ class TestSOAPChannelEndToEnd:
         # the channel can still decrypt the body.
         untrusted_material = build_tls_material('127.0.0.1')
 
-        untrusted_key_pem = _read_pem(untrusted_material.client_key_path)
-        untrusted_certificate_pem = _read_pem(untrusted_material.client_certificate_path)
-
         untrusted_client = _new_channel_client(server_port, url_path, {
             'soap_version': '1.2',
             'security': {
                 'mode': 'x509',
                 'sign': True,
                 'encrypt': True,
-                'signing_key': untrusted_key_pem,
-                'signing_certificate_chain': untrusted_certificate_pem,
-                'peer_certificate': channel_certificate_pem,
+                'signing_key': untrusted_material.client_key_path,
+                'signing_certificate_chain': untrusted_material.client_certificate_path,
+                'peer_certificate': material.server_certificate_path,
             },
         })
 
@@ -682,12 +658,8 @@ class TestSOAPChannelEndToEnd:
 
         wait_for_channel_fixture_services(page, base_url)
 
-        # Real signing material - a CA-signed certificate and its key for the counterparty.
+        # Real signing material - a CA-signed certificate and its key for the counterparty, kept in PEM files.
         material = build_tls_material('127.0.0.1')
-
-        counterparty_key_pem = _read_pem(material.client_key_path)
-        counterparty_certificate_pem = _read_pem(material.client_certificate_path)
-        ca_pem = _read_pem(material.ca_path)
 
         name = _Test_Name_Prefix + 'wss-saml'
         url_path = '/' + name
@@ -697,7 +669,7 @@ class TestSOAPChannelEndToEnd:
         wss_id = create_wss_definition(page, base_url, name, 'user.' + name, 'saml', {
             'issuer': issuer,
             'sign': True,
-            'trust_anchors': ca_pem,
+            'trust_anchors': material.ca_path,
         })
 
         # .. and the channel enforces it.
@@ -719,8 +691,8 @@ class TestSOAPChannelEndToEnd:
                 'issuer': issuer,
                 'subject': 'CN=Test Subject',
                 'sign': True,
-                'signing_key': counterparty_key_pem,
-                'signing_certificate_chain': counterparty_certificate_pem,
+                'signing_key': material.client_key_path,
+                'signing_certificate_chain': material.client_certificate_path,
             },
         })
 
@@ -742,8 +714,8 @@ class TestSOAPChannelEndToEnd:
                 'issuer': 'urn:issuer:untrusted:' + name,
                 'subject': 'CN=Test Subject',
                 'sign': True,
-                'signing_key': counterparty_key_pem,
-                'signing_certificate_chain': counterparty_certificate_pem,
+                'signing_key': material.client_key_path,
+                'signing_certificate_chain': material.client_certificate_path,
             },
         })
 

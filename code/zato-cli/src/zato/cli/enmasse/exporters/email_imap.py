@@ -128,6 +128,10 @@ class IMAPExporter:
                     if scheduler_invoke_with != EMAIL.IMAP.Scheduler.InvokeWith.Message:
                         imap_conn['scheduler_invoke_with'] = scheduler_invoke_with
 
+            # The audit log is on by default so only the off state is exported
+            if item.get('is_audit_log_active') is False:
+                imap_conn['is_audit_log_active'] = False
+
             exported_imap.append(imap_conn)
 
         logger.info('Successfully prepared %d IMAP connection definitions for export', len(exported_imap))

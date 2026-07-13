@@ -82,6 +82,7 @@ def _make_amqp_msg(topic_name:'str', channel_name:'str'='', exchange:'str'='my.e
     msg.amqp_exchange = exchange
     msg.amqp_routing_key = topic_name
     msg.amqp_channel_name = channel_name
+    msg.is_audit_log_active = True
     return msg
 
 # ################################################################################################################################

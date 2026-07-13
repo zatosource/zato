@@ -37,7 +37,8 @@ partnership_string_fields = ('as2_from', 'as2_to', 'isa_qualifier', 'isa_id', 'g
     'content_transfer_encoding', 'http_transfer_mode', 'inbound_topic', 'inbound_service')
 
 partnership_bool_fields = ('sign', 'encrypt', 'compress', 'compress_before_signing', 'mdn_signed',
-    'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename')
+    'preserve_filename', 'verify_tls', 'force_base64', 'prevent_canonicalization', 'warn_on_duplicate_filename',
+    'is_audit_log_active')
 
 partnership_int_fields = ('http_timeout_seconds', 'chunked_threshold_bytes', 'ack_overdue_after', 'resend_max_retries')
 

@@ -206,6 +206,9 @@ class IMAPImporter:
             job = self._sync_linked_job(imap_def, imap_conn, session)
             imap_def['scheduler_job_id'] = job.id
 
+        # The audit log is on unless the YAML definition turns it off
+        imap_def['is_audit_log_active'] = imap_def.get('is_audit_log_active', True)
+
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(imap_conn, imap_def)
 
@@ -243,6 +246,9 @@ class IMAPImporter:
         if imap_def.get('scheduler_service'):
             job = self._sync_linked_job(imap_def, imap_conn, session)
             imap_def['scheduler_job_id'] = job.id
+
+        # The audit log is on unless the YAML definition turns it off
+        imap_def['is_audit_log_active'] = imap_def.get('is_audit_log_active', True)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(imap_conn, imap_def)

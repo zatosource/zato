@@ -13,5 +13,6 @@ cleanup_refs = {
     'server_process': None,
     'dashboard_process': None,
     'listener_process': None,
+    'queue_bridge_redis_process': None,
     'temporary_dir': None,
 }

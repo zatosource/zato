@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import tempfile
+from json import loads
 from unittest import TestCase, main
 
 # Zato
@@ -113,6 +114,20 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.assertEqual(outgoing.url_path, '/sso/{{type}}/hello/{{endpoint}}')
         self.assertEqual(outgoing.data_format, 'json')
         self.assertEqual(outgoing.timeout, 60)
+
+        # A connection without the flag in YAML has the audit log on
+        opaque = loads(outgoing.opaque1)
+        self.assertIs(opaque['is_audit_log_active'], True)
+
+        # The template turns the audit log off for rest.5
+        outgoing_5 = self.session.query(HTTPSOAP).filter_by(
+            name='enmasse.outgoing.rest.5',
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.PLAIN_HTTP
+        ).one()
+
+        opaque_5 = loads(outgoing_5.opaque1)
+        self.assertIs(opaque_5['is_audit_log_active'], False)
 
 # ################################################################################################################################
 

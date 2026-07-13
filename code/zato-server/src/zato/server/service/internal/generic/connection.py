@@ -123,6 +123,26 @@ skip_simple_type = {
     'gs_id',
     'unb_id',
     'as2_partner_next_cert_from',
+
+    # PEM keys and certificates are always strings - running them through the literal
+    # parser would only make the compiler emit SyntaxWarning on key material that
+    # happens to contain digits-then-letters tokens.
+    'as2_partner_cert',
+    'as2_partner_next_cert',
+    'as2_signing_key',
+    'as2_signing_cert_chain',
+    'as2_decryption_key',
+    'as2_next_decryption_key',
+    'as2_next_decryption_cert',
+    'as2_peer_signing_cert',
+    'as2_peer_encryption_cert',
+    'as2_trust_anchors',
+    'as4_signing_key',
+    'as4_signing_cert_chain',
+    'as4_decryption_key',
+    'as4_peer_signing_cert',
+    'as4_peer_encryption_cert',
+    'as4_trust_anchors',
 }
 
 # ################################################################################################################################

@@ -143,6 +143,7 @@ class GenericIMAPMessage(IMAPMessage):
     audit_conn_name: 'str'
     audit_folder: 'str'
     audit_cid: 'str'
+    needs_audit: 'bool'
 
     def delete(self) -> 'None':
 
@@ -154,14 +155,16 @@ class GenericIMAPMessage(IMAPMessage):
         except Exception:
 
             # Record the failed deletion before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
+            if self.needs_audit:
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 
@@ -175,14 +178,16 @@ class GenericIMAPMessage(IMAPMessage):
         except Exception:
 
             # Record the failed operation before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
+            if self.needs_audit:
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=msg_id, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,6 +200,7 @@ class Microsoft365IMAPMessage(IMAPMessage):
     audit_conn_name: 'str'
     audit_folder: 'str'
     audit_cid: 'str'
+    needs_audit: 'bool'
 
     def delete(self) -> 'None':
 
@@ -203,14 +209,16 @@ class Microsoft365IMAPMessage(IMAPMessage):
         except Exception:
 
             # Record the failed deletion before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
+            if self.needs_audit:
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 
@@ -221,14 +229,16 @@ class Microsoft365IMAPMessage(IMAPMessage):
         except Exception:
 
             # Record the failed operation before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.Error, data=error)
             raise
 
         else:
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
-                cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
+            if self.needs_audit:
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.audit_conn_name,
+                    cid=self.audit_cid, msg_id=self.uid, folder=self.audit_folder, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -397,6 +407,9 @@ class _IMAPConnection(_Connection):
         self.config_no_sensitive = config_no_sensitive
         self.audit_log = audit_log
 
+        # Each connection can have its audit log turned off individually
+        self.needs_audit = config['is_audit_log_active']
+
     def get(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
@@ -440,13 +453,15 @@ class GenericIMAPConnection(_IMAPConnection):
                     message.audit_conn_name = self.config.name
                     message.audit_folder = folder
                     message.audit_cid = cid
+                    message.needs_audit = self.needs_audit
 
                     # .. record the received message in the audit log ..
-                    msg_id = _uid_as_str(uid)
-                    data = _get_message_summary(msg)
+                    if self.needs_audit:
+                        msg_id = _uid_as_str(uid)
+                        data = _get_message_summary(msg)
 
-                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
-                        cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
 
                     # .. and hand the message over to the caller.
                     yield (uid, message)
@@ -454,9 +469,10 @@ class GenericIMAPConnection(_IMAPConnection):
         except Exception:
 
             # Record the failure before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
-                cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
+                    cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
 
 # ################################################################################################################################
@@ -480,18 +496,20 @@ class GenericIMAPConnection(_IMAPConnection):
                     _ = conn.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
 
                     # .. and record the deletion in the audit log.
-                    msg_id = _uid_as_str(uid)
-                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
-                        cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+                    if self.needs_audit:
+                        msg_id = _uid_as_str(uid)
+                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
 
                 _ = conn.connection.expunge()
 
         except Exception:
 
             # Record the failure before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
-                cid=cid, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Deleted, self.config.name,
+                    cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
 # ################################################################################################################################
@@ -509,16 +527,18 @@ class GenericIMAPConnection(_IMAPConnection):
                     _ = conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
 
                     # .. and record the operation in the audit log.
-                    msg_id = _uid_as_str(uid)
-                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
-                        cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+                    if self.needs_audit:
+                        msg_id = _uid_as_str(uid)
+                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
 
         except Exception:
 
             # Record the failure before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
-                cid=cid, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Marked_Seen, self.config.name,
+                    cid=cid, outcome=AuditOutcome.Error, data=error)
             raise
 
 # ################################################################################################################################
@@ -662,12 +682,14 @@ class Microsoft365IMAPConnection(_IMAPConnection):
                     imap_message.audit_conn_name = self.config['name']
                     imap_message.audit_folder = folder
                     imap_message.audit_cid = cid
+                    imap_message.needs_audit = self.needs_audit
 
                     # .. record the received message in the audit log ..
-                    data = _get_message_summary(imap_message.data)
+                    if self.needs_audit:
+                        data = _get_message_summary(imap_message.data)
 
-                    _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
-                        cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+                        _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
 
                     # .. and hand the message over to the caller.
                     yield msg_id, imap_message
@@ -679,9 +701,10 @@ class Microsoft365IMAPConnection(_IMAPConnection):
         except Exception:
 
             # Record the failure before letting the exception propagate
-            error = format_exc()
-            _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
-                cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
+                    cid=cid, folder=folder, outcome=AuditOutcome.Error, data=error)
             raise
 
 # ################################################################################################################################

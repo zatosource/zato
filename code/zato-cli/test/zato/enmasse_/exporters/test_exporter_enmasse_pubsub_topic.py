@@ -143,6 +143,10 @@ class TestEnmassePubSubTopicExporter(TestCase):
             if 'description' in topic_def and topic_def['description']:
                 topic_required['description'] = topic_def['description']
 
+            # The audit log flag is exported only when it is off
+            if topic_def.get('is_audit_log_active') is False:
+                topic_required['is_audit_log_active'] = False
+
             # Add this topic's requirements to our dictionary
             required_topic_fields[topic_name] = topic_required
 
@@ -168,6 +172,11 @@ class TestEnmassePubSubTopicExporter(TestCase):
                         logger.info(f'Optional field {field} not found in exported topic {name}, but was in template')
         else:
             logger.warning('No pubsub topic definitions found in test YAML template')
+
+        # The template turns the audit log off for topic.2 only, the other topics do not export the flag
+        exported_by_name = {topic['name']: topic for topic in exported_topics}
+        self.assertIs(exported_by_name['enmasse.topic.2']['is_audit_log_active'], False)
+        self.assertNotIn('is_audit_log_active', exported_by_name['enmasse.topic.1'])
 
 # ################################################################################################################################
 

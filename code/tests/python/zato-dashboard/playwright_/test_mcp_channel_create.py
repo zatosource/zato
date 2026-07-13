@@ -1429,7 +1429,36 @@ class MCPTestHotDeployTools(Service):
 
         logger.info('[test_service_hot_deploy_updates_tools_list] tool_names=%s', tool_names)
 
-        # .. clean up the deployed file ..
+        # .. the channel must not outlive the hot-deployed service its allow list references,
+        # otherwise a fresh server start would fail rebuilding the MCP tool registries,
+        # so delete the channel first ..
+        mcp_list_url = f'{_Page_Url_Pattern}&query={channel_name}'
+        navigate_to_page(page, base_url, mcp_list_url)
+
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id = item_id_cell.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+
+        # .. delete the basic auth definition ..
+        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
+        navigate_to_page(page, base_url, basic_auth_page_url)
+
+        row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
+        row_security = page.wait_for_selector(row_selector_security, state='visible', timeout=5000)
+        item_id_cell_security = row_security.query_selector('td[class*="item_id_"]')
+        item_id_security = item_id_cell_security.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id_security}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
+
+        # .. and only now remove the deployed service file.
         os.remove(service_file_path)
 
         assert hot_deploy_service_name in tool_names, \
@@ -1799,7 +1828,46 @@ class MCPTestAllowListB(Service):
         assert service_name_a not in tool_names_b, \
             f'Channel B should NOT expose "{service_name_a}", got: {tool_names_b}'
 
-        # .. clean up deployed files ..
+        # .. the channels must not outlive the hot-deployed services their allow lists reference,
+        # otherwise a fresh server start would fail rebuilding the MCP tool registries,
+        # so delete channel A first ..
+        mcp_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}allow-'
+        navigate_to_page(page, base_url, mcp_list_url)
+
+        row_a = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+        item_id_cell_a = row_a.query_selector('td[class*="item_id_"]')
+        item_id_a = item_id_cell_a.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id_a}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector_a, state='hidden', timeout=5000)
+
+        # .. then delete channel B ..
+        row_b = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        item_id_cell_b = row_b.query_selector('td[class*="item_id_"]')
+        item_id_b = item_id_cell_b.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id_b}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector_b, state='hidden', timeout=5000)
+
+        # .. delete the shared basic auth definition ..
+        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
+        navigate_to_page(page, base_url, basic_auth_page_url)
+
+        row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
+        row_security = page.wait_for_selector(row_selector_security, state='visible', timeout=5000)
+        item_id_cell_security = row_security.query_selector('td[class*="item_id_"]')
+        item_id_security = item_id_cell_security.inner_text().strip()
+
+        page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id_security}")')
+        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        page.click('#popup_ok')
+        page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
+
+        # .. and only now remove the deployed service files.
         os.remove(service_file_path_a)
         os.remove(service_file_path_b)
 

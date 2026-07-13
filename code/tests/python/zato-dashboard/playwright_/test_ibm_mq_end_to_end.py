@@ -75,13 +75,16 @@ def ibm_mq_server() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def queue_bridge(ibm_mq_server:'any_') -> 'any_':
-    """ The queue bridge binary running as a subprocess against the local Redis,
-    the same way the server runs it in production. The server under test talks
-    to it through the shared Redis streams.
+def queue_bridge(ibm_mq_server:'any_', zato_dashboard:'anydict') -> 'any_':
+    """ The queue bridge binary running as a subprocess against the test session's
+    dedicated Redis, the same way the server runs it in production. The server under
+    test talks to it through the shared Redis streams - dedicated because servers
+    left over from other test sessions in the same run read the default Redis
+    and would steal recv events from the shared consumer groups.
     """
     env = os.environ.copy()
     env['Zato_MQ_Client_Lib'] = _MQ_Client_Lib
+    env['Zato_Queue_Bridge_Redis_Port'] = str(zato_dashboard['queue_bridge_redis_port'])
 
     process = subprocess.Popen([_Bridge_Binary], env=env)
 

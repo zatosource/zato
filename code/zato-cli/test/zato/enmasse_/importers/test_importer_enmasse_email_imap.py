@@ -101,6 +101,15 @@ class TestEnmasseEmailIMAPFromYAML(TestCase):
         self.assertEqual(imap.mode, 'plain')
         self.assertTrue(hasattr(imap, 'password'))
 
+        # A connection without the flag in YAML has the audit log on
+        imap_opaque = parse_instance_opaque_attr(imap)
+        self.assertIs(imap_opaque['is_audit_log_active'], True)
+
+        # The template turns the audit log off for imap.2
+        imap_2 = self.session.query(IMAP).filter_by(name='enmasse.email.imap.2').one()  # type: ignore
+        imap_2_opaque = parse_instance_opaque_attr(imap_2)
+        self.assertIs(imap_2_opaque['is_audit_log_active'], False)
+
 # ################################################################################################################################
 
     def test_imap_scheduler_job_creation(self):

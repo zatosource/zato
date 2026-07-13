@@ -123,6 +123,10 @@ class OutgoingSOAPExporter:
             # with row-based fields as YAML lists and without the environment-local job IDs.
             export_invocation_fields(exported_conn, opaque, Invocation_Fields_SOAP)
 
+            # The audit log is on by default so only the off state is exported
+            if opaque.get('is_audit_log_active') is False:
+                exported_conn['is_audit_log_active'] = False
+
             exported_outgoing.append(exported_conn)
 
         logger.info('Successfully prepared %d outgoing SOAP connection definitions for export', len(exported_outgoing))

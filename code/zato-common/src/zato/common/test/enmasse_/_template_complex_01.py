@@ -133,6 +133,7 @@ channel_rest:
     service: demo.ping
     url_path: /enmasse.rest.2
     data_format: json
+    is_audit_log_active: false
     rate_limiting:
       - cidr_list:
           - 0.0.0.0/0
@@ -192,6 +193,7 @@ channel_soap:
     soap_action: urn:enmasse:soap:2
     soap_version: "1.2"
     use_mtom: true
+    is_audit_log_active: false
     groups:
       - enmasse.group.1
       - enmasse.group.2
@@ -257,6 +259,7 @@ outgoing_rest:
     url_path: /abc/5
     ping_method: GET
     tls_verify: false # Default is True
+    is_audit_log_active: false # Default is True
 
 scheduler:
 
@@ -461,6 +464,7 @@ outgoing_soap:
     soap_version: "1.1"
     tls_verify: false
     timeout: 20
+    is_audit_log_active: false
 
   - name: enmasse.outgoing.soap.2
     host: https://registry.example.com
@@ -504,6 +508,7 @@ outgoing_as2:
     verify_tls: false
     content_type: application/edifact
     unb_id: LEGACYPARTNER
+    is_audit_log_active: false
 
 outgoing_as4:
 
@@ -577,6 +582,7 @@ email_imap:
     port: 143
     username: enmasse2@example.com
     password: Zato_Enmasse_Env.IMAPPassword
+    is_audit_log_active: false
     scheduler_run_every: 5
     scheduler_run_unit: minutes
     scheduler_start_date: '2030-01-01T00:00:00'
@@ -622,6 +628,7 @@ pubsub_topic:
 
   - name: enmasse.topic.2
     description: Optional description for topic 2
+    is_audit_log_active: false
 
   - name: enmasse.topic.3
     description: Optional description for topic 3

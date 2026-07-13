@@ -826,13 +826,15 @@ class RequestDispatcher:
         if _has_log_info:
             self._log_incoming_request(cid, meta, channel_item, channel_name, payload, user_agent, remote_addr)
 
-        # .. only user-defined REST and SOAP channels go to the audit log, internal ones would flood it ..
+        # .. only user-defined REST and SOAP channels go to the audit log, internal ones would flood it,
+        # .. and each channel can have its audit log turned off individually ..
         needs_audit = False
 
         if channel_item:
             if channel_item['transport'] in (_transport_plain_http, _transport_soap):
                 if not channel_item['is_internal']:
-                    needs_audit = True
+                    if channel_item['is_audit_log_active']:
+                        needs_audit = True
 
         # .. we have a match and we can possibly handle the incoming request ..
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore

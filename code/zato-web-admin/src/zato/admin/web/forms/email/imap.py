@@ -23,6 +23,7 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     server_type = forms.ChoiceField(widget=forms.Select())
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     port = forms.CharField(initial=IMAP4_SSL_PORT, widget=forms.TextInput(attrs={'style':'width:10%'}))
@@ -71,6 +72,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

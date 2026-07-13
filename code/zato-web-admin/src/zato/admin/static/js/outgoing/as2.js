@@ -75,6 +75,7 @@ $.fn.zato.outgoing.as2.field_descriptions = {
     // Main tab
     'id_name': 'A unique name for this connection.<br>Used to identify the partner in logs<br>and the dashboard.',
     'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
+    'id_is_audit_log_active': 'Whether this connection\'s exchanges are recorded<br>in the audit log. On by default.<br>Turning it off also disables MDN reconciliation<br>and duplicate detection for this partnership.',
     'id_endpoint_url': 'The partner\'s AS2 endpoint,<br>e.g. https://as2.example.com/exchange.',
     'id_as2_from': 'Your own AS2 identifier,<br>sent in the AS2-From header<br>of every outgoing message.',
     'id_as2_to': 'The partner\'s AS2 identifier,<br>sent in the AS2-To header<br>of every outgoing message.',
@@ -238,6 +239,7 @@ $.fn.zato.outgoing.as2.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.prevent_canonicalization));
     row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.warn_on_duplicate_filename));
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
+    row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.is_audit_log_active));
 
     if(include_tr) {
         row += '</tr>';

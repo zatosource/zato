@@ -148,6 +148,7 @@ def _connection_config(parties:'TestParties', **overrides:'any_') -> 'any_':
     out['force_base64'] = False
     out['prevent_canonicalization'] = False
     out['warn_on_duplicate_filename'] = False
+    out['is_audit_log_active'] = True
 
     out['http_timeout_seconds'] = 0
     out['chunked_threshold_bytes'] = 0

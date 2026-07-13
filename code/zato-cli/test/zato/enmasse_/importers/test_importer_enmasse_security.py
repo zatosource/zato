@@ -195,7 +195,7 @@ class TestEnmasseSecurity(TestCase):
         self.assertEqual(opaque['mode'], 'username_token')
         self.assertTrue(opaque['use_digest'])
 
-        # .. an X.509 definition keeps its switches and all of its PEM material in opaque attributes ..
+        # .. an X.509 definition keeps its switches and all of its PEM file paths in opaque attributes ..
         x509 = created_by_name['enmasse.wss.2']
         x509_yaml = yaml_by_name['enmasse.wss.2']
         self.assertEqual(x509.username, 'enmasse.2')
@@ -245,7 +245,7 @@ class TestEnmasseSecurity(TestCase):
         _, _ = self.security_importer.sync_security_definitions(wss_defs, self.session)
 
         # Build an update for the X.509 definition that changes the username
-        # and carries none of the PEM material the definition already holds.
+        # and carries none of the PEM file paths the definition already holds.
         original = cast_('stranydict', None)
 
         for item in wss_defs:
@@ -271,7 +271,7 @@ class TestEnmasseSecurity(TestCase):
         self.assertEqual(instance.name, 'enmasse.wss.2')
         self.assertEqual(instance.username, 'enmasse.2.updated')
 
-        # .. and the PEM material and switches the update did not mention are still there.
+        # .. and the PEM file paths and switches the update did not mention are still there.
         opaque = json.loads(instance.opaque1)
         self.assertEqual(opaque['mode'], 'x509')
         self.assertTrue(opaque['sign'])

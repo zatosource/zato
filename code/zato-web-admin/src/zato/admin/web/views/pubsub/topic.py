@@ -52,7 +52,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = 'description', 'publisher_count', 'subscriber_count', 'backend_type', 'amqp_outconn_name', \
-        'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name'
+        'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name', 'is_audit_log_active'
     output_repeated = True
 
     def handle(self) -> 'anydict':
@@ -75,7 +75,7 @@ class _CreateEdit(CreateEdit):
 
     input_required = 'name', 'is_active'
     input_optional = 'description', 'backend_type', 'amqp_outconn_name', 'amqp_exchange', 'amqp_routing_key', \
-        'amqp_channel_name'
+        'amqp_channel_name', 'is_audit_log_active'
     output_required = 'id', 'name'
 
     def success_message(self, item:'any_') -> 'str':

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.common.odb.query import pubsub_topic_list
@@ -60,6 +61,12 @@ class PubSubTopicExporter:
             # Add description if present
             if item.description:
                 exported_topic['description'] = item.description
+
+            # The audit log flag lives in the opaque attributes and only the off state is exported
+            if opaque1 := item.opaque1:
+                opaque = loads(opaque1)
+                if opaque.get('is_audit_log_active') is False:
+                    exported_topic['is_audit_log_active'] = False
 
             exported_topics.append(exported_topic)
 

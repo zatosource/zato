@@ -158,6 +158,10 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
                     if field in conn_def and conn_def[field] is not None:
                         conn_required[field] = conn_def[field]
 
+                # The audit log flag is exported only when it is off
+                if conn_def.get('is_audit_log_active') is False:
+                    conn_required['is_audit_log_active'] = False
+
                 # Add this connection's requirements to our dictionary
                 required_conn_fields[conn_name] = conn_required
 
@@ -219,6 +223,11 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         self.assertNotIn('tls_client_cert', conn)
         self.assertNotIn('tls_client_key', conn)
         self.assertNotIn('body_credentials', conn)
+
+        # The template turns the audit log off for soap.1 while soap.2 keeps the default,
+        # so only soap.1 exports the flag.
+        self.assertIs(conn['is_audit_log_active'], False)
+        self.assertNotIn('is_audit_log_active', exported_by_name['enmasse.outgoing.soap.2'])
 
 # ################################################################################################################################
 

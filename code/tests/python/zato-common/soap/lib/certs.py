@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import ipaddress
 import os
 import tempfile
 from dataclasses import dataclass
@@ -19,12 +20,21 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from cryptography.x509.oid import NameOID
 
+# Zato
+from zato.common.typing_ import optional
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from cryptography.x509 import Certificate
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+general_name_list = list[x509.GeneralName]
+general_name_list_none = optional[general_name_list]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,10 +101,10 @@ def _ca_certificate(key:'RSAPrivateKey', name:'x509.Name') -> 'Certificate':
 
 def _leaf_certificate(
     common_name:'str',
-    public_key:'object',
+    public_key:'RSAPublicKey',
     ca_key:'RSAPrivateKey',
     ca_name:'x509.Name',
-    alternative_names:'list | None'=None,
+    alternative_names:'general_name_list_none'=None,
     ) -> 'Certificate':
     """ Issues a CA-signed leaf certificate, optionally carrying subject alternative names.
     """
@@ -137,6 +147,40 @@ def _key_pem(key:'RSAPrivateKey') -> 'bytes':
 
 # ################################################################################################################################
 
+def _write_temp_pem(pem_bytes:'bytes') -> 'str':
+    """ Writes PEM bytes to a new temporary file and returns the file's path.
+    """
+    file_descriptor, out = tempfile.mkstemp(prefix='soap_test_pem_', suffix='.pem')
+
+    with os.fdopen(file_descriptor, 'wb') as handle:
+        _ = handle.write(pem_bytes)
+
+    return out
+
+# ################################################################################################################################
+
+def private_key_pem_path(key:'RSAPrivateKey') -> 'str':
+    """ Serializes a private key to a temporary PEM file and returns the file's path -
+    the path a WS-Security definition would keep.
+    """
+    pem_bytes = _key_pem(key)
+
+    out = _write_temp_pem(pem_bytes)
+    return out
+
+# ################################################################################################################################
+
+def certificate_pem_path(certificate:'Certificate') -> 'str':
+    """ Serializes a certificate to a temporary PEM file and returns the file's path -
+    the path a WS-Security definition would keep.
+    """
+    pem_bytes = _certificate_pem(certificate)
+
+    out = _write_temp_pem(pem_bytes)
+    return out
+
+# ################################################################################################################################
+
 def build_tls_material(host:'str') -> 'TLSMaterial':
     """ Builds a CA plus a server certificate for the given host and a client certificate,
     writing every artifact to a fresh temporary directory. The server certificate carries the
@@ -149,9 +193,8 @@ def build_tls_material(host:'str') -> 'TLSMaterial':
     ca_certificate = _ca_certificate(ca_key, ca_name)
 
     # The server certificate must name the host both ways so requests validates it either way.
-    alternative_names = [x509.DNSName(host), x509.DNSName('localhost')]
+    alternative_names:'general_name_list' = [x509.DNSName(host), x509.DNSName('localhost')]
     try:
-        import ipaddress
         alternative_names.append(x509.IPAddress(ipaddress.ip_address(host)))
     except ValueError:
         pass
