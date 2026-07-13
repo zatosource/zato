@@ -50,7 +50,11 @@ _Propagation_Poll_Interval = 0.5
 _Timeout_Log_Patterns = ('Read timed out', 'ReadTimeoutError')
 
 # Log patterns produced when an invocation runs before the connection propagates to the server
-_Propagation_Log_Patterns = ('Outgoing REST connection wrapper', 'invoke_outconn error')
+_Propagation_Log_Patterns = (
+    'Outgoing REST connection wrapper',
+    'invoke_outconn error',
+    'Internal Server Error: /zato/http-soap/invoke-outconn',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################

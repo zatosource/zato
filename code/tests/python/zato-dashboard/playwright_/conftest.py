@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 from http.client import OK, FOUND
 from urllib.request import Request, urlopen
 
@@ -120,6 +121,10 @@ def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
     """
     outcome = yield
     report = outcome.get_result()
+
+    # Stash the per-phase report on the item so fixtures can check during teardown whether the test failed.
+    setattr(item, 'report_' + report.when, report)
+
     if report.failed:
         _cleanup_refs['has_failures'] = True
 
@@ -506,24 +511,24 @@ def logged_in_page(
     # .. open a page, which is a new tab in the already open window ..
     page = context.new_page()
 
-    # .. listen for page crashes and unexpected closes ..
+    # .. listen for page crashes and unexpected closes, buffering the events so they
+    # are only logged during teardown, and only for tests that failed ..
     _close_reasons = [] # type: list
+    _close_events = [] # type: list
 
     def _on_page_crash() -> 'None':
         _close_reasons.append('PAGE_CRASH')
-        logger.debug(f'[PAGE-EVENT] {test_name}: page renderer stopped')
+        _close_events.append(f'[PAGE-EVENT] {test_name}: page renderer stopped')
 
     def _on_page_close(_p:'any_') -> 'None':
         _close_reasons.append('PAGE_CLOSE')
-        import traceback
         stack = ''.join(traceback.format_stack())
-        logger.debug(f'[PAGE-EVENT] {test_name}: PAGE CLOSED, stack:\n{stack}')
+        _close_events.append(f'[PAGE-EVENT] {test_name}: PAGE CLOSED, stack:\n{stack}')
 
     def _on_context_close(_c:'any_') -> 'None':
         _close_reasons.append('CONTEXT_CLOSE')
-        import traceback
         stack = ''.join(traceback.format_stack())
-        logger.debug(f'[PAGE-EVENT] {test_name}: CONTEXT CLOSED, stack:\n{stack}')
+        _close_events.append(f'[PAGE-EVENT] {test_name}: CONTEXT CLOSED, stack:\n{stack}')
 
     page.on('crash', _on_page_crash)
     page.on('close', _on_page_close)
@@ -567,6 +572,23 @@ def logged_in_page(
     # which is also why its close listener must be detached here.
     page.close()
     context.remove_listener('close', _on_context_close)
+
+    # .. the test failed if either its setup or its call phase failed, the reports
+    # were stashed on the item by pytest_runtest_makereport, and the call report
+    # is absent when setup itself failed ..
+    test_failed = False
+
+    for phase in ('setup', 'call'):
+        report = getattr(request.node, 'report_' + phase, None)
+        if report:
+            if report.failed:
+                test_failed = True
+
+    # .. and log the buffered close events only for failed tests, so passing tests
+    # produce no tracebacks in their teardown output.
+    if test_failed:
+        for event in _close_events:
+            logger.debug(event)
 
 # ################################################################################################################################
 # ################################################################################################################################
