@@ -366,23 +366,23 @@ def on_mcp_channel_create_edit(service, data, model, old_name):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def on_mcp_channel_delete(session, channel_name, cluster_id):
+def on_mcp_channel_delete(service, session, channel_name, cluster_id):
     """ Removes the HTTPSOAP channel associated with an MCP channel.
     Also removes the auto-created security group named mcp.<channel_name>.
     Called when an MCP generic connection is deleted.
     """
     from zato.common.api import CONNECTION, Groups
-    from zato.common.odb.model import GenericObject, HTTPSOAP
+    from zato.common.odb.model import GenericObject
 
-    # Remove the HTTPSOAP channel ..
-    existing_http = session.query(HTTPSOAP).filter(
-        HTTPSOAP.name == channel_name,
-        HTTPSOAP.cluster_id == cluster_id,
-        HTTPSOAP.connection == CONNECTION.CHANNEL,
-    ).first()
-
-    if existing_http:
-        session.delete(existing_http)
+    # Remove the HTTPSOAP channel by invoking the standard delete service - this both deletes
+    # the database row and publishes the config event that removes the URL path
+    # from the live request dispatcher, so requests to the deleted channel get 404 ..
+    payload = {
+        'name': channel_name,
+        'connection': CONNECTION.CHANNEL,
+        'should_raise_if_missing': False,
+    }
+    _ = service.invoke('zato.http-soap.delete', payload)
 
     # .. also remove the auto-created security group and its members ..
     group_name = 'mcp.' + channel_name
