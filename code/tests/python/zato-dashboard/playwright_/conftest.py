@@ -131,6 +131,32 @@ def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def pytest_internalerror(excrepr:'any_', excinfo:'any_') -> 'None':
+    """ Pytest prints internal errors to stderr only, so when a run's output is captured from stdout,
+    the traceback is lost. Duplicate it to stdout here - returning None keeps the default stderr printing too.
+    """
+    for line in str(excrepr).split('\n'):
+        _ = sys.stdout.write(f'INTERNALERROR> {line}\n')
+
+    sys.stdout.flush()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_sessionfinish(session:'any_', exitstatus:'any_') -> 'None':
+    """ On an internal error pytest skips the FAILURES, ERRORS and short summary sections even though
+    all the per-test reports were already collected, which hides every failed test's traceback.
+    This hook runs inside the terminal reporter's own sessionfinish wrapper, so render the sections here explicitly.
+    """
+    if exitstatus == pytest.ExitCode.INTERNAL_ERROR:
+        reporter = session.config.pluginmanager.get_plugin('terminalreporter')
+        reporter.summary_failures()
+        reporter.summary_errors()
+        reporter.short_test_summary()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _wait_for_tcp_port(port:'int', timeout:'int' = _Server_Wait_Timeout) -> 'None':
     """ Polls a TCP port until it accepts connections, or raises after timeout.
     """

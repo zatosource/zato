@@ -657,7 +657,12 @@ _test-ui:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright \
-		$(FAIL_FAST) $(PYTEST_ARGS)
+		$(FAIL_FAST) $(PYTEST_ARGS) 2>&1; \
+	status=$$?; \
+	if [ $$status -eq 3 ]; then \
+		echo "pytest exited with code 3 (internal error) - the test run itself broke, this is not an ordinary test failure, look for INTERNALERROR lines above"; \
+	fi; \
+	exit $$status
 
 test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain and TLS.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/ibm_mq/

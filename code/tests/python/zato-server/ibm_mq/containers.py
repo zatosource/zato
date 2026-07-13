@@ -151,7 +151,14 @@ def start_ibm_mq(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None
 
     command.append(ModuleCtx.MQ_Image)
 
-    _ = subprocess.run(command, check=True, capture_output=True)
+    # Start the container, surfacing docker's own error message if the command fails -
+    # a bare CalledProcessError hides both stdout and stderr.
+    result = subprocess.run(command, capture_output=True, check=False)
+
+    if result.returncode != 0:
+        stdout = result.stdout.decode('utf-8')
+        stderr = result.stderr.decode('utf-8')
+        raise Exception(f'Could not start `{container_name}`, stdout: `{stdout}`, stderr: `{stderr}`')
 
     # Wait until the queue manager reports it is ready to accept connections
     _wait_until_ready(container_name)

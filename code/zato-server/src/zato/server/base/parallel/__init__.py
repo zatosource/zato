@@ -26,7 +26,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.common.ext.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
@@ -79,7 +79,7 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
-        strlist, strorlistnone, strnone, strorlist, strset
+        strlist, strorlistnone, strnone, strorlist, strset, strtuple
     from zato.server.base.parallel.delivery import RedisPushDelivery
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
@@ -113,8 +113,8 @@ floatpair = tuple_[float, float]
 
 _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
-# How often, at most, a still-failing queue bridge listener logs a reminder (in seconds).
-_queue_bridge_error_log_interval = 60.0
+# How often, at most, a still-failing Redis stream listener logs a reminder (in seconds).
+_listener_error_log_interval = 60.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1060,14 +1060,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         consumer_name = 'server-fire-0'
 
         for stream in (fire_stream, timeout_stream):
-            try:
-                _ = fire_redis.xgroup_create(stream, group_name, id='$', mkstream=True)
-            except Exception as exc:
-                if 'BUSYGROUP' not in str(exc):
-                    raise
+            self._ensure_stream_group(fire_redis, stream, group_name)
 
         def _fire_listener_loop() -> 'None':
             logger.info('Scheduler fire listener loop entering')
+
+            error_since = 0.0
+            last_logged = 0.0
+
             while True:
                 try:
                     result = fire_redis.xreadgroup(
@@ -1077,6 +1077,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         count=10,
                         block=1000,
                     )
+
+                    # We are able to read from the streams again, so the error condition, if any, has cleared.
+                    if error_since:
+                        logger.info('Scheduler fire listener recovered')
+                        error_since = 0.0
 
                     if not result:
                         continue
@@ -1110,8 +1115,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
                             _ = fire_redis.xack(stream_name, group_name, msg_id)
 
-                except Exception:
-                    logger.warning('Fire event: listener loop exception: %s', format_exc())
+                except Exception as exc:
+                    error_since, last_logged = self._handle_stream_listener_error(
+                        'scheduler fire', exc, fire_redis, (fire_stream, timeout_stream), group_name,
+                        error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_fire_listener_loop)
@@ -1125,14 +1132,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         group_name = 'server-request'
         consumer_name = 'server-request-0'
 
-        try:
-            _ = req_redis.xgroup_create(request_stream, group_name, id='$', mkstream=True)
-        except Exception as exc:
-            if 'BUSYGROUP' not in str(exc):
-                raise
+        self._ensure_stream_group(req_redis, request_stream, group_name)
 
         def _request_listener_loop() -> 'None':
             logger.info('Scheduler request listener loop entering')
+
+            error_since = 0.0
+            last_logged = 0.0
+
             while True:
                 try:
                     result = req_redis.xreadgroup(
@@ -1142,6 +1149,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         count=10,
                         block=5000,
                     )
+
+                    # We are able to read from the stream again, so the error condition, if any, has cleared.
+                    if error_since:
+                        logger.info('Scheduler request listener recovered')
+                        error_since = 0.0
 
                     if not result:
                         continue
@@ -1154,8 +1166,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                                 self._scheduler.reload(odb_adapter=scheduler_adapter)
                             _ = req_redis.xack(stream_name, group_name, msg_id)
 
-                except Exception:
-                    logger.warning('Error in scheduler request listener: %s', format_exc())
+                except Exception as exc:
+                    error_since, last_logged = self._handle_stream_listener_error(
+                        'scheduler request', exc, req_redis, (request_stream,), group_name, error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_request_listener_loop)
@@ -1438,8 +1451,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _ensure_queue_bridge_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
-        """ Creates a queue bridge stream and its consumer group idempotently.
+    def _ensure_stream_group(self, redis_conn:'any_', stream:'str', group_name:'str') -> 'None':
+        """ Creates a Redis stream and its consumer group idempotently.
         """
         try:
             _ = redis_conn.xgroup_create(stream, group_name, id='$', mkstream=True)
@@ -1451,38 +1464,46 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _handle_queue_bridge_listener_error(
+    def _handle_stream_listener_error(
         self,
         listener_name:'str',
         exception:'Exception',
         redis_conn:'any_',
-        stream:'str',
+        streams:'strtuple',
         group_name:'str',
         error_since:'float',
         last_logged:'float',
         ) -> 'floatpair':
-        """ Handles an error from a queue bridge listener loop. Logs the full traceback when the condition starts,
-        then only a one-line reminder at most once a minute, and recreates the stream and group if they were deleted,
-        e.g. by another process that cleared this Redis database.
+        """ Handles an error from a Redis stream listener loop. A missing stream or consumer group, e.g. one deleted
+        by another process that cleared this Redis database, is logged as a single concise line and recreated
+        so the listener heals itself. Any other error logs the full traceback when the condition starts,
+        then only a one-line reminder at most once a minute.
         """
         now = monotonic()
+        error_text = str(exception)
+        is_missing_group = 'NOGROUP' in error_text
 
-        # Log the full traceback when the condition starts ..
+        # Log when the condition starts - a missing stream or group gets one concise line,
+        # anything else gets the full traceback ..
         if not error_since:
             error_since = now
             last_logged = now
-            logger.warning('Error in queue bridge %s listener: %s', listener_name, format_exc())
+            if is_missing_group:
+                logger.warning('Recreating stream and group in %s listener: %s', listener_name, error_text)
+            else:
+                logger.warning('Error in %s listener: %s', listener_name, format_exc())
 
         # .. and only a one-line reminder at most once a minute afterwards ..
-        elif now - last_logged >= _queue_bridge_error_log_interval:
+        elif now - last_logged >= _listener_error_log_interval:
             last_logged = now
             elapsed = int(now - error_since)
-            logger.warning('Queue bridge %s listener still failing after %ss: %s', listener_name, elapsed, exception)
+            logger.warning('Listener %s still failing after %ss: %s', listener_name, elapsed, exception)
 
         # .. if the stream or group no longer exists, recreate it so the listener heals itself.
-        if 'NOGROUP' in str(exception):
+        if is_missing_group:
             try:
-                self._ensure_queue_bridge_group(redis_conn, stream, group_name)
+                for stream in streams:
+                    self._ensure_stream_group(redis_conn, stream, group_name)
             except Exception:
                 # Redis may be temporarily unavailable - the next loop iteration will try again.
                 pass
@@ -1501,7 +1522,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         group_name = 'server-request'
         consumer_name = 'server-request-0'
 
-        self._ensure_queue_bridge_group(request_redis, request_stream, group_name)
+        self._ensure_stream_group(request_redis, request_stream, group_name)
 
         def _request_listener_loop() -> 'None':
             logger.info('Queue bridge request listener loop entering')
@@ -1536,8 +1557,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             _ = request_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception as exc:
-                    error_since, last_logged = self._handle_queue_bridge_listener_error(
-                        'request', exc, request_redis, request_stream, group_name, error_since, last_logged)
+                    error_since, last_logged = self._handle_stream_listener_error(
+                        'queue bridge request', exc, request_redis, (request_stream,), group_name, error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_request_listener_loop)
@@ -1556,7 +1577,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         group_name = 'server-recv'
         consumer_name = 'server-recv-0'
 
-        self._ensure_queue_bridge_group(recv_redis, recv_stream, group_name)
+        self._ensure_stream_group(recv_redis, recv_stream, group_name)
 
         def _recv_listener_loop() -> 'None':
 
@@ -1617,8 +1638,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                             _ = recv_redis.xack(stream_name, group_name, msg_id)
 
                 except Exception as exc:
-                    error_since, last_logged = self._handle_queue_bridge_listener_error(
-                        'recv', exc, recv_redis, recv_stream, group_name, error_since, last_logged)
+                    error_since, last_logged = self._handle_stream_listener_error(
+                        'queue bridge recv', exc, recv_redis, (recv_stream,), group_name, error_since, last_logged)
                     sleep(1)
 
         _ = spawn(_recv_listener_loop)
@@ -2381,6 +2402,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from contextlib import closing
         from sqlalchemy import text
 
+        # [DIAG-1] Log every input argument exactly as received from the invoker
+        logger.debug('[DIAG-1] check_attr_exists: entity_type=%s, attr_name=%s, value=%s, filter_name=%s, filter_value=%s, ' \
+            'soap_action=%s, method=%s, http_accept=%s',
+            entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
+
         # Map logical entity types used by the frontend to actual ODB table names ..
         _entity_type_to_table = {
             'security': 'sec_base',
@@ -2391,11 +2417,25 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'channel_rest': 'http_soap',
             'channel_soap': 'http_soap',
             'channel_as4': 'http_soap',
+            'channel_openapi': 'generic_conn',
             'outgoing_amqp': 'out_amqp',
+            'outgoing_ftp': 'out_ftp',
+            'outgoing_odoo': 'out_odoo',
+            'outgoing_sql': 'sql_pool',
+            'groups': 'generic_object',
+            'scheduler': 'job',
+            'channel_amqp': 'channel_amqp',
+            'email_imap': 'email_imap',
+            'email_smtp': 'email_smtp',
+            'http_soap': 'http_soap',
+            'pubsub_topic': 'pubsub_topic',
         }
 
         # The http_soap table stores channels and outgoing connections together,
-        # so uniqueness must be scoped by the connection direction and transport ..
+        # so uniqueness must be scoped by the connection direction and transport.
+        # Groups are rows in generic_object and OpenAPI channels are rows in generic_conn,
+        # so both must be scoped by their respective type_ discriminator columns -
+        # the unique index on generic_object is (name, type_, cluster_id), regardless of subtype ..
         _entity_type_to_extra_where = {
             'outgoing_rest': "connection = 'outgoing' AND transport = 'plain_http'",
             'outgoing_soap': "connection = 'outgoing' AND transport = 'soap'",
@@ -2403,9 +2443,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'channel_rest':  "connection = 'channel' AND transport = 'plain_http'",
             'channel_soap':  "connection = 'channel' AND transport = 'soap'",
             'channel_as4':   "connection = 'channel' AND transport = 'as4'",
+            'channel_openapi': "type_ = '{}'".format(GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI),
+            'groups': "type_ = '{}'".format(Groups.Type.Group_Parent),
         }
 
-        table_name = _entity_type_to_table.get(entity_type, entity_type)
+        # Every entity type must be mapped explicitly - a silent fall-through to the entity type itself
+        # would turn the next unmapped type into a confusing SQL-level error instead of a clear one ..
+        table_name = _entity_type_to_table.get(entity_type)
+        if not table_name:
+            raise Exception(f'Unmapped entity type `{entity_type}` in check_attr_exists')
+
+        # [DIAG-2] Log how the entity type resolved to a table
+        logger.debug('[DIAG-2] check_attr_exists: entity_type=%s -> table_name=%s', entity_type, table_name)
 
         # A channel's url_path is shared across all transports, so this check must mirror
         # ensure_channel_is_unique from the create service - scoped by connection and soap_action
@@ -2447,7 +2496,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     exists = True
                     break
 
-            logger.debug('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s (url_path)',
+            # [DIAG-6] Log the outcome of the url_path-specific branch
+            logger.debug('[DIAG-6] check_attr_exists: entity_type=%s, value=%s, exists=%s (url_path)',
                 entity_type, value, exists)
 
             out = json.dumps({'exists': exists})
@@ -2472,15 +2522,32 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         with closing(self.odb.session()) as session:
             query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
-            logger.debug('[DIAG] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
+
+            # [DIAG-3] Log the exact SQL and parameters right before execution
+            logger.debug('[DIAG-3] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
                 entity_type, table_name, query, params)
-            result = session.execute(
-                text(query),  # type: ignore[operator]
-                params
-            )
+
+            try:
+                result = session.execute(
+                    text(query),  # type: ignore[operator]
+                    params
+                )
+            except Exception:
+
+                # [DIAG-4] The query failed - log the tables that actually exist in the database
+                # so the mismatch between the resolved table name and reality is visible in one place
+                tables = session.execute(text("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"))
+                table_list = []
+                for row in tables:
+                    table_list.append(row[0])
+                logger.info('[DIAG-4] check_attr_exists: query failed for table=%s, existing tables=%s',
+                    table_name, table_list)
+                raise
+
             exists = result.fetchone() is not None
 
-        logger.debug('[DIAG] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
+        # [DIAG-5] Log the final outcome of the check
+        logger.debug('[DIAG-5] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
 
         out = json.dumps({'exists': exists})
         return out
