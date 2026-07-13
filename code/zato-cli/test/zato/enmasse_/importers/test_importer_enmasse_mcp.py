@@ -15,6 +15,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
+from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.api import GENERIC
 from zato.common.odb.model import GenericConn
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -43,6 +44,7 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
         self.temp_file.close()
 
         self.importer = EnmasseYAMLImporter()
+        self.security_importer = SecurityImporter(self.importer)
         self.mcp_importer = ChannelMCPImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
@@ -63,6 +65,10 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
             self.session = get_session_from_server_dir(self.server_path)
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+        # Process security definitions and groups first - MCP channels reference security groups
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
 
 # ################################################################################################################################
 

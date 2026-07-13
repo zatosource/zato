@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 import subprocess
 from shutil import copy2, copytree, rmtree
@@ -47,6 +48,14 @@ class ModuleCtx:
 
     # How long a single readiness connection attempt may take, in seconds
     Ready_Connect_Timeout = 2
+
+    # The readiness loop below is the retry mechanism - the client must not retry on its own
+    # within a single poll attempt, which the default transport would do three times.
+    Ready_Max_Retries = 0
+
+    # The loggers that would otherwise report each expected connection failure
+    # while the server is still starting - they are silenced for the poll only.
+    Ready_Quiet_Loggers = ['elastic_transport.node_pool', 'elastic_transport.transport']
 
     # The heap is capped so the tests do not take half of the machine's memory
     Java_Opts = '-Xms512m -Xmx512m'
@@ -154,6 +163,11 @@ def _wait_until_ready(server:'ESServer', ca_cert:'str') -> 'None':
     client_config:'stranydict' = {
         'hosts': [f'{server.scheme}://{server.host}:{server.port}'],
         'request_timeout': ModuleCtx.Ready_Connect_Timeout,
+
+        # This loop is the retry mechanism - without this setting, the transport would retry
+        # each failed attempt three more times on its own, multiplying the connection attempts
+        # against a server that is expectedly not up yet.
+        'max_retries': ModuleCtx.Ready_Max_Retries,
     }
 
     if server.username:
@@ -162,21 +176,34 @@ def _wait_until_ready(server:'ESServer', ca_cert:'str') -> 'None':
     if ca_cert:
         client_config['ca_certs'] = ca_cert
 
-    while time() < deadline:
+    # These loggers report each refused connection at warning level, including full tracebacks,
+    # which is pure noise while the server is still starting - they are raised to error level
+    # for the duration of the poll and restored afterwards.
+    quiet_loggers = [logging.getLogger(name) for name in ModuleCtx.Ready_Quiet_Loggers]
+    original_levels = [quiet_logger.level for quiet_logger in quiet_loggers]
 
-        # A dead process will never become ready - fail fast with its output
-        if server.process.poll() is not None:
-            raise Exception(f'Elasticsearch process exited prematurely with rc={server.process.returncode}')
+    for quiet_logger in quiet_loggers:
+        quiet_logger.setLevel(logging.ERROR)
 
-        client = Elasticsearch(**client_config)
-        try:
-            _ = client.info()
-            client.close()
-            return
-        except Exception as e:
-            last_error = str(e)
-            client.close()
-            sleep(ModuleCtx.Ready_Sleep)
+    try:
+        while time() < deadline:
+
+            # A dead process will never become ready - fail fast with its output
+            if server.process.poll() is not None:
+                raise Exception(f'Elasticsearch process exited prematurely with rc={server.process.returncode}')
+
+            client = Elasticsearch(**client_config)
+            try:
+                _ = client.info()
+                client.close()
+                return
+            except Exception as e:
+                last_error = str(e)
+                client.close()
+                sleep(ModuleCtx.Ready_Sleep)
+    finally:
+        for quiet_logger, original_level in zip(quiet_loggers, original_levels):
+            quiet_logger.setLevel(original_level)
 
     raise Exception(f'Elasticsearch at {server.host}:{server.port} did not become ready, last error: {last_error}')
 

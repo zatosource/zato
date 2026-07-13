@@ -72,6 +72,15 @@ class _MockReaperWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _MockReaperChannelConfig:
+    """ Mock channel config for reaper tests, exposing the wrapper via .conn.
+    """
+    def __init__(self, conn:'any_') -> 'None':
+        self.conn = conn
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -281,8 +290,8 @@ class SessionManagerReaping(TestCase):
 
         # .. mock the channel_mcp_dict structure that the reaper expects ..
         channel_dict:'anydict' = {
-            'test.mcp.orders': _MockReaperWrapper(orders_manager, 'test.mcp.orders'),
-            'test.mcp.notifications': _MockReaperWrapper(notifications_manager, 'test.mcp.notifications'),
+            'test.mcp.orders': _MockReaperChannelConfig(_MockReaperWrapper(orders_manager, 'test.mcp.orders')),
+            'test.mcp.notifications': _MockReaperChannelConfig(_MockReaperWrapper(notifications_manager, 'test.mcp.notifications')),
         }
 
         reaper = MCPSessionReaper(channel_dict)

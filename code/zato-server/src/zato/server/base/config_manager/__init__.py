@@ -1235,9 +1235,6 @@ class ConfigManager(_ConfigManagerBase):
 
         with closing(self.server.odb.session()) as session:
 
-            total_count = session.query(PubSubSubscription).filter(
-                PubSubSubscription.cluster_id == self.server.cluster_id).count()
-
             rows = session.query(
                 PubSubSubscription.sub_key,
                 PubSubSubscription.delivery_type,
@@ -1257,17 +1254,12 @@ class ConfigManager(_ConfigManagerBase):
                 PubSubSubscription.cluster_id == self.server.cluster_id
             ).all()
 
-            logger.info('_sync_pubsub_subscriptions trace -> total_in_odb=%d, after_query=%d',
-                total_count, len(rows))
-
             synced = 0
             push_subs = {} # type: dict[str, list]
 
             for row in rows:
                 topic_name = row.name
                 sub_key = row.sub_key
-                logger.info('_sync_pubsub_subscriptions trace -> syncing sub_key=%s, sec_name=%s, topic=%s',
-                    sub_key, row.sec_name, topic_name)
                 self.server.pubsub_redis.subscribe(sub_key, topic_name)
                 synced += 1
 

@@ -163,22 +163,18 @@ class PubSubSubscriptionImporter:
         verify_row = session.query(PubSubSubscription).filter_by(id=instance.id).first()
         logger.info('CREATE: verify row with id=%s exists=%s', instance.id, verify_row is not None)
 
+        # A newly created subscription must start with an empty topic set, so remove any association rows
+        # that point at this subscription ID - they were left behind by a previously deleted subscription
+        # whose ID the database reused for this row.
+        stale_count = session.query(PubSubSubscriptionTopic).filter_by(subscription_id=instance.id).delete()
+        if stale_count:
+            logger.info('Deleted %d stale topic associations for reused subscription ID %s', stale_count, instance.id)
+
         # Create subscription-topic associations
         logger.info('Creating topic associations for subscription ID %s with topics %s', instance.id, definition['topic_id_list'])
 
         for topic_id in definition['topic_id_list']:
             logger.info('Adding topic association: subscription_id=%s, topic_id=%s, cluster_id=%s', instance.id, topic_id, self.importer.cluster_id)
-
-            # Check if association already exists
-            existing = session.query(PubSubSubscriptionTopic).filter(
-                PubSubSubscriptionTopic.subscription_id == instance.id,
-                PubSubSubscriptionTopic.topic_id == topic_id,
-                PubSubSubscriptionTopic.cluster_id == self.importer.cluster_id
-            ).first()
-
-            if existing:
-                logger.info('Topic association already exists: subscription_id=%s, topic_id=%s, cluster_id=%s', instance.id, topic_id, self.importer.cluster_id)
-                continue
 
             sub_topic = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
