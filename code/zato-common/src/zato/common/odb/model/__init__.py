@@ -16,7 +16,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SAP, SCHEDULER, PARAMS_PRIORITY, \
+from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SCHEDULER, PARAMS_PRIORITY, \
     URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
@@ -828,37 +828,6 @@ class OutgoingOdoo(Base):
     def __init__(self, cluster=None):
         self.cluster = cluster
         self.protocol_name = None # Not used by the DB
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class OutgoingSAP(Base):
-    """ An outgoing SAP RFC connection.
-    """
-    __tablename__ = 'out_sap'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('out_sap_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    host = Column(String(200), nullable=False)
-    sysnr = Column(String(3), nullable=True, server_default=str(SAP.DEFAULT.INSTANCE))
-    user = Column(String(200), nullable=False)
-    client = Column(String(4), nullable=False)
-    sysid = Column(String(4), nullable=False)
-    password = Column(String(400), nullable=False)
-    pool_size = Column(Integer(), nullable=False, server_default=str(SAP.DEFAULT.POOL_SIZE))
-    router = Column(String(400), nullable=True)
-
-    # JSON data is here
-    opaque1 = Column(_JSON(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_sap', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, cluster=None):
-        self.cluster = cluster
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -471,11 +471,16 @@ class TestPubSubTopicLifecycle:
         # .. count rows before ..
         count_before = get_table_row_count(page)
 
-        # .. click "Import demo config" ..
-        page.click('a:has-text("Import demo config")')
+        # .. click "Import demo config" and wait for the import GET itself - the import runs
+        # .. a synchronous enmasse subprocess server-side, so it needs a generous timeout,
+        # .. and on success the page calls window.location.reload(), hence the navigation wait ..
+        with page.expect_navigation(wait_until='load', timeout=150000):
+            with page.expect_response('**/zato/pubsub/import-demo-config', timeout=120000) as response_info:
+                page.click('a:has-text("Import demo config")')
 
-        # .. wait for page reload ..
-        page.wait_for_load_state('networkidle', timeout=30000)
+        response = response_info.value
+        assert response.status == 200, f'Import demo config returned {response.status}'
+
         page.wait_for_selector('#data-table', state='visible')
 
         # .. verify topics appeared.

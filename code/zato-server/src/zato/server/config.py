@@ -303,7 +303,6 @@ class ConfigStore:
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
         self.out_sql = None   # type: ConfigDict
-        self.out_sap = None   # type: ConfigDict
         self.out_plain_http = None # type: ConfigDict
         self.out_amqp = None       # type: ConfigDict
         self.email_smtp = None   # type: ConfigDict
@@ -382,7 +381,7 @@ class ConfigStore:
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap, self.out_sap
+        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap
 
 # ################################################################################################################################
 

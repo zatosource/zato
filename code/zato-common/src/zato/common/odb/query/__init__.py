@@ -24,7 +24,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
-    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP, WSSecurity
+    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -773,27 +773,6 @@ def out_odoo_list(session, cluster_id, needs_columns=False):
     """ A list of Odoo connections.
     """
     return _out_odoo(session, cluster_id)
-
-# ################################################################################################################################
-
-def _out_sap(session, cluster_id):
-    return session.query(OutgoingSAP).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OutgoingSAP.cluster_id).\
-        order_by(OutgoingSAP.name)
-
-def out_sap(session, cluster_id, id):
-    """ An individual SAP RFC connection.
-    """
-    return _out_sap(session, cluster_id).\
-        filter(OutgoingSAP.id==id).\
-        one()
-
-@query_wrapper
-def out_sap_list(session, cluster_id, needs_columns=False):
-    """ A list of SAP RFC connections.
-    """
-    return _out_sap(session, cluster_id)
 
 # ################################################################################################################################
 

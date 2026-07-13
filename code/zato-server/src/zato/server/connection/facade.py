@@ -1129,11 +1129,11 @@ class ODataConnection:
     the pool itself.
     """
     _conn_name: 'str'
-    _outconn_odata: 'anydict'
+    _outconn_config: 'anydict'
 
-    def __init__(self, conn_name:'str', outconn_odata:'anydict') -> 'None':
+    def __init__(self, conn_name:'str', outconn_config:'anydict') -> 'None':
         self._conn_name = conn_name
-        self._outconn_odata = outconn_odata
+        self._outconn_config = outconn_config
 
 # ################################################################################################################################
 
@@ -1147,7 +1147,7 @@ class ODataConnection:
         """ Returns a context manager that yields a pooled client, blocking to cover
         the window while the connection queue is still being built at startup.
         """
-        wrapper = self._outconn_odata[self._conn_name].conn
+        wrapper = self._outconn_config[self._conn_name].conn
 
         out = wrapper.client(should_block=True, block_timeout=_odata_block_timeout)
         return out
@@ -1220,21 +1220,22 @@ class ODataConnection:
 # ################################################################################################################################
 
 class ODataFacade:
-    """ Provides dict-like access to OData outgoing connections from services via self.odata.
+    """ Provides dict-like access to OData-based outgoing connections from services - the same class
+    serves every subtype of the OData implementation, e.g. self.odata and self.sap.
     """
-    _outconn_odata: 'anydict'
+    _outconn_config: 'anydict'
 
-    def init(self, config_manager:'ConfigManager') -> 'None':
-        self._outconn_odata = config_manager.outconn_odata
+    def init(self, outconn_config:'anydict') -> 'None':
+        self._outconn_config = outconn_config
 
 # ################################################################################################################################
 
     def __getitem__(self, name:'str') -> 'ODataConnection':
 
         # This will raise a KeyError if there is no such connection
-        self._outconn_odata[name]
+        self._outconn_config[name]
 
-        out = ODataConnection(name, self._outconn_odata)
+        out = ODataConnection(name, self._outconn_config)
         return out
 
 # ################################################################################################################################

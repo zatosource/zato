@@ -142,7 +142,6 @@ $.namespace('zato.outgoing.smb.data_table');
 $.namespace('zato.outgoing.soap');
 $.namespace('zato.outgoing.soap.data_table');
 $.namespace('zato.outgoing.sql');
-$.namespace('zato.outgoing.sap');
 $.namespace('zato.pubsub');
 $.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.subscription');
