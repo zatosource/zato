@@ -948,14 +948,6 @@ class ODOO:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SAP:
-    class DEFAULT:
-        INSTANCE = '00'
-        POOL_SIZE = 1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 CONTENT_TYPE = Bunch(
     JSON = 'application/json',
     PLAIN_XML = 'application/xml',
@@ -1038,6 +1030,7 @@ class GENERIC:
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_ODATA = 'outconn-odata'
+            OUTCONN_SAP = 'outconn-sap'
             OUTCONN_SFTP = 'outconn-sftp'
             OUTCONN_SMB = 'outconn-smb'
 
@@ -1152,6 +1145,28 @@ class ODATA:
 
         def __iter__(self):
             return iter((self.NO_AUTH, self.BASIC, self.BEARER, self.OAUTH2))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Each subtype is one full deployment of the OData implementation - the same client, screens and enmasse code
+# serve every subtype, differing only in what this configuration describes.
+ODATA_Subtype = {
+    'odata': {
+        'label': 'OData',
+        'url_prefix': 'out-odata',
+        'type_': GENERIC.CONNECTION.TYPE.OUTCONN_ODATA,
+        'odata_version': ODATA.VERSION.V4.id,
+        'needs_csrf_token': False,
+    },
+    'sap': {
+        'label': 'SAP',
+        'url_prefix': 'out-sap',
+        'type_': GENERIC.CONNECTION.TYPE.OUTCONN_SAP,
+        'odata_version': ODATA.VERSION.V2.id,
+        'needs_csrf_token': True,
+    },
+}
 
 # ################################################################################################################################
 # ################################################################################################################################

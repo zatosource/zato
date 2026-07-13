@@ -128,7 +128,6 @@ class _TestingConfigManager:
 class _TestingWorkerConfig:
     out_odoo = None
     out_soap = None
-    out_sap = None
 
 # ################################################################################################################################
 

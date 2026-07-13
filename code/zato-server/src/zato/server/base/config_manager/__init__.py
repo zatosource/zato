@@ -55,7 +55,6 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
-from zato.server.connection.sap import SAPWrapper
 from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_aws import CloudAWSWrapper
@@ -249,6 +248,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - OData outconns
         self.outconn_odata = {}
 
+        # Generic connections - SAP outconns, running on the OData implementation
+        self.outconn_sap = {}
+
         # Generic connections - SFTP outconns
         self.outconn_sftp = {}
 
@@ -312,6 +314,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: self.outconn_odata,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: self.outconn_sap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: self.outconn_smb,
         }
@@ -339,6 +342,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: OutconnODataWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: OutconnODataWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: OutconnSMBWrapper,
         }
@@ -352,9 +356,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # Odoo
         self.init_odoo()
-
-        # SAP RFC
-        self.init_sap()
 
         # API keys
         self.update_apikeys()
@@ -760,17 +761,6 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def init_sap(self) -> 'None':
-        names = self.config_store.out_sap.keys()
-        for name in names:
-            item = config = self.config_store.out_sap[name]
-            config = item['config']
-            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-            item.conn = SAPWrapper(config, self.server)
-            item.conn.build_queue()
-
-# ################################################################################################################################
-
     def _build_cache_api(self) -> 'CacheAPI':
         """ Creates a Redis-backed CacheAPI using the server's [redis] configuration.
         """
@@ -952,6 +942,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_odata_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA, {})
+        outconn_sap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_smb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB, {})
 
@@ -979,6 +970,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_mongodb_map,
             outconn_odata_map,
+            outconn_sap_map,
             outconn_sftp_map,
             outconn_smb_map,
         ]
@@ -994,6 +986,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ldap_map,
             outconn_mongodb_map,
             outconn_odata_map,
+            outconn_sap_map,
             outconn_sftp_map,
             outconn_smb_map,
         ]
@@ -2379,20 +2372,6 @@ class ConfigManager(_ConfigManagerBase):
         """ Closes and deletes an Odoo connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.config_store.out_odoo, 'Odoo', logger.debug)
-
-# ################################################################################################################################
-
-    def on_config_event_OUTGOING_SAP_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Creates or updates an SAP RFC connection.
-        """
-        _ = self._on_config_event_cloud_create_edit(msg, 'SAP', self.config_store.out_sap, SAPWrapper)
-
-    on_config_event_OUTGOING_SAP_CHANGE_PASSWORD = on_config_event_OUTGOING_SAP_EDIT = on_config_event_OUTGOING_SAP_CREATE
-
-    def on_config_event_OUTGOING_SAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
-        """ Closes and deletes an SAP RFC connection.
-        """
-        self._delete_config_close_wrapper(msg['name'], self.config_store.out_sap, 'SAP', logger.debug)
 
 # ################################################################################################################################
 

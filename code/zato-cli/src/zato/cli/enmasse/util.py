@@ -463,6 +463,7 @@ def get_top_level_order() -> 'strlist':
         'scheduler',
         'ldap',
         'odata',
+        'sap',
         'sql',
         'outgoing_soap',
         'outgoing_as2',
@@ -512,6 +513,10 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
     order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_type', 'username', 'token_url', 'tenant_id', \
         'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',
+
+    # SAP connections run on the OData implementation, so their fields are ordered the same way
+    order['sap'] = order['odata']
+
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
     order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
         'timeout', 'tls_verify') + Invocation_Order_Fields_SOAP

@@ -114,11 +114,6 @@ class OUTGOING(Constants):
     ODOO_DELETE = ValueConstant('')
     ODOO_CHANGE_PASSWORD = ValueConstant('')
 
-    SAP_CREATE = ValueConstant('')
-    SAP_EDIT = ValueConstant('')
-    SAP_DELETE = ValueConstant('')
-    SAP_CHANGE_PASSWORD = ValueConstant('')
-
     REST_WRAPPER_CHANGE_PASSWORD = ValueConstant('')
 
 class CHANNEL(Constants):

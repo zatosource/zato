@@ -93,7 +93,8 @@ class EnmasseYAMLExporter:
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
         self.mongodb_exporter = MongoDBExporter(self)
-        self.odata_exporter = ODataExporter(self)
+        self.odata_exporter = ODataExporter(self, 'odata')
+        self.sap_exporter = ODataExporter(self, 'sap')
         self.sftp_exporter = SFTPExporter(self)
         self.smb_exporter = SMBExporter(self)
         self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
@@ -347,6 +348,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_sap(self, session:'SASession') -> 'list':
+        """ Exports SAP connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        sap_list = self.sap_exporter.export(session, self.cluster_id)
+        return sap_list
+
+# ################################################################################################################################
+
     def export_sftp(self, session:'SASession') -> 'list':
         """ Exports SFTP connection definitions.
         """
@@ -587,6 +597,11 @@ class EnmasseYAMLExporter:
         odata_defs = self.export_odata(session)
         if odata_defs:
             output_dict['odata'] = odata_defs
+
+        # Export SAP connection definitions
+        sap_defs = self.export_sap(session)
+        if sap_defs:
+            output_dict['sap'] = sap_defs
 
         # Export SFTP connection definitions
         sftp_defs = self.export_sftp(session)

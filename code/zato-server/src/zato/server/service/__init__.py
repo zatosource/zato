@@ -471,7 +471,6 @@ class Service:
             self._config_manager.config_store.out_plain_http,
             self._config_store.out_soap,
             self._config_manager.sql_pool_store,
-            self._config_store.out_sap,
             self._config_manager.outconn_ldap,
             as2=self._config_manager.outconn_as2,
             as4=self._config_manager.config_store.out_as4,
@@ -500,6 +499,9 @@ class Service:
 
         # OData facade for outgoing connections
         self.odata = ODataFacade()
+
+        # SAP facade for outgoing connections - runs on the OData implementation
+        self.sap = ODataFacade()
 
         # SFTP facade for outgoing connections
         self.sftp = SFTPFacade()
@@ -643,7 +645,10 @@ class Service:
         self.mllp.init(self._config_manager)
 
         # OData facade
-        self.odata.init(self._config_manager)
+        self.odata.init(self._config_manager.outconn_odata)
+
+        # SAP facade - runs on the OData implementation
+        self.sap.init(self._config_manager.outconn_sap)
 
         # SFTP facade
         self.sftp.init(self.cid, self._config_manager)
@@ -1775,6 +1780,10 @@ class ODataAdapter(AdapterBase):
     conn_name  = cast_('str', None)
     entity_set = cast_('str', None)
 
+    # Which OData-based facade the connection is looked up in - subtypes point it elsewhere,
+    # e.g. SAPAdapter reads through self.sap.
+    facade_name = 'odata'
+
     # An optional key - when given, a single entity is read instead of the whole set.
     key = ''
 
@@ -1828,8 +1837,9 @@ class ODataAdapter(AdapterBase):
         # Resolve the placeholders the path elements may carry ..
         entity_set = self._replace_placeholders(self.entity_set)
 
-        # .. get the connection ..
-        conn = self.odata[conn_name]
+        # .. get the connection from the facade this adapter reads through ..
+        facade = getattr(self, self.facade_name)
+        conn = facade[conn_name]
 
         # .. a key means a single entity is being addressed ..
         if self.key:
@@ -1851,6 +1861,15 @@ class ODataAdapter(AdapterBase):
 
     def handle(self):
         self.response.payload = self._invoke_odata()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SAPAdapter(ODataAdapter):
+    """ Reads entities from a SAP system through a self.sap connection - SAP connections
+    run on the OData implementation, so everything ODataAdapter offers applies here too.
+    """
+    facade_name = 'sap'
 
 # ################################################################################################################################
 # ################################################################################################################################

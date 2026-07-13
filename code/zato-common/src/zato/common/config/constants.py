@@ -23,7 +23,6 @@ Outgoing_AMQP       = 'outgoing_amqp'
 Outgoing_FTP        = 'outgoing_ftp'
 SQL                 = 'sql'
 Odoo                = 'odoo'
-Outgoing_SAP        = 'outgoing_sap'
 Cache               = 'cache'
 Email_SMTP          = 'email_smtp'
 Email_IMAP          = 'email_imap'
@@ -55,7 +54,6 @@ All_Sections = frozenset([
     Outgoing_FTP,
     SQL,
     Odoo,
-    Outgoing_SAP,
     Cache,
     Email_SMTP,
     Email_IMAP,

@@ -26,7 +26,7 @@ from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outc
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
-    outconn_odata_int_config_keys
+    outconn_odata_int_config_keys, outconn_sap_config_defaults
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys
 from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
@@ -431,14 +431,14 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
-    def _generic_normalize_config_outconn_odata(self, config:'stranydict') -> 'None':
+    def _normalize_config_odata_impl(self, config:'stranydict', config_defaults:'stranydict') -> 'None':
         """ Fills in defaults for fields that the create path did not supply and coerces
         numeric and boolean fields that may arrive as strings from opaque storage.
         """
 
         # Apply a default for every field that is missing or None - column-backed fields
         # the message did not carry arrive as no-value markers and count as missing too ..
-        for key, default in outconn_odata_config_defaults.items():
+        for key, default in config_defaults.items():
             value = config.get(key)
             is_marker = isinstance(value, str) and value.startswith(_no_value_marker)
             if value is None or is_marker:
@@ -455,6 +455,19 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_odata(self, config:'stranydict') -> 'None':
+        self._normalize_config_odata_impl(config, outconn_odata_config_defaults)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_sap(self, config:'stranydict') -> 'None':
+
+        # SAP outconns run on the OData implementation - the same normalization applies,
+        # only the subtype defaults differ.
+        self._normalize_config_odata_impl(config, outconn_sap_config_defaults)
 
 # ################################################################################################################################
 

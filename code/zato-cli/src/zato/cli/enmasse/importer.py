@@ -134,6 +134,7 @@ class EnmasseYAMLImporter:
         self.ldap_defs = {}
         self.mongodb_defs = {}
         self.odata_defs = {}
+        self.sap_defs = {}
         self.sftp_defs = {}
         self.smb_defs = {}
         self.microsoft_cloud_defs = {}
@@ -178,7 +179,8 @@ class EnmasseYAMLImporter:
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
         self.mongodb_importer = MongoDBImporter(self)
-        self.odata_importer = ODataImporter(self)
+        self.odata_importer = ODataImporter(self, 'odata')
+        self.sap_importer = ODataImporter(self, 'sap')
         self.sftp_importer = SFTPImporter(self)
         self.smb_importer = SMBImporter(self)
         self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
@@ -651,27 +653,52 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def _sync_odata_impl(self, item_list:'list', session:'SASession', importer:'ODataImporter') -> 'tuple':
+        """ Synchronizes connection definitions of one OData subtype from a YAML configuration with the database.
+        """
+        if not item_list:
+            return [], []
+
+        label = importer.subtype['label']
+
+        count = len(item_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} {label} connection {noun}')
+
+        # Examine each connection item
+        for idx, item in enumerate(item_list):
+            logger.info('%s connection item %d: %s', label, idx, item)
+
+        items_created, items_updated = importer.sync_definitions(item_list, session)
+
+        logger.info('Processed %s connection definitions: created=%d updated=%d',
+            label, len(items_created), len(items_updated))
+
+        return items_created, items_updated
+
+# ################################################################################################################################
+
     def sync_odata(self, odata_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes OData connection definitions from a YAML configuration with the database.
         """
-        if not odata_list:
-            return [], []
-
-        count = len(odata_list)
-        noun = 'definition' if count == 1 else 'definitions'
-        logger.info(f'Processing {count} OData connection {noun}')
-
-        # Examine each OData connection item
-        for idx, item in enumerate(odata_list):
-            logger.info('OData connection item %d: %s', idx, item)
-
-        odata_created, odata_updated = self.odata_importer.sync_definitions(odata_list, session)
+        odata_created, odata_updated = self._sync_odata_impl(odata_list, session, self.odata_importer)
 
         # Get OData definitions from the OData importer
         self.odata_defs = self.odata_importer.connection_defs
-        logger.info('Processed OData connection definitions: created=%d updated=%d', len(odata_created), len(odata_updated))
 
         return odata_created, odata_updated
+
+# ################################################################################################################################
+
+    def sync_sap(self, sap_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes SAP connection definitions from a YAML configuration with the database.
+        """
+        sap_created, sap_updated = self._sync_odata_impl(sap_list, session, self.sap_importer)
+
+        # Get SAP definitions from the SAP importer
+        self.sap_defs = self.sap_importer.connection_defs
+
+        return sap_created, sap_updated
 
 # ################################################################################################################################
 
@@ -1261,6 +1288,14 @@ class EnmasseYAMLImporter:
             self.created_objects['odata'] = odata_created
         if odata_updated:
             self.updated_objects['odata'] = odata_updated
+
+        # Process SAP connection definitions
+        sap_list = yaml_config.get('sap') or yaml_config.get('outgoing_sap', [])
+        sap_created, sap_updated = self.sync_sap(sap_list, session)
+        if sap_created:
+            self.created_objects['sap'] = sap_created
+        if sap_updated:
+            self.updated_objects['sap'] = sap_updated
 
         # Process SFTP connection definitions
         sftp_list = yaml_config.get('sftp') or yaml_config.get('outgoing_sftp', [])

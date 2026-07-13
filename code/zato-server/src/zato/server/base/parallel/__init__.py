@@ -1929,10 +1929,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def import_demo_pubsub(self):
 
+        import time as time_
+
         import zato.server.service.internal.pubsub
         from zato.common.api import Default_Demo_PubSub_Service_File_Data
         from zato.common.util.open_ import open_w
         from zato.server.commands import CommandsFacade
+
+        time_start = time_.monotonic()
+        pid = os.getpid()
+
+        logger.info('[DIAG] import_demo_pubsub: start, pid=%s', pid)
 
         pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
         config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
@@ -1942,10 +1949,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         with open_w(full_path) as f:
             f.write(Default_Demo_PubSub_Service_File_Data)
 
+        logger.info('[DIAG] import_demo_pubsub: services file written, pid=%s, elapsed=%.2f', pid, time_.monotonic() - time_start)
+
         facade = CommandsFacade()
         facade.init(self)
 
         result = facade.run_enmasse_sync_import(config_path)
+
+        logger.info('[DIAG] import_demo_pubsub: enmasse done, pid=%s, elapsed=%.2f, is_ok=%s, exit_code=%s, is_timeout=%s',
+            pid, time_.monotonic() - time_start, result.is_ok, result.exit_code, result.is_timeout)
+
+        if not result.is_ok:
+            logger.warning('[DIAG] import_demo_pubsub: enmasse failed, pid=%s, stdout=%s, stderr=%s',
+                pid, result.stdout.strip(), result.stderr.strip())
 
         return result.is_ok
 

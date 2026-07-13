@@ -101,8 +101,6 @@
                 'Max size',
                 'Max item size',
                 'Members',
-                'SAP router string',
-                'System ID',
                 'User',
                 'Use TLS',
             ];
@@ -371,9 +369,7 @@
                                             <li class="child"><a class="menu-link" href="{% url "out-odata" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-odata">OData</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-odoo" %}?cluster={{ cluster_id|default:"1" }}">Odoo</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
-                                            {% if 0 %}
-                                            <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP RFC</a></li>
-                                            {% endif %}
+                                            <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sap">SAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-soap" %}?cluster={{ cluster_id|default:"1" }}">SOAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
                                         </ul>
@@ -503,9 +499,7 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
-                                    {% if 0 %}
-                                    <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}">SAP</a></li>
-                                    {% endif %}
+                                    <li class="child"><a class="menu-link" href="{% url "out-sap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sap">SAP</a></li>
                                 </ul>
                             </li>
                             <li class="first-level">
