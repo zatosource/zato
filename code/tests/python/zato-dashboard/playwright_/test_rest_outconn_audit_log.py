@@ -87,7 +87,11 @@ _Enmasse_Import_Timeout = 120
 _Connection_Failure_Log_Patterns = ('Connection refused', 'NewConnectionError', 'Max retries exceeded', 'Connection error')
 
 # Log patterns produced when an invocation runs before the connection propagates to the server
-_Propagation_Log_Patterns = ('Outgoing REST connection wrapper', 'invoke_outconn error')
+_Propagation_Log_Patterns = (
+    'Outgoing REST connection wrapper',
+    'invoke_outconn error',
+    'Internal Server Error: /zato/http-soap/invoke-outconn',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
