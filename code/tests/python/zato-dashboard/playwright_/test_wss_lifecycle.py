@@ -24,8 +24,8 @@ if 0:
 
 _Test_Name_Prefix = 'test.wss.' + CryptoManager.generate_hex_string(32) + '.'
 
-_Sample_Key_PEM = '-----BEGIN PRIVATE KEY-----\nc2FtcGxlLWtleS1ib2R5\n-----END PRIVATE KEY-----'
-_Sample_Cert_PEM = '-----BEGIN CERTIFICATE-----\nc2FtcGxlLWNlcnQtYm9keQ==\n-----END CERTIFICATE-----'
+_Sample_Key_Path = '/opt/zato/pki/wss-lifecycle-key.pem'
+_Sample_Certificate_Path = '/opt/zato/pki/wss-lifecycle-certificate.pem'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,14 +105,14 @@ class TestWSSLifecycle:
         name = _Test_Name_Prefix + 'x509'
         username = 'user.' + name
 
-        # Create an X.509 definition with signing and encryption on, plus its crypto material ..
+        # Create an X.509 definition with signing and encryption on, plus paths to its crypto material ..
         wss_id = create_wss_definition(page, base_url, name, username, 'x509', {
             'sign': True,
             'encrypt': True,
-            'signing_key': _Sample_Key_PEM,
-            'signing_certificate_chain': _Sample_Cert_PEM,
-            'decryption_key': _Sample_Key_PEM,
-            'peer_certificate': _Sample_Cert_PEM,
+            'signing_key': _Sample_Key_Path,
+            'signing_certificate_chain': _Sample_Certificate_Path,
+            'decryption_key': _Sample_Key_Path,
+            'peer_certificate': _Sample_Certificate_Path,
         })
 
         # .. reload and verify every value through the edit dialog ..
@@ -123,10 +123,10 @@ class TestWSSLifecycle:
         assert page.input_value('#id_edit-mode') == 'x509'
         assert page.is_checked('#id_edit-sign')
         assert page.is_checked('#id_edit-encrypt')
-        assert page.input_value('#id_edit-signing_key') == _Sample_Key_PEM
-        assert page.input_value('#id_edit-signing_certificate_chain') == _Sample_Cert_PEM
-        assert page.input_value('#id_edit-decryption_key') == _Sample_Key_PEM
-        assert page.input_value('#id_edit-peer_certificate') == _Sample_Cert_PEM
+        assert page.input_value('#id_edit-signing_key') == _Sample_Key_Path
+        assert page.input_value('#id_edit-signing_certificate_chain') == _Sample_Certificate_Path
+        assert page.input_value('#id_edit-decryption_key') == _Sample_Key_Path
+        assert page.input_value('#id_edit-peer_certificate') == _Sample_Certificate_Path
 
         close_dialog_via_jquery(page, 'edit-div')
 
@@ -134,7 +134,7 @@ class TestWSSLifecycle:
         edit_wss_definition(page, wss_id, {
             'encrypt': False,
             'peer_certificate': '',
-            'trust_anchors': _Sample_Cert_PEM,
+            'trust_anchors': _Sample_Certificate_Path,
         })
 
         # .. reload and verify the changes round-tripped through the server ..
@@ -144,7 +144,7 @@ class TestWSSLifecycle:
 
         assert not page.is_checked('#id_edit-encrypt')
         assert page.input_value('#id_edit-peer_certificate') == ''
-        assert page.input_value('#id_edit-trust_anchors') == _Sample_Cert_PEM
+        assert page.input_value('#id_edit-trust_anchors') == _Sample_Certificate_Path
 
         close_dialog_via_jquery(page, 'edit-div')
 
@@ -164,14 +164,14 @@ class TestWSSLifecycle:
         name = _Test_Name_Prefix + 'saml'
         username = 'user.' + name
 
-        # Create a SAML definition with a signed assertion and its signing material ..
+        # Create a SAML definition with a signed assertion and paths to its signing material ..
         wss_id = create_wss_definition(page, base_url, name, username, 'saml', {
             'issuer': 'urn:issuer:' + name,
             'subject': 'subject.' + name,
             'audience': 'urn:audience:' + name,
             'sign': True,
-            'signing_key': _Sample_Key_PEM,
-            'signing_certificate_chain': _Sample_Cert_PEM,
+            'signing_key': _Sample_Key_Path,
+            'signing_certificate_chain': _Sample_Certificate_Path,
         })
 
         # .. reload and verify every value through the edit dialog ..
@@ -184,7 +184,7 @@ class TestWSSLifecycle:
         assert page.input_value('#id_edit-subject') == 'subject.' + name
         assert page.input_value('#id_edit-audience') == 'urn:audience:' + name
         assert page.is_checked('#id_edit-sign')
-        assert page.input_value('#id_edit-signing_key') == _Sample_Key_PEM
+        assert page.input_value('#id_edit-signing_key') == _Sample_Key_Path
 
         close_dialog_via_jquery(page, 'edit-div')
 

@@ -24,26 +24,12 @@ if 0:
 
 SERVICE = 'zato.security.wss'
 
-# Sample PEM material a definition keeps - stored as opaque attributes, not parsed at creation time.
-_signing_key_pem = """-----BEGIN PRIVATE KEY-----
-V1NTQ29uZmlnU3RvcmVTaWduaW5nS2V5Cg==
------END PRIVATE KEY-----"""
-
-_signing_certificate_chain_pem = """-----BEGIN CERTIFICATE-----
-V1NTQ29uZmlnU3RvcmVTaWduaW5nQ2hhaW4K
------END CERTIFICATE-----"""
-
-_decryption_key_pem = """-----BEGIN PRIVATE KEY-----
-V1NTQ29uZmlnU3RvcmVEZWNyeXB0aW9uS2V5Cg==
------END PRIVATE KEY-----"""
-
-_peer_certificate_pem = """-----BEGIN CERTIFICATE-----
-V1NTQ29uZmlnU3RvcmVQZWVyQ2VydGlmaWNhdGUK
------END CERTIFICATE-----"""
-
-_trust_anchors_pem = """-----BEGIN CERTIFICATE-----
-V1NTQ29uZmlnU3RvcmVUcnVzdEFuY2hvcnMK
------END CERTIFICATE-----"""
+# Sample paths to PEM files a definition keeps - stored as opaque attributes, not read at creation time.
+_signing_key_path = '/opt/zato/pki/wss-signing-key.pem'
+_signing_certificate_chain_path = '/opt/zato/pki/wss-signing-chain.pem'
+_decryption_key_path = '/opt/zato/pki/wss-decryption-key.pem'
+_peer_certificate_path = '/opt/zato/pki/wss-peer-certificate.pem'
+_trust_anchors_path = '/opt/zato/pki/wss-trust-anchors.pem'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,11 +103,11 @@ class TestSecurityWSS:
             mode='x509',
             sign=True,
             encrypt=True,
-            signing_key=_signing_key_pem,
-            signing_certificate_chain=_signing_certificate_chain_pem,
-            decryption_key=_decryption_key_pem,
-            peer_certificate=_peer_certificate_pem,
-            trust_anchors=_trust_anchors_pem,
+            signing_key=_signing_key_path,
+            signing_certificate_chain=_signing_certificate_chain_path,
+            decryption_key=_decryption_key_path,
+            peer_certificate=_peer_certificate_path,
+            trust_anchors=_trust_anchors_path,
         )
         assert 'id' in resp
         self.__class__.created_ids.append(resp['id'])
@@ -136,11 +122,11 @@ class TestSecurityWSS:
         assert item['mode'] == 'x509'
         assert item['sign'] is True
         assert item['encrypt'] is True
-        assert item['signing_key'] == _signing_key_pem
-        assert item['signing_certificate_chain'] == _signing_certificate_chain_pem
-        assert item['decryption_key'] == _decryption_key_pem
-        assert item['peer_certificate'] == _peer_certificate_pem
-        assert item['trust_anchors'] == _trust_anchors_pem
+        assert item['signing_key'] == _signing_key_path
+        assert item['signing_certificate_chain'] == _signing_certificate_chain_path
+        assert item['decryption_key'] == _decryption_key_path
+        assert item['peer_certificate'] == _peer_certificate_path
+        assert item['trust_anchors'] == _trust_anchors_path
 
 # ################################################################################################################################
 
@@ -155,8 +141,8 @@ class TestSecurityWSS:
             subject='CN=Test Subject',
             audience='https://api.example.com/test',
             sign=True,
-            signing_key=_signing_key_pem,
-            signing_certificate_chain=_signing_certificate_chain_pem,
+            signing_key=_signing_key_path,
+            signing_certificate_chain=_signing_certificate_chain_path,
         )
         assert 'id' in resp
         self.__class__.created_ids.append(resp['id'])
@@ -173,8 +159,8 @@ class TestSecurityWSS:
         assert item['subject'] == 'CN=Test Subject'
         assert item['audience'] == 'https://api.example.com/test'
         assert item['sign'] is True
-        assert item['signing_key'] == _signing_key_pem
-        assert item['signing_certificate_chain'] == _signing_certificate_chain_pem
+        assert item['signing_key'] == _signing_key_path
+        assert item['signing_certificate_chain'] == _signing_certificate_chain_path
 
 # ################################################################################################################################
 

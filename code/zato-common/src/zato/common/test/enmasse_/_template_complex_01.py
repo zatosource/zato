@@ -74,26 +74,11 @@ security:
     mode: x509
     sign: true
     encrypt: true
-    signing_key: |-
-      -----BEGIN PRIVATE KEY-----
-      RW5tYXNzZVdTU1NpZ25pbmdLZXkyCg==
-      -----END PRIVATE KEY-----
-    signing_certificate_chain: |-
-      -----BEGIN CERTIFICATE-----
-      RW5tYXNzZVdTU1NpZ25pbmdDaGFpbjIK
-      -----END CERTIFICATE-----
-    decryption_key: |-
-      -----BEGIN PRIVATE KEY-----
-      RW5tYXNzZVdTU0RlY3J5cHRpb25LZXkyCg==
-      -----END PRIVATE KEY-----
-    peer_certificate: |-
-      -----BEGIN CERTIFICATE-----
-      RW5tYXNzZVdTU1BlZXJDZXJ0aWZpY2F0ZTIK
-      -----END CERTIFICATE-----
-    trust_anchors: |-
-      -----BEGIN CERTIFICATE-----
-      RW5tYXNzZVdTU1RydXN0QW5jaG9yczIK
-      -----END CERTIFICATE-----
+    signing_key: /opt/zato/pki/enmasse-wss-signing-key-2.pem
+    signing_certificate_chain: /opt/zato/pki/enmasse-wss-signing-chain-2.pem
+    decryption_key: /opt/zato/pki/enmasse-wss-decryption-key-2.pem
+    peer_certificate: /opt/zato/pki/enmasse-wss-peer-certificate-2.pem
+    trust_anchors: /opt/zato/pki/enmasse-wss-trust-anchors-2.pem
 
   - name: enmasse.wss.3
     username: enmasse.3
@@ -104,14 +89,8 @@ security:
     subject: enmasse.subject.3
     audience: https://api.example.com/enmasse
     sign: true
-    signing_key: |-
-      -----BEGIN PRIVATE KEY-----
-      RW5tYXNzZVdTU1NpZ25pbmdLZXkzCg==
-      -----END PRIVATE KEY-----
-    signing_certificate_chain: |-
-      -----BEGIN CERTIFICATE-----
-      RW5tYXNzZVdTU1NpZ25pbmdDaGFpbjMK
-      -----END CERTIFICATE-----
+    signing_key: /opt/zato/pki/enmasse-wss-signing-key-3.pem
+    signing_certificate_chain: /opt/zato/pki/enmasse-wss-signing-chain-3.pem
 
   - name: enmasse.wss.4
     username: enmasse.4

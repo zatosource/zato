@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# cryptography
-from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
-
 # lxml
 from lxml import etree
 
@@ -21,6 +18,10 @@ from zato.common.soap.envelope import attach_body, build_envelope, get_body, par
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.wss import apply_wss, enforce_wss, keystore_from_config, Mode
 from zato.common.util.xml_.core import qname
+
+# ################################################################################################################################
+
+from certs import certificate_pem_path, private_key_pem_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,37 +50,17 @@ def _sample_envelope():
 
 # ################################################################################################################################
 
-def _private_key_pem(key):
-    """ Serializes a private key to the PEM string a definition would keep.
-    """
-    pem_bytes = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-
-    out = pem_bytes.decode('ascii')
-    return out
-
-# ################################################################################################################################
-
-def _certificate_pem(certificate):
-    """ Serializes a certificate to the PEM string a definition would keep.
-    """
-    pem_bytes = certificate.public_bytes(Encoding.PEM)
-
-    out = pem_bytes.decode('ascii')
-    return out
-
-# ################################################################################################################################
-
 def _sender_x509_config(parties, sign, encrypt):
     """ The config dict of an outgoing connection's X.509 definition -
-    our own key material plus the other side's certificate.
+    paths to our own key material plus the other side's certificate.
     """
     out = {
         'mode': Mode.X509,
         'sign': sign,
         'encrypt': encrypt,
-        'signing_key': _private_key_pem(parties.sender.signing_key),
-        'signing_certificate_chain': _certificate_pem(parties.sender.signing_certificate),
-        'peer_certificate': _certificate_pem(parties.receiver.signing_certificate),
+        'signing_key': private_key_pem_path(parties.sender.signing_key),
+        'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+        'peer_certificate': certificate_pem_path(parties.receiver.signing_certificate),
     }
 
     return out
@@ -87,15 +68,15 @@ def _sender_x509_config(parties, sign, encrypt):
 # ################################################################################################################################
 
 def _receiver_x509_config(parties, sign, encrypt):
-    """ The config dict of a channel's X.509 definition - our own decryption key
+    """ The config dict of a channel's X.509 definition - paths to our own decryption key
     plus the sender's pinned certificate.
     """
     out = {
         'mode': Mode.X509,
         'sign': sign,
         'encrypt': encrypt,
-        'decryption_key': _private_key_pem(parties.receiver.decryption_key),
-        'peer_certificate': _certificate_pem(parties.sender.signing_certificate),
+        'decryption_key': private_key_pem_path(parties.receiver.decryption_key),
+        'peer_certificate': certificate_pem_path(parties.sender.signing_certificate),
     }
 
     return out
@@ -104,16 +85,16 @@ def _receiver_x509_config(parties, sign, encrypt):
 # ################################################################################################################################
 
 class TestKeystoreFromConfig:
-    """ PEM strings out of a plain config dict - the exact shape the server keeps in RAM.
+    """ PEM files out of a plain config dict of paths - the exact shape the server keeps in RAM.
     """
 
     def test_all_fields(self, parties):
         config = {
-            'signing_key': _private_key_pem(parties.sender.signing_key),
-            'signing_certificate_chain': _certificate_pem(parties.sender.signing_certificate),
-            'decryption_key': _private_key_pem(parties.sender.decryption_key),
-            'peer_certificate': _certificate_pem(parties.receiver.signing_certificate),
-            'trust_anchors': _certificate_pem(parties.ca_certificate),
+            'signing_key': private_key_pem_path(parties.sender.signing_key),
+            'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+            'decryption_key': private_key_pem_path(parties.sender.decryption_key),
+            'peer_certificate': certificate_pem_path(parties.receiver.signing_certificate),
+            'trust_anchors': certificate_pem_path(parties.ca_certificate),
         }
 
         keystore = keystore_from_config(config)
@@ -187,7 +168,7 @@ class TestUsernameTokenMode:
 # ################################################################################################################################
 
 class TestX509Mode:
-    """ The X.509 mode - signatures and body encryption out of PEM config material.
+    """ The X.509 mode - signatures and body encryption out of the PEM files the config points to.
     """
 
     def test_sign_verify_roundtrip(self, parties):
@@ -240,8 +221,8 @@ class TestX509Mode:
             'mode': Mode.X509,
             'sign': True,
             'encrypt': False,
-            'signing_key': _private_key_pem(parties.receiver.signing_key),
-            'signing_certificate_chain': _certificate_pem(parties.receiver.signing_certificate),
+            'signing_key': private_key_pem_path(parties.receiver.signing_key),
+            'signing_certificate_chain': certificate_pem_path(parties.receiver.signing_certificate),
         }
 
         envelope = _sample_envelope()
@@ -259,7 +240,7 @@ class TestX509Mode:
             'mode': Mode.X509,
             'sign': True,
             'encrypt': False,
-            'trust_anchors': _certificate_pem(parties.ca_certificate),
+            'trust_anchors': certificate_pem_path(parties.ca_certificate),
         }
 
         enforce_wss(_reparse(envelope), channel_config)

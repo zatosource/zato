@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 WSS_Page_Url = '/zato/security/wss/?cluster=1'
 
-# Plain text and textarea fields in the create and edit forms, keyed by option name
+# Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'username', 'issuer', 'subject', 'audience', 'signing_key', 'signing_certificate_chain',
     'decryption_key', 'peer_certificate', 'trust_anchors')
 
@@ -126,7 +126,7 @@ def fill_wss_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None':
     if 'mode' in options:
         set_select_value(page, f'#id_{prefix}mode', options['mode'])
 
-    # .. plain text inputs and textareas, switching to the tab each field lives on;
+    # .. plain text inputs, switching to the tab each field lives on;
     # the first field always clicks its tab so the form's current tab does not matter ..
     current_tab = None
 

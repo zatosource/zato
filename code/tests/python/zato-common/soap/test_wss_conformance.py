@@ -15,7 +15,7 @@ from hashlib import sha1, sha256
 from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, PKCS1v15
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from cryptography.hazmat.primitives.serialization import Encoding
 
 # lxml
 from lxml import etree
@@ -25,6 +25,10 @@ from zato.common.soap.common import SOAPVersion
 from zato.common.soap.envelope import attach_body, build_envelope, to_bytes
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.wss import apply_wss, Mode
+
+# ################################################################################################################################
+
+from certs import certificate_pem_path, private_key_pem_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,26 +99,6 @@ def _reparse(envelope):
 
 # ################################################################################################################################
 
-def _private_key_pem(key):
-    """ Serializes a private key to the PEM string a definition would keep.
-    """
-    pem_bytes = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-
-    out = pem_bytes.decode('ascii')
-    return out
-
-# ################################################################################################################################
-
-def _certificate_pem(certificate):
-    """ Serializes a certificate to the PEM string a definition would keep.
-    """
-    pem_bytes = certificate.public_bytes(Encoding.PEM)
-
-    out = pem_bytes.decode('ascii')
-    return out
-
-# ################################################################################################################################
-
 def _username_token_config(use_digest):
     out = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': use_digest}
     return out
@@ -128,9 +112,9 @@ def _x509_config(parties, sign, encrypt):
         'mode': Mode.X509,
         'sign': sign,
         'encrypt': encrypt,
-        'signing_key': _private_key_pem(parties.sender.signing_key),
-        'signing_certificate_chain': _certificate_pem(parties.sender.signing_certificate),
-        'peer_certificate': _certificate_pem(parties.receiver.signing_certificate),
+        'signing_key': private_key_pem_path(parties.sender.signing_key),
+        'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+        'peer_certificate': certificate_pem_path(parties.receiver.signing_certificate),
     }
 
     return out
