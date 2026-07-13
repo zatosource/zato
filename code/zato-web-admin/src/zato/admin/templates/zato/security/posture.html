@@ -5,7 +5,6 @@
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
-<link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/security/posture.css">
 {% endblock %}
@@ -87,10 +86,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-auth-no-credentials">Channels without credentials</span></div>
                             <span class="posture-check-description" id="posture-description-auth-no-credentials">Flag REST channels that have no security definition assigned</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-auth-no-credentials">
-                            <input type="checkbox" id="posture-toggle-auth-no-credentials" data-check="auth_no_credentials" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-auth-no-credentials" data-check="auth_no_credentials" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-auth-weak-credentials" data-check="auth_weak_credentials">
@@ -98,10 +94,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-auth-weak-credentials">Weak passwords</span></div>
                             <span class="posture-check-description" id="posture-description-auth-weak-credentials">Detect credentials with low password strength scores</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-auth-weak-credentials">
-                            <input type="checkbox" id="posture-toggle-auth-weak-credentials" data-check="auth_weak_credentials" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-auth-weak-credentials" data-check="auth_weak_credentials" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-rate-limiting" data-check="rate_limiting">
@@ -109,10 +102,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-rate-limiting">Missing rate limiting</span></div>
                             <span class="posture-check-description" id="posture-description-rate-limiting">Detect channels and services without rate limiting configured</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-rate-limiting">
-                            <input type="checkbox" id="posture-toggle-rate-limiting" data-check="rate_limiting" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-rate-limiting" data-check="rate_limiting" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-admin-services-exposed" data-check="admin_services_exposed">
@@ -120,10 +110,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-admin-services-exposed">Admin services exposed</span></div>
                             <span class="posture-check-description" id="posture-description-admin-services-exposed">Check if internal admin services are reachable from public channels</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-admin-services-exposed">
-                            <input type="checkbox" id="posture-toggle-admin-services-exposed" data-check="admin_services_exposed" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-admin-services-exposed" data-check="admin_services_exposed" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-internal-no-auth" data-check="internal_no_auth">
@@ -131,10 +118,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-internal-no-auth">Internal services without auth</span></div>
                             <span class="posture-check-description" id="posture-description-internal-no-auth">Find internal services accessible without authentication</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-internal-no-auth">
-                            <input type="checkbox" id="posture-toggle-internal-no-auth" data-check="internal_no_auth" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-internal-no-auth" data-check="internal_no_auth" checked>
                     </div>
 
                 </div>
@@ -152,10 +136,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-request-forgery">Request forgery risks</span></div>
                             <span class="posture-check-description" id="posture-description-request-forgery">Scan service code for server-side request forgery patterns</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-request-forgery">
-                            <input type="checkbox" id="posture-toggle-request-forgery" data-check="request_forgery" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-request-forgery" data-check="request_forgery" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-unused-channels" data-check="unused_channels">
@@ -163,10 +144,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-unused-channels">Unused channels</span></div>
                             <span class="posture-check-description" id="posture-description-unused-channels">Find channels with no traffic in the configured time window</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-unused-channels">
-                            <input type="checkbox" id="posture-toggle-unused-channels" data-check="unused_channels" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-unused-channels" data-check="unused_channels" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-orphaned-services" data-check="orphaned_services">
@@ -174,10 +152,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-orphaned-services">Unattached services</span></div>
                             <span class="posture-check-description" id="posture-description-orphaned-services">Detect services with no channel or scheduled job attached</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-orphaned-services">
-                            <input type="checkbox" id="posture-toggle-orphaned-services" data-check="orphaned_services" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-orphaned-services" data-check="orphaned_services" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-pii-detection" data-check="pii_detection">
@@ -185,10 +160,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-pii-detection">Personal data in responses</span></div>
                             <span class="posture-check-description" id="posture-description-pii-detection">Scan outgoing payloads for credit card numbers, national IDs and other PII</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-pii-detection">
-                            <input type="checkbox" id="posture-toggle-pii-detection" data-check="pii_detection" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-pii-detection" data-check="pii_detection" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-connection-string-leaks" data-check="connection_string_leaks">
@@ -196,10 +168,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-connection-string-leaks">Connection string leaks</span></div>
                             <span class="posture-check-description" id="posture-description-connection-string-leaks">Detect database or broker connection strings appearing in API responses</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-connection-string-leaks">
-                            <input type="checkbox" id="posture-toggle-connection-string-leaks" data-check="connection_string_leaks" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-connection-string-leaks" data-check="connection_string_leaks" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-cumulative-data" data-check="cumulative_data">
@@ -207,10 +176,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-cumulative-data">Cumulative data exposure</span></div>
                             <span class="posture-check-description" id="posture-description-cumulative-data">Track total volume of sensitive fields returned per consumer over time</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-cumulative-data">
-                            <input type="checkbox" id="posture-toggle-cumulative-data" data-check="cumulative_data" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-cumulative-data" data-check="cumulative_data" checked>
                     </div>
 
                 </div>
@@ -228,10 +194,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-debug-mode">Debug mode enabled</span></div>
                             <span class="posture-check-description" id="posture-description-debug-mode">Warn if the server is running with debug or development settings</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-debug-mode">
-                            <input type="checkbox" id="posture-toggle-debug-mode" data-check="debug_mode" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-debug-mode" data-check="debug_mode" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-plaintext-secrets" data-check="plaintext_secrets">
@@ -239,10 +202,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-plaintext-secrets">Plaintext secrets in config</span></div>
                             <span class="posture-check-description" id="posture-description-plaintext-secrets">Scan configuration files for passwords and tokens stored in clear text</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-plaintext-secrets">
-                            <input type="checkbox" id="posture-toggle-plaintext-secrets" data-check="plaintext_secrets" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-plaintext-secrets" data-check="plaintext_secrets" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-known-vulnerabilities" data-check="known_vulnerabilities">
@@ -250,10 +210,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-known-vulnerabilities">Known vulnerabilities</span></div>
                             <span class="posture-check-description" id="posture-description-known-vulnerabilities">Check installed Python packages against known CVE databases</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-known-vulnerabilities">
-                            <input type="checkbox" id="posture-toggle-known-vulnerabilities" data-check="known_vulnerabilities" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-known-vulnerabilities" data-check="known_vulnerabilities" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-tls-certificates" data-check="tls_certificates">
@@ -261,10 +218,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-tls-certificates">TLS certificates</span></div>
                             <span class="posture-check-description" id="posture-description-tls-certificates">Validate certificate chains and warn about upcoming expirations</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-tls-certificates">
-                            <input type="checkbox" id="posture-toggle-tls-certificates" data-check="tls_certificates" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-tls-certificates" data-check="tls_certificates" checked>
                     </div>
 
                 </div>
@@ -282,10 +236,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-unencrypted-traffic">Unencrypted traffic</span></div>
                             <span class="posture-check-description" id="posture-description-unencrypted-traffic">Find outgoing connections using plain HTTP instead of HTTPS</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-unencrypted-traffic">
-                            <input type="checkbox" id="posture-toggle-unencrypted-traffic" data-check="unencrypted_traffic" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-unencrypted-traffic" data-check="unencrypted_traffic" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-missing-timeouts" data-check="missing_timeouts">
@@ -293,10 +244,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-missing-timeouts">Missing timeouts</span></div>
                             <span class="posture-check-description" id="posture-description-missing-timeouts">Detect outgoing connections without timeout values set</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-missing-timeouts">
-                            <input type="checkbox" id="posture-toggle-missing-timeouts" data-check="missing_timeouts" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-missing-timeouts" data-check="missing_timeouts" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-outgoing-cert-issues" data-check="outgoing_cert_issues">
@@ -304,10 +252,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-outgoing-cert-issues">Certificate issues</span></div>
                             <span class="posture-check-description" id="posture-description-outgoing-cert-issues">Check outgoing TLS connections for expired or weak certificates</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-outgoing-cert-issues">
-                            <input type="checkbox" id="posture-toggle-outgoing-cert-issues" data-check="outgoing_cert_issues" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-outgoing-cert-issues" data-check="outgoing_cert_issues" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-backend-no-auth" data-check="backend_no_auth">
@@ -315,10 +260,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-backend-no-auth">Backend connections without auth</span></div>
                             <span class="posture-check-description" id="posture-description-backend-no-auth">Find outgoing connections with no authentication configured</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-backend-no-auth">
-                            <input type="checkbox" id="posture-toggle-backend-no-auth" data-check="backend_no_auth" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-backend-no-auth" data-check="backend_no_auth" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-backend-tls-version" data-check="backend_tls_version">
@@ -326,10 +268,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-backend-tls-version">Outdated TLS versions</span></div>
                             <span class="posture-check-description" id="posture-description-backend-tls-version">Flag outgoing connections that allow TLS 1.0 or 1.1</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-backend-tls-version">
-                            <input type="checkbox" id="posture-toggle-backend-tls-version" data-check="backend_tls_version" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-backend-tls-version" data-check="backend_tls_version" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-backend-tls-ciphers" data-check="backend_tls_ciphers">
@@ -337,10 +276,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-backend-tls-ciphers">Weak TLS ciphers</span></div>
                             <span class="posture-check-description" id="posture-description-backend-tls-ciphers">Detect outgoing connections using deprecated cipher suites</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-backend-tls-ciphers">
-                            <input type="checkbox" id="posture-toggle-backend-tls-ciphers" data-check="backend_tls_ciphers" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-backend-tls-ciphers" data-check="backend_tls_ciphers" checked>
                     </div>
 
                 </div>
@@ -358,10 +294,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-bulk-extraction">Bulk data extraction</span></div>
                             <span class="posture-check-description" id="posture-description-bulk-extraction">Detect unusually large response payloads that may indicate data scraping</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-bulk-extraction">
-                            <input type="checkbox" id="posture-toggle-bulk-extraction" data-check="bulk_extraction" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-bulk-extraction" data-check="bulk_extraction" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-enumeration" data-check="enumeration">
@@ -369,10 +302,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-enumeration">Enumeration attempts</span></div>
                             <span class="posture-check-description" id="posture-description-enumeration">Watch for sequential ID probing and resource enumeration patterns</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-enumeration">
-                            <input type="checkbox" id="posture-toggle-enumeration" data-check="enumeration" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-enumeration" data-check="enumeration" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-credential-anomaly" data-check="credential_anomaly">
@@ -380,10 +310,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-credential-anomaly">Credential anomalies</span></div>
                             <span class="posture-check-description" id="posture-description-credential-anomaly">Track per-IP authentication failure rates for brute-force detection</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-credential-anomaly">
-                            <input type="checkbox" id="posture-toggle-credential-anomaly" data-check="credential_anomaly" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-credential-anomaly" data-check="credential_anomaly" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-pagination-abuse" data-check="pagination_abuse">
@@ -391,10 +318,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-pagination-abuse">Pagination abuse</span></div>
                             <span class="posture-check-description" id="posture-description-pagination-abuse">Detect requests with extreme offset or page-size values</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-pagination-abuse">
-                            <input type="checkbox" id="posture-toggle-pagination-abuse" data-check="pagination_abuse" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-pagination-abuse" data-check="pagination_abuse" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-request-rate-anomaly" data-check="request_rate_anomaly">
@@ -402,10 +326,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-request-rate-anomaly">Request rate anomalies</span></div>
                             <span class="posture-check-description" id="posture-description-request-rate-anomaly">Use sliding window counters to flag unusual traffic spikes per endpoint</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-request-rate-anomaly">
-                            <input type="checkbox" id="posture-toggle-request-rate-anomaly" data-check="request_rate_anomaly" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-request-rate-anomaly" data-check="request_rate_anomaly" checked>
                     </div>
 
                     <div class="posture-check-item" id="posture-item-call-pattern-anomaly" data-check="call_pattern_anomaly">
@@ -413,10 +334,7 @@ $(document).ready(function() {
                             <div class="posture-check-name"><span class="posture-check-name-text" id="posture-name-call-pattern-anomaly">Call pattern anomalies</span></div>
                             <span class="posture-check-description" id="posture-description-call-pattern-anomaly">ML-based detection of abnormal API call sequences and timing</span>
                         </div>
-                        <label class="toggle-switch" for="posture-toggle-call-pattern-anomaly">
-                            <input type="checkbox" id="posture-toggle-call-pattern-anomaly" data-check="call_pattern_anomaly" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+                        <input type="checkbox" id="posture-toggle-call-pattern-anomaly" data-check="call_pattern_anomaly" checked>
                     </div>
 
                 </div>

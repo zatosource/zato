@@ -190,6 +190,10 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'is_active' in options:
         page.set_checked(f'#id_{prefix}is_active', options['is_active'])
 
+    # .. the audit log checkbox ..
+    if 'is_audit_log_active' in options:
+        page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])
+
     # .. the gateway service list textarea, visible only for the gateway trigger service ..
     if 'gateway_service_list' in options:
         page.fill(f'#id_{prefix}gateway_service_list', options['gateway_service_list'])

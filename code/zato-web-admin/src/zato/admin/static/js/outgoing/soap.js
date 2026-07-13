@@ -110,15 +110,11 @@ $.fn.zato.outgoing.soap.add_param_row = function(action, kind, key, value, mode)
     var row = $('<tr class="request-param-row"></tr>');
 
     var jsonata_cell = $('<td class="request-param-jsonata-cell"></td>');
-    var jsonata_toggle = $('<label class="toggle-switch" title="Evaluate the value as JSONata"></label>');
-    var jsonata_checkbox = $('<input type="checkbox" class="request-param-jsonata">');
+    var jsonata_checkbox = $('<input type="checkbox" class="request-param-jsonata" title="Evaluate the value as JSONata">');
     if(mode === 'jsonata') {
         jsonata_checkbox.prop('checked', true);
     }
-    var jsonata_slider = $('<span class="toggle-slider"></span>');
-    jsonata_toggle.append(jsonata_checkbox);
-    jsonata_toggle.append(jsonata_slider);
-    jsonata_cell.append(jsonata_toggle);
+    jsonata_cell.append(jsonata_checkbox);
 
     var key_cell = $('<td class="request-param-key-cell"></td>');
     var key_input = $('<input type="text" class="request-param-key" placeholder="Name">');
@@ -342,6 +338,7 @@ $.fn.zato.outgoing.soap.field_descriptions = {
     // Main tab
     'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
+    'id_is_audit_log_active': 'Whether this connection\'s traffic is recorded<br>in the audit log. On by default.',
     'id_host': 'Address of the remote SOAP server,<br>e.g. https://example.com:8443.',
     'id_url_path': 'URL path of the SOAP endpoint<br>on the remote server,<br>e.g. /services/endpoint.',
     'id_soap_action': 'Value of the SOAPAction header<br>sent with each request. Leave empty<br>if the endpoint does not require one.',
@@ -501,6 +498,8 @@ $.fn.zato.outgoing.soap.data_table.new_row = function(item, data, include_tr) {
     $.each(invocation_fields, function(ignored, name) {
         row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
     });
+
+    row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.is_audit_log_active));
 
     if(include_tr) {
         row += '</tr>';

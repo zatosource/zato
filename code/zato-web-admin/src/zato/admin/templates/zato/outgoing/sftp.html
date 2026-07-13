@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -224,7 +223,7 @@
                                 <label for="id_strict_host_key_checking">Strict host key checking</label>
                             </td>
                             <td>
-                                <label class="toggle-switch">{{ create_form.strict_host_key_checking }}<span class="toggle-slider"></span></label>
+                                {{ create_form.strict_host_key_checking }}
                             </td>
                         </tr>
 
@@ -307,7 +306,7 @@
                                 <label for="id_edit-strict_host_key_checking">Strict host key checking</label>
                             </td>
                             <td>
-                                <label class="toggle-switch">{{ edit_form.strict_host_key_checking }}<span class="toggle-slider"></span></label>
+                                {{ edit_form.strict_host_key_checking }}
                             </td>
                         </tr>
 

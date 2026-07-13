@@ -1148,3 +1148,68 @@ div.action-panel span.previous-next {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ------------------------------------------------------------ */
+/* Checkbox slider - every checkbox renders as a toggle switch   */
+/* ------------------------------------------------------------ */
+
+:root {
+    --toggle-width: 48px;
+    --toggle-height: 24px;
+    --toggle-knob-size: 18px;
+    --toggle-knob-offset: 3px;
+    --toggle-travel: 24px;
+    --toggle-off-background: #ccc;
+    --toggle-on-background: var(--primary-dark);
+    --toggle-knob-color: white;
+}
+
+/* Row-selection checkboxes in list tables (td.impexp) keep the native look */
+input[type="checkbox"]:not(td.impexp input) {
+    display: inline-block;
+    position: relative;
+    top: 0;
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+    margin: 0;
+    border: none;
+    vertical-align: middle;
+    background-color: var(--toggle-off-background);
+    border-radius: var(--toggle-height);
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: background-color 0.24s;
+}
+
+input[type="checkbox"]:not(td.impexp input):before {
+    content: "";
+    position: absolute;
+    left: var(--toggle-knob-offset);
+    bottom: var(--toggle-knob-offset);
+    width: var(--toggle-knob-size);
+    height: var(--toggle-knob-size);
+    background-color: var(--toggle-knob-color);
+    border-radius: 50%;
+    transition: transform 0.24s;
+}
+
+input[type="checkbox"]:not(td.impexp input):checked {
+    background-color: var(--toggle-on-background);
+}
+
+input[type="checkbox"]:not(td.impexp input):checked:before {
+    transform: translateX(var(--toggle-travel));
+}
+
+/* Smaller slider inside dialog forms. The off-state track
+   uses a darker shade so it stands out against the form background. */
+.data-popup {
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
+}

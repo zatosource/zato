@@ -38,7 +38,7 @@ _Text_Fields = ('name', 'url_path', 'soap_action')
 # Select fields set by raw value via JS since Chosen.js hides the underlying elements
 _Select_Fields = ('soap_version',)
 
-# Checkbox fields toggled by boolean options, set via JS because toggle-switch styling covers the inputs
+# Checkbox fields toggled by boolean options, set via JS so the state is set directly regardless of the slider styling
 _Toggle_Fields = ('use_mtom',)
 
 # The readiness probe of the channel-side fixture services, deployed from fixtures/services during server boot
@@ -106,6 +106,10 @@ def fill_soap_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> '
     # .. the active checkbox, a plain visible one ..
     if 'is_active' in options:
         page.set_checked(f'#id_{prefix}is_active', options['is_active'])
+
+    # .. the audit log checkbox, a plain visible one too ..
+    if 'is_audit_log_active' in options:
+        page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])
 
     # .. and toggles hidden behind the switch styling.
     for field_name in _Toggle_Fields:

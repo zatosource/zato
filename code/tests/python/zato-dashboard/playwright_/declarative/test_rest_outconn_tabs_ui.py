@@ -208,7 +208,7 @@ class TestRESTOutconnTabsUI:
             'Expected a new row to start in text mode'
 
         # .. click the toggle the way a user would ..
-        page.click(f'{_Query_Rows_Selector} .toggle-slider')
+        page.click(f'{_Query_Rows_Selector} .request-param-jsonata')
 
         assert page.is_checked(f'{_Query_Rows_Selector} .request-param-jsonata'), \
             'Expected the toggle click to flip the row to JSONata mode'

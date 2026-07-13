@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -180,7 +179,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_mode">Mode</label></td>
@@ -197,7 +196,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_use_digest">Password digest</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_digest }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.use_digest }}</td>
                             </tr>
                         </table>
                     </div>
@@ -223,11 +222,11 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_sign">Sign</label></td>
-                                <td><label class="toggle-switch">{{ create_form.sign }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.sign }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_encrypt">Encrypt</label></td>
-                                <td><label class="toggle-switch">{{ create_form.encrypt }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.encrypt }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_signing_key">Signing key</label></td>
@@ -288,7 +287,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-mode">Mode</label></td>
@@ -305,7 +304,7 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_edit-use_digest">Password digest</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.use_digest }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.use_digest }}</td>
                             </tr>
                         </table>
                     </div>
@@ -331,11 +330,11 @@
                         <table class="form-data">
                             <tr>
                                 <td style="width:16%"><label for="id_edit-sign">Sign</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.sign }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.sign }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-encrypt">Encrypt</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.encrypt }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.encrypt }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-signing_key">Signing key</label></td>

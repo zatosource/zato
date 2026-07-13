@@ -4,6 +4,23 @@ td.request-config-cell {
     padding:12px 8px;
 }
 
+/* Label cells of rows that hold a parameter table */
+td.request-config-label {
+    vertical-align:top;
+    padding-top:12px;
+}
+
+/* Compact spacing while a parameter table has no rows yet */
+.request-config-table tr:has(.request-param-table tbody:empty) td.request-config-cell {
+    padding-top:7px;
+    padding-bottom:7px;
+}
+
+.request-config-table tr:has(.request-param-table tbody:empty) td.request-config-label {
+    vertical-align:middle;
+    padding-top:0;
+}
+
 /* The block hover highlight comes from /static/css/shared/form-highlight.css */
 
 /* Parameter tables - a JSONata toggle, a name, a value and a remove badge per row */
@@ -64,7 +81,7 @@ td.request-config-cell {
 }
 
 /* The JSONata toggle needs its clickable area vertically centered */
-.request-param-table .toggle-switch {
+.request-param-table .request-param-jsonata {
     vertical-align:middle;
 }
 

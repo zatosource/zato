@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
@@ -80,6 +79,7 @@
             'health_check_job_id',
             'health_check_callback_type',
             'health_check_callback_name',
+            'is_audit_log_active',
         ]
     }
     </script>
@@ -172,6 +172,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th> {% comment %} is_audit_log_active {% endcomment %}
+
                 </thead>
 
                 <tbody>
@@ -255,11 +257,13 @@
                         <td class='ignore'>{{ item.health_check_callback_type|default:'' }}</td>
                         <td class='ignore'>{{ item.health_check_callback_name|default:'' }}</td>
 
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='47'>No results</td>
+                        <td colspan='48'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -295,7 +299,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_is_audit_log_active">Audit log</label></td>
+                                <td>{{ create_form.is_audit_log_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_host">Host</label></td>
@@ -324,11 +332,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_use_ws_addressing">WS-Addressing</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_ws_addressing }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.use_ws_addressing }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_use_mtom">MTOM</label></td>
-                                <td><label class="toggle-switch">{{ create_form.use_mtom }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.use_mtom }}</td>
                             </tr>
                         </table>
                     </div>
@@ -443,7 +451,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-is_audit_log_active">Audit log</label></td>
+                                <td>{{ edit_form.is_audit_log_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-host">Host</label></td>
@@ -472,11 +484,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-use_ws_addressing">WS-Addressing</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.use_ws_addressing }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.use_ws_addressing }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-use_mtom">MTOM</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.use_mtom }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.use_mtom }}</td>
                             </tr>
                         </table>
                     </div>

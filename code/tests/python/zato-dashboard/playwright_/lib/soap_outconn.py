@@ -45,7 +45,7 @@ _Text_Fields = ('name', 'host', 'url_path', 'soap_action', 'timeout', 'tls_clien
 _Select_Fields = ('soap_version', 'validate_tls')
 
 # Checkbox fields toggled by boolean options
-_Checkbox_Fields = ('is_active', 'use_ws_addressing', 'use_mtom')
+_Checkbox_Fields = ('is_active', 'is_audit_log_active', 'use_ws_addressing', 'use_mtom')
 
 # The forms are tabbed and a text field is only fillable while its tab is active
 _Field_To_Tab = {
@@ -161,7 +161,7 @@ def fill_soap_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> '
     if 'security_value' in options:
         set_select_value(page, f'#id_{prefix}security_id', options['security_value'])
 
-    # .. checkboxes, checked via JS because toggle-switch styling covers the inputs ..
+    # .. checkboxes, checked via JS so the state is set directly regardless of the slider styling ..
     for field_name in _Checkbox_Fields:
         if field_name in options:
             checked = 'true' if options[field_name] else 'false'

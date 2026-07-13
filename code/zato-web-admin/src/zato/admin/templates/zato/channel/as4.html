@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -231,7 +230,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_url_path">URL path</label></td>
@@ -371,7 +370,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-url_path">URL path</label></td>

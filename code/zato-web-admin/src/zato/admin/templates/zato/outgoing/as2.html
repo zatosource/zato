@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/toggle-switch.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <style type="text/css">
@@ -32,9 +31,6 @@
             margin-left: 14px;
             margin-right: 6px;
             color: #333;
-            vertical-align: middle;
-        }
-        .data-popup td .toggle-switch {
             vertical-align: middle;
         }
         /* The partner certificate's not-after date, red when it is about to expire. */
@@ -348,11 +344,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_is_audit_log_active">Audit log</label></td>
-                                <td><label class="toggle-switch">{{ create_form.is_audit_log_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.is_audit_log_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_endpoint_url">Endpoint URL</label></td>
@@ -410,19 +406,19 @@
                         <table class="form-data">
                             <tr>
                                 <td><label for="id_sign">Sign</label></td>
-                                <td><label class="toggle-switch">{{ create_form.sign }}<span class="toggle-slider"></span></label><span class="joined-control">{{ create_form.sign_algorithm }}</span></td>
+                                <td>{{ create_form.sign }}<span class="joined-control">{{ create_form.sign_algorithm }}</span></td>
                             </tr>
                             <tr>
                                 <td><label for="id_encrypt">Encrypt</label></td>
-                                <td><label class="toggle-switch">{{ create_form.encrypt }}<span class="toggle-slider"></span></label><span class="joined-control">{{ create_form.encryption_algorithm }}</span></td>
+                                <td>{{ create_form.encrypt }}<span class="joined-control">{{ create_form.encryption_algorithm }}</span></td>
                             </tr>
                             <tr>
                                 <td><label for="id_compress">Compress</label></td>
-                                <td><label class="toggle-switch">{{ create_form.compress }}<span class="toggle-slider"></span></label><label class="joined-label" for="id_compress_before_signing">Before signing</label><label class="toggle-switch">{{ create_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.compress }}<label class="joined-label" for="id_compress_before_signing">Before signing</label>{{ create_form.compress_before_signing }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_mdn_mode">MDN</label></td>
-                                <td>{{ create_form.mdn_mode }}<label class="joined-label" for="id_mdn_signed">Signed</label><label class="toggle-switch">{{ create_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.mdn_mode }}<label class="joined-label" for="id_mdn_signed">Signed</label>{{ create_form.mdn_signed }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_async_mdn_url">Async MDN URL</label></td>
@@ -489,7 +485,7 @@
                         <table class="form-data">
                             <tr>
                                 <td><label for="id_verify_tls">Verify TLS</label></td>
-                                <td><label class="toggle-switch">{{ create_form.verify_tls }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.verify_tls }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_username">Username</label></td>
@@ -509,7 +505,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_preserve_filename">Preserve filename</label></td>
-                                <td><label class="toggle-switch">{{ create_form.preserve_filename }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.preserve_filename }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_ack_overdue_after">Ack. overdue after</label></td>
@@ -525,7 +521,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_alerting_opt_out">Alerting opt-out</label></td>
-                                <td><label class="toggle-switch">{{ create_form.alerting_opt_out }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.alerting_opt_out }}</td>
                             </tr>
                         </table>
                     </div>
@@ -542,15 +538,15 @@
                             </tr>
                             <tr>
                                 <td><label for="id_force_base64">Force Base64</label></td>
-                                <td><label class="toggle-switch">{{ create_form.force_base64 }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.force_base64 }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_prevent_canonicalization">Prevent canonicalization</label></td>
-                                <td><label class="toggle-switch">{{ create_form.prevent_canonicalization }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.prevent_canonicalization }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_warn_on_duplicate_filename">Warn on duplicate filename</label></td>
-                                <td><label class="toggle-switch">{{ create_form.warn_on_duplicate_filename }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ create_form.warn_on_duplicate_filename }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_pool_size">Pool size</label></td>
@@ -598,11 +594,11 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_active">Active</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-is_audit_log_active">Audit log</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.is_audit_log_active }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.is_audit_log_active }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-endpoint_url">Endpoint URL</label></td>
@@ -660,19 +656,19 @@
                         <table class="form-data">
                             <tr>
                                 <td><label for="id_edit-sign">Sign</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.sign }}<span class="toggle-slider"></span></label><span class="joined-control">{{ edit_form.sign_algorithm }}</span></td>
+                                <td>{{ edit_form.sign }}<span class="joined-control">{{ edit_form.sign_algorithm }}</span></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-encrypt">Encrypt</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.encrypt }}<span class="toggle-slider"></span></label><span class="joined-control">{{ edit_form.encryption_algorithm }}</span></td>
+                                <td>{{ edit_form.encrypt }}<span class="joined-control">{{ edit_form.encryption_algorithm }}</span></td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-compress">Compress</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.compress }}<span class="toggle-slider"></span></label><label class="joined-label" for="id_edit-compress_before_signing">Before signing</label><label class="toggle-switch">{{ edit_form.compress_before_signing }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.compress }}<label class="joined-label" for="id_edit-compress_before_signing">Before signing</label>{{ edit_form.compress_before_signing }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-mdn_mode">MDN</label></td>
-                                <td>{{ edit_form.mdn_mode }}<label class="joined-label" for="id_edit-mdn_signed">Signed</label><label class="toggle-switch">{{ edit_form.mdn_signed }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.mdn_mode }}<label class="joined-label" for="id_edit-mdn_signed">Signed</label>{{ edit_form.mdn_signed }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-async_mdn_url">Async MDN URL</label></td>
@@ -739,7 +735,7 @@
                         <table class="form-data">
                             <tr>
                                 <td><label for="id_edit-verify_tls">Verify TLS</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.verify_tls }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.verify_tls }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-username">Username</label></td>
@@ -759,7 +755,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-preserve_filename">Preserve filename</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.preserve_filename }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.preserve_filename }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-ack_overdue_after">Ack. overdue after</label></td>
@@ -775,7 +771,7 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-alerting_opt_out">Alerting opt-out</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.alerting_opt_out }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.alerting_opt_out }}</td>
                             </tr>
                         </table>
                     </div>
@@ -792,15 +788,15 @@
                             </tr>
                             <tr>
                                 <td><label for="id_edit-force_base64">Force Base64</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.force_base64 }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.force_base64 }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-prevent_canonicalization">Prevent canonicalization</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.prevent_canonicalization }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.prevent_canonicalization }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-warn_on_duplicate_filename">Warn on duplicate filename</label></td>
-                                <td><label class="toggle-switch">{{ edit_form.warn_on_duplicate_filename }}<span class="toggle-slider"></span></label></td>
+                                <td>{{ edit_form.warn_on_duplicate_filename }}</td>
                             </tr>
                             <tr>
                                 <td><label for="id_edit-pool_size">Pool size</label></td>
