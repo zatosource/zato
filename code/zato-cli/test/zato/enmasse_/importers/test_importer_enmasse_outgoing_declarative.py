@@ -65,7 +65,7 @@ _rest_def = {
     'health_check_callback_name': 'demo.input-logger',
 }
 
-# An outgoing SOAP definition covering the soap. job prefix
+# An outgoing SOAP definition covering the soap. job prefix and topic callbacks on both tabs
 _soap_def = {
     'name': 'enmasse.outgoing.soap.roundtrip',
     'host': 'https://orders.example.com',
@@ -76,8 +76,15 @@ _soap_def = {
     'request_message': [
         {'key': 'order.customer_id', 'value': 'customer-1', 'mode': 'text'},
     ],
+    'callback_type': 'topic',
+    'callback_name': 'orders.responses',
     'scheduler_run_every': 2,
     'scheduler_run_unit': 'hours',
+    'health_check_run_every': 10,
+    'health_check_run_unit': 'minutes',
+    'health_check_notify_on': 'failures',
+    'health_check_callback_type': 'topic',
+    'health_check_callback_name': 'orders.health-checks',
 }
 
 # ################################################################################################################################
@@ -186,6 +193,12 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
         self.assertIsInstance(stored, str)
         self.assertEqual(loads(stored), _soap_def['request_message'])
 
+        # .. topic callbacks travel through unchanged, both on the Callback and the Health check tab ..
+        self.assertEqual(opaque['callback_type'], 'topic')
+        self.assertEqual(opaque['callback_name'], 'orders.responses')
+        self.assertEqual(opaque['health_check_callback_type'], 'topic')
+        self.assertEqual(opaque['health_check_callback_name'], 'orders.health-checks')
+
         # .. and the linked job carries the soap. prefix and the generic link attributes.
         scheduler_job = self._get_job('soap.' + _soap_def['name'])
         self.assertEqual(opaque[_invocation.Field_Job_ID], scheduler_job.id)
@@ -195,6 +208,16 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
         self.assertEqual(scheduler_job_opaque[SchedulerLink.Conn_ID], conn.id)
         self.assertEqual(scheduler_job_opaque[SchedulerLink.Kind], SchedulerLink.KindType.Scheduler)
         self.assertEqual(scheduler_job.service.name, _invocation.Dispatch_Service)
+
+        # The health check job was created too, delivering each outcome to the topic callback.
+        health_check_job = self._get_job('health.' + _soap_def['name'])
+        self.assertEqual(opaque[_health_check.Field_Job_ID], health_check_job.id)
+
+        health_check_job_opaque = loads(health_check_job.opaque1)
+        self.assertEqual(health_check_job_opaque[SchedulerLink.Conn_Type], SchedulerLink.ConnType.SOAP_Outgoing)
+        self.assertEqual(health_check_job_opaque[SchedulerLink.Conn_ID], conn.id)
+        self.assertEqual(health_check_job_opaque[SchedulerLink.Kind], SchedulerLink.KindType.HealthCheck)
+        self.assertEqual(health_check_job.service.name, _health_check.Dispatch_Service)
 
 # ################################################################################################################################
 # ################################################################################################################################

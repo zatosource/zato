@@ -18,7 +18,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.forms import add_http_soap_select
+from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
@@ -254,6 +254,12 @@ def index(req): # type: ignore
             add_http_soap_select(edit_form, 'callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
             add_http_soap_select(create_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
             add_http_soap_select(edit_form, 'health_check_callback_rest', req, 'outgoing', URL_TYPE.PLAIN_HTTP, by_id=False)
+
+            # .. and to pub/sub topics, selected by name from the topics that currently exist.
+            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
+            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'callback_topic', by_id=False)
+            add_select_from_service(create_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
+            add_select_from_service(edit_form, req, 'zato.pubsub.topic.get-list', 'health_check_callback_topic', by_id=False)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,

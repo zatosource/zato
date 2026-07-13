@@ -212,7 +212,7 @@ def fill_rest_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
         if callback_type == 'service':
             _set_chosen_select(page, f'#id_{prefix}callback_service', options['callback_name'])
         elif callback_type == 'topic':
-            page.fill(f'#id_{prefix}callback_topic', options['callback_name'])
+            _ = page.select_option(f'#id_{prefix}callback_topic', options['callback_name'])
         else:
             _set_chosen_select(page, f'#id_{prefix}callback_rest', options['callback_name'])
 
@@ -234,7 +234,7 @@ def fill_rest_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
                 _set_chosen_select(
                     page, f'#id_{prefix}health_check_callback_service', options['health_check_callback_name'])
             elif health_check_callback_type == 'topic':
-                page.fill(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
+                _ = page.select_option(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
             else:
                 _set_chosen_select(
                     page, f'#id_{prefix}health_check_callback_rest', options['health_check_callback_name'])
@@ -327,7 +327,7 @@ def fill_soap_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
         if callback_type == 'service':
             _set_chosen_select(page, f'#id_{prefix}callback_service', options['callback_name'])
         elif callback_type == 'topic':
-            page.fill(f'#id_{prefix}callback_topic', options['callback_name'])
+            _ = page.select_option(f'#id_{prefix}callback_topic', options['callback_name'])
         else:
             _set_chosen_select(page, f'#id_{prefix}callback_rest', options['callback_name'])
 
@@ -349,7 +349,7 @@ def fill_soap_invocation_tabs(page:'Page', options:'anydict', action:'str'='crea
                 _set_chosen_select(
                     page, f'#id_{prefix}health_check_callback_service', options['health_check_callback_name'])
             elif health_check_callback_type == 'topic':
-                page.fill(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
+                _ = page.select_option(f'#id_{prefix}health_check_callback_topic', options['health_check_callback_name'])
             else:
                 _set_chosen_select(
                     page, f'#id_{prefix}health_check_callback_rest', options['health_check_callback_name'])

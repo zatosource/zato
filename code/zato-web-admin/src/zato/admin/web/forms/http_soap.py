@@ -120,7 +120,7 @@ class CreateForm(DataFormatForm):
     # Callback - where to deliver the response
     callback_type = forms.ChoiceField(required=False, widget=forms.Select())
     callback_service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
-    callback_topic = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    callback_topic = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
     callback_rest = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
     # Scheduler - the ID of the linked job, if any
