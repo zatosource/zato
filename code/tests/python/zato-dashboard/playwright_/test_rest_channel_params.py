@@ -113,7 +113,7 @@ class TestRESTChannelParams:
 
     def test_data_format_form_data(
         self, logged_in_page:'Page', zato_dashboard:'anydict', introspection_service:'str') -> 'None':
-        """ A channel with data_format=form-data hands the service the parsed form fields.
+        """ A channel with data_format=form hands the service the parsed form fields.
         """
 
         page = logged_in_page
@@ -122,7 +122,7 @@ class TestRESTChannelParams:
         url_path = '/test/rest/format-form/' + rand_string()
 
         _ = _create_introspection_channel(page, zato_dashboard, 'format-form', url_path, {
-            'data_format': 'form-data',
+            'data_format': 'form',
         })
 
         # POST a form-encoded body ..

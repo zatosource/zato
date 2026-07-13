@@ -50,7 +50,7 @@ class LoginLogoutTestCase(BaseTestCase):
         self.assertEqual(self.client.current_url, address)
 
         # .. now, log us out ..
-        logout:'WebElement' = self.client.find_element(By.PARTIAL_LINK_TEXT, 'Log out')
+        logout:'WebElement' = self.client.find_element(By.PARTIAL_LINK_TEXT, 'log out')
         logout.click()
 
         # .. try to access an address ..
