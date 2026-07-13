@@ -3208,3 +3208,53 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
 })();
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Fallback Esc handling for jQuery UI dialogs. jQuery UI binds its closeOnEscape
+// handler on the .ui-dialog wrapper, so it only fires while focus is inside the
+// dialog. When focus has dropped to body - e.g. a tab click hid the panel that
+// held the focused input - the keydown never reaches the wrapper and the dialog
+// stays open. This handler closes the topmost dialog in that case. It is bound
+// on window, not document, so every document-level Escape consumer (e.g. the
+// topic-matches popup in pubsub/permission.js) runs first - once such a consumer
+// has closed its own dialog, it is no longer visible and is not closed twice.
+$(window).on('keydown.zato-dialog-esc', function(e) {
+
+    if(e.key !== 'Escape') {
+        return;
+    }
+
+    // Already handled, either by the dialog itself (focus was inside it)
+    // or by another Escape consumer such as an overlay.
+    if(e.isDefaultPrevented()) {
+        return;
+    }
+
+    // Find the topmost visible dialog by z-index ..
+    var topmost = null;
+    var topmost_z = -1;
+    $('.ui-dialog:visible').each(function() {
+        var z = parseInt($(this).css('z-index'), 10);
+        if(isNaN(z)) {
+            z = 0;
+        }
+        if(z > topmost_z) {
+            topmost_z = z;
+            topmost = $(this);
+        }
+    });
+
+    if(!topmost) {
+        return;
+    }
+
+    // .. and close it, unless closeOnEscape is off, e.g. the how-it-works
+    // help mode turns it off while active and handles Escape on its own.
+    var content = topmost.find('.ui-dialog-content');
+    if(content.dialog('option', 'closeOnEscape')) {
+        content.dialog('close');
+    }
+});
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+

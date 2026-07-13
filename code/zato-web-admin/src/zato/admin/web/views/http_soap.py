@@ -531,6 +531,7 @@ def rate_limiting(req, id): # type: ignore
         'channel_id': id,
         'channel_name': response.data.name,
         'channel_url_path': response.data.url_path,
+        'transport': response.data.transport,
         'rules_json': dumps(rules_response.data.rate_limiting),
         'zato_template_name': 'zato/http_soap/rate-limiting.html',
     }

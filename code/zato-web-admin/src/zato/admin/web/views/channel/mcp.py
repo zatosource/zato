@@ -8,7 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
+import re
 from json import dumps
+from urllib.parse import urlsplit
 
 # Django
 from django.http import HttpResponse
@@ -16,7 +19,9 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.forms.channel.mcp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import GENERIC, Groups, SEC_DEF_TYPE_NAME
+from zato.common.api import API_Key, GENERIC, Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
+from zato.common.defaults import http_plain_server_port
+from zato.common.util.tcp import get_current_ip
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -35,6 +40,40 @@ logger = logging.getLogger(__name__)
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
+
+# The JSON Schema that exported MCP channel documents conform to
+_export_schema_url = 'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json'
+
+# The version of the exported document
+_export_version = '1.0.0'
+
+# Used when the server address is not configured through the environment
+_default_server_address = f'http://{get_current_ip()}:{http_plain_server_port}'
+
+# Characters that cannot appear in the exported document's name
+_slug_invalid_characters = re.compile('[^a-z0-9._-]+')
+
+# The API key header may be redefined through the environment
+if _api_key_header := os.environ.get(API_Key.Env_Key):
+    pass
+else:
+    _api_key_header = API_Key.Default_Header
+
+# Maps security definition types to the HTTP headers MCP clients need to send
+_sec_type_to_export_header = {
+    SEC_DEF_TYPE.APIKEY: {
+        'name': _api_key_header,
+        'description': 'API key',
+        'isRequired': True,
+        'isSecret': True,
+    },
+    SEC_DEF_TYPE.BASIC_AUTH: {
+        'name': 'Authorization',
+        'description': 'Basic Auth credentials',
+        'isRequired': True,
+        'isSecret': True,
+    },
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -345,6 +384,95 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     # .. and return the JSON response.
     out = dumps(items)
     return HttpResponse(out, content_type='application/json') # type: ignore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def export(req:'any_', id:'str') -> 'HttpResponse':
+    """ Exports an MCP channel as a server.json-format document that the browser downloads.
+    """
+
+    # Look up the channel by its ID ..
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
+    channel = response.data
+
+    channel_name = channel['name']
+    url_path = channel['url_path']
+
+    # .. resolve the externally visible base address ..
+    if base_address := os.environ.get('Zato_Server_Address'):
+        pass
+    else:
+        base_address = _default_server_address
+
+    # .. the name's namespace is the host part of that address ..
+    netloc = urlsplit(base_address).netloc
+    host_parts = netloc.split(':')
+    host = host_parts[0]
+
+    # .. reversing labels only makes sense for DNS names, never for IP addresses ..
+    labels = host.split('.')
+
+    is_ip_address = True
+    for label in labels:
+        if not label.isdigit():
+            is_ip_address = False
+            break
+
+    if not is_ip_address:
+        labels.reverse()
+
+    namespace = '.'.join(labels)
+
+    # .. the server part of the name is a slug of the channel name ..
+    slug = channel_name.lower()
+    slug = _slug_invalid_characters.sub('-', slug)
+
+    # .. collect authentication headers from the channel's security group members ..
+    headers = []
+    header_names = set()
+
+    if security_groups := channel.get('security_groups'):
+        group_id = security_groups[0]
+        member_response = req.zato.client.invoke('zato.groups.get-member-list', {
+            'group_type': Groups.Type.API_Clients,
+            'group_id': group_id,
+        })
+
+        # .. each security type maps to one header, emitted once no matter how many members use it ..
+        for member in member_response.data:
+            header = _sec_type_to_export_header[member['sec_type']]
+            if header['name'] not in header_names:
+                header_names.add(header['name'])
+                headers.append(header)
+
+    # .. build the remote endpoint description ..
+    remote = {
+        'type': 'streamable-http',
+        'url': base_address + url_path,
+    }
+
+    if headers:
+        remote['headers'] = headers
+
+    # .. assemble the full document ..
+    document = {
+        '$schema': _export_schema_url,
+        'name': f'{namespace}/{slug}',
+        'description': f'MCP channel {channel_name}',
+        'version': _export_version,
+        'remotes': [remote],
+    }
+
+    # .. and return it as a file download.
+    file_name = f'mcp-{slug}.json'
+    out = dumps(document, indent=2)
+
+    http_response = HttpResponse(out, content_type='application/json') # type: ignore
+    http_response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+
+    return http_response
 
 # ################################################################################################################################
 # ################################################################################################################################

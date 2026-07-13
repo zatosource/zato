@@ -289,6 +289,7 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td class="text-center" id="service_count_{0}">{1}</td>', item.id, service_count);
     row += String.format('<td class="text-center" id="security_count_{0}">{1}</td>', item.id, security_count);
 
+    row += String.format('<td>{0}</td>', String.format('<a href="/zato/channel/mcp/export/{0}/">Export</a>', item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.mcp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.mcp.delete_('{0}');\">Delete</a>", item.id));
 

@@ -33,6 +33,7 @@
             'url_path',
             '_services',
             '_security',
+            '_export',
             '_edit',
             '_delete',
             'id',
@@ -74,6 +75,7 @@
                         <th style="text-align:center"><a href="#">Security</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
@@ -89,6 +91,7 @@
                         <td>{{ item.url_path }}</td>
                         <td class="text-center" id="service_count_{{ item.id }}">{{ item.services|length }}</td>
                         <td class="text-center" id="security_count_{{ item.id }}">{{ item.security_member_count }}</td>
+                        <td><a href="{% url "channel-mcp-export" item.id %}">Export</a></td>
                         <td><a href="javascript:$.fn.zato.channel.mcp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -97,7 +100,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='11'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 

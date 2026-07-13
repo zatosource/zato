@@ -692,9 +692,13 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
     }
 
-    /* Audit log (REST channels and REST outgoing connections only) */
+    /* Audit log (REST and SOAP channels, REST outgoing connections) */
     if(is_channel && !is_soap) {
         row += String.format('<td><a href="/zato/audit-log/?source=rest-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
+    }
+
+    if(is_channel && is_soap) {
+        row += String.format('<td><a href="/zato/audit-log/?source=soap-channel&object_name={0}&cluster={1}">Audit log</a></td>', encodeURIComponent(item.name), cluster_id);
     }
 
     if(is_outgoing && !is_soap) {

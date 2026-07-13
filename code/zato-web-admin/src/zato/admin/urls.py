@@ -479,6 +479,9 @@ urlpatterns += [
 
     url(r'^zato/channel/mcp/get-security-list/$',
         login_required(channel_mcp.get_security_list), name='channel-mcp-get-security-list'),
+
+    url(r'^zato/channel/mcp/export/(?P<id>.*)/$',
+        login_required(channel_mcp.export), name='channel-mcp-export'),
     ]
 
 # ################################################################################################################################
