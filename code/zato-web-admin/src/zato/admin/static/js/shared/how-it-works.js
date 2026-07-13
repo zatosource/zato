@@ -55,6 +55,13 @@ $.fn.zato.how_it_works.init = function(config) {
     $(container).off('click.how_it_works_label').on('click.how_it_works_label', 'label.how-it-works-label', function(event) {
         event.stopPropagation();
 
+        // .. controls nested inside a wrapping label bubble their clicks here,
+        // .. only clicks on the label text itself should activate help mode ..
+        var targetTag = event.target.tagName;
+        if (targetTag === 'INPUT' || targetTag === 'SELECT' || targetTag === 'TEXTAREA') {
+            return;
+        }
+
         var fieldId = $(this).attr('for');
         var howItWorks = $.fn.zato.how_it_works;
 
