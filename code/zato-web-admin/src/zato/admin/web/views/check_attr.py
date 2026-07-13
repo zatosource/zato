@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from json import dumps
 
 # Django
@@ -15,11 +16,16 @@ from django.http import HttpResponse
 # Zato
 from zato.admin.web.views import method_allowed
 
+logger = logging.getLogger(__name__)
+
 @method_allowed('POST')
 def check_attr_exists(req):
     entity_type = req.POST['entity_type']
     attr_name = req.POST['attr_name']
     value = req.POST['value']
+
+    # [DIAG-9] Log what the browser sent to the dashboard backend
+    logger.debug('[DIAG-9] check_attr_exists view: POST=%s', dict(req.POST.items()))
 
     # An optional scoping filter, present only for checks that are unique within a sub-group
     # (e.g. a username is unique per sec_type rather than globally) ..
@@ -43,6 +49,9 @@ def check_attr_exists(req):
         'method': method,
         'http_accept': http_accept,
     })
+    # [DIAG-10] Log what the server invoker returned, including whether the call itself succeeded
+    logger.debug('[DIAG-10] check_attr_exists view: ok=%s, data=%s', response.ok, response.data)
+
     data = response.data
     if isinstance(data, dict):
         data = dumps(data)

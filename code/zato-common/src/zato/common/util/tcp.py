@@ -48,11 +48,27 @@ class SocketReaderCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_free_port(start=30000):
-    port = start
-    while is_port_taken(port):
-        port += 1
-    return port
+def get_free_port(start:'int' = 30000) -> 'int':
+    """ Returns the first port equal to or greater than start that a server can actually bind to.
+    """
+    out = start
+
+    # Merely checking listeners is not enough because an outbound connection may occupy a port
+    # in a non-LISTEN state, e.g. ESTABLISHED, in which case a server would still not be able
+    # to bind to such a port, which is why each candidate is probed with an actual bind call -
+    # a socket that is only bound, without listening or connecting, leaves no TIME_WAIT behind.
+    while True:
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            tcp_socket.bind(('', out))
+        except OSError:
+            out += 1
+        else:
+            break
+        finally:
+            tcp_socket.close()
+
+    return out
 
 # ################################################################################################################################
 
