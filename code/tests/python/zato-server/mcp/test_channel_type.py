@@ -68,8 +68,8 @@ class InstanceHookDispatch(TestCase):
         calls = []
         original = conn_module.on_mcp_channel_delete
 
-        def _mock_delete(session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
-            calls.append((session, channel_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
+            calls.append((service, session, channel_name, cluster_id))
 
         conn_module.on_mcp_channel_delete = _mock_delete
 
@@ -109,8 +109,8 @@ class InstanceHookDispatch(TestCase):
         # .. patch the delete function temporarily ..
         original = conn_module.on_mcp_channel_delete
 
-        def _mock_delete(session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
-            calls.append((session, channel_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
+            calls.append((service, session, channel_name, cluster_id))
 
         conn_module.on_mcp_channel_delete = _mock_delete
 
@@ -121,7 +121,7 @@ class InstanceHookDispatch(TestCase):
 
         # .. verify the call was made with the correct arguments.
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0], ('fake-session', 'my-mcp', 1))
+        self.assertEqual(calls[0], (None, 'fake-session', 'my-mcp', 1))
 
 # ################################################################################################################################
 # ################################################################################################################################

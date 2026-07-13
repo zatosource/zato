@@ -130,25 +130,25 @@ class Edit(Service):
 
         self.server.groups_manager.edit_group(input.id, input.group_type, input.name)
 
-        if member_id_list:
+        # The diff is computed even when the input list is empty - an empty list means
+        # the caller wants all the current members removed from the group.
+        group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
 
-            group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
+        logger_groups.info('Edit.handle: group_members=%s', group_members)
 
-            logger_groups.info('Edit.handle: group_members=%s', group_members)
+        input_member_ids = set(member_id_list)
+        group_member_ids = {f'{m.sec_type}-{m.security_id}' for m in group_members}
 
-            input_member_ids = set(member_id_list)
-            group_member_ids = {f'{m.sec_type}-{m.security_id}' for m in group_members}
+        logger_groups.info('Edit.handle: input_member_ids=%s, group_member_ids=%s',
+            input_member_ids, group_member_ids)
 
-            logger_groups.info('Edit.handle: input_member_ids=%s, group_member_ids=%s',
-                input_member_ids, group_member_ids)
+        for member_id in group_member_ids:
+            if member_id not in input_member_ids:
+                to_remove.append(member_id)
 
-            for gm_id in group_member_ids:
-                if gm_id not in input_member_ids:
-                    to_remove.append(gm_id)
-
-            for im_id in input_member_ids:
-                if im_id not in group_member_ids:
-                    to_add.append(im_id)
+        for member_id in input_member_ids:
+            if member_id not in group_member_ids:
+                to_add.append(member_id)
 
         logger_groups.info('Edit.handle: to_add=%s, to_remove=%s', to_add, to_remove)
 

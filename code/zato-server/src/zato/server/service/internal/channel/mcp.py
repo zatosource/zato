@@ -82,9 +82,18 @@ class MCPEndpoint(AdminService):
             'MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
             self.channel.name, channel_security.id, channel_security.username)
 
-        # Look up the MCP channel config from the config manager,
-        # then reach the ChannelMCPWrapper through its .conn attribute ..
-        channel_config = self.server.config_manager.channel_mcp[self.channel.name]
+        # Look up the MCP channel config from the config manager - the entry may be gone
+        # if the channel is being deleted while this request is already in flight,
+        # in which case the resource no longer exists ..
+        channel_config = self.server.config_manager.channel_mcp.get(self.channel.name)
+
+        if channel_config is None:
+            logger.info('MCP channel `%s` has no config entry (channel deleted)', self.channel.name)
+            self.response.status_code = NOT_FOUND
+            self.response.payload = ''
+            return
+
+        # .. reach the ChannelMCPWrapper through its .conn attribute ..
         wrapper = channel_config.conn
 
         # .. when Origin validation is enabled and the header is present,

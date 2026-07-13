@@ -72,7 +72,7 @@ def instance_hook(service, input, instance, attrs):
     """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP connections.
     """
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
-        on_mcp_channel_delete(attrs._meta_session, instance.name, instance.cluster_id)
+        on_mcp_channel_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
 
 # ################################################################################################################################
 
@@ -226,6 +226,11 @@ class _CreateEdit(_BaseService):
         # Make sure that specific keys are integers
         ensure_ints(data)
 
+        # The cluster ID may be missing on input, e.g. in API calls that give only the object's ID,
+        # or it may have been turned into a bool by the simple-type parser above (1 becomes True),
+        # so it is always set to our own server's cluster here.
+        data['cluster_id'] = self.server.cluster_id
+
         self.logger.info('GenericConn _CreateEdit step 2: data after raw_request merge, keys=%s', sorted(data.keys()))
         self.logger.info('GenericConn _CreateEdit step 2b: type_=%s, is_active=%s, security_id=%s',
             data.get('type_'), data.get('is_active'), data.get('security_id'))
@@ -332,11 +337,6 @@ class _CreateEdit(_BaseService):
                         continue
 
                 setattr(model, key, value)
-
-            # The cluster id may be missing on input when the instance goes to the external database
-            if is_ext:
-                if not model.cluster_id:
-                    model.cluster_id = self.server.cluster_id
 
             self.logger.info('GenericConn _CreateEdit step 5: about to session.add + commit, model.type_=%s, model.name=%s',
                 getattr(model, 'type_', None), getattr(model, 'name', None))

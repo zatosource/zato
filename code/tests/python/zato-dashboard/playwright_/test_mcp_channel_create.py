@@ -685,7 +685,7 @@ class TestMCPChannelCreate:
         auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
         assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
@@ -795,7 +795,7 @@ class TestMCPChannelCreate:
         auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
         assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
@@ -1280,7 +1280,7 @@ class MCPTestHotDeployTools(Service):
         auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url, data=request_body, headers=headers, auth=auth, timeout=10)
         assert initialize_response.status_code == OK, f'initialize failed: {initialize_response.status_code}'
 
@@ -1356,7 +1356,9 @@ class MCPTestHotDeployTools(Service):
 
         # .. navigate to the basic auth page and change the password ..
         new_password = 'changed.' + rand_string()
-        basic_auth_page_url = '/zato/security/basic-auth/?cluster=1'
+        # The query parameter makes sure the definition is on the first page of results,
+        # otherwise it could land on a later page among definitions from earlier tests.
+        basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
 
         navigate_to_page(page, base_url, basic_auth_page_url)
 
@@ -1615,7 +1617,7 @@ class MCPTestAllowListB(Service):
         auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
-        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url_a, data=request_body, headers=headers, auth=auth, timeout=10)
         assert initialize_response.status_code == OK, f'Channel A initialize failed: {initialize_response.status_code}'
 
@@ -1644,7 +1646,7 @@ class MCPTestAllowListB(Service):
         # .. verify channel B only exposes service B ..
         url_b = f'http://127.0.0.1:{server_port}{url_path_b}'
 
-        request_body = json.dumps({'jsonrpc': '2.0', 'method': 'initialize', 'id': 1})
+        request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url_b, data=request_body, headers=headers, auth=auth, timeout=10)
         assert initialize_response.status_code == OK, f'Channel B initialize failed: {initialize_response.status_code}'
 
@@ -1924,8 +1926,10 @@ class MCPTestAllowListB(Service):
 
         logger.info('[test_mcp_list_pagination] created %d channels', _channel_count)
 
-        # .. reload to get a fresh paginated view ..
-        navigate_to_page(page, base_url, _Page_Url_Pattern)
+        # .. reload to get a fresh paginated view, filtered to this test's channels only,
+        # otherwise channels left over from other tests in this file would add extra pages ..
+        pagination_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}pag-'
+        navigate_to_page(page, base_url, pagination_list_url)
         page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         # .. verify page 1 ..

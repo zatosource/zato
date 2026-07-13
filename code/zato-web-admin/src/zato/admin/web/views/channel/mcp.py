@@ -47,10 +47,16 @@ class Index(_Index):
     output_class = Bunch
     paginate = True
 
-    input_required = 'cluster_id', 'type_'
+    input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
     output_optional = 'url_path', 'services', 'security_groups'
     output_repeated = True
+
+    def get_initial_input(self) -> 'strdict':
+
+        # The type is constant for this page so it is not expected in the URL,
+        # it is always added to the service request here instead.
+        return {'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP}
 
     def on_before_append_item(self, item:'any_') -> 'any_':
 
