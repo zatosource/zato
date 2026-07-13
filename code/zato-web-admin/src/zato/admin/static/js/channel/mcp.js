@@ -231,8 +231,8 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.mcp.field_descriptions = {
-    'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this channel accepts requests.<br>MCP clients cannot reach inactive channels.',
+    'id_name': 'A unique name for this gateway.<br>Used to identify it in logs and the dashboard.',
+    'id_is_active': 'Whether this gateway accepts requests.<br>MCP clients cannot reach inactive gateways.',
     'id_url_path': 'URL path the MCP endpoint is exposed under,<br>e.g. /mcp/. This is the address MCP clients,<br>such as AI assistants, connect to in order<br>to discover and invoke the assigned services.',
 };
 
@@ -241,7 +241,7 @@ $.fn.zato.channel.mcp.field_descriptions = {
 $.fn.zato.channel.mcp.create = function() {
     $.fn.zato.channel.mcp.badge_picker.load('create', null);
     $.fn.zato.channel.mcp.security_badge_picker.load('create', null);
-    $.fn.zato.data_table._create_edit('create', 'Create a new MCP channel', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new MCP gateway', null);
     $('#create-div').dialog('option', 'width', '45em');
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
@@ -256,7 +256,7 @@ $.fn.zato.channel.mcp.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.channel.mcp.badge_picker.load('edit', instance.id);
     $.fn.zato.channel.mcp.security_badge_picker.load('edit', instance.id);
-    $.fn.zato.data_table._create_edit('edit', 'Update the MCP channel', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
 
     $('#edit-div').dialog('option', 'width', '45em');
     $.fn.zato.how_it_works.init({
@@ -307,8 +307,8 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.channel.mcp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'MCP channel `{0}` deleted',
-        'Are you sure you want to delete MCP channel `{0}`?',
+        'MCP gateway `{0}` deleted',
+        'Are you sure you want to delete MCP gateway `{0}`?',
         true);
 };
 

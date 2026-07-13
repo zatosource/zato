@@ -61,7 +61,7 @@ class ChannelMCPImporter(GenericConnectionImporter):
         if group_names := connection_def.get('security_groups'):
             for group_name in group_names:
                 if group_name not in self.importer.group_defs:
-                    raise Exception(f'Security group "{group_name}" not found for MCP channel "{connection_def["name"]}"')
+                    raise Exception(f'Security group "{group_name}" not found for MCP gateway "{connection_def["name"]}"')
                 group_id = self.importer.group_defs[group_name]['id']
                 out.append(group_id)
 

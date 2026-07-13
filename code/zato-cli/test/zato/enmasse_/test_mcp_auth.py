@@ -161,7 +161,7 @@ class TestMCPAuth(TestCase):
 
         logger.info('[MCP-AUTH setUpClass] Server is ready')
 
-        # .. deploy MCP channels via enmasse ..
+        # .. deploy MCP gateways via enmasse ..
         token = os.urandom(4).hex()
         cls._sec_def_name = f'test.mcp.auth.{token}'
         cls._group_name = f'mcp.test-auth-group.{token}'
@@ -249,7 +249,7 @@ groups:
     members:
       - {cls._sec_def_name}
 
-channel_mcp:
+mcp_gateway:
   - name: {cls._channel_name}
     is_active: true
     url_path: {cls._url_path}
@@ -549,7 +549,7 @@ groups:
     members:
       - {self._non_member_sec_def_name}
 
-channel_mcp:
+mcp_gateway:
   - name: {self._update_channel_name}
     is_active: true
     url_path: {self._update_url_path}
@@ -615,7 +615,7 @@ groups:
     members:
       - {self._sec_def_name}
 
-channel_mcp:
+mcp_gateway:
   - name: {self._inactive_channel_name}
     is_active: true
     url_path: {self._inactive_url_path}

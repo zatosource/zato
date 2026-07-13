@@ -476,7 +476,7 @@ def get_top_level_order() -> 'strlist':
         'channel_ibm_mq',
         'outgoing_ibm_mq',
         'channel_kafka',
-        'channel_mcp',
+        'mcp_gateway',
         'outgoing_graphql',
         'outgoing_kafka',
         'channel_hl7_mllp',
@@ -548,7 +548,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['outgoing_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', \
         'username', 'ssl', 'cipher_spec', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file',
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
-    order['channel_mcp'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
+    order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
     order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \

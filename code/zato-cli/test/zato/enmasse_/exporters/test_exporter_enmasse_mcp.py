@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 
 class TestEnmasseChannelMCPExport(TestCase):
-    """ Tests exporting MCP channel definitions to YAML format.
+    """ Tests exporting MCP gateway definitions to YAML format.
     """
 
     def setUp(self) -> 'None':
@@ -66,24 +66,24 @@ class TestEnmasseChannelMCPExport(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Process security definitions and groups first - MCP channels reference security groups
+        # Process security definitions and groups first - MCP gateways reference security groups
         _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
         _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
 
 # ################################################################################################################################
 
-    def test_channel_mcp_export(self):
+    def test_mcp_gateway_export(self):
         self._setup_test_environment()
 
-        mcp_list_from_yaml = self.yaml_config['channel_mcp']
+        mcp_list_from_yaml = self.yaml_config['mcp_gateway']
 
         created, _ = self.mcp_importer.sync_definitions(mcp_list_from_yaml, self.session)
         self.assertEqual(len(created), 2)
 
         exported_data = self.exporter.export_to_dict(self.session)
 
-        self.assertIn('channel_mcp', exported_data)
-        exported_mcp_list = exported_data['channel_mcp']
+        self.assertIn('mcp_gateway', exported_data)
+        exported_mcp_list = exported_data['mcp_gateway']
 
         # Filter to only the test-created channels (DB may have pre-existing ones)
         exported_mcp_list = [item for item in exported_mcp_list if item['name'].startswith('enmasse.mcp.')]

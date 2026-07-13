@@ -232,7 +232,7 @@ groups:
       - {_mcp_sec_def_name}
       - {_mcp_sec_def_name_b}
 
-channel_mcp:
+mcp_gateway:
   - name: {mcp_channel_name}
     is_active: true
     url_path: /mcp/demo

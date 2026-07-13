@@ -259,7 +259,7 @@ class EnmasseYAMLExporter:
 # ################################################################################################################################
 
     def export_channel_mcp(self, session:'SASession') -> 'list':
-        """ Exports MCP channel definitions.
+        """ Exports MCP gateway definitions.
         """
         _ = self.get_cluster(session)
         channel_mcp_list = self.channel_mcp_exporter.export(session, self.cluster_id)
@@ -548,10 +548,10 @@ class EnmasseYAMLExporter:
         if channel_kafka_defs:
             output_dict['channel_kafka'] = channel_kafka_defs
 
-        # Export MCP channel definitions
+        # Export MCP gateway definitions
         channel_mcp_defs = self.export_channel_mcp(session)
         if channel_mcp_defs:
-            output_dict['channel_mcp'] = channel_mcp_defs
+            output_dict['mcp_gateway'] = channel_mcp_defs
 
         # Export GraphQL outgoing definitions
         outgoing_graphql_defs = self.export_outgoing_graphql(session)
