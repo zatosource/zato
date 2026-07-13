@@ -56,9 +56,9 @@ $.fn.zato.how_it_works.init = function(config) {
         event.stopPropagation();
 
         // .. controls nested inside a wrapping label bubble their clicks here,
-        // .. only clicks on the label text itself should activate help mode ..
-        var targetTag = event.target.tagName;
-        if (targetTag === 'INPUT' || targetTag === 'SELECT' || targetTag === 'TEXTAREA') {
+        // .. only clicks on the label text itself should activate help mode,
+        // .. closest also covers clicks landing on option elements inside a select ..
+        if (event.target.closest('input, select, textarea')) {
             return;
         }
 
