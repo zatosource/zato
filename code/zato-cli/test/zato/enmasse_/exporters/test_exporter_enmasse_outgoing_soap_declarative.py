@@ -62,8 +62,8 @@ _connection_def = {
     'wsa_reply_to': 'http://www.w3.org/2005/08/addressing/anonymous',
     'response_map': '//OrderStatus/text()',
     'response_map_mode': 'xpath',
-    'callback_type': 'service',
-    'callback_name': 'demo.input-logger',
+    'callback_type': 'topic',
+    'callback_name': 'orders.responses',
     'scheduler_run_every': 4,
     'scheduler_run_unit': 'hours',
     'scheduler_start_date': '2026-01-01 00:00:00',
@@ -128,8 +128,8 @@ class TestEnmasseOutgoingSOAPDeclarativeExport(TestCase):
         self.assertEqual(conn['wsa_reply_to'], 'http://www.w3.org/2005/08/addressing/anonymous')
         self.assertEqual(conn['response_map'], '//OrderStatus/text()')
         self.assertEqual(conn['response_map_mode'], 'xpath')
-        self.assertEqual(conn['callback_type'], 'service')
-        self.assertEqual(conn['callback_name'], 'demo.input-logger')
+        self.assertEqual(conn['callback_type'], 'topic')
+        self.assertEqual(conn['callback_name'], 'orders.responses')
         self.assertEqual(conn['scheduler_run_every'], 4)
         self.assertEqual(conn['scheduler_run_unit'], 'hours')
         self.assertEqual(conn['scheduler_start_date'], '2026-01-01 00:00:00')

@@ -84,8 +84,8 @@ def add_health_check_fields(form):
     form.fields['health_check_callback_service'] = forms.ChoiceField(
         required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
-    form.fields['health_check_callback_topic'] = forms.CharField(
-        required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    form.fields['health_check_callback_topic'] = forms.ChoiceField(
+        required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
     form.fields['health_check_callback_rest'] = forms.ChoiceField(
         required=False, widget=forms.Select(attrs={'style':'width:100%'}))

@@ -1164,8 +1164,9 @@ div.action-panel span.previous-next {
     --toggle-knob-color: white;
 }
 
-/* Row-selection checkboxes in list tables (td.impexp) keep the native look */
-input[type="checkbox"]:not(td.impexp input) {
+/* Excluded from the slider look: row-selection checkboxes in list tables (td.impexp),
+   tri-state checkboxes (.tri-state) and item pickers in multi-select tables. */
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input) {
     display: inline-block;
     position: relative;
     top: 0;
@@ -1182,7 +1183,7 @@ input[type="checkbox"]:not(td.impexp input) {
     transition: background-color 0.24s;
 }
 
-input[type="checkbox"]:not(td.impexp input):before {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):before {
     content: "";
     position: absolute;
     left: var(--toggle-knob-offset);
@@ -1194,11 +1195,11 @@ input[type="checkbox"]:not(td.impexp input):before {
     transition: transform 0.24s;
 }
 
-input[type="checkbox"]:not(td.impexp input):checked {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):checked {
     background-color: var(--toggle-on-background);
 }
 
-input[type="checkbox"]:not(td.impexp input):checked:before {
+input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-table input):checked:before {
     transform: translateX(var(--toggle-travel));
 }
 
