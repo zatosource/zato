@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
+from http.client import OK
 from urllib.parse import urlparse
 
 # Zato
@@ -23,8 +23,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-logger = logging.getLogger(__name__)
 
 WSS_Page_Url = '/zato/security/wss/?cluster=1'
 
@@ -248,6 +246,12 @@ def delete_wss_definition(page:'Page', wss_id:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _is_change_password_response(response:'any_') -> 'bool':
+    out = '/zato/security/wss/change-password/' in response.url
+    return out
+
+# ################################################################################################################################
+
 def change_wss_password(page:'Page', wss_id:'str', password:'str') -> 'None':
     """ Changes the password of a WS-Security definition via the change-password dialog.
     """
@@ -259,8 +263,14 @@ def change_wss_password(page:'Page', wss_id:'str', password:'str') -> 'None':
     # .. type the password in ..
     page.fill('#change_password-div #id_password', password)
 
-    # .. submit and wait for the dialog to close.
-    page.click('#change_password-div input[type="submit"]')
+    # .. submit, waiting for the server to confirm the change - the dialog closes before
+    # the request completes, so the dialog state alone is not enough to synchronize on ..
+    with page.expect_response(_is_change_password_response, timeout=10000) as response_info:
+        page.click('#change_password-div input[type="submit"]')
+
+    assert response_info.value.status == OK
+
+    # .. and wait for the dialog to close too.
     _ = page.wait_for_selector('#change_password-div', state='hidden', timeout=10000)
 
 # ################################################################################################################################

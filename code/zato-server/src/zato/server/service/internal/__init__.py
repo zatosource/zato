@@ -207,13 +207,7 @@ class ServerInvoker(AdminService):
             method = self.request.raw_request.get('method', '')
             http_accept = self.request.raw_request.get('http_accept', '')
 
-            # [DIAG-7] Log the raw request as it enters the server invoker
-            logger.debug('[DIAG-7] ServerInvoker.check_attr_exists: raw_request=%s', self.request.raw_request)
-
             response = func(entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
-
-            # [DIAG-8] Log the response that will be sent back to the dashboard
-            logger.debug('[DIAG-8] ServerInvoker.check_attr_exists: response=%s', response)
         elif func_name in ('test_logging', 'set_logging'):
             text = self.request.raw_request['text']
             response = func(text)

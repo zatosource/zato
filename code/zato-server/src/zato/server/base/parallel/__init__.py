@@ -2021,17 +2021,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def import_demo_pubsub(self):
 
-        import time as time_
-
         import zato.server.service.internal.pubsub
         from zato.common.api import Default_Demo_PubSub_Service_File_Data
         from zato.common.util.open_ import open_w
         from zato.server.commands import CommandsFacade
-
-        time_start = time_.monotonic()
-        pid = os.getpid()
-
-        logger.info('[DIAG] import_demo_pubsub: start, pid=%s', pid)
 
         pubsub_dir = os.path.dirname(zato.server.service.internal.pubsub.__file__)
         config_path = os.path.join(pubsub_dir, 'demo-enmasse.yaml')
@@ -2041,19 +2034,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         with open_w(full_path) as f:
             f.write(Default_Demo_PubSub_Service_File_Data)
 
-        logger.info('[DIAG] import_demo_pubsub: services file written, pid=%s, elapsed=%.2f', pid, time_.monotonic() - time_start)
-
         facade = CommandsFacade()
         facade.init(self)
 
         result = facade.run_enmasse_sync_import(config_path)
 
-        logger.info('[DIAG] import_demo_pubsub: enmasse done, pid=%s, elapsed=%.2f, is_ok=%s, exit_code=%s, is_timeout=%s',
-            pid, time_.monotonic() - time_start, result.is_ok, result.exit_code, result.is_timeout)
-
         if not result.is_ok:
-            logger.warning('[DIAG] import_demo_pubsub: enmasse failed, pid=%s, stdout=%s, stderr=%s',
-                pid, result.stdout.strip(), result.stderr.strip())
+            logger.warning('import_demo_pubsub: enmasse failed, stdout=%s, stderr=%s',
+                result.stdout.strip(), result.stderr.strip())
 
         return result.is_ok
 
@@ -2402,11 +2390,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from contextlib import closing
         from sqlalchemy import text
 
-        # [DIAG-1] Log every input argument exactly as received from the invoker
-        logger.debug('[DIAG-1] check_attr_exists: entity_type=%s, attr_name=%s, value=%s, filter_name=%s, filter_value=%s, ' \
-            'soap_action=%s, method=%s, http_accept=%s',
-            entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
-
         # Map logical entity types used by the frontend to actual ODB table names ..
         _entity_type_to_table = {
             'security': 'sec_base',
@@ -2453,9 +2436,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         if not table_name:
             raise Exception(f'Unmapped entity type `{entity_type}` in check_attr_exists')
 
-        # [DIAG-2] Log how the entity type resolved to a table
-        logger.debug('[DIAG-2] check_attr_exists: entity_type=%s -> table_name=%s', entity_type, table_name)
-
         # A channel's url_path is shared across all transports, so this check must mirror
         # ensure_channel_is_unique from the create service - scoped by connection and soap_action
         # but not by transport, with a clash reported only when the existing channel also uses
@@ -2496,10 +2476,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     exists = True
                     break
 
-            # [DIAG-6] Log the outcome of the url_path-specific branch
-            logger.debug('[DIAG-6] check_attr_exists: entity_type=%s, value=%s, exists=%s (url_path)',
-                entity_type, value, exists)
-
             out = json.dumps({'exists': exists})
             return out
 
@@ -2523,31 +2499,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         with closing(self.odb.session()) as session:
             query = f'SELECT 1 FROM {table_name} WHERE {where} LIMIT 1'
 
-            # [DIAG-3] Log the exact SQL and parameters right before execution
-            logger.debug('[DIAG-3] check_attr_exists: entity_type=%s, table=%s, query=%s, params=%s',
-                entity_type, table_name, query, params)
-
-            try:
-                result = session.execute(
-                    text(query),  # type: ignore[operator]
-                    params
-                )
-            except Exception:
-
-                # [DIAG-4] The query failed - log the tables that actually exist in the database
-                # so the mismatch between the resolved table name and reality is visible in one place
-                tables = session.execute(text("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"))
-                table_list = []
-                for row in tables:
-                    table_list.append(row[0])
-                logger.info('[DIAG-4] check_attr_exists: query failed for table=%s, existing tables=%s',
-                    table_name, table_list)
-                raise
+            result = session.execute(
+                text(query),  # type: ignore[operator]
+                params
+            )
 
             exists = result.fetchone() is not None
-
-        # [DIAG-5] Log the final outcome of the check
-        logger.debug('[DIAG-5] check_attr_exists: entity_type=%s, value=%s, exists=%s', entity_type, value, exists)
 
         out = json.dumps({'exists': exists})
         return out
