@@ -25,7 +25,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
-from zato.common.ext.bunch import Bunch
+from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.bearer_token import BearerTokenManager
@@ -996,24 +996,45 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _build_mcp_tool_registries(self) -> 'None':
-        """ Creates MCP channel wrappers and builds their tool registries.
-        Called after all services (internal and user-defined) are deployed,
-        so rebuild() can resolve every service on the allow list.
+    def _create_mcp_channels(self) -> 'None':
+        """ Creates wrappers for all the MCP channels found in the configuration store.
+        MCP channels are skipped in init_generic_connections because their tool registries
+        can only resolve services once all of them are deployed, which is why the wrappers
+        are built here instead - after deployment at startup and on each config reload.
         """
-        from zato.common.ext.bunch import bunchify
-        from zato.common.api import GENERIC as COMMON_GENERIC
 
-        # Create the MCP channel wrappers that were skipped during init_generic_connections ..
+        # Names of the MCP channels that exist in the configuration store ..
+        config_channel_names = set()
+
+        # .. create or recreate a wrapper for each MCP channel found there ..
         for config_dict in self.config_manager.config_store.generic_connection.values():
 
             config = config_dict['config']
             config_type = config['type_']
 
-            if config_type == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+            if config_type == GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
+                config_channel_names.add(config['name'])
                 config_as_bunch = bunchify(config)
-                self.config_manager._create_generic_connection(
-                    config_as_bunch, raise_exc=True, is_starting=False)
+                self.config_manager._create_generic_connection(config_as_bunch)
+
+        # .. and drop the wrappers of channels that no longer exist in the configuration store.
+        channel_mcp = self.config_manager.channel_mcp
+        removed_names = set(channel_mcp) - config_channel_names
+
+        for name in removed_names:
+            channel_config = channel_mcp.pop(name)
+            channel_config.conn.delete()
+
+# ################################################################################################################################
+
+    def _build_mcp_tool_registries(self) -> 'None':
+        """ Creates MCP channel wrappers and builds their tool registries.
+        Called after all services (internal and user-defined) are deployed,
+        so rebuild() can resolve every service on the allow list.
+        """
+
+        # Create the MCP channel wrappers that were skipped during init_generic_connections ..
+        self._create_mcp_channels()
 
         # .. now all wrappers exist with their registries populated,
         # spawn a single reaper greenlet to periodically clean up expired sessions ..
@@ -1860,6 +1881,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. now reload it ..
         self.config_manager.init()
         self.config_manager.init_pubsub()
+
+        # .. MCP channels are skipped in init_generic_connections, and by the time
+        # a config reload runs, all services are already deployed, so their wrappers
+        # and tool registries can be rebuilt here ..
+        self._create_mcp_channels()
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()

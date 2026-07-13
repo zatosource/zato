@@ -199,6 +199,7 @@ class TestServicePublishRoundTrip(unittest.TestCase):
 
         # Build a minimally wired Service instance ..
         service = Service.__new__(Service)
+        service.cid = 'test-cid-1'
 
         # .. mock pubsub.publish to capture what it receives ..
         service.pubsub = MagicMock()
@@ -217,6 +218,9 @@ class TestServicePublishRoundTrip(unittest.TestCase):
         # .. not included in the payload.
         received_kwargs = call_args[1]
         self.assertEqual(received_kwargs['priority'], 5)
+
+        # .. the service's own CID was forwarded too.
+        self.assertEqual(received_kwargs['cid'], 'test-cid-1')
 
 # ################################################################################################################################
 

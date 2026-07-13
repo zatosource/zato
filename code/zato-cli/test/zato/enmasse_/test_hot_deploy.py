@@ -19,6 +19,9 @@ import time
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# Zato
+from zato.common.test.process_util import kill_process_tree
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,13 +53,7 @@ def _find_free_port():
 # ################################################################################################################################
 
 def _kill_proc(proc):
-    if proc and proc.poll() is None:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=5)
+    kill_process_tree(proc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -192,6 +189,7 @@ class TestHotDeploy(TestCase):
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         logger.warning('[setUpClass] Server PID=%d', _server_proc.pid)
 
@@ -230,6 +228,7 @@ class TestHotDeploy(TestCase):
             env=listener_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         logger.warning('[setUpClass] Listener PID=%d', cls._listener_proc.pid)
 
@@ -276,10 +275,21 @@ class TestHotDeploy(TestCase):
     def tearDownClass(cls):
         global _tmpdir, _server_proc
         logger.warning('[tearDownClass] Stopping listener and server')
+
+        # Stop the listener, wait for the capture thread to drain the pipe and only then close it,
+        # otherwise close() could block on the buffered reader's lock held by the thread ..
         _kill_proc(cls._listener_proc)
+        cls._listener_thread.join(timeout=5)
+        cls._listener_proc.stdout.close()
         cls._listener_proc = None
+
+        # .. do the same for the server ..
         _kill_proc(_server_proc)
+        cls._server_thread.join(timeout=5)
+        _server_proc.stdout.close()
         _server_proc = None
+
+        # .. and remove the temporary directory.
         if _tmpdir and os.path.isdir(_tmpdir):
             shutil.rmtree(_tmpdir, ignore_errors=True)
         _tmpdir = None

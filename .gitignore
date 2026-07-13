@@ -39,6 +39,7 @@ code/sec-wall-trunk-src/*
 code/share/*
 code/src/*
 code/support-linux/bin/uvx
+code/tests/.cr-session.sqlite
 code/tmp
 code/util/extra/
 code/uv.lock

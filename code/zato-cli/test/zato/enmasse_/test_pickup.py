@@ -20,6 +20,9 @@ import yaml
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# Zato
+from zato.common.test.process_util import kill_process_tree
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -51,13 +54,7 @@ def _find_free_port():
 # ################################################################################################################################
 
 def _kill_proc(proc):
-    if proc and proc.poll() is None:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=5)
+    kill_process_tree(proc)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,6 +166,7 @@ class TestEnmassePickup(TestCase):
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
 
         cls._server_output_lines = []
@@ -213,6 +211,7 @@ class TestEnmassePickup(TestCase):
             env=listener_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
 
         # .. give the listener time to initialize.
@@ -221,10 +220,20 @@ class TestEnmassePickup(TestCase):
     @classmethod
     def tearDownClass(cls):
         global _tmpdir, _server_proc, _listener_proc
+
+        # Stop the listener and close its stdout pipe - nothing reads it, so it can be closed right away ..
         _kill_proc(_listener_proc)
+        _listener_proc.stdout.close()
         _listener_proc = None
+
+        # .. stop the server, wait for the capture thread to drain the pipe and only then close it,
+        # .. otherwise close() could block on the buffered reader's lock held by the thread ..
         _kill_proc(_server_proc)
+        cls._server_thread.join(timeout=5)
+        _server_proc.stdout.close()
         _server_proc = None
+
+        # .. and remove the temporary directory.
         if _tmpdir and os.path.isdir(_tmpdir):
             shutil.rmtree(_tmpdir, ignore_errors=True)
         _tmpdir = None
@@ -258,17 +267,13 @@ class TestEnmassePickup(TestCase):
         """
         deadline = time.monotonic() + timeout
         last_data = {}
-        poll_idx = 0
         while time.monotonic() < deadline:
             last_data = self._export_to_dict()
             items = last_data.get(section_name, [])
             names = [item['name'] for item in items if isinstance(item, dict) and 'name' in item]
-            print(f'--- DEBUG _wait_for_named_item poll={poll_idx} section={section_name} '
-                  f'looking_for={item_name} got_names={names}', file=sys.stderr)
             if item_name in names:
                 return last_data
             time.sleep(2)
-            poll_idx += 1
 
         print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
         for line in self._server_output_lines[-30:]:

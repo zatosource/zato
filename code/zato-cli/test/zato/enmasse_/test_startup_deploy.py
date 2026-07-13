@@ -61,6 +61,17 @@ def _kill_proc(proc):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _stop_server(proc, thread):
+    _kill_proc(proc)
+
+    # Wait for the capture thread to drain the pipe and only then close it,
+    # otherwise close() could block on the buffered reader's lock held by the thread
+    thread.join(timeout=5)
+    proc.stdout.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _wait_for_server(host, port, password, timeout=60):
     from urllib.request import Request, urlopen
 
@@ -262,29 +273,18 @@ channel_rest:
         enmasse_env = os.environ.copy()
         enmasse_env.pop('COVERAGE_PROCESS_START', None)
 
-        print(f'\n--- DEBUG startup_deploy: enmasse_file={cls._enmasse_file}', file=sys.stderr)
-        with open(cls._enmasse_file) as _f:
-            print(f'--- DEBUG startup_deploy: enmasse content:\n{_f.read()}', file=sys.stderr)
-        print(f'--- DEBUG startup_deploy: env_ini_file={cls._env_ini_file}', file=sys.stderr)
-        with open(cls._env_ini_file) as _f:
-            print(f'--- DEBUG startup_deploy: env.ini content:\n{_f.read()}', file=sys.stderr)
-
         result = subprocess.run([
             _ZATO_BIN, 'enmasse', cls.server_dir, '--import', '--verbose',
             '--input', cls._enmasse_file,
             '--env-file', cls._env_ini_file,
         ], capture_output=True, text=True, timeout=60, env=enmasse_env)
 
-        print(f'--- DEBUG startup_deploy: enmasse exit={result.returncode}', file=sys.stderr)
-        print(f'--- DEBUG startup_deploy: stdout:\n{result.stdout}', file=sys.stderr)
-        print(f'--- DEBUG startup_deploy: stderr:\n{result.stderr}', file=sys.stderr)
-
         cls._enmasse_result = result
         cls._enmasse_import_ok = result.returncode == 0
 
     @classmethod
     def tearDownClass(cls):
-        _kill_proc(cls._proc)
+        _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
 
@@ -402,7 +402,7 @@ channel_rest:
 
     @classmethod
     def tearDownClass(cls):
-        _kill_proc(cls._proc)
+        _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
 
@@ -493,7 +493,7 @@ class TestDockerProjectRootFromEnvIni(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        _kill_proc(cls._proc)
+        _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
 

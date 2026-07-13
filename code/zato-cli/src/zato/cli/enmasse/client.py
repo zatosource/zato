@@ -193,6 +193,14 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 
                 if pubsub_subscription_ids:
                     pubsub_subscription_ids = [row[0] for row in pubsub_subscription_ids]
+
+                    # Delete the topic associations of these subscriptions first - they have no name column,
+                    # so the generic prefix-based cleanup below never touches them
+                    result = session.execute(
+                        text('DELETE FROM pubsub_subscription_topic WHERE subscription_id IN ({})'.format(','.join(map(str, pubsub_subscription_ids))))
+                    )
+                    logger.info('Deleted %d rows from pubsub_subscription_topic linked to subscriptions being cleaned up', result.rowcount)
+
                     session.execute(
                         text('DELETE FROM pubsub_subscription WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
                     )
@@ -202,6 +210,21 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             except SQLAlchemyError as e:
                 session.rollback()
                 logger.debug(f'Could not delete from pubsub_subscription: {e}')
+
+        # Delete topic associations whose subscription no longer exists - such rows keep old subscription IDs
+        # alive and would be silently attached to future subscriptions once the database reuses those IDs
+        if 'pubsub_subscription_topic' in table_names:
+            try:
+                result = session.execute(
+                    text('DELETE FROM pubsub_subscription_topic WHERE subscription_id NOT IN (SELECT id FROM pubsub_subscription)')
+                )
+                session.commit()
+                if result.rowcount > 0:
+                    suffix = 's' if result.rowcount != 1 else ''
+                    logger.info(f'Deleted {result.rowcount} row{suffix} from pubsub_subscription_topic with no matching subscription')
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.debug(f'Could not delete from pubsub_subscription_topic: {e}')
 
         # Special handling for job_interval_based table - need to handle it before job records are deleted
         # as it doesn't have a name column but depends on job_id from the job table
