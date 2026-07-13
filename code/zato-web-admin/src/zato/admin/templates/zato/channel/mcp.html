@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}MCP channels{% endblock %}
+{% block html_title %}MCP gateways{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -53,14 +53,14 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">MCP channels</h2>
+            <h2 class="zato">MCP gateways</h2>
 
 {% with has_generic="1" generic_type="channel-mcp" %}
-    {% include "zato/search-form.html" with page_prompt="Show channels" %}
+    {% include "zato/search-form.html" with page_prompt="Show gateways" %}
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.mcp.create()">Create a new MCP channel</a>
+            <a href="javascript:$.fn.zato.channel.mcp.create()">Create a new MCP gateway</a>
         </div>
 
             <table class="zato-table" id="data-table">

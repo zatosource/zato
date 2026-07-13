@@ -33,7 +33,7 @@ if 0:
 # ################################################################################################################################
 
 class TestEnmasseChannelMCPFromYAML(TestCase):
-    """ Tests importing MCP channel definitions from YAML files using enmasse.
+    """ Tests importing MCP gateway definitions from YAML files using enmasse.
     """
 
     def setUp(self) -> 'None':
@@ -66,16 +66,16 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-        # Process security definitions and groups first - MCP channels reference security groups
+        # Process security definitions and groups first - MCP gateways reference security groups
         _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
         _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
 
 # ################################################################################################################################
 
-    def test_channel_mcp_creation(self):
+    def test_mcp_gateway_creation(self):
         self._setup_test_environment()
 
-        mcp_defs = self.yaml_config['channel_mcp']
+        mcp_defs = self.yaml_config['mcp_gateway']
         created, updated = self.mcp_importer.sync_definitions(mcp_defs, self.session)
 
         self.assertEqual(len(created), 2)
@@ -89,10 +89,10 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_mcp_update(self):
+    def test_mcp_gateway_update(self):
         self._setup_test_environment()
 
-        mcp_defs = self.yaml_config['channel_mcp']
+        mcp_defs = self.yaml_config['mcp_gateway']
         mcp_def = mcp_defs[0]
 
         instance = self.mcp_importer.create_definition(mcp_def, self.session)
@@ -111,10 +111,10 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
 
 # ################################################################################################################################
 
-    def test_complete_channel_mcp_import_flow(self):
+    def test_complete_mcp_gateway_import_flow(self):
         self._setup_test_environment()
 
-        mcp_list = self.yaml_config['channel_mcp']
+        mcp_list = self.yaml_config['mcp_gateway']
         created, updated = self.mcp_importer.sync_definitions(mcp_list, self.session)
 
         self.assertEqual(len(created), 2)

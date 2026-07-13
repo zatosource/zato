@@ -882,14 +882,14 @@ class EnmasseYAMLImporter:
 
         count = len(channel_mcp_list)
         noun = 'definition' if count == 1 else 'definitions'
-        logger.info(f'Processing {count} MCP channel {noun}')
+        logger.info(f'Processing {count} MCP gateway {noun}')
 
         for idx, item in enumerate(channel_mcp_list):
-            logger.info('MCP channel item %d: %s', idx, item)
+            logger.info('MCP gateway item %d: %s', idx, item)
 
         created, updated = self.channel_mcp_importer.sync_definitions(channel_mcp_list, session)
         self.channel_mcp_defs = self.channel_mcp_importer.connection_defs
-        logger.info('Processed MCP channel definitions: created=%d updated=%d', len(created), len(updated))
+        logger.info('Processed MCP gateway definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
 
@@ -1345,13 +1345,13 @@ class EnmasseYAMLImporter:
         if channel_kafka_updated:
             self.updated_objects['channel_kafka'] = channel_kafka_updated
 
-        # Process MCP channel definitions
-        channel_mcp_list = yaml_config.get('channel_mcp', [])
+        # Process MCP gateway definitions
+        channel_mcp_list = yaml_config.get('mcp_gateway', [])
         channel_mcp_created, channel_mcp_updated = self.sync_channel_mcp(channel_mcp_list, session)
         if channel_mcp_created:
-            self.created_objects['channel_mcp'] = channel_mcp_created
+            self.created_objects['mcp_gateway'] = channel_mcp_created
         if channel_mcp_updated:
-            self.updated_objects['channel_mcp'] = channel_mcp_updated
+            self.updated_objects['mcp_gateway'] = channel_mcp_updated
 
         # Process Kafka outgoing definitions
         outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])

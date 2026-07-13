@@ -47,18 +47,18 @@ class ChannelMCPExporter:
         self.exporter = exporter
 
     def export(self, session: 'SASession', cluster_id: 'int') -> 'mcp_def_list':
-        """ Exports MCP channel definitions.
+        """ Exports MCP gateway definitions.
         """
-        logger.info('Exporting MCP channel definitions')
+        logger.info('Exporting MCP gateway definitions')
 
         db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_MCP)
 
         if not db_items:
-            logger.info('No MCP channel definitions found in DB')
+            logger.info('No MCP gateway definitions found in DB')
             return []
 
         connections = to_json(db_items, return_as_dict=True)
-        logger.debug('Processing %d MCP channel definitions', len(connections))
+        logger.debug('Processing %d MCP gateway definitions', len(connections))
 
         exported = []
 
@@ -79,7 +79,7 @@ class ChannelMCPExporter:
 
             exported.append(item)
 
-        logger.info('Successfully prepared %d MCP channel definitions for export', len(exported))
+        logger.info('Successfully prepared %d MCP gateway definitions for export', len(exported))
         return exported
 
 # ################################################################################################################################

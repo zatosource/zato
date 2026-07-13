@@ -308,7 +308,7 @@ channel_kafka:
     ssl_cert_file: /path/to/cert.pem
     ssl_key_file: /path/to/key.pem
 
-channel_mcp:
+mcp_gateway:
 
   - name: enmasse.mcp.channel.1
     is_active: true
