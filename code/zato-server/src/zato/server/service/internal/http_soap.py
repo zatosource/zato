@@ -492,6 +492,7 @@ class _BaseGet(AdminService):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
+        '-transport', \
         *_invocation_input, \
         *_as4_input, \
         *_as2_input

@@ -27,7 +27,7 @@
 {% block "content" %}
 
 <div id="markup">
-<h2 class="zato">Rate limiting | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport=plain_http">REST channels</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport=plain_http">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
+<h2 class="zato">Rate limiting | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport={{ transport }}">{% if transport == 'soap' %}SOAP channels{% else %}REST channels{% endif %}</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport={{ transport }}">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
 
 <div class="rate-limiting-container" id="rate-limiting-container">
 </div>

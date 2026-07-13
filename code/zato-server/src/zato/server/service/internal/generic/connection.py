@@ -512,6 +512,43 @@ class GetList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetByID(AdminService):
+    """ Returns a single generic connection by its ID.
+    """
+    input = Int('id')
+
+    def handle(self) -> 'None':
+
+        input_id = self.request.input.id
+
+        # Objects from the external AS2/AS4 database are stored under their local ids there ..
+        if is_ext_object_id(input_id):
+            local_id = to_local_id(input_id)
+        else:
+            local_id = input_id
+
+        # .. look the connection up in the correct database ..
+        with closing(self.server.get_config_session(object_id=input_id)) as session:
+            query = session.query(ModelGenericConn)
+            query = query.filter(ModelGenericConn.id==local_id)
+            item = query.one()
+
+            # .. turn the model into a dict ..
+            conn = GenericConnection.from_model(item)
+            conn_dict = cast_('anydict', conn.to_dict())
+
+        # .. everyone else knows objects from the external database under their offset ids ..
+        conn_dict['id'] = input_id
+
+        # .. mask out all the relevant secret attributes ..
+        replace_query_string_items_in_dict(self.server, conn_dict)
+
+        # .. and return the connection to our caller.
+        self.response.payload = dumps(conn_dict)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the secret (password) of a generic connection.
     """

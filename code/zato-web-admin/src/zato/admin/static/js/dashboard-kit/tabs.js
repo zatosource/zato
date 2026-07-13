@@ -117,6 +117,23 @@
             if (typeof config.on_change === 'function') {
                 config.on_change(tab);
             }
+
+            // Hiding the previous panel drops focus to body, which breaks the
+            // dialog's closeOnEscape keydown handler. Runs after on_change so
+            // callers that restore focus themselves (independent_tabs) win.
+            if (config.no_scroll_lock && document.activeElement === document.body) {
+                var $panel = $('#' + panel_prefix + tab);
+                var $first_field = $panel.find('input:visible, select:visible, textarea:visible').first();
+                if ($first_field.length) {
+                    $first_field.trigger('focus');
+                }
+                else {
+                    var $dialog = $(this).closest('.ui-dialog');
+                    if ($dialog.length) {
+                        $dialog.trigger('focus');
+                    }
+                }
+            }
         });
 
         apply();

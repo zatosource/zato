@@ -17,6 +17,7 @@ from http.client import FORBIDDEN, NOT_FOUND, OK
 import requests
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.test import rand_string
 from zato.common.test.mcp_ import make_jsonrpc_initialize
 from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, \
@@ -354,6 +355,132 @@ class TestMCPChannelCreate:
         # .. POST with invalid creds - should get FORBIDDEN ..
         response = _post_mcp(server_port, url_path, auth=('bogus_user', 'bogus_pass'))
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN with invalid creds, got {response.status_code}: {response.text}'
+
+# ################################################################################################################################
+
+    def test_export(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an MCP channel with both a Basic Auth and an API key definition assigned,
+        clicks the row's Export link and verifies the downloaded server.json-format document,
+        including both authentication headers.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'export'
+        url_path = '/mcp/test-export/' + rand_string()
+
+        # Create a Basic Auth definition via the UI ..
+        security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'mcp-export')
+        basic_auth_name = security_info['name']
+
+        # .. create an API key definition via the UI, the header field is pre-filled with X-API-Key ..
+        apikey_name = _Test_Name_Prefix + 'apikey.mcp-export'
+        apikey_value = 'key.' + CryptoManager.generate_hex_string()
+
+        navigate_to_page(page, base_url, '/zato/security/apikey/?cluster=1')
+        open_create_dialog(page)
+
+        page.fill('#id_name', apikey_name)
+        page.fill('#id_password', apikey_value)
+
+        submit_create_form(page)
+
+        apikey_row_selector = f'#data-table tbody tr:has(td:text-is("{apikey_name}"))'
+        _ = page.wait_for_selector(apikey_row_selector, state='visible', timeout=5000)
+
+        logger.info('[test_export] created sec defs: basic_auth=%s apikey=%s', basic_auth_name, apikey_name)
+
+        # .. navigate to the MCP channels page ..
+        navigate_to_page(page, base_url, _Page_Url_Pattern)
+
+        # .. open the create dialog ..
+        open_create_dialog(page)
+
+        # .. fill in the fields ..
+        page.fill('#id_name', channel_name)
+        page.fill('#id_url_path', url_path)
+
+        # .. wait for both of our security badges to be available ..
+        basic_auth_badge_selector = \
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{basic_auth_name}"]'
+        apikey_badge_selector = \
+            f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{apikey_name}"]'
+
+        basic_auth_badge = page.wait_for_selector(basic_auth_badge_selector, state='visible', timeout=10000)
+        apikey_badge = page.wait_for_selector(apikey_badge_selector, state='visible', timeout=10000)
+
+        assert basic_auth_badge is not None, f'Could not find badge for sec def "{basic_auth_name}"'
+        assert apikey_badge is not None, f'Could not find badge for sec def "{apikey_name}"'
+
+        # .. assign both definitions to the channel ..
+        basic_auth_badge.click()
+        apikey_badge.click()
+
+        # .. verify the assigned count shows 2 ..
+        assigned_count_text = page.inner_text('#badge-zone-assigned-sec-create .badge-zone-count')
+        assert assigned_count_text == '2', f'Expected assigned count "2", got: "{assigned_count_text}"'
+
+        # .. submit and wait for the dialog to close ..
+        submit_create_form(page)
+
+        # .. wait for the new row to appear ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        assert row is not None, f'Could not find the row for channel "{channel_name}"'
+
+        # .. click the Export link and capture the download ..
+        export_link = row.query_selector('a:text-is("Export")')
+        assert export_link is not None, 'Could not find the Export link in the row'
+
+        with page.expect_download() as download_info:
+            export_link.click()
+
+        download = download_info.value
+
+        # .. the channel name contains only characters allowed in a slug, so the file name uses it as is ..
+        expected_file_name = f'mcp-{channel_name}.json'
+        assert download.suggested_filename == expected_file_name, \
+            f'Expected file name "{expected_file_name}", got: "{download.suggested_filename}"'
+
+        # .. load the downloaded document ..
+        download_path = download.path()
+
+        with open(download_path) as json_file:
+            document = json.load(json_file)
+
+        logger.info('[test_export] document=%s', document)
+
+        # .. the dashboard under test runs with Zato_Server_Address=http://127.0.0.1:<server_port>,
+        # and IP addresses are used as namespaces as they are, without reversing their labels ..
+        expected_name = f'127.0.0.1/{channel_name}'
+        assert document['name'] == expected_name, f'Expected name "{expected_name}", got: "{document["name"]}"'
+
+        assert document['description'] == f'MCP channel {channel_name}', \
+            f'Unexpected description: "{document["description"]}"'
+
+        # .. verify the remote endpoint ..
+        remotes = document['remotes']
+        remote_count = len(remotes)
+        assert remote_count == 1, f'Expected 1 remote, got: {remote_count}'
+
+        remote = remotes[0]
+        assert remote['type'] == 'streamable-http', f'Expected type "streamable-http", got: "{remote["type"]}"'
+
+        expected_url = f'http://127.0.0.1:{server_port}{url_path}'
+        assert remote['url'] == expected_url, f'Expected URL "{expected_url}", got: "{remote["url"]}"'
+
+        # .. verify both authentication headers are present ..
+        header_names = set()
+
+        for header in remote['headers']:
+            header_names.add(header['name'])
+            assert header['isRequired'] is True, f'Expected isRequired for header: {header}'
+            assert header['isSecret'] is True, f'Expected isSecret for header: {header}'
+
+        assert 'Authorization' in header_names, f'Expected "Authorization" in headers, got: {header_names}'
+        assert 'X-API-Key' in header_names, f'Expected "X-API-Key" in headers, got: {header_names}'
 
 # ################################################################################################################################
 
