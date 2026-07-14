@@ -169,10 +169,16 @@ class GroupsManager:
             sec_type, security_id, _ignored_sql_group_id = sec_info
             security_id = int(security_id)
 
+            # Bearer token members may be stored under their YAML type name - normalize it here
+            if sec_type == 'bearer_token':
+                sec_type = SEC_DEF_TYPE.OAUTH
+
             if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                 get_sec_func = self.server.config_manager.basic_auth_get_by_id
             elif sec_type == SEC_DEF_TYPE.APIKEY:
                 get_sec_func = self.server.config_manager.apikey_get_by_id
+            elif sec_type == SEC_DEF_TYPE.OAUTH:
+                get_sec_func = self.server.config_manager.oauth_get_by_id
             else:
                 raise Exception(f'Unrecognized sec_type: {sec_type}')
 

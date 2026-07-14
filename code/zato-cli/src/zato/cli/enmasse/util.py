@@ -499,9 +499,10 @@ def get_object_order(object_type:'str') -> 'strlist':
     order = {}
 
     order['security'] = 'name', 'is_active', 'type', 'username', 'mode', 'use_digest', 'sign', 'encrypt', \
-        'issuer', 'subject', 'audience', 'signing_key', 'signing_certificate_chain', 'decryption_key', \
-        'peer_certificate', 'trust_anchors', 'auth_endpoint', 'client_id_field', \
-        'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', 'rate_limiting:list',
+        'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'signing_key', 'signing_certificate_chain', \
+        'decryption_key', 'peer_certificate', 'trust_anchors', 'auth_endpoint', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
+        'static_header', 'static_token', 'static_prefix', 'rate_limiting:list',
 
     order['groups'] = 'name', 'is_active', 'members:list',
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',

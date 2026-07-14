@@ -1844,20 +1844,42 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_SECURITY_OAUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing OAuth security definition.
         """
+        # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+
+        # .. extract the newest information  ..
+        sec_def = self.oauth_get_by_id(msg.id)
+
+        # .. and update security groups.
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
 
     def on_config_event_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an OAuth security definition.
         """
+        # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_delete)
+
+        # .. and update security groups.
+        for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+            security_groups_ctx.on_bearer_token_deleted(msg.id)
 
     def on_config_event_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an OAuth security definition.
         """
+        # Update channels and outgoing connections ..
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_change_password)
+
+        # .. extract the newest information  ..
+        if msg.id:
+            sec_def = self.oauth_get_by_id(msg.id)
+
+            # .. and update security groups.
+            for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
+                security_groups_ctx.set_current_bearer_token(msg.id, sec_def)
 
 # ################################################################################################################################
 

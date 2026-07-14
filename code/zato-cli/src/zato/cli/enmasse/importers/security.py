@@ -12,6 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
+from zato.common.json_internal import loads
 from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json, WSSecurity
 from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
 from zato.common.util.sql import set_instance_opaque_attrs
@@ -46,6 +47,15 @@ class SecurityImporter:
         for item in definitions:
             item['type'] = sec_type
             name = item['name']
+
+            # Fields stored as opaque attributes, e.g. issuer, jwks_url, audience or claims,
+            # are part of the definition too, so they can be compared against YAML input.
+            if opaque1 := item.get('opaque1'):
+                opaque = loads(opaque1)
+                for key, value in opaque.items():
+                    if key not in item:
+                        item[key] = value
+
             logger.info('Processing security definition: %s (type=%s, id=%s)', name, sec_type, item.get('id'))
             out[name] = item
 
@@ -131,6 +141,8 @@ class SecurityImporter:
                         item['static_header'] = 'Authorization'
                     if 'static_prefix' not in item:
                         item['static_prefix'] = 'bearer'
+                    if 'username' not in item:
+                        item['username'] = f'Zato-Not-Used-{uuid4().hex}'
                 else:
                     if 'client_id_field' not in item:
                         item['client_id_field'] = 'client_id'
@@ -347,7 +359,6 @@ class SecurityImporter:
         db_def = db_defs[def_name]
         logger.debug('DB definition for %s: %s', def_name, db_def)
 
-        from zato.common.json_internal import loads
         if 'opaque1' in db_def and db_def['opaque1']:
             logger.debug('Parsing opaque1 from DB: %s', db_def['opaque1'])
             opaque_data = loads(db_def['opaque1'])

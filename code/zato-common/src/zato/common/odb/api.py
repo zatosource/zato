@@ -855,6 +855,15 @@ class ODBManager(SessionWrapper):
                     elif item.sec_type == SEC_DEF_TYPE.NTLM:
                         result[target].sec_def.username = sec_def.username
 
+                    elif item.sec_type == SEC_DEF_TYPE.OAUTH:
+                        result[target].sec_def.username = sec_def.username
+
+                        # Inbound bearer token verification needs the definition's static token
+                        # and its JWT details, all of which come from opaque attributes.
+                        for key, value in sec_def.items():
+                            if key not in result[target].sec_def:
+                                result[target].sec_def[key] = value
+
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
                         result[target].sec_def.username = sec_def.username
 
