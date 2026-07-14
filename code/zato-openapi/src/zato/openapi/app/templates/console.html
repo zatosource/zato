@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="icon" href="{{ favicon_url }}">
+    <link rel="stylesheet" href="/static/console/console.css">
+    {% if has_custom_css %}<link rel="stylesheet" href="/openapi/console/branding/custom.css">{% endif %}
+</head>
+<body class="console-body">
+
+    <header class="console-header">
+        <img src="{{ logo_url }}" alt="Logo" class="console-header-logo">
+        <span class="console-header-title">{{ title }}</span>
+        <a href="/openapi/console/logout" class="console-header-logout">Sign out</a>
+    </header>
+
+    <div id="console-reference"></div>
+
+    <script src="/static/scalar/scalar.standalone.js"></script>
+    <script src="/static/console/console.js"></script>
+
+</body>
+</html>

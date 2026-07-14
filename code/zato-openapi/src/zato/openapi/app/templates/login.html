@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} - Sign in</title>
+    <link rel="icon" href="{{ favicon_url }}">
+    <link rel="stylesheet" href="/static/console/console.css">
+    {% if has_custom_css %}<link rel="stylesheet" href="/openapi/console/branding/custom.css">{% endif %}
+</head>
+<body class="console-login-body">
+
+    <main class="console-login-main">
+        <form class="console-login-card" method="post" action="/openapi/console/login">
+            {% csrf_token %}
+
+            <div class="console-login-brand">
+                <img src="{{ logo_url }}" alt="Logo" class="console-login-logo">
+                <h1 class="console-login-title">{{ title }}</h1>
+            </div>
+
+            {% if error %}
+            <div class="console-login-error">{{ error }}</div>
+            {% endif %}
+
+            <label class="console-login-label" for="username">Username</label>
+            <input class="console-login-input" type="text" id="username" name="username" autocomplete="username" autofocus required>
+
+            <label class="console-login-label" for="password">Password</label>
+            <input class="console-login-input" type="password" id="password" name="password" autocomplete="current-password" required>
+
+            <button class="console-login-button" type="submit">Sign in</button>
+        </form>
+    </main>
+
+</body>
+</html>

@@ -989,6 +989,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Start the queue bridge (Kafka, SQS, etc.)
         self._start_queue_bridge()
 
+        # Start the listener that serves OpenAPI console requests
+        self._start_openapi_console_listener()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -1666,6 +1669,17 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         _ = spawn(_recv_listener_loop)
 
         logger.info('Queue bridge recv listener greenlet started')
+
+# ################################################################################################################################
+
+    def _start_openapi_console_listener(self) -> 'None':
+        """ Starts the greenlet that answers OpenAPI console requests arriving via Redis Streams.
+        """
+        try:
+            from zato.server.openapi_console.listener import start_openapi_console_listener
+            start_openapi_console_listener(self)
+        except Exception:
+            logger.warning('OpenAPI console listener could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
