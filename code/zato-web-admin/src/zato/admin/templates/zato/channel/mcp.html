@@ -5,6 +5,8 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -19,6 +21,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/mcp.js"></script>
@@ -113,6 +117,13 @@
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "channel-mcp-create" %}" method="post" id="create-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
+                        <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-access_control" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:14%"><label for="id_name">Name</label></td>
@@ -170,6 +181,15 @@
                                 </div>
                             </td>
                         </tr>
+                    </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-response_shaping" role="tabpanel" hidden>
+                        <table class="form-data">
+                        </table>
+                    </div>
+
+                    <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
@@ -188,6 +208,13 @@
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "channel-mcp-edit" %}" method="post" id="edit-form">
+
+                    <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
+                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
+                        <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-access_control" role="tabpanel">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:14%"><label for="id_edit-name">Name</label></td>
@@ -245,6 +272,15 @@
                                 </div>
                             </td>
                         </tr>
+                    </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-response_shaping" role="tabpanel" hidden>
+                        <table class="form-data">
+                        </table>
+                    </div>
+
+                    <table class="form-data">
                         <tr>
                             <td style="text-align:left;vertical-align:middle">
                                 <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>

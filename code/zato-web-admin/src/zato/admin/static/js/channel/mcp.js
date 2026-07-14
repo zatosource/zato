@@ -230,6 +230,23 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.mcp.tab_labels = {
+    access_control:   'Access control',
+    response_shaping: 'Response shaping'
+};
+
+$.fn.zato.channel.mcp._reset_tabs = function(action) {
+    var is_edit = action === 'edit';
+    $.fn.zato.form_tabs.reset({
+        div_id:       is_edit ? '#edit-div' : '#create-div',
+        panel_prefix: is_edit ? 'mcp-edit-tab-panel-' : 'mcp-create-tab-panel-',
+        default_tab:  'access_control',
+        tab_labels:   $.fn.zato.channel.mcp.tab_labels
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.mcp.field_descriptions = {
     'id_name': 'A unique name for this gateway.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this gateway accepts requests.<br>MCP clients cannot reach inactive gateways.',
@@ -239,6 +256,7 @@ $.fn.zato.channel.mcp.field_descriptions = {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.mcp.create = function() {
+    $.fn.zato.channel.mcp._reset_tabs('create');
     $.fn.zato.channel.mcp.badge_picker.load('create', null);
     $.fn.zato.channel.mcp.security_badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a new MCP gateway', null);
@@ -254,6 +272,7 @@ $.fn.zato.channel.mcp.create = function() {
 
 $.fn.zato.channel.mcp.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
+    $.fn.zato.channel.mcp._reset_tabs('edit');
     $.fn.zato.channel.mcp.badge_picker.load('edit', instance.id);
     $.fn.zato.channel.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
