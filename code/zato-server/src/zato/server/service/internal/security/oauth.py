@@ -36,7 +36,8 @@ class GetList(AdminService):
     input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
         '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
-        '-static_header', '-static_token', '-static_prefix'
+        '-static_header', '-static_token', '-static_prefix', \
+        '-issuer', '-jwks_url', '-audience', '-claims'
 
     def get_data(self, session:'any_') -> 'anylist':
         return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
@@ -54,7 +55,8 @@ class Create(AdminService):
     """
     input = 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
         '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
-        '-static_header', '-static_token', '-static_prefix'
+        '-static_header', '-static_token', '-static_prefix', \
+        '-issuer', '-jwks_url', '-audience', '-claims'
     output = 'id', 'name'
 
     def handle(self):
@@ -114,7 +116,8 @@ class Edit(AdminService):
     """
     input = 'id', 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
         '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
-        '-static_header', '-static_token', '-static_prefix'
+        '-static_header', '-static_token', '-static_prefix', \
+        '-issuer', '-jwks_url', '-audience', '-claims'
     output = 'id', 'name'
 
     def handle(self):
