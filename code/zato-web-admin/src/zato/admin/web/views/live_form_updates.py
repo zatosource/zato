@@ -106,7 +106,8 @@ OBJECT_TYPE_CONFIG:'stranydict' = {
         'id_field': 'id',
         'label_format': '{name}',
         'extra_params': {
-            'sec_type': ['apikey', 'basic_auth'],
+            # This must match the types that the security groups page itself lists in its badge picker
+            'sec_type': ['apikey', 'basic_auth', 'oauth'],
             'paginate': False,
         },
         'filter_func': _security_basic_filter,

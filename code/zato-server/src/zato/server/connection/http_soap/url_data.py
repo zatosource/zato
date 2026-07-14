@@ -41,6 +41,9 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# Fields that inbound bearer token verification reads from a definition's opaque attributes
+_oauth_inbound_keys = ('static_token', 'issuer', 'jwks_url', 'audience', 'claims')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -148,6 +151,42 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
+    def get_bearer_token_verifier(self):
+        """ Returns the bearer token verifier, building it on first use.
+        """
+        if not self._bearer_token_verifier:
+            self._bearer_token_verifier = BearerTokenVerifier(self.config_manager.cache_api)
+
+        return self._bearer_token_verifier
+
+# ################################################################################################################################
+
+    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Performs the authentication against an inbound bearer token, either a static one or a JWT.
+        """
+        # Extract the token from the Authorization header ..
+        auth_header = wsgi_environ.get('HTTP_AUTHORIZATION') or ''
+        token = extract_bearer_token(auth_header)
+
+        # .. and verify it against the one definition attached to this channel.
+        if token:
+            verifier = self.get_bearer_token_verifier()
+            verify_config = build_verify_config(sec_def)
+            claims = verifier.verify(cid, path_info, token, verify_config)
+
+            if claims is not None:
+                return True
+
+        if enforce_auth:
+            msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
+            error_msg = '401 Unauthorized'
+            logger.error(msg + ' (Bearer token)')
+            raise Unauthorized(cid, error_msg, 'Bearer')
+        else:
+            return False
+
+# ################################################################################################################################
+
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Enforces the channel's WS-Security definition on the incoming SOAP envelope.
         """
@@ -212,6 +251,13 @@ class URLData(PyURLData):
                         for key, _ignored_new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
+
+                            # Bearer token definitions keep their inbound verification fields
+                            # in opaque attributes, so an edit may introduce keys that the
+                            # definition did not carry before, e.g. an audience added later on.
+                            elif sec_def_type == SEC_DEF_TYPE.OAUTH:
+                                if key in _oauth_inbound_keys:
+                                    sec_def[key] = msg[key]
 
 # ################################################################################################################################
 

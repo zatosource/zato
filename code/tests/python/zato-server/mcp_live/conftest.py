@@ -22,7 +22,10 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 _this_directory = os.path.dirname(__file__)
+_keycloak_directory = os.path.join(_this_directory, '..', '..', 'zato-common', 'test')
+
 sys.path.insert(0, _this_directory)
+sys.path.insert(0, _keycloak_directory)
 
 # pytest
 import pytest  # noqa: E402
@@ -30,6 +33,9 @@ import pytest  # noqa: E402
 # Zato
 from zato.common.test import kill_server_process, rand_string  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
+
+# Zato - test helpers
+import keycloak_  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +79,12 @@ _mcp_sec_def_name   = 'test.mcp.live.auth'
 _mcp_username_b     = 'test.mcp.live.user.b'
 _mcp_password_b     = 'test.mcp.live.b.' + rand_string()
 _mcp_sec_def_name_b = 'test.mcp.live.auth.b'
+
+# Bearer token members of the same group - one static and two claim-filtered JWT definitions
+_mcp_bearer_static_name     = 'test.mcp.live.bearer.static'
+_mcp_bearer_static_token    = 'test.mcp.live.bearer.' + rand_string()
+_mcp_bearer_accounting_name = 'test.mcp.live.bearer.accounting'
+_mcp_bearer_sales_name      = 'test.mcp.live.bearer.sales'
 
 _mcp_group_name = 'mcp.test-live-group'
 
@@ -215,6 +227,9 @@ def _deploy_mcp_security(server_directory:'str') -> 'None':
 
     from zato.common.util.channel import mcp_channel_name
 
+    keycloak_token_url = keycloak_.get_token_url()
+    keycloak_issuer = keycloak_.get_issuer()
+
     enmasse_yaml = f'''\
 security:
   - name: {_mcp_sec_def_name}
@@ -225,12 +240,36 @@ security:
     type: basic_auth
     username: {_mcp_username_b}
     password: "{_mcp_password_b}"
+  - name: {_mcp_bearer_static_name}
+    type: bearer_token
+    static_token: "{_mcp_bearer_static_token}"
+  - name: {_mcp_bearer_accounting_name}
+    type: bearer_token
+    username: {keycloak_.Client_Accounting}
+    password: "{keycloak_.Secret_Accounting}"
+    auth_endpoint: {keycloak_token_url}
+    issuer: {keycloak_issuer}
+    audience: {keycloak_.Audience_Main}
+    claims:
+      - {keycloak_.Claim_Department}={keycloak_.Department_Accounting}
+  - name: {_mcp_bearer_sales_name}
+    type: bearer_token
+    username: {keycloak_.Client_Sales}
+    password: "{keycloak_.Secret_Sales}"
+    auth_endpoint: {keycloak_token_url}
+    issuer: {keycloak_issuer}
+    audience: {keycloak_.Audience_Main}
+    claims:
+      - {keycloak_.Claim_Department}={keycloak_.Department_Sales}
 
 groups:
   - name: {_mcp_group_name}
     members:
       - {_mcp_sec_def_name}
       - {_mcp_sec_def_name_b}
+      - {_mcp_bearer_static_name}
+      - {_mcp_bearer_accounting_name}
+      - {_mcp_bearer_sales_name}
 
 mcp_gateway:
   - name: {mcp_channel_name}
@@ -521,6 +560,7 @@ def zato_server(request:'any_') -> 'any_':
         'mcp_url': mcp_url,
         'mcp_auth': (_mcp_username, _mcp_password),
         'mcp_auth_b': (_mcp_username_b, _mcp_password_b),
+        'bearer_static_token': _mcp_bearer_static_token,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
     }

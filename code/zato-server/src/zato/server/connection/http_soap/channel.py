@@ -21,6 +21,7 @@ from typing import NamedTuple
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.bearer_token_verifier import extract_bearer_token
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
@@ -1035,6 +1036,13 @@ class RequestDispatcher:
         # Extract Basic Auth information from input ..
         basic_auth_info = wsgi_environ.get('HTTP_AUTHORIZATION')
 
+        # .. the same header may carry a bearer token instead ..
+        bearer_token = extract_bearer_token(basic_auth_info or '')
+
+        # .. in which case it is not Basic Auth information at all ..
+        if bearer_token:
+            basic_auth_info = None
+
         # .. extract API key information too, using the one header ..
         # .. that this channel's group members are configured with ..
         apikey_header_value = None
@@ -1046,8 +1054,18 @@ class RequestDispatcher:
             logger.warning('Received both Basic Auth and API key (groups)')
             raise BadRequest(cid)
 
+        # Handle bearer tokens via groups ..
+        if bearer_token:
+
+            # .. run the validation now ..
+            if security_id := security_groups_ctx.check_security_bearer_token(cid, channel_name, bearer_token):
+                sec_def = self.url_data.oauth_get_by_id(security_id)
+            else:
+                logger.warning('Invalid bearer token (groups)')
+                raise Forbidden(cid)
+
         # Handle Basic Auth via groups ..
-        if basic_auth_info:
+        elif basic_auth_info:
 
             # .. extract credentials ..
             username, password = extract_basic_auth(cid, basic_auth_info)
@@ -1070,7 +1088,7 @@ class RequestDispatcher:
                 raise Forbidden(cid)
 
         else:
-            logger.warning('Received neither Basic Auth nor API key (groups)')
+            logger.warning('Received neither Basic Auth, bearer token nor API key (groups)')
             raise Forbidden(cid)
 
         # Now we can enrich the WSGI environment with information

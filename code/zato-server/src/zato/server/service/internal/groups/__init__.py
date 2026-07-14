@@ -13,6 +13,7 @@ from operator import itemgetter
 
 # Zato
 from zato.common.api import CONNECTION, Groups
+from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.server.service import AsIs, Service
 
@@ -304,6 +305,16 @@ class EditMemberList(Service):
             func.__name__, input.group_id, member_id_list)
 
         func(input.group_id, member_id_list)
+
+        # Notify the config manager so the in-RAM security groups of running channels are updated too,
+        # otherwise the change would only take effect after a server restart.
+        msg = {
+            'action': Broker_Message_Groups.Edit_Member_List.value,
+            'group_action': input.group_action,
+            'group_id': int(input.group_id),
+            'member_id_list': member_id_list,
+        }
+        self.config_dispatcher.publish(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

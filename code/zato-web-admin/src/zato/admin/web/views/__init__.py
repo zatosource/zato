@@ -27,7 +27,7 @@ from pytz import UTC
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.util import get_template_response
-from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import validate_python_syntax
@@ -918,6 +918,11 @@ def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
 
     sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
     sec_type_as_link = sec_type.replace('_', '-')
+
+    # Bearer token definitions live under their own subpath
+    if sec_type == SEC_DEF_TYPE.OAUTH:
+        sec_type_as_link += '/outconn/client-credentials'
+
     security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={sec_name}'
     security_link = f'<a href="{security_href}">{sec_name}</a>'
     if needs_type:

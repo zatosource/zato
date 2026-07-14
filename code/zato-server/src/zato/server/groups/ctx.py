@@ -17,6 +17,7 @@ from gevent.lock import RLock
 from zato.common.api import Groups, Sec_Def_Type
 from zato.common.crypto.api import is_string_equal
 from zato.common.groups import Member
+from zato.server.groups.ctx_bearer import BearerTokenCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,7 +50,7 @@ class _APIKeySecDef:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SecurityGroupsCtx:
+class SecurityGroupsCtx(BearerTokenCtx):
     """ An instance of this class is attached to each channel using security groups.
     """
     # ID of a channel this ctx object is attached to
@@ -81,6 +82,9 @@ class SecurityGroupsCtx:
         self.basic_auth_credentials = {}
         self.apikey_credentials = {}
         self.apikey_header = None
+
+        self.bearer_token_credentials = {}
+        self._bearer_token_verifier = None
 
         self._lock = RLock()
 
@@ -401,6 +405,9 @@ class SecurityGroupsCtx:
         # A list of all the API key header values we are going to delete
         apikey_list:'strlist' = []
 
+        # A list of all the bearer token security IDs we are going to delete
+        bearer_token_list:'intlist' = []
+
         with self._lock:
 
             # Continue only if this group has been previously assigned to our context object ..
@@ -422,6 +429,11 @@ class SecurityGroupsCtx:
                 if item.security_id in sec_id_list:
                     apikey_list.append(header_value)
 
+            # .. collect bearer token definitions belonging to this group ..
+            for security_id in self.bearer_token_credentials:
+                if security_id in sec_id_list:
+                    bearer_token_list.append(security_id)
+
             # .. remove security definitions (Basic Auth) ..
             for item in basic_auth_list:
                 _ = self.basic_auth_credentials.pop(item, None)
@@ -429,6 +441,10 @@ class SecurityGroupsCtx:
             # .. remove security definitions (API keys) ..
             for item in apikey_list:
                 _ = self.apikey_credentials.pop(item, None)
+
+            # .. remove security definitions (bearer tokens) ..
+            for security_id in bearer_token_list:
+                _ = self.bearer_token_credentials.pop(security_id, None)
 
             # .. if no API key definitions remain, there is no channel-wide header anymore ..
             if not self.apikey_credentials:
@@ -447,12 +463,15 @@ class SecurityGroupsCtx:
         # Let's try Basic Auth definitions first ..
         if not (sec_def := self.server.config_manager.basic_auth_get_by_id(security_id)):
 
-            # .. if we do not have anything, it must be an API key definition then ..
-            sec_def = self.server.config_manager.apikey_get_by_id(security_id)
+            # .. it may be an API key definition then ..
+            if not (sec_def := self.server.config_manager.apikey_get_by_id(security_id)):
+
+                # .. and the last possibility is a bearer token definition ..
+                sec_def = self.server.config_manager.oauth_get_by_id(security_id)
 
         # If we do not have anything, we can only report an error
         if not sec_def:
-            raise Exception(f'Security ID is neither Basic Auth nor API key -> {security_id}')
+            raise Exception(f'Security ID is neither Basic Auth, API key nor bearer token -> {security_id}')
 
         # .. otherwise, we can return the definition to our caller.
         else:
@@ -468,7 +487,7 @@ class SecurityGroupsCtx:
 # ################################################################################################################################
 
     def has_members(self) -> 'bool':
-        return bool(self.basic_auth_credentials) or bool(self.apikey_credentials)
+        return bool(self.basic_auth_credentials) or bool(self.apikey_credentials) or bool(self.bearer_token_credentials)
 
 # ################################################################################################################################
 
@@ -486,6 +505,8 @@ class SecurityGroupsCtx:
             # If we are here, we know we have everything to populate all the runtime containers
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
                 self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
+            elif sec_def_type == Sec_Def_Type.OAUTH:
+                self._on_bearer_token_created(group_id, security_id, sec_def)
             else:
                 self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
 
@@ -515,6 +536,8 @@ class SecurityGroupsCtx:
             # .. do delete the definition from the correct container.
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
                 self._on_basic_auth_deleted(security_id)
+            elif sec_def_type == Sec_Def_Type.OAUTH:
+                self._on_bearer_token_deleted(security_id)
             else:
                 self._on_apikey_deleted(security_id)
 
@@ -528,6 +551,12 @@ class SecurityGroupsCtx:
 # ################################################################################################################################
 
     def on_group_assigned_to_channel(self, group_id:'int', members:'list_[Member]') -> 'None':
+
+        # Register the group itself first - it may be empty at assignment time,
+        # e.g. the auto-created group of a new MCP gateway, and without this registration
+        # members added to it later would be ignored by on_member_added_to_group.
+        self.security_groups.add(group_id)
+        _ = self.group_to_sec_map.setdefault(group_id, set())
 
         # .. now, go through each of the members found ..
         for member in members:
@@ -558,6 +587,14 @@ class SecurityGroupsCtx:
                     sec_def['header'],
                     sec_def.get('password') or 'Zato-Not-Provided-API-Key-' + uuid4().hex,
                 )
+
+            elif member.sec_type == Sec_Def_Type.OAUTH:
+
+                # .. get the member's security definition ..
+                sec_def = self.server.config_manager.oauth_get_by_id(member.security_id)
+
+                # .. populate the correct container ..
+                self.on_bearer_token_created(group_id, sec_def['id'], sec_def)
 
 # ################################################################################################################################
 

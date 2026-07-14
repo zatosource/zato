@@ -48,6 +48,12 @@ class CreateForm(forms.Form):
     static_prefix = forms.CharField(
         required=False, widget=forms.TextInput(attrs={'style':'width:100%'}), initial='Bearer')
 
+    # Inbound verification fields
+    issuer = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    jwks_url = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    audience = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    claims = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%; height:30px'}))
+
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 

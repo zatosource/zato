@@ -57,7 +57,7 @@ _http_timeout = 10
 _jwks_cache_key_prefix = 'zato.sec.bearer-token.jwks.'
 
 # What jwt_decode must always validate
-_decode_options = {'require': ['exp', 'iss', 'aud']}
+_decode_options:'any_' = {'require': ['exp', 'iss', 'aud']}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -335,7 +335,11 @@ class BearerTokenVerifier:
             if key_data.get('kid') == key_id:
                 jwk = PyJWK.from_dict(key_data, algorithm=JWT_Algorithm)
                 out = jwk.key
-                return out
+                break
+        else:
+            out = None
+
+        return out
 
 # ################################################################################################################################
 

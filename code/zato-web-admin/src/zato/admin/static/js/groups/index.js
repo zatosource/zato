@@ -51,7 +51,7 @@ $.fn.zato.groups.badge_picker_config = {
     },
 
     sort_items: function(a, b) {
-        var type_order = { 'basic_auth': 0, 'apikey': 1, 'ntlm': 2, 'bearer_token': 3 };
+        var type_order = { 'basic_auth': 0, 'apikey': 1, 'ntlm': 2, 'oauth': 3, 'bearer_token': 4 };
         var order_a = type_order[a.sec_type] !== undefined ? type_order[a.sec_type] : 99;
         var order_b = type_order[b.sec_type] !== undefined ? type_order[b.sec_type] : 99;
         if (order_a !== order_b) return order_a - order_b;

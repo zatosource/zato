@@ -71,7 +71,7 @@ class Index(_Index):
 
         # Get all available security definitions for the badge picker ..
         security_list_response = self.req.zato.client.invoke('zato.security.get-list', {
-            'sec_type': ['apikey', 'basic_auth'],
+            'sec_type': ['apikey', 'basic_auth', 'oauth'],
             'paginate': False,
         })
 
@@ -203,7 +203,7 @@ def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
 def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'strnone'=None) -> 'anylist':
 
     # Handle optional parameters
-    sec_type = sec_type or ['apikey', 'basic_auth']
+    sec_type = sec_type or ['apikey', 'basic_auth', 'oauth']
 
     logger.info('Groups._get_security_list: sec_type=%s, query=%s', sec_type, query)
 

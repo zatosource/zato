@@ -47,7 +47,7 @@ _Cell_Security_Groups = 7
 # Log patterns produced by the server when group credentials are rejected
 _Group_Log_Patterns = (
     'Invalid API key (groups)',
-    'Received neither Basic Auth nor API key (groups)',
+    'Received neither Basic Auth, bearer token nor API key (groups)',
     'Received both Basic Auth and API key (groups)',
 )
 

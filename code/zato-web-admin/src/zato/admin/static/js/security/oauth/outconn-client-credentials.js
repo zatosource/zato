@@ -66,6 +66,12 @@ $.fn.zato.security.oauth.field_descriptions = {
     'id_static_header': 'The HTTP header the token goes into,<br>Authorization by default.',
     'id_static_prefix': 'Text placed before the token in the header,<br>Bearer by default. Leave it empty<br>if the server expects the bare token.',
     'id_static_token': 'The fixed token sent with each request.<br>It is never refreshed automatically -<br>update it here whenever it changes.',
+
+    // Inbound verification section
+    'id_issuer': 'The issuer inbound JWTs must carry in their iss claim.<br>If empty, it is derived from the auth. endpoint.',
+    'id_jwks_url': 'Where to fetch the signing keys from.<br>If empty, the issuer\'s well-known<br>discovery document is used.',
+    'id_audience': 'The audience inbound JWTs must carry in their aud claim.<br>Required for this definition to accept inbound JWTs at all.',
+    'id_claims': 'Additional claim=value pairs, one per line,<br>that inbound JWTs must carry,<br>e.g. department=Accounting.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -108,6 +114,10 @@ $.fn.zato.security.oauth.edit = function(id) {
     $('#id_edit-name').val(instance.name);
     $('#id_edit-id').val(instance.id);
 
+    // The uniqueness check must know the original name, otherwise submitting
+    // an edit that keeps the name would be blocked as a duplicate of itself
+    $('#id_edit-name').data('zato-original-value', instance.name);
+
     if (is_static) {
         $('#id_edit-static_header').val(instance.static_header);
         $('#id_edit-static_prefix').val(instance.static_prefix);
@@ -124,6 +134,12 @@ $.fn.zato.security.oauth.edit = function(id) {
         $('#id_edit-scopes').val(instance.scopes);
         $('#id_edit-data_format').val(instance.data_format);
     }
+
+    // Inbound verification fields apply to both token types
+    $('#id_edit-issuer').val(instance.issuer);
+    $('#id_edit-jwks_url').val(instance.jwks_url);
+    $('#id_edit-audience').val(instance.audience);
+    $('#id_edit-claims').val(instance.claims);
 
     // Open the dialog without auto-populate
     $.fn.zato.data_table._create_edit('edit', 'Edit Bearer token definition', id, undefined, false);
@@ -184,6 +200,11 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.static_header);
     row += String.format("<td class='ignore'>{0}</td>", item.static_token);
     row += String.format("<td class='ignore'>{0}</td>", item.static_prefix);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.issuer);
+    row += String.format("<td class='ignore'>{0}</td>", item.jwks_url);
+    row += String.format("<td class='ignore'>{0}</td>", item.audience);
+    row += String.format("<td class='ignore'>{0}</td>", item.claims);
 
     if(include_tr) {
         row += '</tr>';
