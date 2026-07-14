@@ -131,10 +131,36 @@
     text-shadow: 0 0 8px var(--form-tab-glow);
 }
 
-/* Read-only inputs in the routing tab when "Default" is active. */
-.data-popup input.routing-disabled {
+/* Read-only inputs in the routing tab when "Default" is active,
+   also inputs and selects disabled by a master toggle. */
+.data-popup input.routing-disabled,
+.data-popup select.routing-disabled {
     background-color: #e8e8e8;
     color: #888;
     cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------ */
+/* Form data - section headers and hint rows                     */
+/* ------------------------------------------------------------ */
+
+/* A group heading row inside a form-data table, e.g. "Compaction"
+   or "PII removal" in a tab holding several groups of fields. */
+.data-popup .form-data td.form-data-section {
+    padding-top: 12px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #d0d0d0;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #052238;
+}
+
+/* An explanatory row under a field, e.g. what a filter expression does. */
+.data-popup .form-data td.form-data-hint {
+    padding-top: 2px;
+    font-size: 0.62rem;
+    color: #777;
 }
 
