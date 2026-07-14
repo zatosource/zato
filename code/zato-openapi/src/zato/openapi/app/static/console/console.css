@@ -1,0 +1,162 @@
+/* ------------------------------------------------------------ */
+/* Console - shared tokens                                       */
+/* ------------------------------------------------------------ */
+
+:root {
+    --console-header-background: #012845;
+    --console-header-foreground: #f4f7fa;
+    --console-header-height: 52px;
+    --console-accent: #1d7af2;
+    --console-accent-hover: #3c8ef5;
+    --console-page-background: #f4f6f8;
+    --console-card-background: #ffffff;
+    --console-card-border: #dbe2ea;
+    --console-text: #1c2733;
+    --console-text-muted: #5d6b7a;
+    --console-error-background: #fdecec;
+    --console-error-border: #f2b8b5;
+    --console-error-text: #8c1d18;
+}
+
+/* ------------------------------------------------------------ */
+/* Console - base layout                                         */
+/* ------------------------------------------------------------ */
+
+body.console-body,
+body.console-login-body {
+    margin: 0;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: var(--console-text);
+    background: var(--console-page-background);
+}
+
+/* ------------------------------------------------------------ */
+/* Console - header bar                                          */
+/* ------------------------------------------------------------ */
+
+.console-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--console-header-height);
+    padding: 0 20px;
+    background: var(--console-header-background);
+    color: var(--console-header-foreground);
+}
+
+.console-header-logo {
+    height: 28px;
+    width: auto;
+}
+
+.console-header-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.console-header-logout {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--console-header-foreground);
+    text-decoration: none;
+    opacity: 0.85;
+}
+
+.console-header-logout:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ */
+/* Console - sign-in page                                        */
+/* ------------------------------------------------------------ */
+
+.console-login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.console-login-card {
+    display: flex;
+    flex-direction: column;
+    width: 340px;
+    padding: 32px;
+    background: var(--console-card-background);
+    border: 1px solid var(--console-card-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 26px rgba(16, 36, 56, 0.08);
+}
+
+.console-login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.console-login-logo {
+    height: 40px;
+    width: auto;
+    background: var(--console-header-background);
+    border-radius: 8px;
+    padding: 8px 14px;
+}
+
+.console-login-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.console-login-label {
+    margin: 12px 0 5px;
+    font-size: 13px;
+    color: var(--console-text-muted);
+}
+
+.console-login-input {
+    padding: 9px 11px;
+    font-size: 14px;
+    border: 1px solid var(--console-card-border);
+    border-radius: 6px;
+    outline: none;
+}
+
+.console-login-input:focus {
+    border-color: var(--console-accent);
+}
+
+.console-login-button {
+    margin-top: 22px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--console-accent);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.console-login-button:hover {
+    background: var(--console-accent-hover);
+}
+
+.console-login-error {
+    padding: 9px 11px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--console-error-text);
+    background: var(--console-error-background);
+    border: 1px solid var(--console-error-border);
+    border-radius: 6px;
+}

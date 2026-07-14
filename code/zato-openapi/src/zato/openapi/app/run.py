@@ -49,7 +49,7 @@ class OpenAPIServer(gunicorn.app.base.BaseApplication):
 # ################################################################################################################################
 
 def main():
-    """ Main entry point for the OpenAPI server.
+    """ Main entry point for the OpenAPI console server.
     """
     # Set up Django settings module
     _ = os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.openapi.app.settings')
@@ -60,24 +60,23 @@ def main():
     # Import Django WSGI application
     from zato.openapi.app.wsgi import application
 
-    # Check if OpenAPI spec exists
-    openapi_path = os.environ.get('Zato_OpenAPI_Path', '/tmp/openapi.yaml')
-    if not os.path.exists(openapi_path):
-        logger.warning('OpenAPI specification file not found at %s', openapi_path)
-        logger.info('Please run "make openapi /path/to/services" first')
+    # The console binds on this address unless the environment overrides it
+    host = os.environ.get('Zato_OpenAPI_Console_Host', '0.0.0.0')
+    port = os.environ.get('Zato_OpenAPI_Console_Port', '8088')
 
-    # Set up Gunicorn options
+    # Set up Gunicorn options - the application must be preloaded in the master process
+    # so that all workers share the same session signing and credential encryption keys.
     options = {
-        'bind': '0.0.0.0:8088',
+        'bind': f'{host}:{port}',
         'workers': 3,
+        'preload_app': True,
         'accesslog': '-',  # Log to stdout
         'errorlog': '-',   # Log to stderr
         'loglevel': 'info',
     }
 
     # Start the server
-    logger.info('Starting OpenAPI server on %s', options['bind'])
-    logger.info('Serving OpenAPI spec from %s', openapi_path)
+    logger.info('Starting the OpenAPI console on %s', options['bind'])
     OpenAPIServer(application, options).run()
 
 # ################################################################################################################################

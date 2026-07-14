@@ -25,5 +25,12 @@ _ = os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.openapi.app.settings')
 
 application = get_wsgi_application()
 
+# Load the URL configuration, and with it the views and the session module, in this process
+# rather than lazily on the first request - gunicorn imports this module in the master before workers fork,
+# which is what makes all workers share the same credential encryption key.
+from django.urls import get_resolver
+
+_ = get_resolver().url_patterns
+
 # ################################################################################################################################
 # ################################################################################################################################

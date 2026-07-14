@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Services without typed input or output are documented with this schema - any JSON object is accepted or returned.
+_any_object_schema = {'type': 'object', 'additionalProperties': True}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TypeConversionError(Exception):
     """ Raised when a type cannot be converted to an OpenAPI type.
     """
@@ -40,6 +46,10 @@ class OpenAPIGenerator:
         """
         if not service_input:
             return None
+
+        # Handle untyped input - any JSON object is accepted
+        if service_input['type'] == 'any':
+            return _any_object_schema
 
         # Handle model-based input
         if service_input['type'] == 'model':
@@ -115,6 +125,10 @@ class OpenAPIGenerator:
         if not service_output:
             return None
 
+        # Handle untyped output - any JSON object may be returned
+        if service_output['type'] == 'any':
+            return _any_object_schema
+
         # Handle model-based output
         if service_output['type'] == 'model':
             model_name = service_output['model_name']
@@ -164,8 +178,8 @@ class OpenAPIGenerator:
             f'Cannot map service output {service_output["type"]} to OpenAPI schema. '
             'Add handling for this output type in _create_response_schema method')
 
-    def generate_openapi(self, scan_results, output_file):
-        """ Generate an OpenAPI specification from the scanned services and models.
+    def build_spec(self, scan_results):
+        """ Build an OpenAPI specification document from the scanned services and models and return it as a dict.
         """
         services = scan_results['services']
         models = scan_results['models']
@@ -253,6 +267,13 @@ class OpenAPIGenerator:
         schema_components = self.type_mapper.get_schema_components()
         if schema_components:
             openapi['components']['schemas'].update(schema_components)
+
+        return openapi
+
+    def generate_openapi(self, scan_results, output_file):
+        """ Generate an OpenAPI specification from the scanned services and models and write it out as YAML.
+        """
+        openapi = self.build_spec(scan_results)
 
         # Write the OpenAPI specification to a file
         with open(output_file, 'w') as f:
