@@ -141,11 +141,11 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Form data - section headers and hint rows                     */
+/* Form data - section headers and label cells                   */
 /* ------------------------------------------------------------ */
 
-/* A group heading row inside a form-data table, e.g. "Compaction"
-   or "PII removal" in a tab holding several groups of fields. */
+/* A group heading row inside a form-data table, e.g. "Unicode"
+   or "URL policy" in a tab holding several groups of fields. */
 .data-popup .form-data td.form-data-section {
     padding-top: 12px;
     padding-bottom: 4px;
@@ -157,10 +157,17 @@
     color: #052238;
 }
 
-/* An explanatory row under a field, e.g. what a filter expression does. */
-.data-popup .form-data td.form-data-hint {
+/* The first group heading sits right under the tab strip,
+   only the later ones need the separation from fields above. */
+.data-popup .form-data tr:first-child td.form-data-section {
     padding-top: 2px;
-    font-size: 0.62rem;
-    color: #777;
+}
+
+/* A label cell as wide as its longest label and no wider. */
+.data-popup .form-data td.form-data-label {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 14px;
+    vertical-align: middle;
 }
 

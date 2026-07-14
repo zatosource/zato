@@ -22,18 +22,14 @@ _url_mode_choices = (
     ('reject', 'Reject'),
 )
 
-_filter_expression_placeholder = '{"customer": name, "total": $sum(items.price)}'
-
-# ################################################################################################################################
-
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(initial='/mcp/', widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
-    # Response shaping
-    filter_expression = forms.CharField(required=False, widget=forms.Textarea(
-        attrs={'style':'width:100%; font-family:monospace', 'rows':6, 'placeholder':_filter_expression_placeholder}))
+    # Response shaping - the textarea is hidden, a syntax-highlighting editor pane
+    # renders on top of it and the two are kept in sync by the page's JS.
+    filter_expression = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'display:none'}))
 
     # Response safeguards - compaction
     safeguards_strip_nulls = forms.BooleanField(required=False)
