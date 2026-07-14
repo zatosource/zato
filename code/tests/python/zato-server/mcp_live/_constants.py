@@ -18,7 +18,7 @@ _error_invalid_params   = -32602
 # JSON-RPC protocol version
 _jsonrpc_version = '2.0'
 
-# The demo service exposed on the default MCP channel
+# The demo service exposed on the default MCP gateway
 _demo_echo_service = 'demo.echo'
 
 # The test service that always raises an exception

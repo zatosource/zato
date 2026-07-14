@@ -55,12 +55,12 @@ _default_allowed_origins:'tuple' = ()
 
 class MCPEndpoint(AdminService):
     """ Built-in service that serves as the MCP endpoint.
-    Receives raw JSON-RPC requests, dispatches them through the MCP channel's handler,
+    Receives raw JSON-RPC requests, dispatches them through the MCP gateway's handler,
     and returns JSON-RPC responses. Supports MCP-Session-Id headers and DELETE for
     session termination.
     """
 
-    name = 'zato.channel.mcp.endpoint'
+    name = 'zato.gateway.mcp.endpoint'
 
 # ################################################################################################################################
 
@@ -68,43 +68,43 @@ class MCPEndpoint(AdminService):
         """ Processes an incoming MCP request.
         """
 
-        # MCP channels require authentication via security groups ..
+        # MCP gateways require authentication via security groups ..
         # .. if the HTTP layer did not authenticate the caller, reject immediately.
         channel_security = self.channel.security
 
         if not channel_security.id:
-            logger.info('MCP channel `%s` rejected unauthenticated request', self.channel.name)
+            logger.info('MCP gateway `%s` rejected unauthenticated request', self.channel.name)
             self.response.status_code = FORBIDDEN
             self.response.payload = ''
             return
 
         logger.info(
-            'MCP channel `%s` authenticated sec_def id=`%s` username=`%s`',
+            'MCP gateway `%s` authenticated sec_def id=`%s` username=`%s`',
             self.channel.name, channel_security.id, channel_security.username)
 
-        # Look up the MCP channel config from the config manager - the entry may be gone
-        # if the channel is being deleted while this request is already in flight,
+        # Look up the MCP gateway config from the config manager - the entry may be gone
+        # if the gateway is being deleted while this request is already in flight,
         # in which case the resource no longer exists ..
-        channel_config = self.server.config_manager.channel_mcp.get(self.channel.name)
+        gateway_config = self.server.config_manager.gateway_mcp.get(self.channel.name)
 
-        if channel_config is None:
-            logger.info('MCP channel `%s` has no config entry (channel deleted)', self.channel.name)
+        if gateway_config is None:
+            logger.info('MCP gateway `%s` has no config entry (gateway deleted)', self.channel.name)
             self.response.status_code = NOT_FOUND
             self.response.payload = ''
             return
 
-        # .. reach the ChannelMCPWrapper through its .conn attribute ..
-        wrapper = channel_config.conn
+        # .. reach the GatewayMCPWrapper through its .conn attribute ..
+        wrapper = gateway_config.conn
 
         # .. when Origin validation is enabled and the header is present,
-        # it must match the channel's allowed origins ..
+        # it must match the gateway's allowed origins ..
         if check_origin:
             if origin := self.request.http.headers.get(_origin_header):
 
                 allowed_origins = wrapper.config.get('allowed_origins') or _default_allowed_origins
 
                 if origin not in allowed_origins:
-                    logger.info('MCP channel `%s` rejected origin `%s`', self.channel.name, origin)
+                    logger.info('MCP gateway `%s` rejected origin `%s`', self.channel.name, origin)
                     self.response.status_code = FORBIDDEN
                     self.response.payload = ''
                     return
@@ -121,14 +121,14 @@ class MCPEndpoint(AdminService):
         # .. get the sec_def id of the authenticated caller ..
         sec_def_id = channel_security.id
 
-        # .. get the handler for request dispatch, reading it once into a local so a channel
+        # .. get the handler for request dispatch, reading it once into a local so a gateway
         # deletion later in this request cannot affect the dispatch already underway ..
         handler = wrapper.handler
 
-        # .. no handler means the channel is not usable - it was not built yet,
+        # .. no handler means the gateway is not usable - it was not built yet,
         # its build failed, or it is being deleted - in all cases the resource does not exist ..
         if handler is None:
-            logger.info('MCP channel `%s` has no handler (not built yet, build failed, or channel deleted)', self.channel.name)
+            logger.info('MCP gateway `%s` has no handler (not built yet, build failed, or gateway deleted)', self.channel.name)
             self.response.status_code = NOT_FOUND
             self.response.payload = ''
             return

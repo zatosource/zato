@@ -30,18 +30,18 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-CHANNEL_OPTIONAL_FIELDS = [
+GATEWAY_OPTIONAL_FIELDS = [
     'url_path', 'services', 'security_groups',
 ]
 
-CHANNEL_OPAQUE_FIELDS = [
+GATEWAY_OPAQUE_FIELDS = [
     'url_path', 'services', 'security_groups',
 ]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPExporter:
+class GatewayMCPExporter:
 
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
@@ -51,7 +51,7 @@ class ChannelMCPExporter:
         """
         logger.info('Exporting MCP gateway definitions')
 
-        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_MCP)
+        db_items = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.GATEWAY_MCP)
 
         if not db_items:
             logger.info('No MCP gateway definitions found in DB')
@@ -73,7 +73,7 @@ class ChannelMCPExporter:
                 'name': row['name'],
             }
 
-            for field in CHANNEL_OPTIONAL_FIELDS:
+            for field in GATEWAY_OPTIONAL_FIELDS:
                 if value := row.get(field):
                     item[field] = value
 

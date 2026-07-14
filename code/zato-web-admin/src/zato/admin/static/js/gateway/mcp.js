@@ -1,9 +1,9 @@
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.MCPChannel = new Class({
+$.fn.zato.data_table.MCPGateway = new Class({
     toString: function() {
-        var s = '<MCPChannel id:{0} name:{1} is_active:{2}>';
+        var s = '<MCPGateway id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)');
@@ -14,8 +14,8 @@ $.fn.zato.data_table.MCPChannel = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.MCPChannel;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.channel.mcp.data_table.new_row;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.MCPGateway;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.gateway.mcp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path']);
     var unique_constraints = [
@@ -32,7 +32,7 @@ $(document).ready(function() {
 
         // The filter expression travels as a hidden input filled from the editor pane
         form.find('input[name="filter_expression"]').remove();
-        var pane = $.fn.zato.channel.mcp._filter_panes[action];
+        var pane = $.fn.zato.gateway.mcp._filter_panes[action];
         if (pane) {
             form.append($('<input/>', {
                 type: 'hidden',
@@ -42,13 +42,13 @@ $(document).ready(function() {
         }
 
         // Inject hidden inputs for both badge pickers into the same form
-        $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.channel.mcp.badge_picker_config);
+        $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.gateway.mcp.badge_picker_config);
 
         // The security picker uses 'sec-' prefixed zone IDs but must inject into the same form
         form.find('input.badge-member-input[name^="mcp_security_"]').remove();
         var sec_assigned = $('#badge-zone-assigned-sec-' + action + ' .badge-zone-body .security-badge');
         sec_assigned.each(function() {
-            $.fn.zato.channel.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
+            $.fn.zato.gateway.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
         });
 
         return true;
@@ -59,7 +59,7 @@ $(document).ready(function() {
 // MCP-specific badge picker configuration
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.badge_picker_config = {
+$.fn.zato.gateway.mcp.badge_picker_config = {
 
     make_badge: function(item, num) {
         var badge = $('<div/>', { 'class': 'security-badge', 'data-id': item.id, 'data-name': (item.name || '').toLowerCase() });
@@ -106,7 +106,7 @@ $.fn.zato.channel.mcp.badge_picker_config = {
 // Security badge picker configuration (reuses groups-style badges with sec_type)
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.security_badge_picker_config = {
+$.fn.zato.gateway.mcp.security_badge_picker_config = {
 
     make_badge: function(item, num) {
         var badge = $('<div/>', { 'class': 'security-badge', 'data-id': item.id, 'data-security-type': item.sec_type, 'data-name': (item.name || '').toLowerCase() });
@@ -161,18 +161,18 @@ $.fn.zato.channel.mcp.security_badge_picker_config = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.badge_picker = {};
-$.fn.zato.channel.mcp.security_badge_picker = {};
+$.fn.zato.gateway.mcp.badge_picker = {};
+$.fn.zato.gateway.mcp.security_badge_picker = {};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.badge_picker.load = function(action, channel_id) {
-    var url = '/zato/channel/mcp/get-service-list/';
-    if (channel_id) {
-        url += '?channel_id=' + channel_id;
+$.fn.zato.gateway.mcp.badge_picker.load = function(action, gateway_id) {
+    var url = '/zato/gateway/mcp/get-service-list/';
+    if (gateway_id) {
+        url += '?gateway_id=' + gateway_id;
     }
 
-    console.log('[mcp.badge_picker.load] action=' + action + ' channel_id=' + channel_id + ' url=' + url);
+    console.log('[mcp.badge_picker.load] action=' + action + ' gateway_id=' + gateway_id + ' url=' + url);
 
     var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
     available_body.html('<span class="badge-zone-empty">Loading...</span>');
@@ -191,7 +191,7 @@ $.fn.zato.channel.mcp.badge_picker.load = function(action, channel_id) {
                     }
                 }
             }
-            $.fn.zato.badge_picker.init(action, items, $.fn.zato.channel.mcp.badge_picker_config);
+            $.fn.zato.badge_picker.init(action, items, $.fn.zato.gateway.mcp.badge_picker_config);
         },
         error: function(xhr, status, err) {
             console.log('[mcp.badge_picker.load] error: status=' + status + ' err=' + err + ' response=' + xhr.responseText);
@@ -202,14 +202,14 @@ $.fn.zato.channel.mcp.badge_picker.load = function(action, channel_id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) {
+$.fn.zato.gateway.mcp.security_badge_picker.load = function(action, gateway_id) {
     var sec_action = 'sec-' + action;
-    var url = '/zato/channel/mcp/get-security-list/';
-    if (channel_id) {
-        url += '?channel_id=' + channel_id;
+    var url = '/zato/gateway/mcp/get-security-list/';
+    if (gateway_id) {
+        url += '?gateway_id=' + gateway_id;
     }
 
-    console.log('[mcp.security_badge_picker.load] action=' + action + ' sec_action=' + sec_action + ' channel_id=' + channel_id + ' url=' + url);
+    console.log('[mcp.security_badge_picker.load] action=' + action + ' sec_action=' + sec_action + ' gateway_id=' + gateway_id + ' url=' + url);
 
     var available_body = $('#badge-zone-available-' + sec_action + ' .badge-zone-body');
     available_body.html('<span class="badge-zone-empty">Loading...</span>');
@@ -230,7 +230,7 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
                 }
             }
             console.log('[mcp.security_badge_picker.load] success, total=' + (items ? items.length : 0) + ' assigned=' + assigned_count);
-            $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.channel.mcp.security_badge_picker_config);
+            $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.gateway.mcp.security_badge_picker_config);
         },
         error: function(xhr, status, err) {
             console.log('[mcp.security_badge_picker.load] error: status=' + status + ' err=' + err + ' response=' + xhr.responseText);
@@ -241,7 +241,7 @@ $.fn.zato.channel.mcp.security_badge_picker.load = function(action, channel_id) 
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.tab_labels = {
+$.fn.zato.gateway.mcp.tab_labels = {
     access_control:   'Access control',
     response_shaping: 'Response shaping',
     compaction:       'Compaction',
@@ -249,19 +249,19 @@ $.fn.zato.channel.mcp.tab_labels = {
     content_safety:   'Content safety'
 };
 
-$.fn.zato.channel.mcp._reset_tabs = function(action) {
+$.fn.zato.gateway.mcp._reset_tabs = function(action) {
     var is_edit = action === 'edit';
     $.fn.zato.form_tabs.reset({
         div_id:       is_edit ? '#edit-div' : '#create-div',
         panel_prefix: is_edit ? 'mcp-edit-tab-panel-' : 'mcp-create-tab-panel-',
         default_tab:  'access_control',
-        tab_labels:   $.fn.zato.channel.mcp.tab_labels
+        tab_labels:   $.fn.zato.gateway.mcp.tab_labels
     });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.field_descriptions = {
+$.fn.zato.gateway.mcp.field_descriptions = {
     'id_name': 'A unique name for this gateway.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this gateway accepts requests.<br>MCP clients cannot reach inactive gateways.',
     'id_url_path': 'URL path the MCP endpoint is exposed under,<br>e.g. /mcp/. This is the address MCP clients,<br>such as AI assistants, connect to in order<br>to discover and invoke the assigned services.',
@@ -298,12 +298,12 @@ $.fn.zato.channel.mcp.field_descriptions = {
 // Response shaping - the filter expression editor pane.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp._filter_panes = {};
+$.fn.zato.gateway.mcp._filter_panes = {};
 
-$.fn.zato.channel.mcp._init_filter_pane = function(action) {
+$.fn.zato.gateway.mcp._init_filter_pane = function(action) {
 
     // Tear down the pane from a previous opening of this dialog ..
-    var previous = $.fn.zato.channel.mcp._filter_panes[action];
+    var previous = $.fn.zato.gateway.mcp._filter_panes[action];
     if (previous) {
         previous.destroy();
     }
@@ -317,7 +317,7 @@ $.fn.zato.channel.mcp._init_filter_pane = function(action) {
         ace_options: {minLines: 5, maxLines: 8}
     });
 
-    $.fn.zato.channel.mcp._filter_panes[action] = pane;
+    $.fn.zato.gateway.mcp._filter_panes[action] = pane;
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -325,7 +325,7 @@ $.fn.zato.channel.mcp._init_filter_pane = function(action) {
 // enables or disables the inputs listed under it.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.safeguard_groups = {
+$.fn.zato.gateway.mcp.safeguard_groups = {
     'safeguards_pii_enabled': [
         'safeguards_pii_lands',
         'safeguards_pii_detectors',
@@ -347,10 +347,10 @@ $.fn.zato.channel.mcp.safeguard_groups = {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp._init_safeguard_toggles = function(action) {
+$.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
 
     var prefix = action === 'edit' ? 'id_edit-' : 'id_';
-    var groups = $.fn.zato.channel.mcp.safeguard_groups;
+    var groups = $.fn.zato.gateway.mcp.safeguard_groups;
 
     $.each(groups, function(master_name, dependent_names) {
 
@@ -374,43 +374,43 @@ $.fn.zato.channel.mcp._init_safeguard_toggles = function(action) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.create = function() {
-    $.fn.zato.channel.mcp._reset_tabs('create');
-    $.fn.zato.channel.mcp._init_safeguard_toggles('create');
-    $.fn.zato.channel.mcp._init_filter_pane('create');
-    $.fn.zato.channel.mcp.badge_picker.load('create', null);
-    $.fn.zato.channel.mcp.security_badge_picker.load('create', null);
+$.fn.zato.gateway.mcp.create = function() {
+    $.fn.zato.gateway.mcp._reset_tabs('create');
+    $.fn.zato.gateway.mcp._init_safeguard_toggles('create');
+    $.fn.zato.gateway.mcp._init_filter_pane('create');
+    $.fn.zato.gateway.mcp.badge_picker.load('create', null);
+    $.fn.zato.gateway.mcp.security_badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a new MCP gateway', null);
     $('#create-div').dialog('option', 'width', '45em');
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.channel.mcp.field_descriptions
+        descriptions: $.fn.zato.gateway.mcp.field_descriptions
     });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.edit = function(id) {
+$.fn.zato.gateway.mcp.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
-    $.fn.zato.channel.mcp._reset_tabs('edit');
-    $.fn.zato.channel.mcp._init_safeguard_toggles('edit');
-    $.fn.zato.channel.mcp._init_filter_pane('edit');
-    $.fn.zato.channel.mcp.badge_picker.load('edit', instance.id);
-    $.fn.zato.channel.mcp.security_badge_picker.load('edit', instance.id);
+    $.fn.zato.gateway.mcp._reset_tabs('edit');
+    $.fn.zato.gateway.mcp._init_safeguard_toggles('edit');
+    $.fn.zato.gateway.mcp._init_filter_pane('edit');
+    $.fn.zato.gateway.mcp.badge_picker.load('edit', instance.id);
+    $.fn.zato.gateway.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
 
     $('#edit-div').dialog('option', 'width', '45em');
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.channel.mcp.field_descriptions
+        descriptions: $.fn.zato.gateway.mcp.field_descriptions
     });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
+$.fn.zato.gateway.mcp.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
     if(include_tr) {
@@ -431,9 +431,9 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td class="text-center" id="service_count_{0}">{1}</td>', item.id, service_count);
     row += String.format('<td class="text-center" id="security_count_{0}">{1}</td>', item.id, security_count);
 
-    row += String.format('<td>{0}</td>', String.format('<a href="/zato/channel/mcp/export/{0}/">Export</a>', item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.mcp.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.mcp.delete_('{0}');\">Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format('<a href="/zato/gateway/mcp/export/{0}/">Export</a>', item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.gateway.mcp.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.gateway.mcp.delete_('{0}');\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
@@ -447,7 +447,7 @@ $.fn.zato.channel.mcp.data_table.new_row = function(item, data, include_tr) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.mcp.delete_ = function(id) {
+$.fn.zato.gateway.mcp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'MCP gateway `{0}` deleted',
         'Are you sure you want to delete MCP gateway `{0}`?',

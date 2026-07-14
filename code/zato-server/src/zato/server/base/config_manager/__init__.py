@@ -55,7 +55,6 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
-from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_aws import CloudAWSWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
@@ -64,6 +63,7 @@ from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_microsoft_fabric import CloudMicrosoftFabricWrapper
 from zato.server.generic.api.cloud_microsoft_power_automate import CloudMicrosoftPowerAutomateWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
+from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
@@ -179,9 +179,6 @@ class ConfigManager(_ConfigManagerBase):
         # To expedite look-ups
         self._simple_types = simple_types
 
-        # Generic connections - Channel - MCP
-        self.channel_mcp = {}
-
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
 
@@ -208,6 +205,9 @@ class ConfigManager(_ConfigManagerBase):
 
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
+
+        # Generic connections - Gateway - MCP
+        self.gateway_mcp = {}
 
         # Generic connections - AS2 outconns
         self.outconn_as2 = {}
@@ -292,7 +292,6 @@ class ConfigManager(_ConfigManagerBase):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: self.channel_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: self.cloud_aws,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
@@ -301,6 +300,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: self.cloud_microsoft_fabric,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: self.cloud_microsoft_power_automate,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
+            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: self.gateway_mcp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
@@ -320,7 +320,6 @@ class ConfigManager(_ConfigManagerBase):
         }
 
         self._generic_conn_handler = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: ChannelMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: CloudAWSWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
@@ -329,6 +328,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: CloudMicrosoftFabricWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: CloudMicrosoftPowerAutomateWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: GatewayMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
@@ -900,8 +900,8 @@ class ConfigManager(_ConfigManagerBase):
 
     def init_generic_connections(self) -> 'None':
 
-        # MCP channels are built after services are deployed in _build_mcp_tool_registries
-        to_skip = {COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP}
+        # MCP gateways are built after services are deployed in _build_mcp_tool_registries
+        to_skip = {COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP}
 
         for config_dict in self.config_store.generic_connection.values():
 
@@ -924,7 +924,6 @@ class ConfigManager(_ConfigManagerBase):
         channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         channel_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
-        channel_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         cloud_aws_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
@@ -935,6 +934,7 @@ class ConfigManager(_ConfigManagerBase):
         cloud_microsoft_power_automate_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
+        gateway_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, {})
         outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
         outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
@@ -954,7 +954,6 @@ class ConfigManager(_ConfigManagerBase):
             channel_hl7_mllp_map,
             channel_ibm_mq_map,
             channel_kafka_map,
-            channel_mcp_map,
             channel_openapi_map,
             cloud_aws_map,
             cloud_confluence_map,
@@ -963,6 +962,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_microsoft_fabric_map,
             cloud_microsoft_power_automate_map,
             cloud_salesforce_map,
+            gateway_mcp_map,
             outconn_as2_map,
             outconn_es_map,
             outconn_graphql_map,

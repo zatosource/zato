@@ -25,7 +25,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The default session cap per sec_def per channel
+# The default session cap per sec_def per gateway
 _default_max_sessions = 100
 
 # The generic error message returned by the server for session-related rejections

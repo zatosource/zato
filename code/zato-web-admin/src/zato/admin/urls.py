@@ -37,7 +37,7 @@ from zato.admin.web.views.outgoing.hl7 import fhir as out_hl7_fhir
 from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
-from zato.admin.web.views.channel import mcp as channel_mcp
+from zato.admin.web.views.gateway import mcp as gateway_mcp
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
@@ -466,22 +466,22 @@ urlpatterns += [
 
     # .. MCP
 
-    url(r'^zato/channel/mcp/$',
-        login_required(channel_mcp.Index()), name=channel_mcp.Index.url_name),
-    url(r'^zato/channel/mcp/create/$',
-        login_required(channel_mcp.Create()), name=channel_mcp.Create.url_name),
-    url(r'^zato/channel/mcp/edit/$',
-        login_required(channel_mcp.Edit()), name=channel_mcp.Edit.url_name),
-    url(r'^zato/channel/mcp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_mcp.Delete()), name=channel_mcp.Delete.url_name),
-    url(r'^zato/channel/mcp/get-service-list/$',
-        login_required(channel_mcp.get_service_list), name='channel-mcp-get-service-list'),
+    url(r'^zato/gateway/mcp/$',
+        login_required(gateway_mcp.Index()), name=gateway_mcp.Index.url_name),
+    url(r'^zato/gateway/mcp/create/$',
+        login_required(gateway_mcp.Create()), name=gateway_mcp.Create.url_name),
+    url(r'^zato/gateway/mcp/edit/$',
+        login_required(gateway_mcp.Edit()), name=gateway_mcp.Edit.url_name),
+    url(r'^zato/gateway/mcp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(gateway_mcp.Delete()), name=gateway_mcp.Delete.url_name),
+    url(r'^zato/gateway/mcp/get-service-list/$',
+        login_required(gateway_mcp.get_service_list), name='gateway-mcp-get-service-list'),
 
-    url(r'^zato/channel/mcp/get-security-list/$',
-        login_required(channel_mcp.get_security_list), name='channel-mcp-get-security-list'),
+    url(r'^zato/gateway/mcp/get-security-list/$',
+        login_required(gateway_mcp.get_security_list), name='gateway-mcp-get-security-list'),
 
-    url(r'^zato/channel/mcp/export/(?P<id>.*)/$',
-        login_required(channel_mcp.export), name='channel-mcp-export'),
+    url(r'^zato/gateway/mcp/export/(?P<id>.*)/$',
+        login_required(gateway_mcp.export), name='gateway-mcp-export'),
     ]
 
 # ################################################################################################################################

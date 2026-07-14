@@ -221,11 +221,11 @@ def _wait_for_server(host:'str', port:'int', timeout:'int' = _server_wait_timeou
 # ################################################################################################################################
 
 def _deploy_mcp_security(server_directory:'str') -> 'None':
-    """ Deploys a basic auth definition and security group for the default MCP channel
+    """ Deploys a basic auth definition and security group for the default MCP gateway
     via enmasse so that live tests can authenticate.
     """
 
-    from zato.common.util.channel import mcp_channel_name
+    from zato.common.util.gateway import mcp_gateway_name
 
     keycloak_token_url = keycloak_.get_token_url()
     keycloak_issuer = keycloak_.get_issuer()
@@ -272,7 +272,7 @@ groups:
       - {_mcp_bearer_sales_name}
 
 mcp_gateway:
-  - name: {mcp_channel_name}
+  - name: {mcp_gateway_name}
     is_active: true
     url_path: /mcp/demo
     services:
@@ -519,7 +519,7 @@ def zato_server(request:'any_') -> 'any_':
         _kill_server()
         raise
 
-    # .. deploy security configuration for the default MCP channel via enmasse ..
+    # .. deploy security configuration for the default MCP gateway via enmasse ..
     _deploy_mcp_security(server_directory)
 
     # .. start the file-transfer listener that watches the pickup directory, so that
@@ -545,7 +545,7 @@ def zato_server(request:'any_') -> 'any_':
     # .. give the listener a moment to initialize its directory watch ..
     time.sleep(_listener_settle_seconds)
 
-    # .. the default MCP channel auto-creates on /mcp/demo during server startup,
+    # .. the default MCP gateway auto-creates on /mcp/demo during server startup,
     # but demo.echo is hot-deployed a moment later, so we give it a few seconds
     # to ensure the tool registry is built with the deployed service ..
     time.sleep(_hot_deploy_settle_seconds)

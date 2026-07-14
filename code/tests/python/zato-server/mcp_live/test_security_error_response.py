@@ -91,7 +91,7 @@ class TestErrorResponse:
 
         # .. the error may mention the requested name, but must not expose internal ones.
         assert 'zato.server' not in error_message
-        assert 'zato.channel' not in error_message
+        assert 'zato.gateway' not in error_message
 
 # ################################################################################################################################
 

@@ -22,7 +22,7 @@ import requests
 
 # Zato
 from zato.common.test import get_free_tcp_port
-from zato.common.test.mcp_ import make_jsonrpc_initialize, wait_for_mcp_channel
+from zato.common.test.mcp_ import make_jsonrpc_initialize, wait_for_mcp_gateway
 from zato.common.util.config import get_config_object, update_config_file
 
 # ################################################################################################################################
@@ -165,7 +165,7 @@ class TestMCPAuth(TestCase):
         token = os.urandom(4).hex()
         cls._sec_def_name = f'test.mcp.auth.{token}'
         cls._group_name = f'mcp.test-auth-group.{token}'
-        cls._channel_name = f'test.mcp.auth-channel.{token}'
+        cls._gateway_name = f'test.mcp.auth-gateway.{token}'
         cls._url_path = f'/mcp/test-auth/{token}'
 
         # .. a second sec def that is NOT in any group ..
@@ -175,36 +175,36 @@ class TestMCPAuth(TestCase):
         cls._group2_sec_def_name = f'test.mcp.group2member.{token}'
         cls._group2_name = f'mcp.test-auth-group2.{token}'
 
-        # .. a channel with two security groups ..
-        cls._multi_group_channel_name = f'test.mcp.multi-group.{token}'
+        # .. a gateway with two security groups ..
+        cls._multi_group_gateway_name = f'test.mcp.multi-group.{token}'
         cls._multi_group_url_path = f'/mcp/test-multi-group/{token}'
 
-        # .. a channel with no security groups at all ..
-        cls._no_group_channel_name = f'test.mcp.no-group.{token}'
+        # .. a gateway with no security groups at all ..
+        cls._no_group_gateway_name = f'test.mcp.no-group.{token}'
         cls._no_group_url_path = f'/mcp/test-no-group/{token}'
 
-        # .. a channel dedicated to the membership update test ..
-        cls._update_channel_name = f'test.mcp.update.{token}'
+        # .. a gateway dedicated to the membership update test ..
+        cls._update_gateway_name = f'test.mcp.update.{token}'
         cls._update_url_path = f'/mcp/test-update/{token}'
         cls._update_group_name = f'mcp.test-update-group.{token}'
 
-        # .. a deactivated channel with its own group ..
-        cls._inactive_channel_name = f'test.mcp.inactive.{token}'
+        # .. a deactivated gateway with its own group ..
+        cls._inactive_gateway_name = f'test.mcp.inactive.{token}'
         cls._inactive_url_path = f'/mcp/test-inactive/{token}'
         cls._inactive_group_name = f'mcp.test-inactive-group.{token}'
 
-        # .. a channel dedicated to the rename test ..
-        cls._rename_channel_name = f'test.mcp.rename.{token}'
+        # .. a gateway dedicated to the rename test ..
+        cls._rename_gateway_name = f'test.mcp.rename.{token}'
         cls._rename_url_path = f'/mcp/test-rename/{token}'
         cls._rename_new_url_path = f'/mcp/test-rename-new/{token}'
         cls._rename_group_name = f'mcp.test-rename-group.{token}'
 
-        # .. a channel dedicated to the delete test ..
-        cls._delete_channel_name = f'test.mcp.delete.{token}'
+        # .. a gateway dedicated to the delete test ..
+        cls._delete_gateway_name = f'test.mcp.delete.{token}'
         cls._delete_url_path = f'/mcp/test-delete/{token}'
         cls._delete_group_name = f'mcp.test-delete-group.{token}'
 
-        # .. a path that does not correspond to any channel ..
+        # .. a path that does not correspond to any gateway ..
         cls._nonexistent_url_path = f'/mcp/test-nonexistent/{token}'
 
         enmasse_yaml = f'''\
@@ -250,42 +250,42 @@ groups:
       - {cls._sec_def_name}
 
 mcp_gateway:
-  - name: {cls._channel_name}
+  - name: {cls._gateway_name}
     is_active: true
     url_path: {cls._url_path}
     security_groups:
       - {cls._group_name}
 
-  - name: {cls._multi_group_channel_name}
+  - name: {cls._multi_group_gateway_name}
     is_active: true
     url_path: {cls._multi_group_url_path}
     security_groups:
       - {cls._group_name}
       - {cls._group2_name}
 
-  - name: {cls._no_group_channel_name}
+  - name: {cls._no_group_gateway_name}
     is_active: true
     url_path: {cls._no_group_url_path}
 
-  - name: {cls._update_channel_name}
+  - name: {cls._update_gateway_name}
     is_active: true
     url_path: {cls._update_url_path}
     security_groups:
       - {cls._update_group_name}
 
-  - name: {cls._rename_channel_name}
+  - name: {cls._rename_gateway_name}
     is_active: true
     url_path: {cls._rename_url_path}
     security_groups:
       - {cls._rename_group_name}
 
-  - name: {cls._delete_channel_name}
+  - name: {cls._delete_gateway_name}
     is_active: true
     url_path: {cls._delete_url_path}
     security_groups:
       - {cls._delete_group_name}
 
-  - name: {cls._inactive_channel_name}
+  - name: {cls._inactive_gateway_name}
     is_active: false
     url_path: {cls._inactive_url_path}
     security_groups:
@@ -316,26 +316,26 @@ mcp_gateway:
             if os.path.exists(tmp_yaml):
                 os.remove(tmp_yaml)
 
-        logger.info('[MCP-AUTH setUpClass] Enmasse import complete, waiting for channels')
+        logger.info('[MCP-AUTH setUpClass] Enmasse import complete, waiting for gateways')
 
-        # .. wait until all channels respond.
-        wait_for_mcp_channel(cls._port, cls._url_path)
-        logger.info('[MCP-AUTH setUpClass] Secured channel is ready at %s', cls._url_path)
+        # .. wait until all gateways respond.
+        wait_for_mcp_gateway(cls._port, cls._url_path)
+        logger.info('[MCP-AUTH setUpClass] Secured gateway is ready at %s', cls._url_path)
 
-        wait_for_mcp_channel(cls._port, cls._multi_group_url_path)
-        logger.info('[MCP-AUTH setUpClass] Multi-group channel is ready at %s', cls._multi_group_url_path)
+        wait_for_mcp_gateway(cls._port, cls._multi_group_url_path)
+        logger.info('[MCP-AUTH setUpClass] Multi-group gateway is ready at %s', cls._multi_group_url_path)
 
-        wait_for_mcp_channel(cls._port, cls._no_group_url_path)
-        logger.info('[MCP-AUTH setUpClass] No-group channel is ready at %s', cls._no_group_url_path)
+        wait_for_mcp_gateway(cls._port, cls._no_group_url_path)
+        logger.info('[MCP-AUTH setUpClass] No-group gateway is ready at %s', cls._no_group_url_path)
 
-        wait_for_mcp_channel(cls._port, cls._update_url_path)
-        logger.info('[MCP-AUTH setUpClass] Update channel is ready at %s', cls._update_url_path)
+        wait_for_mcp_gateway(cls._port, cls._update_url_path)
+        logger.info('[MCP-AUTH setUpClass] Update gateway is ready at %s', cls._update_url_path)
 
-        wait_for_mcp_channel(cls._port, cls._rename_url_path)
-        logger.info('[MCP-AUTH setUpClass] Rename channel is ready at %s', cls._rename_url_path)
+        wait_for_mcp_gateway(cls._port, cls._rename_url_path)
+        logger.info('[MCP-AUTH setUpClass] Rename gateway is ready at %s', cls._rename_url_path)
 
-        wait_for_mcp_channel(cls._port, cls._delete_url_path)
-        logger.info('[MCP-AUTH setUpClass] Delete channel is ready at %s', cls._delete_url_path)
+        wait_for_mcp_gateway(cls._port, cls._delete_url_path)
+        logger.info('[MCP-AUTH setUpClass] Delete gateway is ready at %s', cls._delete_url_path)
 
 # ################################################################################################################################
 
@@ -445,27 +445,27 @@ mcp_gateway:
 
 # ################################################################################################################################
 
-    def _get_generic_conn(self, channel_name:'str') -> 'dict':
+    def _get_generic_conn(self, gateway_name:'str') -> 'dict':
         """ Looks up a GenericConn by name via the API, returns the full item dict.
         """
         from zato.common.api import GENERIC
 
         response_data = self._invoke_service('zato.generic.connection.get-list', {
             'cluster_id': 1,
-            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
-            'query': channel_name,
+            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
+            'query': gateway_name,
         })
 
         for item in response_data:
-            if item['name'] == channel_name:
+            if item['name'] == gateway_name:
                 return item
 
-        self.fail(f'GenericConn not found: {channel_name}')
+        self.fail(f'GenericConn not found: {gateway_name}')
 
 # ################################################################################################################################
 
     def test_group_member_allowed(self) -> 'None':
-        """ POST JSON-RPC initialize with credentials of a sec def that IS in the channel's security group -> 200.
+        """ POST JSON-RPC initialize with credentials of a sec def that IS in the gateway's security group -> 200.
         """
         response = self._post_mcp(self._url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
 
@@ -480,7 +480,7 @@ mcp_gateway:
 # ################################################################################################################################
 
     def test_non_member_rejected(self) -> 'None':
-        """ POST JSON-RPC initialize with creds of a sec def NOT in the channel's group -> 403.
+        """ POST JSON-RPC initialize with creds of a sec def NOT in the gateway's group -> 403.
         """
         response = self._post_mcp(self._url_path, auth=(_NON_MEMBER_USERNAME, _NON_MEMBER_PASSWORD))
 
@@ -490,7 +490,7 @@ mcp_gateway:
 # ################################################################################################################################
 
     def test_multiple_groups(self) -> 'None':
-        """ Channel with two security groups - member of either group can access.
+        """ Gateway with two security groups - member of either group can access.
         """
 
         # .. member of group 1 should get through ..
@@ -514,12 +514,12 @@ mcp_gateway:
 # ################################################################################################################################
 
     def test_no_group_rejects_all(self) -> 'None':
-        """ POST JSON-RPC initialize to a channel with no security groups -> 403.
+        """ POST JSON-RPC initialize to a gateway with no security groups -> 403.
         """
         response = self._post_mcp(self._no_group_url_path)
 
         self.assertEqual(response.status_code, FORBIDDEN,
-            f'Expected FORBIDDEN for no-group channel, got {response.status_code}: {response.text}')
+            f'Expected FORBIDDEN for no-group gateway, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 
@@ -527,7 +527,7 @@ mcp_gateway:
         """ Remove sec def A from group, add sec def B. Old creds (A) -> 403, new creds (B) -> 200.
         """
 
-        # .. first confirm member A can access the dedicated update channel ..
+        # .. first confirm member A can access the dedicated update gateway ..
         response = self._post_mcp(self._update_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK)
 
@@ -550,7 +550,7 @@ groups:
       - {self._non_member_sec_def_name}
 
 mcp_gateway:
-  - name: {self._update_channel_name}
+  - name: {self._update_gateway_name}
     is_active: true
     url_path: {self._update_url_path}
     security_groups:
@@ -573,12 +573,12 @@ mcp_gateway:
 
 # ################################################################################################################################
 
-    def test_deactivated_channel_rejects_all(self) -> 'None':
-        """ POST to a deactivated channel and a non-existent path both return the same status,
-        ensuring no information leakage between inactive and non-existent channels.
+    def test_deactivated_gateway_rejects_all(self) -> 'None':
+        """ POST to a deactivated gateway and a non-existent path both return the same status,
+        ensuring no information leakage between inactive and non-existent gateways.
         """
 
-        # .. POST to the deactivated channel with valid credentials ..
+        # .. POST to the deactivated gateway with valid credentials ..
         response_inactive = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
 
         # .. POST to a completely non-existent path ..
@@ -588,21 +588,21 @@ mcp_gateway:
         expected_status = response_nonexistent.status_code
 
         self.assertEqual(response_inactive.status_code, expected_status,
-            f'Deactivated channel status ({response_inactive.status_code}) differs from '
+            f'Deactivated gateway status ({response_inactive.status_code}) differs from '
             f'non-existent path status ({expected_status}) - information leakage')
 
 # ################################################################################################################################
 
-    def test_reactivate_channel(self) -> 'None':
-        """ Deactivate a channel then reactivate it, verify it serves again with group member creds.
+    def test_reactivate_gateway(self) -> 'None':
+        """ Deactivate a gateway then reactivate it, verify it serves again with group member creds.
         """
         from http.client import NOT_FOUND
 
-        # .. first confirm the inactive channel is indeed not reachable ..
+        # .. first confirm the inactive gateway is indeed not reachable ..
         response = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, NOT_FOUND)
 
-        # .. reactivate it via enmasse using the inactive channel's own dedicated group ..
+        # .. reactivate it via enmasse using the inactive gateway's own dedicated group ..
         reactivate_yaml = f'''\
 security:
   - name: {self._sec_def_name}
@@ -616,7 +616,7 @@ groups:
       - {self._sec_def_name}
 
 mcp_gateway:
-  - name: {self._inactive_channel_name}
+  - name: {self._inactive_gateway_name}
     is_active: true
     url_path: {self._inactive_url_path}
     security_groups:
@@ -625,34 +625,34 @@ mcp_gateway:
         self._run_enmasse(reactivate_yaml)
         time.sleep(5)
 
-        # .. now the channel should serve requests with valid creds ..
+        # .. now the gateway should serve requests with valid creds ..
         response = self._post_mcp(self._inactive_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK,
             f'Expected OK after reactivation, got {response.status_code}: {response.text}')
 
 # ################################################################################################################################
 
-    def test_channel_rename_preserves_group(self) -> 'None':
-        """ Rename a channel via API edit, new URL enforces same group, old URL -> 404.
+    def test_gateway_rename_preserves_group(self) -> 'None':
+        """ Rename a gateway via API edit, new URL enforces same group, old URL -> 404.
         """
         from http.client import NOT_FOUND
         from zato.common.api import GENERIC
 
-        # .. confirm channel works at old URL ..
+        # .. confirm gateway works at old URL ..
         response = self._post_mcp(self._rename_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK)
 
         # .. get the GenericConn details ..
-        conn = self._get_generic_conn(self._rename_channel_name)
+        conn = self._get_generic_conn(self._rename_gateway_name)
 
-        # .. rename the channel (new name and new URL path), preserving security_groups ..
-        new_name = self._rename_channel_name + '.renamed'
+        # .. rename the gateway (new name and new URL path), preserving security_groups ..
+        new_name = self._rename_gateway_name + '.renamed'
 
         self._invoke_service('zato.generic.connection.edit', {
             'id': conn['id'],
             'cluster_id': 1,
             'name': new_name,
-            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'is_active': True,
             'is_internal': False,
             'is_channel': True,
@@ -682,17 +682,17 @@ mcp_gateway:
 
 # ################################################################################################################################
 
-    def test_delete_channel_cleans_up(self) -> 'None':
-        """ Delete a channel via API, URL -> 404.
+    def test_delete_gateway_cleans_up(self) -> 'None':
+        """ Delete a gateway via API, URL -> 404.
         """
         from http.client import NOT_FOUND
 
-        # .. confirm channel works before deletion ..
+        # .. confirm gateway works before deletion ..
         response = self._post_mcp(self._delete_url_path, auth=(_SEC_DEF_USERNAME, _SEC_DEF_PASSWORD))
         self.assertEqual(response.status_code, OK)
 
         # .. get the GenericConn details ..
-        conn = self._get_generic_conn(self._delete_channel_name)
+        conn = self._get_generic_conn(self._delete_gateway_name)
 
         # .. delete it ..
         self._invoke_service('zato.generic.connection.delete', {

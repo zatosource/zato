@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.util.channel import ensure_mcp_rest_channel
+from zato.common.util.gateway import ensure_mcp_rest_channel
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 # ################################################################################################################################
@@ -29,13 +29,13 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPImporter(GenericConnectionImporter):
+class GatewayMCPImporter(GenericConnectionImporter):
 
-    connection_type = GENERIC.CONNECTION.TYPE.CHANNEL_MCP
+    connection_type = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
 
     connection_defaults = {
         'is_active': True,
-        'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+        'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
         'is_internal': False,
         'is_channel': True,
         'is_outconn': False,

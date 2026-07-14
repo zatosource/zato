@@ -1010,7 +1010,6 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             CHANNEL_IBM_MQ = 'channel-ibm-mq'
-            CHANNEL_MCP = 'channel-mcp'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
             CLOUD_AWS = 'cloud-aws'
@@ -1020,6 +1019,7 @@ class GENERIC:
             CLOUD_MICROSOFT_FABRIC = 'cloud-microsoft-fabric'
             CLOUD_MICROSOFT_POWER_AUTOMATE = 'cloud-microsoft-power-automate'
             CLOUD_SALESFORCE = 'cloud-salesforce'
+            GATEWAY_MCP = 'gateway-mcp'
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_ES = 'outconn-es'
             OUTCONN_LDAP = 'outconn-ldap'

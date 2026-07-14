@@ -14,7 +14,7 @@ from unittest import TestCase, main
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
+from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.api import GENERIC
 from zato.common.odb.model import GenericConn
@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseChannelMCPFromYAML(TestCase):
+class TestEnmasseGatewayMCPFromYAML(TestCase):
     """ Tests importing MCP gateway definitions from YAML files using enmasse.
     """
 
@@ -45,7 +45,7 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
 
         self.importer = EnmasseYAMLImporter()
         self.security_importer = SecurityImporter(self.importer)
-        self.mcp_importer = ChannelMCPImporter(self.importer)
+        self.mcp_importer = GatewayMCPImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -82,8 +82,8 @@ class TestEnmasseChannelMCPFromYAML(TestCase):
         self.assertEqual(len(updated), 0)
 
         conn = self.session.query(GenericConn).filter_by(
-            name='enmasse.mcp.channel.1',
-            type_=GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            name='enmasse.mcp.gateway.1',
+            type_=GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
         ).one()
         self.assertTrue(conn.is_active)
 

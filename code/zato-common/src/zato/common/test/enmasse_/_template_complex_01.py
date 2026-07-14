@@ -310,14 +310,14 @@ channel_kafka:
 
 mcp_gateway:
 
-  - name: enmasse.mcp.channel.1
+  - name: enmasse.mcp.gateway.1
     is_active: true
     url_path: /mcp/enmasse-1
     services: crm.get-customer,crm.update-customer
     security_groups:
       - enmasse.group.1
 
-  - name: enmasse.mcp.channel.2
+  - name: enmasse.mcp.gateway.2
     is_active: true
     url_path: /mcp/enmasse-2
     services: billing.get-invoice

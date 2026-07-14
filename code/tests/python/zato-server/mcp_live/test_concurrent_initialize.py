@@ -50,7 +50,7 @@ class TestConcurrentInitialize:
 # ################################################################################################################################
 
     def test_concurrent_tools_call_and_initialize(self, client:'MCPClient') -> 'None':
-        """ Runs tools/call and initialize requests in parallel on the same channel.
+        """ Runs tools/call and initialize requests in parallel on the same gateway.
         Per the MCP spec, only initialize responses carry the Mcp-Session-Id header
         and each initialize produces its own unique session ID.
         """

@@ -45,7 +45,7 @@ class _MockToolRegistry:
 # ################################################################################################################################
 
 class _MockReaperConfig:
-    """ Mock config object for reaper tests, carrying a channel name.
+    """ Mock config object for reaper tests, carrying a gateway name.
     """
     def __init__(self, name:'str') -> 'None':
         self.name = name
@@ -63,7 +63,7 @@ class _MockReaperHandler:
 # ################################################################################################################################
 
 class _MockReaperWrapper:
-    """ Mock channel wrapper for reaper tests.
+    """ Mock gateway wrapper for reaper tests.
     """
     def __init__(self, session_manager:'any_', name:'str') -> 'None':
         self.handler = _MockReaperHandler(session_manager)
@@ -72,8 +72,8 @@ class _MockReaperWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _MockReaperChannelConfig:
-    """ Mock channel config for reaper tests, exposing the wrapper via .conn.
+class _MockReaperGatewayConfig:
+    """ Mock gateway config for reaper tests, exposing the wrapper via .conn.
     """
     def __init__(self, conn:'any_') -> 'None':
         self.conn = conn
@@ -288,13 +288,13 @@ class SessionManagerReaping(TestCase):
         notifications_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
         _ = notifications_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
-        # .. mock the channel_mcp_dict structure that the reaper expects ..
-        channel_dict:'anydict' = {
-            'test.mcp.orders': _MockReaperChannelConfig(_MockReaperWrapper(orders_manager, 'test.mcp.orders')),
-            'test.mcp.notifications': _MockReaperChannelConfig(_MockReaperWrapper(notifications_manager, 'test.mcp.notifications')),
+        # .. mock the gateway_mcp_dict structure that the reaper expects ..
+        gateway_dict:'anydict' = {
+            'test.mcp.orders': _MockReaperGatewayConfig(_MockReaperWrapper(orders_manager, 'test.mcp.orders')),
+            'test.mcp.notifications': _MockReaperGatewayConfig(_MockReaperWrapper(notifications_manager, 'test.mcp.notifications')),
         }
 
-        reaper = MCPSessionReaper(channel_dict)
+        reaper = MCPSessionReaper(gateway_dict)
 
         # .. run a single sweep directly (not the loop) ..
         reaper._sweep()

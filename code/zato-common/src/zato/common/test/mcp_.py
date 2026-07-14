@@ -53,8 +53,8 @@ def make_jsonrpc_initialize() -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_mcp_channel(port:'int', url_path:'str', timeout:'int'=45) -> 'None':
-    """ Polls an MCP channel until it responds with something other than NOT_FOUND.
+def wait_for_mcp_gateway(port:'int', url_path:'str', timeout:'int'=45) -> 'None':
+    """ Polls an MCP gateway until it responds with something other than NOT_FOUND.
     """
 
     url = f'http://127.0.0.1:{port}{url_path}'
@@ -69,20 +69,20 @@ def wait_for_mcp_channel(port:'int', url_path:'str', timeout:'int'=45) -> 'None'
             response = requests.post(url, data=data, headers=headers, timeout=5)
 
             if attempt <= 3:
-                logger.info('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, response.status_code)
+                logger.info('[wait_for_mcp_gateway] attempt=%d POST %s -> %d', attempt, url, response.status_code)
             elif attempt % 10 == 0:
-                logger.info('[wait_for_mcp_channel] attempt=%d POST %s -> %d', attempt, url, response.status_code)
+                logger.info('[wait_for_mcp_gateway] attempt=%d POST %s -> %d', attempt, url, response.status_code)
 
             if response.status_code != NOT_FOUND:
                 return
 
         except Exception as e:
             if attempt <= 3:
-                logger.info('[wait_for_mcp_channel] attempt=%d exception: %s', attempt, e)
+                logger.info('[wait_for_mcp_gateway] attempt=%d exception: %s', attempt, e)
 
         time.sleep(1)
 
-    raise Exception(f'MCP channel at {url} not available within {timeout}s')
+    raise Exception(f'MCP gateway at {url} not available within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################
