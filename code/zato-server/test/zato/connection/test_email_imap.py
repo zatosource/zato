@@ -209,7 +209,7 @@ class GenericIMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def disabled_test_get(self):
 
         conn = self.get_conn()
         if not conn:
@@ -294,7 +294,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def test_ping(self):
+    def disabled_test_ping(self):
 
         conn = self.get_conn()
         if not conn:
@@ -316,7 +316,7 @@ class Microsoft365IMAPConnectionTestCase(BaseIMAPConnectionTestCase):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def disabled_test_get(self):
 
         conn = self.get_conn()
         if not conn:

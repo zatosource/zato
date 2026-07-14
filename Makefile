@@ -381,7 +381,7 @@ test-scheduler: ## All scheduler tests.
 test-rate-limiting: ## All rate limiting tests.
 	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_rate_limiting_core && cargo test $(PYTEST_ARGS)
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-rate-limiting/python-unit-tests \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rate_limiting_py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rate_limiting_py -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub: ## All pub/sub tests.

@@ -911,7 +911,7 @@ class RequestDispatcher:
             data = str(data)
 
         # .. the source depends on the channel's transport ..
-        if channel_item['transport'] is _transport_plain_http:
+        if channel_item['transport'] == _transport_plain_http:
             source = AuditSource.REST_Channel
         else:
             source = AuditSource.SOAP_Channel
