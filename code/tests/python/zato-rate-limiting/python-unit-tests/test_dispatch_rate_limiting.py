@@ -20,6 +20,12 @@ from zato.server.connection.http_soap.channel import RequestDispatcher
 # ################################################################################################################################
 # ################################################################################################################################
 
+# A stand-in file descriptor number for the client socket, socket.fromfd and os.close are mocked so it is never used for real IO
+test_socket_fd = 123
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _make_dispatcher():
     """ Builds a minimal RequestDispatcher with mocked dependencies.
     """
@@ -160,10 +166,13 @@ class DispatchPassthroughTestCase(unittest.TestCase):
 
 class DispatchDisallowedTestCase(unittest.TestCase):
 
+    @patch('zato.server.connection.http_soap.channel.os.close')
+    @patch('zato.server.connection.http_soap.channel.socket.fromfd')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_disallowed_drops_socket(self, mock_extract_meta, mock_match_url, mock_check_security):
+    def test_channel_disallowed_drops_socket(self, mock_extract_meta, mock_match_url, mock_check_security,
+            mock_fromfd, mock_os_close):
         """ When the channel rate limiting manager returns is_disallowed=True,
         the raw socket gets SO_LINGER set and closed, and empty bytes are returned.
         """
@@ -181,8 +190,10 @@ class DispatchDisallowedTestCase(unittest.TestCase):
             is_allowed=False, is_disallowed=True)
 
         mock_socket = MagicMock()
+        mock_fromfd.return_value = mock_socket
+
         wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['gunicorn.socket'] = mock_socket
+        wsgi_environ['zato.socket_fd'] = test_socket_fd
 
         config_manager = MagicMock()
 
@@ -190,9 +201,12 @@ class DispatchDisallowedTestCase(unittest.TestCase):
 
         self.assertEqual(result, b'')
 
+        mock_fromfd.assert_called_once_with(test_socket_fd, socket.AF_INET, socket.SOCK_STREAM)
+
         expected_linger = struct.pack('ii', 1, 0)
         mock_socket.setsockopt.assert_called_once_with(socket.SOL_SOCKET, socket.SO_LINGER, expected_linger)
         mock_socket.close.assert_called_once()
+        mock_os_close.assert_called_once_with(test_socket_fd)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -368,10 +382,13 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
     """ Verifies that sec_def rate limiting is checked before channel rate limiting.
     """
 
+    @patch('zato.server.connection.http_soap.channel.os.close')
+    @patch('zato.server.connection.http_soap.channel.socket.fromfd')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_sec_def_denied_skips_channel_check(self, mock_extract_meta, mock_match_url, mock_check_security):
+    def test_sec_def_denied_skips_channel_check(self, mock_extract_meta, mock_match_url, mock_check_security,
+            mock_fromfd, mock_os_close):
         """ When the sec_def check returns disallowed, the channel check must not be called.
         """
         dispatcher = _make_dispatcher()
@@ -388,8 +405,10 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
             is_allowed=False, is_disallowed=True)
 
         mock_socket = MagicMock()
+        mock_fromfd.return_value = mock_socket
+
         wsgi_environ = _make_wsgi_environ()
-        wsgi_environ['gunicorn.socket'] = mock_socket
+        wsgi_environ['zato.socket_fd'] = test_socket_fd
         wsgi_environ['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
 
         config_manager = MagicMock()
