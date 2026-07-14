@@ -369,12 +369,7 @@ test-rest: ## REST unit tests and mutation testing.
 test-scheduler: ## All scheduler tests.
 	$(MAKE) scheduler-build
 	. $(HOME)/.cargo/env && cd $(ZATO_RUST)/zato_scheduler_core && cargo test $(PYTEST_ARGS)
-	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-scheduler/test_scheduler_shim.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_shim -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-scheduler/ \
-		--ignore=$(CURDIR)/code/tests/python/zato-scheduler/rust-unit-tests \
-		--ignore=$(CURDIR)/code/tests/python/zato-scheduler/test_scheduler_shim.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
