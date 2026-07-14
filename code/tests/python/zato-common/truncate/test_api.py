@@ -151,7 +151,7 @@ class TestNothingToCut:
 
     def test_document_with_no_candidates_is_returned_as_is(self) -> 'None':
 
-        # Many short values under one key each - nothing the degradation is allowed to remove.
+        # Many short values under one key each - nothing the trimming is allowed to remove.
         document = {}
         for index in range(120):
             document[f'key_{index:03}'] = 'v' * 45

@@ -23,7 +23,7 @@ def _visit(result:'WalkResult', node_count:'int', value:'any_', path:'str', dept
     node_count += 1
 
     # .. and once the budget is gone, the walk stops so pathological documents stay cheap -
-    # the caller then degrades only what was seen.
+    # the caller then trims only what was seen.
     if node_count > Max_Node_Count:
         result.hit_node_cap = True
         return node_count
@@ -111,7 +111,7 @@ def _visit_str(result:'WalkResult', value:'str', path:'str', parent:'any_', key:
 # ################################################################################################################################
 
 def collect_candidates(value:'any_') -> 'WalkResult':
-    """ Walks a document and returns every array and string that graceful degradation may cut.
+    """ Walks a document and returns every array and string that graceful trimming may cut.
     """
 
     # Our response to produce

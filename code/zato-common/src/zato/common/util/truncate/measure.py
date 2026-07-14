@@ -16,7 +16,7 @@ from zato.common.typing_ import any_
 # ################################################################################################################################
 
 # The canonical serializer settings - every size measured in this module uses exactly these,
-# so per-element arithmetic in the degradation loop matches the final output byte for byte.
+# so per-element arithmetic in the trimming loop matches the final output byte for byte.
 _Serializer_Separators = (',', ':')
 
 # ################################################################################################################################

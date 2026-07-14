@@ -74,7 +74,7 @@ class TestGetSize:
     def test_element_size_matches_in_container_size(self) -> 'None':
 
         # An element's standalone size plus one comma is exactly what it contributes inside an array -
-        # this is what makes the degradation arithmetic exact.
+        # this is what makes the trimming arithmetic exact.
         element = {'id': 'inv-0001', 'note': 'A note with "quotes" and Góra'}
         single = [element]
         double = [element, element]

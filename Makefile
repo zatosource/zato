@@ -729,7 +729,7 @@ test-common: ## Common library tests.
 test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
-test-truncate: ## Truncation and graceful degradation tests with 100% branch coverage.
+test-truncate: ## Truncation and graceful trimming tests with 100% branch coverage.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/zato-common/src/zato/common/util/truncate/ \
 		$(CURDIR)/code/tests/python/zato-common/truncate/

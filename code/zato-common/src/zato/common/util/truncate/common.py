@@ -51,7 +51,7 @@ Max_Report_Entries = 5
 # Paths longer than this many characters are shortened at a segment boundary.
 Max_Path_Length = 100
 
-# Size caps below this value cannot accommodate meaningful degradation and are refused.
+# Size caps below this value cannot accommodate meaningful trimming and are refused.
 Min_Usable_Cap = 4096
 
 # Kinds of drops that can appear in a report.
@@ -71,7 +71,7 @@ Note_Aggregate  = 'There were also {count} more cuts, {size} bytes in total.'
 
 @dataclass(init=False)
 class DropReportEntry:
-    """ One cut recorded during graceful degradation - which path it happened at, what kind of cut it was and how much it removed.
+    """ One cut recorded during graceful trimming - which path it happened at, what kind of cut it was and how much it removed.
     """
     path:  str = ''
     kind:  str = ''
@@ -85,7 +85,7 @@ class DropReportEntry:
 
 @dataclass(init=False)
 class ArrayCandidate:
-    """ An array that graceful degradation may drain from its tail.
+    """ An array that graceful trimming may drain from its tail.
     """
     path:  str
     items: anylist
@@ -96,7 +96,7 @@ class ArrayCandidate:
 
 @dataclass(init=False)
 class StringCandidate:
-    """ A string value that graceful degradation may shorten, along with the container that holds it.
+    """ A string value that graceful trimming may shorten, along with the container that holds it.
     """
     path:   str
     parent: any_
@@ -120,7 +120,7 @@ class WalkResult:
 
 @dataclass(init=False)
 class TruncateResult:
-    """ The outcome of truncating a value - the possibly degraded value itself plus a full account of what happened.
+    """ The outcome of truncating a value - the possibly trimmed value itself plus a full account of what happened.
     """
     value:  any_
     report: drop_entry_list

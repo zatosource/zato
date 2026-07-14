@@ -13,7 +13,7 @@ from copy import deepcopy
 from zato.common.typing_ import any_
 from zato.common.util.truncate.common import drop_entry_dict, DropReportEntry, Kind_String_Cut, Min_Usable_Cap, Report_Budget, \
     Report_Key, TruncateResult
-from zato.common.util.truncate.degrade import cut_string, drop_array_tails, shorten_strings
+from zato.common.util.truncate.trim import cut_string, drop_array_tails, shorten_strings
 from zato.common.util.truncate.measure import get_size
 from zato.common.util.truncate.report import build_report
 from zato.common.util.truncate.walker import collect_candidates
@@ -39,7 +39,7 @@ def _shorten_root_string(value:'str', max_size:'int') -> 'str':
 # ################################################################################################################################
 
 def _truncate_root_string(out:'TruncateResult', work:'str', max_size:'int', size_before:'int') -> 'TruncateResult':
-    """ Handles the degenerate case of a document that is a single string - there is no structure to degrade,
+    """ Handles the degenerate case of a document that is a single string - there is no structure to trim,
     so the string itself is shortened, which still yields valid JSON.
     """
     shortened = _shorten_root_string(work, max_size)
@@ -64,7 +64,7 @@ def _truncate_root_string(out:'TruncateResult', work:'str', max_size:'int', size
 # ################################################################################################################################
 
 def truncate_json(value:'any_', max_size:'int') -> 'TruncateResult':
-    """ Truncates a JSON-serializable value to fit within max_size bytes through graceful degradation -
+    """ Truncates a JSON-serializable value to fit within max_size bytes through graceful trimming -
     array tails are dropped first, longest arrays first, then the longest string values are shortened,
     and the result is valid JSON at every step, with a report of every cut. The input is never mutated.
     """
@@ -83,7 +83,7 @@ def truncate_json(value:'any_', max_size:'int') -> 'TruncateResult':
         out.did_fit = True
         return out
 
-    # Caps too small for meaningful degradation are refused - the caller decides what to do instead.
+    # Caps too small for meaningful trimming are refused - the caller decides what to do instead.
     if max_size < Min_Usable_Cap:
         out.was_refused = True
         return out
@@ -91,12 +91,12 @@ def truncate_json(value:'any_', max_size:'int') -> 'TruncateResult':
     # Everything below works on a copy - the caller's object is never mutated.
     work = deepcopy(value)
 
-    # A document that is a single string has no structure to degrade - the string itself is shortened.
+    # A document that is a single string has no structure to trim - the string itself is shortened.
     if isinstance(work, str):
         out = _truncate_root_string(out, work, max_size, size_before)
         return out
 
-    # The degradation aims below the cap by the report budget, so the report always has room.
+    # The trimming aims below the cap by the report budget, so the report always has room.
     target_size = max_size - Report_Budget
     current_size = size_before
     entries_by_path:'drop_entry_dict' = {}
