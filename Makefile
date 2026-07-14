@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock test-truncate test-message-filters \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
@@ -751,8 +751,19 @@ test-message-filters: ## Message filter and projection tests with 100% branch co
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_message_filters --show-missing --fail-under=100
 
+test-safeguards: ## Response safeguard tests with 100% branch coverage.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/util/safeguards/ \
+		$(CURDIR)/code/tests/python/zato-common/safeguards/
+	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.safeguards \
+		--data-file=$(CURDIR)/code/tests/.coverage_safeguards -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/safeguards/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_safeguards -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_safeguards --show-missing --fail-under=100
+
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock test-truncate test-message-filters ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
 
 test: test-all ## Alias for test-all.
 
