@@ -22,14 +22,24 @@ _url_mode_choices = (
     ('reject', 'Reject'),
 )
 
+_size_cap_mode_choices = (
+    ('truncate', 'Truncate'),
+    ('block', 'Block'),
+)
+
+# ################################################################################################################################
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(initial='/mcp/', widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
-    # Response shaping - the textarea is hidden, a syntax-highlighting editor pane
-    # renders on top of it and the two are kept in sync by the page's JS.
-    filter_expression = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'display:none'}))
+    # Response shaping - the filter expression itself has no form field, an editor pane
+    # holds it in the page and the page's JS injects it as a hidden input on submit.
+    allow_client_filters = forms.BooleanField(required=False)
+    max_response_size = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={'style':'width:30%'}))
+    size_cap_mode = forms.ChoiceField(choices=_size_cap_mode_choices)
+    min_size_threshold = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={'style':'width:30%'}))
 
     # Response safeguards - compaction
     safeguards_strip_nulls = forms.BooleanField(required=False)
