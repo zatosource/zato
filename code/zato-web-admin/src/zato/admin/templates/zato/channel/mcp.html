@@ -121,6 +121,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
                         <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
+                        <button type="button" class="dashboard-tab" data-tab="compaction" role="tab" aria-selected="false">Compaction</button>
+                        <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
+                        <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mcp-create-tab-panel-access_control" role="tabpanel">
@@ -186,6 +189,101 @@
 
                     <div class="dashboard-tab-panel" id="mcp-create-tab-panel-response_shaping" role="tabpanel" hidden>
                         <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top; width:22%; padding-top:8px"><label for="id_filter_expression">Filter expression</label></td>
+                                <td>{{ create_form.filter_expression }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-hint">A JSONata expression applied to every tool response - only what it selects reaches the client. Empty means no filtering.</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-compaction" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_safeguards_strip_nulls">Strip null fields</label></td>
+                                <td>{{ create_form.safeguards_strip_nulls }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_collapse_whitespace">Collapse whitespace</label></td>
+                                <td>{{ create_form.safeguards_collapse_whitespace }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_strip_base64">Strip binary blobs</label></td>
+                                <td>{{ create_form.safeguards_strip_base64 }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-pii_removal" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_safeguards_pii_enabled">Enabled</label></td>
+                                <td>{{ create_form.safeguards_pii_enabled }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_pii_lands">Lands</label></td>
+                                <td>{{ create_form.safeguards_pii_lands }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_pii_detectors">Detectors</label></td>
+                                <td>{{ create_form.safeguards_pii_detectors }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_pii_exclude">Exclude</label></td>
+                                <td>{{ create_form.safeguards_pii_exclude }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_pii_validate">Validate checksums</label></td>
+                                <td>{{ create_form.safeguards_pii_validate }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_pii_stable_tokens">Stable tokens</label></td>
+                                <td>{{ create_form.safeguards_pii_stable_tokens }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-content_safety" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td colspan="2" class="form-data-section">Unicode</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_safeguards_normalize_unicode">Normalize unicode</label></td>
+                                <td>{{ create_form.safeguards_normalize_unicode }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_unicode_mode">Mode</label></td>
+                                <td>{{ create_form.safeguards_unicode_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-section">Markup</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_sanitize_markup">Sanitize markup</label></td>
+                                <td>{{ create_form.safeguards_sanitize_markup }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_markup_mode">Mode</label></td>
+                                <td>{{ create_form.safeguards_markup_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-section">URL policy</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_url_policy_enabled">Enabled</label></td>
+                                <td>{{ create_form.safeguards_url_policy_enabled }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_url_allow_list">Allow list</label></td>
+                                <td>{{ create_form.safeguards_url_allow_list }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_safeguards_url_mode">Mode</label></td>
+                                <td>{{ create_form.safeguards_url_mode }}</td>
+                            </tr>
                         </table>
                     </div>
 
@@ -212,6 +310,9 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
                         <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
+                        <button type="button" class="dashboard-tab" data-tab="compaction" role="tab" aria-selected="false">Compaction</button>
+                        <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
+                        <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-access_control" role="tabpanel">
@@ -277,6 +378,101 @@
 
                     <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-response_shaping" role="tabpanel" hidden>
                         <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:top; width:22%; padding-top:8px"><label for="id_edit-filter_expression">Filter expression</label></td>
+                                <td>{{ edit_form.filter_expression }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-hint">A JSONata expression applied to every tool response - only what it selects reaches the client. Empty means no filtering.</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-compaction" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_edit-safeguards_strip_nulls">Strip null fields</label></td>
+                                <td>{{ edit_form.safeguards_strip_nulls }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_collapse_whitespace">Collapse whitespace</label></td>
+                                <td>{{ edit_form.safeguards_collapse_whitespace }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_strip_base64">Strip binary blobs</label></td>
+                                <td>{{ edit_form.safeguards_strip_base64 }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-pii_removal" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_edit-safeguards_pii_enabled">Enabled</label></td>
+                                <td>{{ edit_form.safeguards_pii_enabled }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_pii_lands">Lands</label></td>
+                                <td>{{ edit_form.safeguards_pii_lands }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_pii_detectors">Detectors</label></td>
+                                <td>{{ edit_form.safeguards_pii_detectors }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_pii_exclude">Exclude</label></td>
+                                <td>{{ edit_form.safeguards_pii_exclude }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_pii_validate">Validate checksums</label></td>
+                                <td>{{ edit_form.safeguards_pii_validate }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_pii_stable_tokens">Stable tokens</label></td>
+                                <td>{{ edit_form.safeguards_pii_stable_tokens }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-content_safety" role="tabpanel" hidden>
+                        <table class="form-data">
+                            <tr>
+                                <td colspan="2" class="form-data-section">Unicode</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle; width:22%"><label for="id_edit-safeguards_normalize_unicode">Normalize unicode</label></td>
+                                <td>{{ edit_form.safeguards_normalize_unicode }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_unicode_mode">Mode</label></td>
+                                <td>{{ edit_form.safeguards_unicode_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-section">Markup</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_sanitize_markup">Sanitize markup</label></td>
+                                <td>{{ edit_form.safeguards_sanitize_markup }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_markup_mode">Mode</label></td>
+                                <td>{{ edit_form.safeguards_markup_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="form-data-section">URL policy</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_url_policy_enabled">Enabled</label></td>
+                                <td>{{ edit_form.safeguards_url_policy_enabled }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_url_allow_list">Allow list</label></td>
+                                <td>{{ edit_form.safeguards_url_allow_list }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:middle"><label for="id_edit-safeguards_url_mode">Mode</label></td>
+                                <td>{{ edit_form.safeguards_url_mode }}</td>
+                            </tr>
                         </table>
                     </div>
 
