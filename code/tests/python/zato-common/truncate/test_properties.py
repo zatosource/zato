@@ -49,30 +49,30 @@ _fractions = st.floats(min_value=0.2, max_value=1.5)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _assert_keys_preserved(original:'any_', degraded:'any_', is_root:'bool') -> 'None':
-    """ Asserts that the degraded document kept every object key of the original, recursively -
+def _assert_keys_preserved(original:'any_', trimmed:'any_', is_root:'bool') -> 'None':
+    """ Asserts that the trimmed document kept every object key of the original, recursively -
     arrays may be shorter and strings may be cut, but keys never vanish.
     """
     if isinstance(original, dict):
 
-        degraded_keys = set(degraded.keys())
+        trimmed_keys = set(trimmed.keys())
 
         # The report key is the one addition allowed, and only at the root.
         if is_root:
-            degraded_keys.discard(Report_Key)
+            trimmed_keys.discard(Report_Key)
 
-        assert degraded_keys == set(original.keys())
+        assert trimmed_keys == set(original.keys())
 
         for key in original:
-            _assert_keys_preserved(original[key], degraded[key], False)
+            _assert_keys_preserved(original[key], trimmed[key], False)
 
     elif isinstance(original, list):
 
         # Arrays only ever lose elements from the tail, so the survivors match the original head.
-        assert len(degraded) <= len(original)
+        assert len(trimmed) <= len(original)
 
-        for index, degraded_item in enumerate(degraded):
-            _assert_keys_preserved(original[index], degraded_item, False)
+        for index, trimmed_item in enumerate(trimmed):
+            _assert_keys_preserved(original[index], trimmed_item, False)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +111,7 @@ class TestProperties:
         if result.was_truncated:
             _assert_keys_preserved(snapshot, result.value, True)
 
-        # Truncation is deterministic - the same document and cap always degrade identically.
+        # Truncation is deterministic - the same document and cap always trim identically.
         rerun = truncate_json(deepcopy(snapshot), cap)
 
         assert serialize(rerun.value) == serialized

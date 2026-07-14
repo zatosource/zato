@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.typing_ import anydict
 from zato.common.util.truncate.common import Array_Element_Floor, Kind_Array_Tail, Kind_String_Cut, Min_String_Length, \
     Truncation_Marker
-from zato.common.util.truncate.degrade import cut_string, drop_array_tails, shorten_strings
+from zato.common.util.truncate.trim import cut_string, drop_array_tails, shorten_strings
 from zato.common.util.truncate.measure import get_size
 from zato.common.util.truncate.walker import collect_candidates
 
