@@ -214,6 +214,18 @@ class TestEnmassePickup(TestCase):
             start_new_session=True,
         )
 
+        # .. capture the listener's output so it can be shown on failure
+        # .. and so the listener never blocks on a full stdout pipe ..
+        cls._listener_output_lines = []
+
+        def _capture_listener():
+            for line in iter(_listener_proc.stdout.readline, b''):
+                text = line.decode('utf-8', errors='replace').rstrip()
+                cls._listener_output_lines.append(text)
+
+        cls._listener_thread = threading.Thread(target=_capture_listener, daemon=True)
+        cls._listener_thread.start()
+
         # .. give the listener time to initialize.
         time.sleep(2)
 
@@ -221,8 +233,9 @@ class TestEnmassePickup(TestCase):
     def tearDownClass(cls):
         global _tmpdir, _server_proc, _listener_proc
 
-        # Stop the listener and close its stdout pipe - nothing reads it, so it can be closed right away ..
+        # Stop the listener, wait for its capture thread to drain the pipe and only then close it ..
         _kill_proc(_listener_proc)
+        cls._listener_thread.join(timeout=5)
         _listener_proc.stdout.close()
         _listener_proc = None
 
@@ -297,6 +310,78 @@ class TestEnmassePickup(TestCase):
             f'Timeout waiting for item "{item_name}" in section "{section_name}". '
             f'Current data sections: {list(last_data.keys())}')
 
+    def _count_import_markers(self):
+        """ Returns how many enmasse imports the server has started and completed so far,
+        based on the markers its commands facade writes to server.log.
+        """
+        server_log = os.path.join(self.server_dir, 'logs', 'server.log')
+        if not os.path.isfile(server_log):
+            return 0, 0
+        started = 0
+        completed = 0
+        with open(server_log) as f:
+            for line in f:
+                if 'Invoking command' in line and '--import' in line:
+                    started += 1
+                elif 'Enmasse stdout' in line:
+                    completed += 1
+        return started, completed
+
+    def _wait_for_imports_done(self, min_completed, timeout=120):
+        """ Waits until at least min_completed enmasse imports have finished and none is still
+        running. The listener may deploy the same file more than once, and a new import must
+        never run concurrently with a previous one, which is why both counts are checked.
+        """
+        deadline = time.monotonic() + timeout
+        started, completed = 0, 0
+        while time.monotonic() < deadline:
+            started, completed = self._count_import_markers()
+            if completed >= min_completed and started == completed:
+                return completed
+            time.sleep(1)
+
+        self.fail(
+            f'Timeout waiting for {min_completed} completed enmasse imports, '
+            f'started={started} completed={completed}')
+
+    def _wait_for_edited_es_timeout(self, timeout=90):
+        """ Polls the export until every elastic_search item shows the edited timeout,
+        which is how we know the asynchronous enmasse import of the modified file completed.
+        """
+        deadline = time.monotonic() + timeout
+        last_data = {}
+        while time.monotonic() < deadline:
+            last_data = self._export_to_dict()
+            items = last_data.get('elastic_search', [])
+            if items and all(item.get('timeout', 0) >= 100 for item in items):
+                return last_data
+            time.sleep(2)
+
+        print('\n--- Listener output at time of failure: ---', file=sys.stderr)
+        for line in self._listener_output_lines:
+            print(line, file=sys.stderr)
+        print('--- End of listener output ---\n', file=sys.stderr)
+
+        print('\n--- Server stdout at time of failure: ---', file=sys.stderr)
+        for line in self._server_output_lines[-30:]:
+            print(line, file=sys.stderr)
+        print('--- End of server stdout ---\n', file=sys.stderr)
+
+        server_log = os.path.join(self.server_dir, 'logs', 'server.log')
+        if os.path.isfile(server_log):
+
+            # The enmasse import runs as a subprocess of the server and its complete
+            # stdout and stderr are logged in server.log - these lines are the evidence
+            # of what the import actually did, so they are printed in full.
+            print('\n--- server.log enmasse-related lines: ---', file=sys.stderr)
+            with open(server_log) as f:
+                for line in f:
+                    if 'nmasse' in line or 'Invoking command' in line or 'ERROR' in line:
+                        print(line.rstrip(), file=sys.stderr)
+            print('--- End of server.log enmasse-related lines ---\n', file=sys.stderr)
+
+        return last_data
+
 # ################################################################################################################################
 
     def test_pickup_incremental_and_edit(self):
@@ -322,6 +407,14 @@ class TestEnmassePickup(TestCase):
         # .. wait for channel_rest.4 which depends on security groups,
         # so if it's there, everything before it succeeded too ..
         data = self._wait_for_named_item('channel_rest', 'enmasse.channel.rest.4', timeout=30)
+
+        # .. channel_rest is synced in the middle of an import, so the import that brought it
+        # may still be running - wait until it fully completes, otherwise its remaining sections,
+        # elastic_search among them, would race with the edits made below and overwrite them ..
+        _ = self._wait_for_imports_done(min_completed=1)
+
+        # .. re-export now that the whole import is done ..
+        data = self._export_to_dict()
 
         # .. verify all sections are present ..
         for section_name in section_names:
@@ -356,10 +449,9 @@ class TestEnmassePickup(TestCase):
         modified_yaml = yaml.dump(modified_data, default_flow_style=False, sort_keys=True)
         self._place_enmasse_file('enmasse.yaml', modified_yaml)
 
-        # .. wait for edits to be picked up ..
-        time.sleep(15)
-
-        full_data_round2 = self._export_to_dict()
+        # .. wait for edits to be picked up - the import runs asynchronously in a subprocess,
+        # so poll until the edited elastic_search timeout becomes visible in the export ..
+        full_data_round2 = self._wait_for_edited_es_timeout(timeout=90)
         self.assertTrue(full_data_round2, 'Full export after edits is empty')
 
         # .. verify edits took effect for verifiable sections ..
