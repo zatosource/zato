@@ -3,6 +3,7 @@ pytest-xdist
 aiohttp==3.13.5
 fuse-python==1.0.9
 hypothesis==6.152.1
+piigex==0.2.0
 crc32c
 PyYAML
 coverage==7.6.10

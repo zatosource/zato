@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock test-truncate test-message-filters \
 	test-audit-log test-audit-log-ui test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
@@ -729,8 +729,30 @@ test-common: ## Common library tests.
 test-distlock: ## Distlock tests.
 	$(MAKE) -C $(CURDIR)/code/zato-distlock test
 
+test-truncate: ## Truncation and graceful degradation tests with 100% branch coverage.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/util/truncate/ \
+		$(CURDIR)/code/tests/python/zato-common/truncate/
+	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.truncate \
+		--data-file=$(CURDIR)/code/tests/.coverage_truncate -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/truncate/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_truncate -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_truncate --show-missing --fail-under=100
+
+test-message-filters: ## Message filter and projection tests with 100% branch coverage.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/util/message_filters/ \
+		$(CURDIR)/code/tests/python/zato-common/message_filters/
+	$(ZATO_PY) -m coverage run --branch --source=zato.common.util.message_filters \
+		--data-file=$(CURDIR)/code/tests/.coverage_message_filters -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/message_filters/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_message_filters -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_message_filters --show-missing --fail-under=100
+
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock test-truncate test-message-filters ## Everything.
 
 test: test-all ## Alias for test-all.
 
