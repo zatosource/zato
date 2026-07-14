@@ -111,6 +111,9 @@ skip_simple_type = {
     'group_id',
     'odata_version',
 
+    # Connection names must stay strings even when they look numeric, e.g. a channel named 123.
+    'name',
+
     # AS2 fields that must stay strings even when their values look numeric -
     # the version travels as the AS2-Version HTTP header and the identifiers
     # and EDI addressing fields are frequently all-digit strings.
