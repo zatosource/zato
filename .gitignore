@@ -1,3 +1,5 @@
+.coverage
+.coverage_*
 .cr-session.sqlite
 .hypothesis
 .vscode
