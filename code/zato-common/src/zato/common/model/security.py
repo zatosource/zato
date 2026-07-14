@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.typing_ import dataclass
+from zato.common.typing_ import dataclass, dict_field
 from zato.server.service import Model
 
 # ################################################################################################################################
@@ -53,6 +53,27 @@ class BearerTokenInfo(Model):
 class BearerTokenInfoResult(Model):
     info: 'BearerTokenInfo'
     is_cache_hit: 'bool'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class BearerTokenVerifyConfig(Model):
+    """ Everything needed to verify an inbound bearer token against one security definition.
+    """
+    security_id:'int' = 0
+    sec_def_name:'str' = ''
+
+    # Static mode - the exact token the caller must present
+    static_token:'str' = ''
+
+    # JWT mode - what the token must have been issued with
+    issuer:'str' = ''
+    jwks_url:'str' = ''
+    audience:'str' = ''
+
+    # JWT mode - claim name to required value pairs, all of which must match
+    claims:'stranydict' = dict_field()
 
 # ################################################################################################################################
 # ################################################################################################################################

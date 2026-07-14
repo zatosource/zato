@@ -18,6 +18,7 @@ from zato.common.ext.future.utils import iteritems
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common.api import AS2, AS4, CONNECTION, MISC, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, extract_bearer_token
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
@@ -67,6 +68,9 @@ class URLData(PyURLData):
         self.url_sec_lock = RLock()
         self.update_lock = RLock()
         self._target_separator = MISC.SEPARATOR
+
+        # Built on first use because the cache it needs may not exist yet when we are created
+        self._bearer_token_verifier = None
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
 
