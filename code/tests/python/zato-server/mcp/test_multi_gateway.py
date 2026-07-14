@@ -13,36 +13,36 @@ from unittest import TestCase
 import zato.server.base.config_manager as config_manager_module
 from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
-from zato.server.generic.api.channel_mcp import ChannelMCPWrapper, ChannelMCPWrapper as Imported
+from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper, GatewayMCPWrapper as Imported
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPConstant(TestCase):
-    """ Tests that the CHANNEL_MCP constant is correctly defined.
+class GatewayMCPConstant(TestCase):
+    """ Tests that the GATEWAY_MCP constant is correctly defined.
     """
 
 # ################################################################################################################################
 
     def test_constant_value(self) -> 'None':
-        """ Verifies that the CHANNEL_MCP constant has the expected string value.
+        """ Verifies that the GATEWAY_MCP constant has the expected string value.
         """
 
-        self.assertEqual(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, 'channel-mcp')
+        self.assertEqual(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, 'gateway-mcp')
 
 # ################################################################################################################################
 
     def test_constant_is_string(self) -> 'None':
-        """ Verifies that the CHANNEL_MCP constant is a string type.
+        """ Verifies that the GATEWAY_MCP constant is a string type.
         """
 
-        self.assertIsInstance(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP, str)
+        self.assertIsInstance(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, str)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPWrapperInit(TestCase):
-    """ Tests that the ChannelMCPWrapper can be instantiated and has the expected interface.
+class GatewayMCPWrapperInit(TestCase):
+    """ Tests that the GatewayMCPWrapper can be instantiated and has the expected interface.
     """
 
 # ################################################################################################################################
@@ -51,10 +51,10 @@ class ChannelMCPWrapperInit(TestCase):
         """ Verifies that the wrapper stores config and server references.
         """
 
-        config = Bunch(name='test-mcp-channel')
+        config = Bunch(name='test-mcp-gateway')
         server = Bunch()
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
 
         self.assertIs(wrapper.config, config)
         self.assertIs(wrapper.server, server)
@@ -66,10 +66,10 @@ class ChannelMCPWrapperInit(TestCase):
         """
 
         service_store = Bunch(services={}, name_to_impl_name={})
-        config = Bunch(name='test-mcp-channel')
+        config = Bunch(name='test-mcp-gateway')
         server = Bunch(service_store=service_store)
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
 # ################################################################################################################################
@@ -78,23 +78,23 @@ class ChannelMCPWrapperInit(TestCase):
         """ Verifies that delete can be called without error.
         """
 
-        config = Bunch(name='test-mcp-channel')
+        config = Bunch(name='test-mcp-gateway')
         server = Bunch()
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.delete()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ConfigManagerGenericConnWiring(TestCase):
-    """ Tests that ConfigManager maps include the CHANNEL_MCP type.
+    """ Tests that ConfigManager maps include the GATEWAY_MCP type.
     """
 
 # ################################################################################################################################
 
     def test_generic_conn_api_has_mcp(self) -> 'None':
-        """ Verifies that the config manager source references CHANNEL_MCP.
+        """ Verifies that the config manager source references GATEWAY_MCP.
         """
 
         source = config_manager_module.__file__
@@ -102,9 +102,9 @@ class ConfigManagerGenericConnWiring(TestCase):
         with open(source) as source_file:
             content = source_file.read()
 
-        self.assertIn('CHANNEL_MCP', content)
-        self.assertIn('self.channel_mcp', content)
-        self.assertIn('ChannelMCPWrapper', content)
+        self.assertIn('GATEWAY_MCP', content)
+        self.assertIn('self.gateway_mcp', content)
+        self.assertIn('GatewayMCPWrapper', content)
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ class ConfigManagerGenericConnWiring(TestCase):
         """ Verifies that the wrapper import resolves to the same class.
         """
 
-        self.assertIs(Imported, ChannelMCPWrapper)
+        self.assertIs(Imported, GatewayMCPWrapper)
 
 # ################################################################################################################################
 # ################################################################################################################################

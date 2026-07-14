@@ -27,8 +27,8 @@ from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
-from zato.common.util.channel import on_mcp_channel_create_edit, on_mcp_channel_delete
 from zato.common.util.config import replace_query_string_items_in_dict
+from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.time_ import utcnow
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
@@ -63,7 +63,7 @@ extra_delete_attrs = ['type_']
 # ################################################################################################################################
 
 hook = {
-    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP: on_mcp_channel_create_edit,
+    COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
 }
 
 # ################################################################################################################################
@@ -71,8 +71,8 @@ hook = {
 def instance_hook(service, input, instance, attrs):
     """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP connections.
     """
-    if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
-        on_mcp_channel_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
+    if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
+        on_mcp_gateway_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
 
 # ################################################################################################################################
 

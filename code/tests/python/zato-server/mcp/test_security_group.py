@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
-from zato.admin.web.views.channel.mcp import _mcp_group_name_prefix
+from zato.admin.web.views.gateway.mcp import _mcp_group_name_prefix
 from zato.common.api import Groups
 from zato.common.groups import Member
 from zato.common.typing_ import cast_
@@ -28,7 +28,7 @@ if 0:
 # ################################################################################################################################
 
 _cid = 'test-cid-1'
-_channel_name = 'test.mcp.channel'
+_channel_name = 'test.mcp.gateway'
 
 _group_id = 100
 _other_group_id = 200
@@ -77,13 +77,13 @@ class SecurityGroupNaming(TestCase):
 # ################################################################################################################################
 
     def test_group_name_uses_mcp_prefix(self) -> 'None':
-        """ The auto-created group name must be mcp.<channel_name>.
+        """ The auto-created group name must be mcp.<gateway_name>.
         """
 
-        channel_name = 'my-mcp-channel'
-        group_name = 'mcp.' + channel_name
+        gateway_name = 'my-mcp-gateway'
+        group_name = 'mcp.' + gateway_name
 
-        self.assertEqual(group_name, 'mcp.my-mcp-channel')
+        self.assertEqual(group_name, 'mcp.my-mcp-gateway')
 
 # ################################################################################################################################
 
@@ -111,7 +111,7 @@ class SecurityInputParsing(TestCase):
         post_data = {
             'mcp_security_basic_auth-5': 'basic_auth-5',
             'mcp_security_apikey-12': 'apikey-12',
-            'name': 'test-channel',
+            'name': 'test-gateway',
         }
 
         prefix = 'mcp_security_'
@@ -137,7 +137,7 @@ class SecurityInputParsing(TestCase):
         """
 
         post_data = {
-            'name': 'test-channel',
+            'name': 'test-gateway',
         }
 
         prefix = 'mcp_security_'
@@ -175,7 +175,7 @@ class HookSecurityGroupsPropagation(TestCase):
 # ################################################################################################################################
 
     def test_security_groups_merged_into_existing_opaque(self) -> 'None':
-        """ When updating an existing channel, security_groups must be merged
+        """ When updating an existing gateway, security_groups must be merged
         into the existing opaque data without losing other keys.
         """
 
@@ -202,17 +202,17 @@ class HookSecurityGroupsPropagation(TestCase):
 # ################################################################################################################################
 
 class DeleteCleanup(TestCase):
-    """ Tests that on_mcp_channel_delete removes the auto-created security group.
+    """ Tests that on_mcp_gateway_delete removes the auto-created security group.
     """
 
 # ################################################################################################################################
 
-    def test_group_name_matches_channel_name(self) -> 'None':
-        """ The group to delete must be named mcp.<channel_name>.
+    def test_group_name_matches_gateway_name(self) -> 'None':
+        """ The group to delete must be named mcp.<gateway_name>.
         """
 
-        channel_name = 'production-api'
-        group_name = 'mcp.' + channel_name
+        gateway_name = 'production-api'
+        group_name = 'mcp.' + gateway_name
 
         self.assertEqual(group_name, 'mcp.production-api')
 

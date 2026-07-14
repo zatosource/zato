@@ -15,7 +15,7 @@ from unittest import TestCase
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
+from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
@@ -31,7 +31,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseChannelMCPExport(TestCase):
+class TestEnmasseGatewayMCPExport(TestCase):
     """ Tests exporting MCP gateway definitions to YAML format.
     """
 
@@ -45,7 +45,7 @@ class TestEnmasseChannelMCPExport(TestCase):
         self.importer = EnmasseYAMLImporter()
         self.exporter = EnmasseYAMLExporter()
         self.security_importer = SecurityImporter(self.importer)
-        self.mcp_importer = ChannelMCPImporter(self.importer)
+        self.mcp_importer = GatewayMCPImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
@@ -85,7 +85,7 @@ class TestEnmasseChannelMCPExport(TestCase):
         self.assertIn('mcp_gateway', exported_data)
         exported_mcp_list = exported_data['mcp_gateway']
 
-        # Filter to only the test-created channels (DB may have pre-existing ones)
+        # Filter to only the test-created gateways (DB may have pre-existing ones)
         exported_mcp_list = [item for item in exported_mcp_list if item['name'].startswith('enmasse.mcp.')]
         self.assertEqual(len(exported_mcp_list), 2)
 

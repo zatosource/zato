@@ -35,7 +35,7 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-_Page_Url_Pattern = '/zato/channel/mcp/?cluster=1'
+_Page_Url_Pattern = '/zato/gateway/mcp/?cluster=1'
 
 _Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
 
@@ -104,7 +104,7 @@ class TestMCPGatewayCreate:
 
     def test_create_minimal(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway with only name and url_path via the UI, verifies the row
-        appears correctly, then confirms the channel is live on the server (returns 403 because
+        appears correctly, then confirms the gateway is live on the server (returns 403 because
         no security groups are configured - default deny).
         """
 
@@ -112,7 +112,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'minimal'
+        gateway_name = _Test_Name_Prefix + 'minimal'
         url_path = '/mcp/test/' + rand_string()
 
         # Navigate to the MCP gateways page ..
@@ -122,14 +122,14 @@ class TestMCPGatewayCreate:
         open_create_dialog(page)
 
         # .. fill in the fields ..
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. submit and wait for dialog to close ..
         submit_create_form(page)
 
         # .. verify the new row appears in the table ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. extract cell texts from the row ..
@@ -142,8 +142,8 @@ class TestMCPGatewayCreate:
         logger.info('[test_create_minimal] name=%s is_active=%s url_path=%s', name_cell_text, is_active_text, url_path_text)
 
         # .. verify each cell has the correct value ..
-        assert name_cell_text == channel_name, \
-            f'Expected name "{channel_name}", got: "{name_cell_text}"'
+        assert name_cell_text == gateway_name, \
+            f'Expected name "{gateway_name}", got: "{name_cell_text}"'
 
         assert is_active_text == 'Yes', \
             f'Expected is_active "Yes", got: "{is_active_text}"'
@@ -155,21 +155,21 @@ class TestMCPGatewayCreate:
         response = _post_mcp(server_port, url_path)
 
         assert response.status_code == FORBIDDEN, \
-            f'Expected FORBIDDEN for no-security channel, got {response.status_code}: {response.text}'
+            f'Expected FORBIDDEN for no-security gateway, got {response.status_code}: {response.text}'
 
 # ################################################################################################################################
 
     def test_create_with_services(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway with two services assigned via the badge picker.
         Verifies the row shows service count = 2, reopens edit to confirm both are pre-selected,
-        then confirms the channel is live on the server.
+        then confirms the gateway is live on the server.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'with-services'
+        gateway_name = _Test_Name_Prefix + 'with-services'
         url_path = '/mcp/test-service/' + rand_string()
 
         # Navigate to the MCP gateways page ..
@@ -179,7 +179,7 @@ class TestMCPGatewayCreate:
         open_create_dialog(page)
 
         # .. fill in the fields ..
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. wait for the service badge picker to load ..
@@ -208,7 +208,7 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify the new row appears with service count = 2 ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
         cells = row.query_selector_all('td')
 
@@ -222,7 +222,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the badge picker to load in edit mode ..
@@ -250,28 +250,28 @@ class TestMCPGatewayCreate:
         response = _post_mcp(server_port, url_path)
 
         assert response.status_code == FORBIDDEN, \
-            f'Expected FORBIDDEN for no-security channel, got {response.status_code}: {response.text}'
+            f'Expected FORBIDDEN for no-security gateway, got {response.status_code}: {response.text}'
 
         # .. verify the ODB has the correct services stored ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
         api_auth = ('admin.invoke', zato_dashboard['password'])
         api_headers = {'Content-Type': 'application/json'}
-        api_payload = json.dumps({'cluster_id': 1, 'type_': 'channel-mcp'})
+        api_payload = json.dumps({'cluster_id': 1, 'type_': 'gateway-mcp'})
 
         odb_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert odb_response.status_code == OK, f'API call failed: {odb_response.status_code} {odb_response.text}'
 
         items = odb_response.json()
-        channel_data:'anynone' = None
+        gateway_data:'anynone' = None
 
         for item in items:
-            if item['name'] == channel_name:
-                channel_data = item
+            if item['name'] == gateway_name:
+                gateway_data = item
                 break
 
-        assert channel_data is not None, f'Channel "{channel_name}" not found in ODB'
+        assert gateway_data is not None, f'Gateway "{gateway_name}" not found in ODB'
 
-        services = channel_data.get('services')
+        services = gateway_data.get('services')
         if services is None:
             services = []
 
@@ -296,7 +296,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'with-security'
+        gateway_name = _Test_Name_Prefix + 'with-security'
         url_path = '/mcp/test-security/' + rand_string()
 
         # Create a basic auth definition via the UI so we know the credentials ..
@@ -314,7 +314,7 @@ class TestMCPGatewayCreate:
         open_create_dialog(page)
 
         # .. fill in the fields ..
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. wait for the security badge picker to load ..
@@ -338,7 +338,7 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify the new row appears with security count = 1 ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
         cells = row.query_selector_all('td')
 
@@ -368,7 +368,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'export'
+        gateway_name = _Test_Name_Prefix + 'export'
         url_path = '/mcp/test-export/' + rand_string()
 
         # Create a Basic Auth definition via the UI ..
@@ -399,7 +399,7 @@ class TestMCPGatewayCreate:
         open_create_dialog(page)
 
         # .. fill in the fields ..
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. wait for both of our security badges to be available ..
@@ -414,7 +414,7 @@ class TestMCPGatewayCreate:
         assert basic_auth_badge is not None, f'Could not find badge for sec def "{basic_auth_name}"'
         assert apikey_badge is not None, f'Could not find badge for sec def "{apikey_name}"'
 
-        # .. assign both definitions to the channel ..
+        # .. assign both definitions to the gateway ..
         basic_auth_badge.click()
         apikey_badge.click()
 
@@ -426,9 +426,9 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. wait for the new row to appear ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        assert row is not None, f'Could not find the row for channel "{channel_name}"'
+        assert row is not None, f'Could not find the row for gateway "{gateway_name}"'
 
         # .. click the Export link and capture the download ..
         export_link = row.query_selector('a:text-is("Export")')
@@ -439,8 +439,8 @@ class TestMCPGatewayCreate:
 
         download = download_info.value
 
-        # .. the channel name contains only characters allowed in a slug, so the file name uses it as is ..
-        expected_file_name = f'mcp-{channel_name}.json'
+        # .. the gateway name contains only characters allowed in a slug, so the file name uses it as is ..
+        expected_file_name = f'mcp-{gateway_name}.json'
         assert download.suggested_filename == expected_file_name, \
             f'Expected file name "{expected_file_name}", got: "{download.suggested_filename}"'
 
@@ -454,11 +454,11 @@ class TestMCPGatewayCreate:
 
         # .. the dashboard under test runs with Zato_Server_Address=http://127.0.0.1:<server_port>,
         # and IP addresses are used as namespaces as they are, without reversing their labels ..
-        expected_name = f'127.0.0.1/{channel_name}'
+        expected_name = f'127.0.0.1/{gateway_name}'
         assert document['name'] == expected_name, f'Expected name "{expected_name}", got: "{document["name"]}"'
 
-        # .. the description comes from the export view, which keeps the MCP channel wording ..
-        assert document['description'] == f'MCP channel {channel_name}', \
+        # .. the description comes from the export view ..
+        assert document['description'] == f'MCP gateway {gateway_name}', \
             f'Unexpected description: "{document["description"]}"'
 
         # .. verify the remote endpoint ..
@@ -502,7 +502,7 @@ class TestMCPGatewayCreate:
         # Navigate to the MCP gateways page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the initial channel ..
+        # .. create the initial gateway ..
         open_create_dialog(page)
         page.fill('#id_name', old_name)
         page.fill('#id_url_path', old_url_path)
@@ -512,7 +512,7 @@ class TestMCPGatewayCreate:
         row_selector = f'#data-table tbody tr:has(td:text-is("{old_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. confirm old URL is routable (403 = no security but channel exists) ..
+        # .. confirm old URL is routable (403 = no security but gateway exists) ..
         response = _post_mcp(server_port, old_url_path)
         assert response.status_code == FORBIDDEN, f'Expected FORBIDDEN on old URL, got {response.status_code}'
 
@@ -520,7 +520,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. change name and url_path ..
@@ -555,7 +555,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'rename-sec'
+        gateway_name = _Test_Name_Prefix + 'rename-sec'
         old_url_path = '/mcp/rename-security-old/' + rand_string()
         new_url_path = '/mcp/rename-security-new/' + rand_string()
 
@@ -568,9 +568,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with security ..
+        # .. create the gateway with security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', old_url_path)
 
         # .. wait for the security badge picker ..
@@ -587,8 +587,8 @@ class TestMCPGatewayCreate:
 
         submit_create_form(page)
 
-        # .. verify the channel works with valid creds at old URL ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        # .. verify the gateway works with valid creds at old URL ..
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         response = _post_mcp(server_port, old_url_path, auth=(security_username, security_password))
@@ -598,7 +598,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. change only the url_path ..
@@ -635,20 +635,20 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'deactivate'
+        gateway_name = _Test_Name_Prefix + 'deactivate'
         url_path = '/mcp/deactivate/' + rand_string()
 
         # Navigate to the MCP gateways page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel ..
+        # .. create the gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
         submit_create_form(page)
 
         # .. verify it appears and is active ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm URL is routable while active ..
@@ -659,7 +659,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. uncheck is_active ..
@@ -668,7 +668,7 @@ class TestMCPGatewayCreate:
         # .. submit ..
         submit_edit_form(page)
 
-        logger.info('[test_edit_deactivate] deactivated channel %s', channel_name)
+        logger.info('[test_edit_deactivate] deactivated gateway %s', gateway_name)
 
         # .. URL should now return 404 ..
         response = _post_mcp(server_port, url_path)
@@ -685,27 +685,27 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'reactivate'
+        gateway_name = _Test_Name_Prefix + 'reactivate'
         url_path = '/mcp/reactivate/' + rand_string()
 
         # Navigate to the MCP gateways page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel ..
+        # .. create the gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
         submit_create_form(page)
 
         # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. open edit and deactivate ..
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.uncheck('#edit-div #id_edit-is_active')
         submit_edit_form(page)
@@ -716,12 +716,12 @@ class TestMCPGatewayCreate:
 
         # .. reopen edit and reactivate ..
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.check('#edit-div #id_edit-is_active')
         submit_edit_form(page)
 
-        logger.info('[test_edit_reactivate] reactivated channel %s', channel_name)
+        logger.info('[test_edit_reactivate] reactivated gateway %s', gateway_name)
 
         # .. URL should be routable again (403 = no security, but exists) ..
         response = _post_mcp(server_port, url_path)
@@ -738,7 +738,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'add-service'
+        gateway_name = _Test_Name_Prefix + 'add-service'
         url_path = '/mcp/add-service/' + rand_string()
 
         # Create a sec def so we can authenticate ..
@@ -750,9 +750,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with 1 service and security ..
+        # .. create the gateway with 1 service and security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. wait for service badges ..
@@ -778,10 +778,10 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. initialize to confirm channel is live ..
+        # .. initialize to confirm gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK, got {response.status_code}: {response.text}'
 
@@ -789,7 +789,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for service badges in edit mode ..
@@ -849,7 +849,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'rm-service'
+        gateway_name = _Test_Name_Prefix + 'rm-service'
         url_path = '/mcp/remove-service/' + rand_string()
 
         # Create a sec def ..
@@ -861,9 +861,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with 2 services and security ..
+        # .. create the gateway with 2 services and security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         # .. wait for service badges ..
@@ -891,14 +891,14 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. open edit dialog ..
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned badges in edit mode ..
@@ -951,7 +951,7 @@ class TestMCPGatewayCreate:
 # ################################################################################################################################
 
     def test_edit_add_security_member(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel with 1 sec def, edits to add a second sec def.
+        """ Creates a gateway with 1 sec def, edits to add a second sec def.
         Asserts both can authenticate.
         """
 
@@ -959,7 +959,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'add-sec'
+        gateway_name = _Test_Name_Prefix + 'add-sec'
         url_path = '/mcp/add-security/' + rand_string()
 
         # Create two basic auth definitions ..
@@ -976,9 +976,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with only the first sec def ..
+        # .. create the gateway with only the first sec def ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -994,7 +994,7 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm first creds work, second does not ..
@@ -1008,7 +1008,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the security badge picker in edit mode ..
@@ -1025,7 +1025,7 @@ class TestMCPGatewayCreate:
 
         submit_edit_form(page)
 
-        logger.info('[test_edit_add_security_member] added sec def %s to channel %s', security_name_2, channel_name)
+        logger.info('[test_edit_add_security_member] added sec def %s to gateway %s', security_name_2, gateway_name)
 
         # .. both should now authenticate ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1037,7 +1037,7 @@ class TestMCPGatewayCreate:
 # ################################################################################################################################
 
     def test_edit_remove_security_member(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel with 2 sec defs, edits to remove one.
+        """ Creates a gateway with 2 sec defs, edits to remove one.
         Removed member -> 403, remaining member -> 200.
         """
 
@@ -1045,7 +1045,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'rm-sec'
+        gateway_name = _Test_Name_Prefix + 'rm-sec'
         url_path = '/mcp/remove-security/' + rand_string()
 
         # Create two basic auth definitions ..
@@ -1062,9 +1062,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with both sec defs ..
+        # .. create the gateway with both sec defs ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1084,7 +1084,7 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm both work ..
@@ -1098,7 +1098,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned sec badges in edit mode ..
@@ -1115,7 +1115,7 @@ class TestMCPGatewayCreate:
 
         submit_edit_form(page)
 
-        logger.info('[test_edit_remove_security_member] removed sec def %s from channel %s', security_name_1, channel_name)
+        logger.info('[test_edit_remove_security_member] removed sec def %s from gateway %s', security_name_1, gateway_name)
 
         # .. removed member should get 403, remaining should get 200 ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1127,7 +1127,7 @@ class TestMCPGatewayCreate:
 # ################################################################################################################################
 
     def test_edit_remove_all_security(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel with sec defs, edits to remove all.
+        """ Creates a gateway with sec defs, edits to remove all.
         Asserts all requests return 403 (default deny).
         """
 
@@ -1135,7 +1135,7 @@ class TestMCPGatewayCreate:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'rm-all-sec'
+        gateway_name = _Test_Name_Prefix + 'rm-all-sec'
         url_path = '/mcp/remove-all-security/' + rand_string()
 
         # Create a basic auth definition ..
@@ -1147,9 +1147,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel with security ..
+        # .. create the gateway with security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1165,7 +1165,7 @@ class TestMCPGatewayCreate:
         submit_create_form(page)
 
         # .. verify row appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. confirm creds work ..
@@ -1176,7 +1176,7 @@ class TestMCPGatewayCreate:
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned sec badges in edit mode ..
@@ -1193,7 +1193,7 @@ class TestMCPGatewayCreate:
 
         submit_edit_form(page)
 
-        logger.info('[test_edit_remove_all_security] removed all security from channel %s', channel_name)
+        logger.info('[test_edit_remove_all_security] removed all security from gateway %s', gateway_name)
 
         # .. wait for security change to propagate ..
         page.wait_for_timeout(2000)
@@ -1209,33 +1209,33 @@ class TestMCPGatewayCreate:
 # ################################################################################################################################
 
     def test_create_duplicate_name(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel, then tries to create another with the same name.
+        """ Creates a gateway, then tries to create another with the same name.
         Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        channel_name = _Test_Name_Prefix + 'dup-name'
+        gateway_name = _Test_Name_Prefix + 'dup-name'
         url_path_1 = '/mcp/duplicate-1/' + rand_string()
         url_path_2 = '/mcp/duplicate-2/' + rand_string()
 
         # Navigate to the MCP gateways page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the first channel ..
+        # .. create the first gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path_1)
         submit_create_form(page)
 
         # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. try to create a second channel with the same name ..
+        # .. try to create a second gateway with the same name ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path_2)
 
         # .. click submit ..
@@ -1253,33 +1253,33 @@ class TestMCPGatewayCreate:
 # ################################################################################################################################
 
     def test_create_duplicate_url_path(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel with a URL path, then tries to create another with the same path.
+        """ Creates a gateway with a URL path, then tries to create another with the same path.
         Asserts the UI blocks submission (dialog stays open, field gets attention indicator).
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        channel_name_1 = _Test_Name_Prefix + 'dup-path-1'
-        channel_name_2 = _Test_Name_Prefix + 'dup-path-2'
+        gateway_name_1 = _Test_Name_Prefix + 'dup-path-1'
+        gateway_name_2 = _Test_Name_Prefix + 'dup-path-2'
         url_path = '/mcp/duplicate-path/' + rand_string()
 
         # Navigate to the MCP gateways page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the first channel ..
+        # .. create the first gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_1)
+        page.fill('#id_name', gateway_name_1)
         page.fill('#id_url_path', url_path)
         submit_create_form(page)
 
         # .. verify it appears ..
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name_1}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name_1}"))'
         page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. try to create a second channel with the same url_path ..
+        # .. try to create a second gateway with the same url_path ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_2)
+        page.fill('#id_name', gateway_name_2)
         page.fill('#id_url_path', url_path)
 
         # .. click submit ..
@@ -1306,7 +1306,7 @@ class TestMCPGatewayCreate:
         server_port = zato_dashboard['server_port']
         server_dir = zato_dashboard['server_dir']
 
-        channel_name = _Test_Name_Prefix + 'hotdep'
+        gateway_name = _Test_Name_Prefix + 'hotdep'
         url_path = '/mcp/hot-deploy/' + rand_string()
         hot_deploy_service_name = 'mcp-test.hot-deploy-tools.' + rand_string()
 
@@ -1319,9 +1319,9 @@ class TestMCPGatewayCreate:
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create a channel with demo.echo and security ..
+        # .. create a gateway with demo.echo and security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1346,7 +1346,7 @@ class TestMCPGatewayCreate:
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. hot-deploy a new service ..
@@ -1376,7 +1376,7 @@ class MCPTestHotDeployTools(Service):
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the hot-deployed service to appear in the available services badge picker ..
@@ -1392,7 +1392,7 @@ class MCPTestHotDeployTools(Service):
             page.keyboard.press('Escape')
             page.wait_for_selector('#edit-div', state='hidden', timeout=3000)
             time.sleep(1)
-            page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+            page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
             page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         else:
             os.remove(service_file_path)
@@ -1430,17 +1430,17 @@ class MCPTestHotDeployTools(Service):
 
         logger.info('[test_service_hot_deploy_updates_tools_list] tool_names=%s', tool_names)
 
-        # .. the channel must not outlive the hot-deployed service its allow list references,
+        # .. the gateway must not outlive the hot-deployed service its allow list references,
         # otherwise a fresh server start would fail rebuilding the MCP tool registries,
-        # so delete the channel first ..
-        mcp_list_url = f'{_Page_Url_Pattern}&query={channel_name}'
+        # so delete the gateway first ..
+        mcp_list_url = f'{_Page_Url_Pattern}&query={gateway_name}'
         navigate_to_page(page, base_url, mcp_list_url)
 
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         page.wait_for_selector(row_selector, state='hidden', timeout=5000)
@@ -1477,7 +1477,7 @@ class MCPTestHotDeployTools(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'pwd-chg'
+        gateway_name = _Test_Name_Prefix + 'pwd-chg'
         url_path = '/mcp/password-change/' + rand_string()
 
         # Create a basic auth definition ..
@@ -1486,10 +1486,10 @@ class MCPTestHotDeployTools(Service):
         security_username = security_info['username']
         old_password = security_info['password']
 
-        # .. navigate to MCP gateways and create a channel with this sec def ..
+        # .. navigate to MCP gateways and create a gateway with this sec def ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1504,7 +1504,7 @@ class MCPTestHotDeployTools(Service):
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. verify the original password works ..
@@ -1548,7 +1548,7 @@ class MCPTestHotDeployTools(Service):
 
 # ################################################################################################################################
 
-    def test_two_channels_different_groups(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_two_gateways_different_groups(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates two MCP gateways, each with a different security group member.
         Verifies cross-group access is denied: A with Y-creds -> 403, B with X-creds -> 403.
         """
@@ -1557,8 +1557,8 @@ class MCPTestHotDeployTools(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name_a = _Test_Name_Prefix + 'iso-a'
-        channel_name_b = _Test_Name_Prefix + 'iso-b'
+        gateway_name_a = _Test_Name_Prefix + 'iso-a'
+        gateway_name_b = _Test_Name_Prefix + 'iso-b'
         url_path_a = '/mcp/isolation-a/' + rand_string()
         url_path_b = '/mcp/isolation-b/' + rand_string()
 
@@ -1576,9 +1576,9 @@ class MCPTestHotDeployTools(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create channel A with security A ..
+        # .. create gateway A with security A ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_a)
+        page.fill('#id_name', gateway_name_a)
         page.fill('#id_url_path', url_path_a)
 
         page.wait_for_function(
@@ -1593,12 +1593,12 @@ class MCPTestHotDeployTools(Service):
 
         submit_create_form(page)
 
-        row_selector_a = f'#data-table tbody tr:has(td:text-is("{channel_name_a}"))'
+        row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
         page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
 
-        # .. create channel B with security B ..
+        # .. create gateway B with security B ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_b)
+        page.fill('#id_name', gateway_name_b)
         page.fill('#id_url_path', url_path_b)
 
         page.wait_for_function(
@@ -1613,10 +1613,10 @@ class MCPTestHotDeployTools(Service):
 
         submit_create_form(page)
 
-        row_selector_b = f'#data-table tbody tr:has(td:text-is("{channel_name_b}"))'
+        row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
         page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
 
-        # .. verify own creds work on own channel ..
+        # .. verify own creds work on own gateway ..
         response = _post_mcp(server_port, url_path_a, auth=(security_username_a, security_password_a))
         assert response.status_code == OK, f'Expected OK for A with A-creds, got {response.status_code}'
 
@@ -1634,10 +1634,10 @@ class MCPTestHotDeployTools(Service):
 
 # ################################################################################################################################
 
-    def test_two_channels_different_allow_lists(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_two_gateways_different_allow_lists(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates two MCP gateways with different service allow lists.
-        Channel A allows svc-a only, channel B allows svc-b only.
-        Verifies each channel's tools/list only exposes its own allowed service.
+        Gateway A allows svc-a only, gateway B allows svc-b only.
+        Verifies each gateway's tools/list only exposes its own allowed service.
         """
 
         page = logged_in_page
@@ -1648,8 +1648,8 @@ class MCPTestHotDeployTools(Service):
         suffix_a = rand_string()
         suffix_b = rand_string()
 
-        channel_name_a = _Test_Name_Prefix + 'allow-a'
-        channel_name_b = _Test_Name_Prefix + 'allow-b'
+        gateway_name_a = _Test_Name_Prefix + 'allow-a'
+        gateway_name_b = _Test_Name_Prefix + 'allow-b'
         url_path_a = '/mcp/allow-list-a/' + suffix_a
         url_path_b = '/mcp/allow-list-b/' + suffix_b
 
@@ -1691,12 +1691,12 @@ class MCPTestAllowListB(Service):
         with open(service_file_path_b, 'w') as service_file:
             _ = service_file.write(service_code_b)
 
-        logger.info('[test_two_channels_different_allow_lists] deployed %s and %s', service_name_a, service_name_b)
+        logger.info('[test_two_gateways_different_allow_lists] deployed %s and %s', service_name_a, service_name_b)
 
         # .. wait for both services to be picked up ..
         time.sleep(5)
 
-        # .. create a basic auth for both channels to share ..
+        # .. create a basic auth for both gateways to share ..
         security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'allow-list')
         security_name = security_info['name']
         security_username = security_info['username']
@@ -1705,9 +1705,9 @@ class MCPTestAllowListB(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create channel A restricted to service A ..
+        # .. create gateway A restricted to service A ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_a)
+        page.fill('#id_name', gateway_name_a)
         page.fill('#id_url_path', url_path_a)
 
         # .. wait for service badges to load ..
@@ -1735,12 +1735,12 @@ class MCPTestAllowListB(Service):
 
         submit_create_form(page)
 
-        row_selector_a = f'#data-table tbody tr:has(td:text-is("{channel_name_a}"))'
+        row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
         page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
 
-        # .. create channel B restricted to service B ..
+        # .. create gateway B restricted to service B ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_b)
+        page.fill('#id_name', gateway_name_b)
         page.fill('#id_url_path', url_path_b)
 
         page.wait_for_function(
@@ -1761,29 +1761,29 @@ class MCPTestAllowListB(Service):
         )
 
         security_badge = page.query_selector(badge_selector)
-        assert security_badge is not None, f'Could not find security badge for "{security_name}" (channel B)'
+        assert security_badge is not None, f'Could not find security badge for "{security_name}" (gateway B)'
         security_badge.click()
 
         submit_create_form(page)
 
-        row_selector_b = f'#data-table tbody tr:has(td:text-is("{channel_name_b}"))'
+        row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
         page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
 
-        # .. verify channel A only exposes service A ..
+        # .. verify gateway A only exposes service A ..
         url_a = f'http://127.0.0.1:{server_port}{url_path_a}'
         auth = (security_username, security_password)
         headers = {'Content-Type': 'application/json'}
 
         request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url_a, data=request_body, headers=headers, auth=auth, timeout=10)
-        assert initialize_response.status_code == OK, f'Channel A initialize failed: {initialize_response.status_code}'
+        assert initialize_response.status_code == OK, f'Gateway A initialize failed: {initialize_response.status_code}'
 
         session_id_a = initialize_response.headers['Mcp-Session-Id']
         headers_a = {'Content-Type': 'application/json', 'Mcp-Session-Id': session_id_a}
 
         request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
         tools_response_a = requests.post(url_a, data=request_body, headers=headers_a, auth=auth, timeout=10)
-        assert tools_response_a.status_code == OK, f'Channel A tools/list failed: {tools_response_a.status_code}'
+        assert tools_response_a.status_code == OK, f'Gateway A tools/list failed: {tools_response_a.status_code}'
 
         json_body_a = tools_response_a.json()
         result_a = json_body_a['result']
@@ -1793,26 +1793,26 @@ class MCPTestAllowListB(Service):
         for tool in tools_a:
             tool_names_a.add(tool['name'])
 
-        logger.info('[test_two_channels_different_allow_lists] channel A tools: %s', tool_names_a)
+        logger.info('[test_two_gateways_different_allow_lists] gateway A tools: %s', tool_names_a)
 
         assert service_name_a in tool_names_a, \
-            f'Expected "{service_name_a}" in channel A tools, got: {tool_names_a}'
+            f'Expected "{service_name_a}" in gateway A tools, got: {tool_names_a}'
         assert service_name_b not in tool_names_a, \
-            f'Channel A should NOT expose "{service_name_b}", got: {tool_names_a}'
+            f'Gateway A should NOT expose "{service_name_b}", got: {tool_names_a}'
 
-        # .. verify channel B only exposes service B ..
+        # .. verify gateway B only exposes service B ..
         url_b = f'http://127.0.0.1:{server_port}{url_path_b}'
 
         request_body = make_jsonrpc_initialize()
         initialize_response = requests.post(url_b, data=request_body, headers=headers, auth=auth, timeout=10)
-        assert initialize_response.status_code == OK, f'Channel B initialize failed: {initialize_response.status_code}'
+        assert initialize_response.status_code == OK, f'Gateway B initialize failed: {initialize_response.status_code}'
 
         session_id_b = initialize_response.headers['Mcp-Session-Id']
         headers_b = {'Content-Type': 'application/json', 'Mcp-Session-Id': session_id_b}
 
         request_body = json.dumps({'jsonrpc': '2.0', 'method': 'tools/list', 'id': 2})
         tools_response_b = requests.post(url_b, data=request_body, headers=headers_b, auth=auth, timeout=10)
-        assert tools_response_b.status_code == OK, f'Channel B tools/list failed: {tools_response_b.status_code}'
+        assert tools_response_b.status_code == OK, f'Gateway B tools/list failed: {tools_response_b.status_code}'
 
         json_body_b = tools_response_b.json()
         result_b = json_body_b['result']
@@ -1822,16 +1822,16 @@ class MCPTestAllowListB(Service):
         for tool in tools_b:
             tool_names_b.add(tool['name'])
 
-        logger.info('[test_two_channels_different_allow_lists] channel B tools: %s', tool_names_b)
+        logger.info('[test_two_gateways_different_allow_lists] gateway B tools: %s', tool_names_b)
 
         assert service_name_b in tool_names_b, \
-            f'Expected "{service_name_b}" in channel B tools, got: {tool_names_b}'
+            f'Expected "{service_name_b}" in gateway B tools, got: {tool_names_b}'
         assert service_name_a not in tool_names_b, \
-            f'Channel B should NOT expose "{service_name_a}", got: {tool_names_b}'
+            f'Gateway B should NOT expose "{service_name_a}", got: {tool_names_b}'
 
-        # .. the channels must not outlive the hot-deployed services their allow lists reference,
+        # .. the gateways must not outlive the hot-deployed services their allow lists reference,
         # otherwise a fresh server start would fail rebuilding the MCP tool registries,
-        # so delete channel A first ..
+        # so delete gateway A first ..
         mcp_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}allow-'
         navigate_to_page(page, base_url, mcp_list_url)
 
@@ -1839,17 +1839,17 @@ class MCPTestAllowListB(Service):
         item_id_cell_a = row_a.query_selector('td[class*="item_id_"]')
         item_id_a = item_id_cell_a.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id_a}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_a}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         page.wait_for_selector(row_selector_a, state='hidden', timeout=5000)
 
-        # .. then delete channel B ..
+        # .. then delete gateway B ..
         row_b = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
         item_id_cell_b = row_b.query_selector('td[class*="item_id_"]')
         item_id_b = item_id_cell_b.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id_b}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_b}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         page.wait_for_selector(row_selector_b, state='hidden', timeout=5000)
@@ -1874,7 +1874,7 @@ class MCPTestAllowListB(Service):
 
 # ################################################################################################################################
 
-    def test_mcp_delete_channel(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_mcp_delete_gateway(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, deletes it via the UI confirm dialog,
         then verifies the row is gone from the table and the URL returns 404.
         """
@@ -1883,10 +1883,10 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'del'
+        gateway_name = _Test_Name_Prefix + 'del'
         url_path = '/mcp/delete-test/' + rand_string()
 
-        # Create a basic auth so we can verify the channel works before deletion ..
+        # Create a basic auth so we can verify the gateway works before deletion ..
         security_info = create_basic_auth(page, base_url, _Test_Name_Prefix, 'del')
         security_name = security_info['name']
         security_username = security_info['username']
@@ -1895,9 +1895,9 @@ class MCPTestAllowListB(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel ..
+        # .. create the gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1912,10 +1912,10 @@ class MCPTestAllowListB(Service):
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. verify the channel is live ..
+        # .. verify the gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK before delete, got {response.status_code}'
 
@@ -1923,8 +1923,8 @@ class MCPTestAllowListB(Service):
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        # .. delete the channel via UI ..
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        # .. delete the gateway via UI ..
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
 
@@ -1933,7 +1933,7 @@ class MCPTestAllowListB(Service):
 
         # .. verify the row is gone ..
         row_after_delete = page.query_selector(row_selector)
-        assert row_after_delete is None, f'Row "{channel_name}" should be gone after delete'
+        assert row_after_delete is None, f'Row "{gateway_name}" should be gone after delete'
 
         # .. verify the URL returns 404 ..
         page.wait_for_timeout(1000)
@@ -1943,7 +1943,7 @@ class MCPTestAllowListB(Service):
 
 # ################################################################################################################################
 
-    def test_mcp_delete_channel_cleans_channel_rest(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+    def test_mcp_delete_gateway_cleans_channel_rest(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, deletes it via the UI,
         then verifies no orphan REST channel with the same name remains in the ODB.
         """
@@ -1952,7 +1952,7 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'orphan'
+        gateway_name = _Test_Name_Prefix + 'orphan'
         url_path = '/mcp/orphan-test/' + rand_string()
 
         # Create a basic auth ..
@@ -1962,9 +1962,9 @@ class MCPTestAllowListB(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel ..
+        # .. create the gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -1979,7 +1979,7 @@ class MCPTestAllowListB(Service):
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. verify the REST channel exists before deletion ..
@@ -1995,17 +1995,17 @@ class MCPTestAllowListB(Service):
         found_before = False
 
         for item in rest_channels:
-            if item['name'] == channel_name:
+            if item['name'] == gateway_name:
                 found_before = True
                 break
 
-        assert found_before, f'REST channel "{channel_name}" should exist before deletion'
+        assert found_before, f'REST channel "{gateway_name}" should exist before deletion'
 
         # .. delete the MCP gateway ..
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         page.wait_for_selector(row_selector, state='hidden', timeout=5000)
@@ -2021,11 +2021,11 @@ class MCPTestAllowListB(Service):
         found_after = False
 
         for item in rest_channels:
-            if item['name'] == channel_name:
+            if item['name'] == gateway_name:
                 found_after = True
                 break
 
-        assert not found_after, f'Orphan REST channel "{channel_name}" still exists after MCP gateway deletion'
+        assert not found_after, f'Orphan REST channel "{gateway_name}" still exists after MCP gateway deletion'
 
 # ################################################################################################################################
 
@@ -2038,7 +2038,7 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'del-cancel'
+        gateway_name = _Test_Name_Prefix + 'del-cancel'
         url_path = '/mcp/delete-cancel/' + rand_string()
 
         # Create a basic auth ..
@@ -2050,9 +2050,9 @@ class MCPTestAllowListB(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel ..
+        # .. create the gateway ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -2067,7 +2067,7 @@ class MCPTestAllowListB(Service):
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. get the item id ..
@@ -2075,7 +2075,7 @@ class MCPTestAllowListB(Service):
         item_id = item_id_cell.inner_text().strip()
 
         # .. click delete but cancel ..
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_cancel')
 
@@ -2084,7 +2084,7 @@ class MCPTestAllowListB(Service):
 
         # .. verify the row is still there ..
         row_after_cancel = page.query_selector(row_selector)
-        assert row_after_cancel is not None, f'Row "{channel_name}" should still exist after cancel'
+        assert row_after_cancel is not None, f'Row "{gateway_name}" should still exist after cancel'
 
         # .. verify the URL still works ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
@@ -2101,29 +2101,29 @@ class MCPTestAllowListB(Service):
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        _channel_count = 45
+        _gateway_count = 45
         _page_size = 20
 
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create 45 channels ..
-        for idx in range(_channel_count):
-            channel_name = _Test_Name_Prefix + f'pag-{idx:02d}'
+        # .. create 45 gateways ..
+        for idx in range(_gateway_count):
+            gateway_name = _Test_Name_Prefix + f'pag-{idx:02d}'
             url_path = f'/mcp/pagination-{idx:02d}/' + rand_string()
 
             open_create_dialog(page)
-            page.fill('#id_name', channel_name)
+            page.fill('#id_name', gateway_name)
             page.fill('#id_url_path', url_path)
             submit_create_form(page)
 
-            row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+            row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
             page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        logger.info('[test_mcp_list_pagination] created %d channels', _channel_count)
+        logger.info('[test_mcp_list_pagination] created %d gateways', _gateway_count)
 
-        # .. reload to get a fresh paginated view, filtered to this test's channels only,
-        # otherwise channels left over from other tests in this file would add extra pages ..
+        # .. reload to get a fresh paginated view, filtered to this test's gateways only,
+        # otherwise gateways left over from other tests in this file would add extra pages ..
         pagination_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}pag-'
         navigate_to_page(page, base_url, pagination_list_url)
         page.wait_for_selector('#data-table', state='visible', timeout=5000)
@@ -2202,7 +2202,7 @@ class MCPTestAllowListB(Service):
 # ################################################################################################################################
 
     def test_mcp_list_search(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates channels with distinct name suffixes, uses the search box to filter,
+        """ Creates gateways with distinct name suffixes, uses the search box to filter,
         and verifies only matching rows appear in the table.
         """
 
@@ -2210,28 +2210,28 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
 
         unique_token = rand_string()
-        channel_name_match = _Test_Name_Prefix + 'srch-' + unique_token
-        channel_name_other = _Test_Name_Prefix + 'srch-other'
+        gateway_name_match = _Test_Name_Prefix + 'srch-' + unique_token
+        gateway_name_other = _Test_Name_Prefix + 'srch-other'
 
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create a channel with the unique token in its name ..
+        # .. create a gateway with the unique token in its name ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_match)
+        page.fill('#id_name', gateway_name_match)
         page.fill('#id_url_path', '/mcp/search-match/' + rand_string())
         submit_create_form(page)
 
-        row_selector_match = f'#data-table tbody tr:has(td:text-is("{channel_name_match}"))'
+        row_selector_match = f'#data-table tbody tr:has(td:text-is("{gateway_name_match}"))'
         page.wait_for_selector(row_selector_match, state='visible', timeout=5000)
 
-        # .. create another channel without the token ..
+        # .. create another gateway without the token ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name_other)
+        page.fill('#id_name', gateway_name_other)
         page.fill('#id_url_path', '/mcp/search-other/' + rand_string())
         submit_create_form(page)
 
-        row_selector_other = f'#data-table tbody tr:has(td:text-is("{channel_name_other}"))'
+        row_selector_other = f'#data-table tbody tr:has(td:text-is("{gateway_name_other}"))'
         page.wait_for_selector(row_selector_other, state='visible', timeout=5000)
 
         # .. search for the unique token ..
@@ -2242,13 +2242,13 @@ class MCPTestAllowListB(Service):
         page.click('input[type="submit"][value="Show gateways"]')
         page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
-        # .. the matching channel should appear ..
+        # .. the matching gateway should appear ..
         row_match = page.query_selector(row_selector_match)
-        assert row_match is not None, f'Channel "{channel_name_match}" should appear in search results'
+        assert row_match is not None, f'Gateway "{gateway_name_match}" should appear in search results'
 
-        # .. the other channel should not ..
+        # .. the other gateway should not ..
         row_other = page.query_selector(row_selector_other)
-        assert row_other is None, f'Channel "{channel_name_other}" should NOT appear when searching for "{unique_token}"'
+        assert row_other is None, f'Gateway "{gateway_name_other}" should NOT appear when searching for "{unique_token}"'
 
 # ################################################################################################################################
 
@@ -2262,7 +2262,7 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'lifecycle'
+        gateway_name = _Test_Name_Prefix + 'lifecycle'
         url_path = '/mcp/lifecycle/' + rand_string()
         new_name = _Test_Name_Prefix + 'lifecycle-renamed'
         new_url_path = '/mcp/lifecycle-renamed/' + rand_string()
@@ -2282,7 +2282,7 @@ class MCPTestAllowListB(Service):
 
         # 1. CREATE with security ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
         page.wait_for_function(
@@ -2297,7 +2297,7 @@ class MCPTestAllowListB(Service):
 
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # 2. POST with member creds -> 200 ..
@@ -2308,7 +2308,7 @@ class MCPTestAllowListB(Service):
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         page.fill('#edit-div #id_edit-name', new_name)
@@ -2332,7 +2332,7 @@ class MCPTestAllowListB(Service):
 
         # 7. EDIT DEACTIVATE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.uncheck('#edit-div #id_edit-is_active')
         submit_edit_form(page)
@@ -2343,7 +2343,7 @@ class MCPTestAllowListB(Service):
 
         # 9. EDIT REACTIVATE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.check('#edit-div #id_edit-is_active')
         submit_edit_form(page)
@@ -2354,7 +2354,7 @@ class MCPTestAllowListB(Service):
 
         # 11. DELETE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
-        page.evaluate(f'$.fn.zato.channel.mcp.delete_("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
         page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         page.wait_for_selector(new_row_selector, state='hidden', timeout=5000)
@@ -2367,7 +2367,7 @@ class MCPTestAllowListB(Service):
 # ################################################################################################################################
 
     def test_mcp_concurrent_edit_via_ui_and_api(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates a channel via UI, edits its url_path via the API, refreshes the UI page,
+        """ Creates a gateway via UI, edits its url_path via the API, refreshes the UI page,
         asserts the new url_path is displayed in the table, then edits via UI again
         to confirm no stale data issues.
         """
@@ -2376,7 +2376,7 @@ class MCPTestAllowListB(Service):
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        channel_name = _Test_Name_Prefix + 'conc-edit'
+        gateway_name = _Test_Name_Prefix + 'conc-edit'
         original_url_path = '/mcp/concurrent-original/' + rand_string()
         api_url_path = '/mcp/concurrent-api/' + rand_string()
         ui_url_path = '/mcp/concurrent-ui/' + rand_string()
@@ -2384,39 +2384,39 @@ class MCPTestAllowListB(Service):
         # .. navigate to MCP gateways ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
-        # .. create the channel via UI ..
+        # .. create the gateway via UI ..
         open_create_dialog(page)
-        page.fill('#id_name', channel_name)
+        page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', original_url_path)
         submit_create_form(page)
 
-        row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+        row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
         page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
-        # .. get the channel's ID from the API ..
+        # .. get the gateway's ID from the API ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
         api_auth = ('admin.invoke', zato_dashboard['password'])
         api_headers = {'Content-Type': 'application/json'}
-        api_payload = json.dumps({'cluster_id': 1, 'type_': 'channel-mcp'})
+        api_payload = json.dumps({'cluster_id': 1, 'type_': 'gateway-mcp'})
 
         list_response = requests.post(api_url, data=api_payload, headers=api_headers, auth=api_auth, timeout=10)
         assert list_response.status_code == OK, f'get-list failed: {list_response.status_code}'
 
-        channel_data = None
+        gateway_data = None
         for item in list_response.json():
-            if item['name'] == channel_name:
-                channel_data = item
+            if item['name'] == gateway_name:
+                gateway_data = item
                 break
 
-        assert channel_data is not None, f'Channel "{channel_name}" not found via API'
-        channel_id = channel_data['id']
+        assert gateway_data is not None, f'Gateway "{gateway_name}" not found via API'
+        gateway_id = gateway_data['id']
 
         # .. edit url_path via API ..
         edit_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.edit'
         edit_payload = json.dumps({
-            'id': channel_id,
-            'name': channel_name,
-            'type_': 'channel-mcp',
+            'id': gateway_id,
+            'name': gateway_name,
+            'type_': 'gateway-mcp',
             'is_active': True,
             'is_internal': False,
             'is_channel': True,
@@ -2449,7 +2449,7 @@ class MCPTestAllowListB(Service):
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
-        page.evaluate(f'$.fn.zato.channel.mcp.edit("{item_id}")')
+        page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
         page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         page.fill('#edit-div #id_edit-url_path', ui_url_path)

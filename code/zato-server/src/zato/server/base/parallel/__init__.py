@@ -996,50 +996,50 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _create_mcp_channels(self) -> 'None':
-        """ Creates wrappers for all the MCP channels found in the configuration store.
-        MCP channels are skipped in init_generic_connections because their tool registries
+    def _create_mcp_gateways(self) -> 'None':
+        """ Creates wrappers for all the MCP gateways found in the configuration store.
+        MCP gateways are skipped in init_generic_connections because their tool registries
         can only resolve services once all of them are deployed, which is why the wrappers
         are built here instead - after deployment at startup and on each config reload.
         """
 
-        # Names of the MCP channels that exist in the configuration store ..
-        config_channel_names = set()
+        # Names of the MCP gateways that exist in the configuration store ..
+        config_gateway_names = set()
 
-        # .. create or recreate a wrapper for each MCP channel found there ..
+        # .. create or recreate a wrapper for each MCP gateway found there ..
         for config_dict in self.config_manager.config_store.generic_connection.values():
 
             config = config_dict['config']
             config_type = config['type_']
 
-            if config_type == GENERIC.CONNECTION.TYPE.CHANNEL_MCP:
-                config_channel_names.add(config['name'])
+            if config_type == GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
+                config_gateway_names.add(config['name'])
                 config_as_bunch = bunchify(config)
                 self.config_manager._create_generic_connection(config_as_bunch)
 
-        # .. and drop the wrappers of channels that no longer exist in the configuration store.
-        channel_mcp = self.config_manager.channel_mcp
-        removed_names = set(channel_mcp) - config_channel_names
+        # .. and drop the wrappers of gateways that no longer exist in the configuration store.
+        gateway_mcp = self.config_manager.gateway_mcp
+        removed_names = set(gateway_mcp) - config_gateway_names
 
         for name in removed_names:
-            channel_config = channel_mcp.pop(name)
-            channel_config.conn.delete()
+            gateway_config = gateway_mcp.pop(name)
+            gateway_config.conn.delete()
 
 # ################################################################################################################################
 
     def _build_mcp_tool_registries(self) -> 'None':
-        """ Creates MCP channel wrappers and builds their tool registries.
+        """ Creates MCP gateway wrappers and builds their tool registries.
         Called after all services (internal and user-defined) are deployed,
         so rebuild() can resolve every service on the allow list.
         """
 
-        # Create the MCP channel wrappers that were skipped during init_generic_connections ..
-        self._create_mcp_channels()
+        # Create the MCP gateway wrappers that were skipped during init_generic_connections ..
+        self._create_mcp_gateways()
 
         # .. now all wrappers exist with their registries populated,
         # spawn a single reaper greenlet to periodically clean up expired sessions ..
-        channel_mcp_dict = self.config_manager.channel_mcp
-        self._mcp_session_reaper = MCPSessionReaper(channel_mcp_dict)
+        gateway_mcp_dict = self.config_manager.gateway_mcp
+        self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
 
         _ = spawn(self._mcp_session_reaper.run)
 
@@ -1744,12 +1744,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         from contextlib import closing
         from zato.common.util.channel import ensure_as2_channel_exists, ensure_as2_mdn_channel_exists, \
-            ensure_mcp_channel_exists, ensure_openapi_channel_exists
+            ensure_openapi_channel_exists
+        from zato.common.util.gateway import ensure_mcp_gateway_exists
         from zato.common.util.scheduler import ensure_as2_rotation_job_exists, ensure_b2b_alerting_job_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            mcp_created = ensure_mcp_channel_exists(session, self.cluster_id)
+            mcp_created = ensure_mcp_gateway_exists(session, self.cluster_id)
 
             # The job completing AS2 certificate rotations always lives in the main ODB,
             # no matter where the AS2 connections themselves are stored.
@@ -1765,7 +1766,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 logger.info('Created OpenAPI handler channel')
 
             if mcp_created:
-                logger.info('Created MCP handler channel')
+                logger.info('Created MCP gateway')
 
             if as2_rotation_job_created:
                 logger.info('Created AS2 rotation completion job')
@@ -1882,10 +1883,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager.init()
         self.config_manager.init_pubsub()
 
-        # .. MCP channels are skipped in init_generic_connections, and by the time
+        # .. MCP gateways are skipped in init_generic_connections, and by the time
         # a config reload runs, all services are already deployed, so their wrappers
         # and tool registries can be rebuilt here ..
-        self._create_mcp_channels()
+        self._create_mcp_gateways()
 
         # .. reload pub/sub permissions from database ..
         self._load_pubsub_permissions()

@@ -35,7 +35,7 @@ _default_session_ttl = 1800
 # Default absolute max session lifetime in seconds (24 hours)
 _default_max_lifetime = 86400
 
-# Default maximum sessions per sec_def per channel
+# Default maximum sessions per sec_def per gateway
 _default_max_sessions = 100
 
 # Validation result constants
@@ -245,12 +245,12 @@ _default_reaper_interval = 60
 # ################################################################################################################################
 
 class MCPSessionReaper:
-    """ Periodically sweeps all MCP channel session managers to remove expired sessions.
-    One instance per server process, spawned as a gevent greenlet after MCP channels are built.
+    """ Periodically sweeps all MCP gateway session managers to remove expired sessions.
+    One instance per server process, spawned as a gevent greenlet after MCP gateways are built.
     """
 
-    def __init__(self, channel_mcp_dict:'anydict', interval:'int' = _default_reaper_interval) -> 'None':
-        self.channel_mcp_dict = channel_mcp_dict
+    def __init__(self, gateway_mcp_dict:'anydict', interval:'int' = _default_reaper_interval) -> 'None':
+        self.gateway_mcp_dict = gateway_mcp_dict
         self.interval = interval
         self.keep_running = True
 
@@ -274,28 +274,28 @@ class MCPSessionReaper:
 # ################################################################################################################################
 
     def _sweep(self) -> 'None':
-        """ Iterates over all MCP channel wrappers and cleans up expired sessions.
+        """ Iterates over all MCP gateway wrappers and cleans up expired sessions.
         """
 
-        # Walk each channel config, reaching the wrapper through its .conn attribute ..
-        for channel_config in self.channel_mcp_dict.values():
+        # Walk each gateway config, reaching the wrapper through its .conn attribute ..
+        for gateway_config in self.gateway_mcp_dict.values():
 
-            wrapper = channel_config.conn
+            wrapper = gateway_config.conn
 
-            # .. skip channels that were deleted mid-sweep and have no handler anymore ..
+            # .. skip gateways that were deleted mid-sweep and have no handler anymore ..
             handler = wrapper.handler
 
             if handler is None:
                 continue
 
-            # .. run cleanup on the channel's session manager ..
+            # .. run cleanup on the gateway's session manager ..
             session_manager = handler.session_manager
             removed = session_manager.cleanup_expired()
 
             # .. log how many were removed, if any.
             if removed:
-                channel_name = wrapper.config.name
-                logger.info('MCP: Reaper removed %d expired session(s) from channel `%s`', removed, channel_name)
+                gateway_name = wrapper.config.name
+                logger.info('MCP: Reaper removed %d expired session(s) from gateway `%s`', removed, gateway_name)
 
 # ################################################################################################################################
 

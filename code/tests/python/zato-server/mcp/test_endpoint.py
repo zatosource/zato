@@ -14,9 +14,9 @@ from unittest import TestCase
 from zato.common.json_internal import dumps, loads
 from zato.common.test import _test_sec_def_id
 from zato.server.connection.mcp.handler import _mcp_protocol_version, MCPHandler
-from zato.server.generic.api.channel_mcp import ChannelMCPWrapper
-from zato.server.service.internal.channel import mcp as mcp_endpoint_module
-from zato.server.service.internal.channel.mcp import MCPEndpoint
+from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
+from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
+from zato.server.service.internal.gateway.mcp import MCPEndpoint
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,7 +67,7 @@ class _MockBunch(dict):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPWrapperBuild(TestCase):
+class GatewayMCPWrapperBuild(TestCase):
 
     def test_build_wrapper_creates_handler(self) -> 'None':
         """ Verifies that build_wrapper creates an MCPHandler instance.
@@ -77,11 +77,11 @@ class ChannelMCPWrapperBuild(TestCase):
         server.service_store.add_service('crm.get-customer')
 
         config = _MockBunch({
-            'name': 'test-mcp-channel',
+            'name': 'test-mcp-gateway',
             'services': ['crm.get-customer'],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -94,10 +94,10 @@ class ChannelMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'empty-channel',
+            'name': 'empty-gateway',
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -109,11 +109,11 @@ class ChannelMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'empty-services-channel',
+            'name': 'empty-services-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -129,11 +129,11 @@ class ChannelMCPWrapperBuild(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'delete-channel',
+            'name': 'delete-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         self.assertIsNotNone(wrapper.handler)
@@ -145,7 +145,7 @@ class ChannelMCPWrapperBuild(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPWrapperInvoke(TestCase):
+class GatewayMCPWrapperInvoke(TestCase):
 
     def test_invoke_service_through_wrapper(self) -> 'None':
         """ Verifies that a service can be invoked through the wrapper handler.
@@ -156,11 +156,11 @@ class ChannelMCPWrapperInvoke(TestCase):
         server._invoke_responses['crm.get-customer'] = {'name': 'Test Customer'}
 
         config = _MockBunch({
-            'name': 'invoke-channel',
+            'name': 'invoke-gateway',
             'services': ['crm.get-customer'],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
@@ -251,10 +251,10 @@ class _MockResponse:
 # ################################################################################################################################
 
 class _MockConfigManager:
-    """ Mock of the server's config manager holding MCP channel configs.
+    """ Mock of the server's config manager holding MCP gateway configs.
     """
     def __init__(self) -> 'None':
-        self.channel_mcp = {}
+        self.gateway_mcp = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -268,21 +268,21 @@ class _MockEndpointServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_endpoint(channel_name:'str', wrapper:'ChannelMCPWrapper') -> 'MCPEndpoint':
+def _make_endpoint(gateway_name:'str', wrapper:'GatewayMCPWrapper') -> 'MCPEndpoint':
     """ Builds an MCPEndpoint with only the attributes that handle() uses,
     bypassing the full service initialization machinery.
     """
 
     endpoint = MCPEndpoint.__new__(MCPEndpoint)
 
-    endpoint.channel = _MockChannel(channel_name) # pyright: ignore[reportAttributeAccessIssue]
+    endpoint.channel = _MockChannel(gateway_name) # pyright: ignore[reportAttributeAccessIssue]
     endpoint.request = _MockRequest() # pyright: ignore[reportAttributeAccessIssue]
     endpoint.response = _MockResponse() # pyright: ignore[reportAttributeAccessIssue]
     endpoint.wsgi_environ = {'zato.http.remote_addr': '127.0.0.1'}
 
     server = _MockEndpointServer()
-    channel_config = _MockBunch({'conn': wrapper})
-    server.config_manager.channel_mcp[channel_name] = channel_config
+    gateway_config = _MockBunch({'conn': wrapper})
+    server.config_manager.gateway_mcp[gateway_name] = gateway_config
     endpoint.server = server # pyright: ignore[reportAttributeAccessIssue]
 
     out = endpoint
@@ -310,18 +310,18 @@ class MCPEndpointOriginValidation(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'origin-channel',
+            'name': 'origin-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
-        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
@@ -337,18 +337,18 @@ class MCPEndpointOriginValidation(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'origin-channel',
+            'name': 'origin-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
-        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.http.headers['origin'] = 'https://evil.example.com'
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
@@ -359,25 +359,25 @@ class MCPEndpointOriginValidation(TestCase):
         self.assertEqual(endpoint.response.payload, '')
 
     def test_request_with_allowed_origin_accepted(self) -> 'None':
-        """ A request carrying an Origin that is on the channel's allow list is processed.
+        """ A request carrying an Origin that is on the gateway's allow list is processed.
         """
 
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'origin-channel',
+            'name': 'origin-gateway',
             'services': [],
             'allowed_origins': ['https://app.example.com'],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
-        endpoint = _make_endpoint('origin-channel', wrapper)
+        endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.http.headers['origin'] = 'https://app.example.com'
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
@@ -391,7 +391,7 @@ class MCPEndpointOriginValidation(TestCase):
 
 class MCPEndpointNoHandler(TestCase):
     """ Tests requests arriving when the wrapper has no handler,
-    which happens when the channel is not built yet, its build failed,
+    which happens when the gateway is not built yet, its build failed,
     or it is being deleted.
     """
 
@@ -403,18 +403,18 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'deleted-channel',
+            'name': 'deleted-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
-        # Simulate the channel being deleted while a request is in flight ..
+        # Simulate the gateway being deleted while a request is in flight ..
         wrapper.delete()
 
         # .. a request arriving now must get a clean 404 ..
-        endpoint = _make_endpoint('deleted-channel', wrapper)
+        endpoint = _make_endpoint('deleted-gateway', wrapper)
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
@@ -430,15 +430,15 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'deleted-channel',
+            'name': 'deleted-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
         wrapper.delete()
 
-        endpoint = _make_endpoint('deleted-channel', wrapper)
+        endpoint = _make_endpoint('deleted-gateway', wrapper)
         endpoint.request.http.method = 'DELETE'
 
         endpoint.handle()
@@ -454,15 +454,15 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'unbuilt-channel',
+            'name': 'unbuilt-gateway',
             'services': [],
         })
 
         # The wrapper exists but build_wrapper was never called, so there is no handler ..
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
 
         # .. a request arriving now must get a clean 404 ..
-        endpoint = _make_endpoint('unbuilt-channel', wrapper)
+        endpoint = _make_endpoint('unbuilt-gateway', wrapper)
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
@@ -478,18 +478,18 @@ class MCPEndpointNoHandler(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'live-channel',
+            'name': 'live-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         assert wrapper.handler is not None
         session_manager = wrapper.handler.session_manager
         session_id = session_manager.create(_mcp_protocol_version, _test_sec_def_id)
 
-        endpoint = _make_endpoint('live-channel', wrapper)
+        endpoint = _make_endpoint('live-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
@@ -516,11 +516,11 @@ class MCPEndpointServiceDispatch(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'test-channel',
+            'name': 'test-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         request = {
@@ -548,11 +548,11 @@ class MCPEndpointServiceDispatch(TestCase):
         server = _MockServer()
 
         config = _MockBunch({
-            'name': 'test-channel',
+            'name': 'test-gateway',
             'services': [],
         })
 
-        wrapper = ChannelMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
+        wrapper = GatewayMCPWrapper(config, server) # pyright: ignore[reportArgumentType]
         wrapper.build_wrapper()
 
         batch = [

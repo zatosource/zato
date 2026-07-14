@@ -12,7 +12,7 @@ from unittest import TestCase
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.server.service.internal.generic import connection as conn_module
-from zato.common.util.channel import on_mcp_channel_create_edit
+from zato.common.util.gateway import on_mcp_gateway_create_edit
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,17 +29,17 @@ class HookRegistration(TestCase):
 
 # ################################################################################################################################
 
-    def test_hook_registered_for_channel_mcp(self) -> 'None':
-        """ Verifies that the hook dict contains the MCP channel type.
+    def test_hook_registered_for_gateway_mcp(self) -> 'None':
+        """ Verifies that the hook dict contains the MCP gateway type.
         """
 
         # The hook dict must contain our type ..
         hook = conn_module.hook
-        mcp_type = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP
+        mcp_type = COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP
 
         # .. and it must point to the correct function.
         self.assertIn(mcp_type, hook)
-        self.assertIs(hook[mcp_type], on_mcp_channel_create_edit)
+        self.assertIs(hook[mcp_type], on_mcp_gateway_create_edit)
 
 # ################################################################################################################################
 
@@ -55,7 +55,7 @@ class HookRegistration(TestCase):
 # ################################################################################################################################
 
 class InstanceHookDispatch(TestCase):
-    """ Tests that instance_hook only calls on_mcp_channel_delete for MCP types.
+    """ Tests that instance_hook only calls on_mcp_gateway_delete for MCP types.
     """
 
 # ################################################################################################################################
@@ -64,14 +64,14 @@ class InstanceHookDispatch(TestCase):
         """ Verifies that instance_hook does not call delete for non-MCP types.
         """
 
-        # Track whether on_mcp_channel_delete was called ..
+        # Track whether on_mcp_gateway_delete was called ..
         calls = []
-        original = conn_module.on_mcp_channel_delete
+        original = conn_module.on_mcp_gateway_delete
 
-        def _mock_delete(service:'any_', session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
-            calls.append((service, session, channel_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', gateway_name:'str', cluster_id:'int') -> 'None':
+            calls.append((service, session, gateway_name, cluster_id))
 
-        conn_module.on_mcp_channel_delete = _mock_delete
+        conn_module.on_mcp_gateway_delete = _mock_delete
 
         class _MockInstance:
             type_ = 'channel-kafka'
@@ -84,7 +84,7 @@ class InstanceHookDispatch(TestCase):
         try:
             conn_module.instance_hook(None, {}, _MockInstance(), _MockAttrs())
         finally:
-            conn_module.on_mcp_channel_delete = original
+            conn_module.on_mcp_gateway_delete = original
 
         # .. must not have been called for non-MCP types.
         self.assertEqual(len(calls), 0)
@@ -92,14 +92,14 @@ class InstanceHookDispatch(TestCase):
 # ################################################################################################################################
 
     def test_instance_hook_calls_delete_for_mcp(self) -> 'None':
-        """ Verifies that instance_hook calls delete for MCP channel types.
+        """ Verifies that instance_hook calls delete for MCP gateway types.
         """
 
-        # Track whether on_mcp_channel_delete was called ..
+        # Track whether on_mcp_gateway_delete was called ..
         calls = []
 
         class _MockInstance:
-            type_ = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_MCP
+            type_ = COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP
             name = 'my-mcp'
             cluster_id = 1
 
@@ -107,17 +107,17 @@ class InstanceHookDispatch(TestCase):
             _meta_session = 'fake-session'
 
         # .. patch the delete function temporarily ..
-        original = conn_module.on_mcp_channel_delete
+        original = conn_module.on_mcp_gateway_delete
 
-        def _mock_delete(service:'any_', session:'any_', channel_name:'str', cluster_id:'int') -> 'None':
-            calls.append((service, session, channel_name, cluster_id))
+        def _mock_delete(service:'any_', session:'any_', gateway_name:'str', cluster_id:'int') -> 'None':
+            calls.append((service, session, gateway_name, cluster_id))
 
-        conn_module.on_mcp_channel_delete = _mock_delete
+        conn_module.on_mcp_gateway_delete = _mock_delete
 
         try:
             conn_module.instance_hook(None, {}, _MockInstance(), _MockAttrs())
         finally:
-            conn_module.on_mcp_channel_delete = original
+            conn_module.on_mcp_gateway_delete = original
 
         # .. verify the call was made with the correct arguments.
         self.assertEqual(len(calls), 1)

@@ -44,7 +44,7 @@ def session_id(client:'MCPClient') -> 'Iterator[str]':
 # ################################################################################################################################
 
 class TestACL:
-    """ Tests for access control list enforcement on MCP channels.
+    """ Tests for access control list enforcement on MCP gateways.
     """
 
     def test_internal_service_rejected(self, client:'MCPClient', session_id:'str') -> 'None':
@@ -63,7 +63,7 @@ class TestACL:
 # ################################################################################################################################
 
     def test_unlisted_service_rejected(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ Calling a service not in the channel's allow list returns tool-not-found.
+        """ Calling a service not in the gateway's allow list returns tool-not-found.
         """
 
         params = {'name': 'my.private.service', 'arguments': {}}
@@ -95,7 +95,7 @@ class TestACL:
 # ################################################################################################################################
 
     def test_tools_list_only_shows_allow_listed_services(self, client:'MCPClient', session_id:'str') -> 'None':
-        """ The tools/list response must only show services from the channel's allow list.
+        """ The tools/list response must only show services from the gateway's allow list.
         """
 
         response = client.jsonrpc('tools/list', session_id=session_id)
@@ -103,7 +103,7 @@ class TestACL:
         result = json_body['result']
         tools = result['tools']
 
-        # The default channel allows demo.echo and test.raise ..
+        # The default gateway allows demo.echo and test.raise ..
         tool_names = []
 
         for tool in tools:

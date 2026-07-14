@@ -31,7 +31,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/mcp.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
@@ -65,12 +65,12 @@
         <div id="markup">
             <h2 class="zato">MCP gateways</h2>
 
-{% with has_generic="1" generic_type="channel-mcp" %}
+{% with has_generic="1" generic_type="gateway-mcp" %}
     {% include "zato/search-form.html" with page_prompt="Show gateways" %}
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.mcp.create()">Create a new MCP gateway</a>
+            <a href="javascript:$.fn.zato.gateway.mcp.create()">Create a new MCP gateway</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -101,9 +101,9 @@
                         <td>{{ item.url_path }}</td>
                         <td class="text-center" id="service_count_{{ item.id }}">{{ item.services|length }}</td>
                         <td class="text-center" id="security_count_{{ item.id }}">{{ item.security_member_count }}</td>
-                        <td><a href="{% url "channel-mcp-export" item.id %}">Export</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.mcp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.mcp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="{% url "gateway-mcp-export" item.id %}">Export</a></td>
+                        <td><a href="javascript:$.fn.zato.gateway.mcp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.gateway.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                     </tr>
@@ -122,7 +122,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "channel-mcp-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url "gateway-mcp-create" %}" method="post" id="create-form">
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
@@ -332,7 +332,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "channel-mcp-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url "gateway-mcp-edit" %}" method="post" id="edit-form">
 
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>

@@ -35,7 +35,7 @@ from zato.cli.enmasse.importers.outgoing_hl7_mllp import OutgoingHL7MLLPImporter
 from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
-from zato.cli.enmasse.importers.mcp import ChannelMCPImporter
+from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
@@ -127,7 +127,7 @@ class EnmasseYAMLImporter:
         self.outgoing_hl7_mllp_defs = {}
         self.channel_ibm_mq_defs = {}
         self.channel_kafka_defs = {}
-        self.channel_mcp_defs = {}
+        self.gateway_mcp_defs = {}
         self.outgoing_graphql_defs = {}
         self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
@@ -173,7 +173,7 @@ class EnmasseYAMLImporter:
         self.outgoing_hl7_mllp_importer = OutgoingHL7MLLPImporter(self)
         self.channel_ibm_mq_importer = ChannelIBMMQImporter(self)
         self.channel_kafka_importer = ChannelKafkaImporter(self)
-        self.channel_mcp_importer = ChannelMCPImporter(self)
+        self.gateway_mcp_importer = GatewayMCPImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
@@ -876,19 +876,19 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_channel_mcp(self, channel_mcp_list:'list', session:'SASession') -> 'tuple':
-        if not channel_mcp_list:
+    def sync_gateway_mcp(self, gateway_mcp_list:'list', session:'SASession') -> 'tuple':
+        if not gateway_mcp_list:
             return [], []
 
-        count = len(channel_mcp_list)
+        count = len(gateway_mcp_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} MCP gateway {noun}')
 
-        for idx, item in enumerate(channel_mcp_list):
+        for idx, item in enumerate(gateway_mcp_list):
             logger.info('MCP gateway item %d: %s', idx, item)
 
-        created, updated = self.channel_mcp_importer.sync_definitions(channel_mcp_list, session)
-        self.channel_mcp_defs = self.channel_mcp_importer.connection_defs
+        created, updated = self.gateway_mcp_importer.sync_definitions(gateway_mcp_list, session)
+        self.gateway_mcp_defs = self.gateway_mcp_importer.connection_defs
         logger.info('Processed MCP gateway definitions: created=%d updated=%d', len(created), len(updated))
 
         return created, updated
@@ -1346,12 +1346,12 @@ class EnmasseYAMLImporter:
             self.updated_objects['channel_kafka'] = channel_kafka_updated
 
         # Process MCP gateway definitions
-        channel_mcp_list = yaml_config.get('mcp_gateway', [])
-        channel_mcp_created, channel_mcp_updated = self.sync_channel_mcp(channel_mcp_list, session)
-        if channel_mcp_created:
-            self.created_objects['mcp_gateway'] = channel_mcp_created
-        if channel_mcp_updated:
-            self.updated_objects['mcp_gateway'] = channel_mcp_updated
+        gateway_mcp_list = yaml_config.get('mcp_gateway', [])
+        gateway_mcp_created, gateway_mcp_updated = self.sync_gateway_mcp(gateway_mcp_list, session)
+        if gateway_mcp_created:
+            self.created_objects['mcp_gateway'] = gateway_mcp_created
+        if gateway_mcp_updated:
+            self.updated_objects['mcp_gateway'] = gateway_mcp_updated
 
         # Process Kafka outgoing definitions
         outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])

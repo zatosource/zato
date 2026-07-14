@@ -38,7 +38,7 @@ _default_page_size = 100
 
 class ToolRegistry:
     """ Builds and caches the MCP tools/list response for a given set of allowed services.
-    Each MCP channel has its own ToolRegistry instance with its own allow list.
+    Each MCP gateway has its own ToolRegistry instance with its own allow list.
     """
     def __init__(self, service_store:'ServiceStore', allowed_services:'strlist') -> 'None':
         self.service_store = service_store

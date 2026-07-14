@@ -53,11 +53,11 @@ logger = logging.getLogger(__name__)
 
 _Test_Name_Prefix = 'test.bearer.mcp.' + CryptoManager.generate_hex_string(32) + '.'
 
-_MCP_Page_Url = '/zato/channel/mcp/?cluster=1'
+_MCP_Page_Url = '/zato/gateway/mcp/?cluster=1'
 
 _Echo_Service = 'demo.echo'
 
-# MCP gateways auto-create their security group under this prefix followed by the channel name
+# MCP gateways auto-create their security group under this prefix followed by the gateway name
 _MCP_Group_Name_Prefix = 'mcp.'
 
 # How long to wait for a UI change to propagate to live MCP enforcement, in seconds
@@ -131,7 +131,7 @@ def _initialize_until_status(server_port:'int', url_path:'str', token:'strnone',
 
 # ################################################################################################################################
 
-def _create_mcp_gateway(page:'Page', base_url:'str', channel_name:'str', url_path:'str') -> 'None':
+def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_path:'str') -> 'None':
     """ Creates an MCP gateway via the UI with the echo service assigned through the badge picker.
     """
 
@@ -142,7 +142,7 @@ def _create_mcp_gateway(page:'Page', base_url:'str', channel_name:'str', url_pat
     open_create_dialog(page)
 
     # .. fill in the basic fields ..
-    page.fill('#id_name', channel_name)
+    page.fill('#id_name', gateway_name)
     page.fill('#id_url_path', url_path)
 
     # .. assign the echo service via its badge ..
@@ -154,7 +154,7 @@ def _create_mcp_gateway(page:'Page', base_url:'str', channel_name:'str', url_pat
     submit_create_form(page)
 
     # .. and wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{channel_name}"))'
+    row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
     _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
@@ -179,7 +179,7 @@ class TestBearerTokenMCPGateway:
         server_port = zato_dashboard['server_port']
 
         definition_name = _Test_Name_Prefix + 'accounting'
-        channel_name = _Test_Name_Prefix + 'gateway'
+        gateway_name = _Test_Name_Prefix + 'gateway'
         url_path = '/mcp/test/bearer/' + CryptoManager.generate_hex_string()
 
         # Create the definition pointing to Keycloak, filtered to the Accounting department ..
@@ -193,10 +193,10 @@ class TestBearerTokenMCPGateway:
         })
 
         # .. create the gateway, which auto-creates its own security group ..
-        _create_mcp_gateway(page, base_url, channel_name, url_path)
+        _create_mcp_gateway(page, base_url, gateway_name, url_path)
 
         # .. and put the definition into that group.
-        group_name = _MCP_Group_Name_Prefix + channel_name
+        group_name = _MCP_Group_Name_Prefix + gateway_name
         edit_group_members(page, base_url, group_name, add_names=[definition_name])
 
         # A matching token now completes the initialize flow ..

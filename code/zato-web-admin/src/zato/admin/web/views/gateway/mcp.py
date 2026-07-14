@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from django.http import HttpResponse
 
 # Zato
-from zato.admin.web.forms.channel.mcp import CreateForm, EditForm
+from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import API_Key, GENERIC, Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.defaults import http_plain_server_port
@@ -41,7 +41,7 @@ _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
 
-# The JSON Schema that exported MCP channel documents conform to
+# The JSON Schema that exported MCP gateway documents conform to
 _export_schema_url = 'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json'
 
 # The version of the exported document
@@ -80,8 +80,8 @@ _sec_type_to_export_header = {
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'channel-mcp'
-    template = 'zato/channel/mcp.html'
+    url_name = 'gateway-mcp'
+    template = 'zato/gateway/mcp.html'
     service_name = 'zato.generic.connection.get-list'
     output_class = Bunch
     paginate = True
@@ -95,7 +95,7 @@ class Index(_Index):
 
         # The type is constant for this page so it is not expected in the URL,
         # it is always added to the service request here instead.
-        return {'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP}
+        return {'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP}
 
     def on_before_append_item(self, item:'any_') -> 'any_':
 
@@ -132,7 +132,7 @@ class _CreateEdit(CreateEdit):
     output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict:'strdict') -> 'None':
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_MCP
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.GATEWAY_MCP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
         initial_input_dict['is_outconn'] = False
@@ -150,9 +150,9 @@ class _CreateEdit(CreateEdit):
         security_keys = [key for key in self.req.POST if key.startswith(_security_input_prefix)]
         member_id_list = [self.req.POST[key] for key in security_keys]
 
-        # .. the group name is derived from the channel name ..
-        channel_name = input_dict['name']
-        group_name = _mcp_group_name_prefix + channel_name
+        # .. the group name is derived from the gateway name ..
+        gateway_name = input_dict['name']
+        group_name = _mcp_group_name_prefix + gateway_name
 
         # .. auto-create or update the security group with the picked members ..
         existing_groups = self.req.zato.client.invoke('zato.groups.get-list', {
@@ -201,20 +201,20 @@ class _CreateEdit(CreateEdit):
         return out
 
     def success_message(self, item:'any_') -> 'str':
-        return 'Successfully {} MCP channel `{}`'.format(self.verb, item.name)
+        return 'Successfully {} MCP gateway `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'channel-mcp-create'
+    url_name = 'gateway-mcp-create'
     service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'channel-mcp-edit'
+    url_name = 'gateway-mcp-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -222,8 +222,8 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'channel-mcp-delete'
-    error_message = 'Could not delete MCP channel'
+    url_name = 'gateway-mcp-delete'
+    error_message = 'Could not delete MCP gateway'
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
@@ -234,8 +234,8 @@ def get_service_list(req:'any_') -> 'HttpResponse':
     """ Returns the list of all non-internal services for the badge picker.
     """
 
-    # The channel ID is provided when editing an existing channel ..
-    channel_id = req.GET.get('channel_id')
+    # The gateway ID is provided when editing an existing gateway ..
+    gateway_id = req.GET.get('gateway_id')
 
     # .. get all deployed services ..
     response = req.zato.client.invoke('zato.service.get-list', {
@@ -246,23 +246,23 @@ def get_service_list(req:'any_') -> 'HttpResponse':
 
     # .. build the current assigned set if editing ..
     assigned_names:'set[str]' = set()
-    if channel_id:
-        channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+    if gateway_id:
+        gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
             'cluster_id': req.zato.cluster_id,
-            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
-            'id': channel_id,
+            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
+            'id': gateway_id,
             'paginate': False,
         })
-        logger.info('MCP get_service_list: channel_id=%s, response.ok=%s, data_count=%s',
-            channel_id, channel_response.ok, len(channel_response.data) if channel_response.data else 0)
+        logger.info('MCP get_service_list: gateway_id=%s, response.ok=%s, data_count=%s',
+            gateway_id, gateway_response.ok, len(gateway_response.data) if gateway_response.data else 0)
 
-        if channel_response.ok and channel_response.data:
-            for channel_item in channel_response.data:
-                item_id = channel_item['id']
-                item_services = channel_item.get('services')
-                logger.info('MCP get_service_list: item id=%s (%s) vs channel_id=%s (%s), services=%s',
-                    item_id, type(item_id).__name__, channel_id, type(channel_id).__name__, item_services)
-                if str(item_id) == str(channel_id):
+        if gateway_response.ok and gateway_response.data:
+            for gateway_item in gateway_response.data:
+                item_id = gateway_item['id']
+                item_services = gateway_item.get('services')
+                logger.info('MCP get_service_list: item id=%s (%s) vs gateway_id=%s (%s), services=%s',
+                    item_id, type(item_id).__name__, gateway_id, type(gateway_id).__name__, item_services)
+                if str(item_id) == str(gateway_id):
                     assigned_names = set(item_services or [])
                     logger.info('MCP get_service_list: matched, assigned_names=%s', assigned_names)
                     break
@@ -298,12 +298,12 @@ def get_service_list(req:'any_') -> 'HttpResponse':
 @method_allowed('POST')
 def get_security_list(req:'any_') -> 'HttpResponse':
     """ Returns the list of available security definitions (API key, Basic Auth)
-    for the security badge picker, with is_member flags set based on the channel's
+    for the security badge picker, with is_member flags set based on the gateway's
     auto-created security group.
     """
 
-    # The channel ID is provided when editing an existing channel ..
-    channel_id = req.GET.get('channel_id')
+    # The gateway ID is provided when editing an existing gateway ..
+    gateway_id = req.GET.get('gateway_id')
 
     # .. get all available security definitions of the supported types ..
     response = req.zato.client.invoke('zato.security.get-list', {
@@ -332,29 +332,29 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     items.sort(key=lambda elem: (elem['sec_type'], elem['name']))
 
     # .. if editing, figure out which definitions are already assigned ..
-    if channel_id:
+    if gateway_id:
 
-        logger.info('MCP get_security_list: channel_id=%s', channel_id)
+        logger.info('MCP get_security_list: gateway_id=%s', gateway_id)
 
-        # .. look up the channel's security_groups field ..
-        channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+        # .. look up the gateway's security_groups field ..
+        gateway_response = req.zato.client.invoke('zato.generic.connection.get-list', {
             'cluster_id': req.zato.cluster_id,
-            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_MCP,
+            'type_': GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
             'paginate': False,
         })
 
-        logger.info('MCP get_security_list: channel_response.ok=%s, data_count=%s',
-            channel_response.ok, len(channel_response.data) if channel_response.data else 0)
+        logger.info('MCP get_security_list: gateway_response.ok=%s, data_count=%s',
+            gateway_response.ok, len(gateway_response.data) if gateway_response.data else 0)
 
-        if channel_response.ok and channel_response.data:
-            for channel_item in channel_response.data:
-                item_id = channel_item['id']
-                logger.info('MCP get_security_list: item id=%s (%s) vs channel_id=%s (%s), keys=%s',
-                    item_id, type(item_id).__name__, channel_id, type(channel_id).__name__,
-                    list(channel_item.keys()))
+        if gateway_response.ok and gateway_response.data:
+            for gateway_item in gateway_response.data:
+                item_id = gateway_item['id']
+                logger.info('MCP get_security_list: item id=%s (%s) vs gateway_id=%s (%s), keys=%s',
+                    item_id, type(item_id).__name__, gateway_id, type(gateway_id).__name__,
+                    list(gateway_item.keys()))
 
-                if str(item_id) == str(channel_id):
-                    security_groups = channel_item.get('security_groups', [])
+                if str(item_id) == str(gateway_id):
+                    security_groups = gateway_item.get('security_groups', [])
                     logger.info('MCP get_security_list: matched, security_groups=%s', security_groups)
 
                     if security_groups:
@@ -390,15 +390,15 @@ def get_security_list(req:'any_') -> 'HttpResponse':
 
 @method_allowed('GET')
 def export(req:'any_', id:'str') -> 'HttpResponse':
-    """ Exports an MCP channel as a server.json-format document that the browser downloads.
+    """ Exports an MCP gateway as a server.json-format document that the browser downloads.
     """
 
-    # Look up the channel by its ID ..
+    # Look up the gateway by its ID ..
     response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
-    channel = response.data
+    gateway = response.data
 
-    channel_name = channel['name']
-    url_path = channel['url_path']
+    gateway_name = gateway['name']
+    url_path = gateway['url_path']
 
     # .. resolve the externally visible base address ..
     if base_address := os.environ.get('Zato_Server_Address'):
@@ -425,15 +425,15 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
 
     namespace = '.'.join(labels)
 
-    # .. the server part of the name is a slug of the channel name ..
-    slug = channel_name.lower()
+    # .. the server part of the name is a slug of the gateway name ..
+    slug = gateway_name.lower()
     slug = _slug_invalid_characters.sub('-', slug)
 
-    # .. collect authentication headers from the channel's security group members ..
+    # .. collect authentication headers from the gateway's security group members ..
     headers = []
     header_names = set()
 
-    if security_groups := channel.get('security_groups'):
+    if security_groups := gateway.get('security_groups'):
         group_id = security_groups[0]
         member_response = req.zato.client.invoke('zato.groups.get-member-list', {
             'group_type': Groups.Type.API_Clients,
@@ -460,7 +460,7 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     document = {
         '$schema': _export_schema_url,
         'name': f'{namespace}/{slug}',
-        'description': f'MCP channel {channel_name}',
+        'description': f'MCP gateway {gateway_name}',
         'version': _export_version,
         'remotes': [remote],
     }

@@ -37,7 +37,7 @@ from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
-from zato.cli.enmasse.exporters.mcp import ChannelMCPExporter
+from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
 from zato.cli.enmasse.exporters.as2 import AS2Exporter
 from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
@@ -88,7 +88,7 @@ class EnmasseYAMLExporter:
         self.channel_ibm_mq_exporter = ChannelIBMMQExporter(self)
         self.outgoing_ibm_mq_exporter = OutgoingIBMMQExporter(self)
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
-        self.channel_mcp_exporter = ChannelMCPExporter(self)
+        self.gateway_mcp_exporter = GatewayMCPExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
@@ -258,12 +258,12 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
-    def export_channel_mcp(self, session:'SASession') -> 'list':
+    def export_gateway_mcp(self, session:'SASession') -> 'list':
         """ Exports MCP gateway definitions.
         """
         _ = self.get_cluster(session)
-        channel_mcp_list = self.channel_mcp_exporter.export(session, self.cluster_id)
-        return channel_mcp_list
+        gateway_mcp_list = self.gateway_mcp_exporter.export(session, self.cluster_id)
+        return gateway_mcp_list
 
 # ################################################################################################################################
 
@@ -549,9 +549,9 @@ class EnmasseYAMLExporter:
             output_dict['channel_kafka'] = channel_kafka_defs
 
         # Export MCP gateway definitions
-        channel_mcp_defs = self.export_channel_mcp(session)
-        if channel_mcp_defs:
-            output_dict['mcp_gateway'] = channel_mcp_defs
+        gateway_mcp_defs = self.export_gateway_mcp(session)
+        if gateway_mcp_defs:
+            output_dict['mcp_gateway'] = gateway_mcp_defs
 
         # Export GraphQL outgoing definitions
         outgoing_graphql_defs = self.export_outgoing_graphql(session)

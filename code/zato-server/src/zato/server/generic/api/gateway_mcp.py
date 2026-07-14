@@ -30,8 +30,8 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelMCPWrapper:
-    """ Holds configuration for an MCP channel, including tool registry and JSON-RPC handler.
+class GatewayMCPWrapper:
+    """ Holds configuration for an MCP gateway, including tool registry and JSON-RPC handler.
     """
     def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         self.config = config
@@ -41,14 +41,14 @@ class ChannelMCPWrapper:
 # ################################################################################################################################
 
     def build_wrapper(self) -> 'None':
-        """ Initializes the tool registry and handler based on the channel's configuration.
+        """ Initializes the tool registry and handler based on the gateway's configuration.
         """
 
         # The allowed services list is already a top-level key in config,
         # extracted from opaque1 by GenericConnection.to_dict during startup.
         allowed_services:'strlist' = self.config.get('services', [])
 
-        # .. build the tool registry and populate it. This is safe because MCP channels
+        # .. build the tool registry and populate it. This is safe because MCP gateways
         # are only created after all services are deployed ..
         tool_registry = ToolRegistry(self.server.service_store, allowed_services)
         tool_registry.rebuild()
@@ -61,7 +61,7 @@ class ChannelMCPWrapper:
 
         service_suffix = 'service' if len(allowed_services) == 1 else 'services'
         sorted_services = sorted(allowed_services)
-        logger.info('MCP channel `%s` built with %d allowed %s: %s', self.config.name, len(allowed_services), service_suffix, sorted_services)
+        logger.info('MCP gateway `%s` built with %d allowed %s: %s', self.config.name, len(allowed_services), service_suffix, sorted_services)
 
 # ################################################################################################################################
 
@@ -75,10 +75,10 @@ class ChannelMCPWrapper:
 # ################################################################################################################################
 
     def delete(self) -> 'None':
-        """ Cleans up when the channel is being removed.
+        """ Cleans up when the gateway is being removed.
         """
         self.handler = None
-        logger.info('MCP channel `%s` deleted', self.config.name)
+        logger.info('MCP gateway `%s` deleted', self.config.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

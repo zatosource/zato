@@ -160,7 +160,7 @@ def _make_success_response(request_id:'any_', result:'any_') -> 'stranydict':
 # ################################################################################################################################
 
 class MCPHandler:
-    """ Handles MCP JSON-RPC 2.0 dispatch for a single MCP channel.
+    """ Handles MCP JSON-RPC 2.0 dispatch for a single MCP gateway.
     Routes initialize, tools/list, tools/call, and ping methods.
     """
 
@@ -561,7 +561,7 @@ class MCPHandler:
             out = _make_error_response(request_id, _error_invalid_params, _message_missing_tool_name)
             return out
 
-        # .. check if the tool is allowed on this channel ..
+        # .. check if the tool is allowed on this gateway ..
         if not self.tool_registry.is_tool_allowed(tool_name):
 
             message = f'Tool not found: `{tool_name}`'
