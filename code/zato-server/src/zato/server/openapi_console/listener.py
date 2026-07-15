@@ -19,14 +19,18 @@ from gevent import sleep, spawn
 from redis import Redis
 
 # Zato
+from zato.common.typing_ import cast_
+from zato.server.openapi_console.invoke import handle_invoke
 from zato.server.openapi_console.spec import build_spec
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.base.parallel import ParallelServer
+    any_ = any_
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +77,15 @@ def _handle_get_spec(server:'ParallelServer', fields:'anydict') -> 'anydict':
 
 # ################################################################################################################################
 
+# Maps command names from the request stream to their handlers - every handler receives the server
+# and the message fields and returns the reply fields to place on the reply stream.
+_command_handlers = {
+    'get_spec': _handle_get_spec,
+    'invoke': handle_invoke,
+}
+
+# ################################################################################################################################
+
 def start_openapi_console_listener(server:'ParallelServer') -> 'None':
     """ Starts a greenlet that serves OpenAPI console requests arriving via Redis Streams.
     """
@@ -104,6 +117,9 @@ def start_openapi_console_listener(server:'ParallelServer') -> 'None':
                     block=1000,
                 )
 
+                # A synchronous Redis client always returns a list here, never an awaitable
+                result = cast_('anylist', result)
+
                 # We are able to read from the stream again, so the error condition, if any, has cleared.
                 if error_since:
                     logger.info('OpenAPI console listener recovered')
@@ -118,16 +134,18 @@ def start_openapi_console_listener(server:'ParallelServer') -> 'None':
                         command = fields['command']
 
                         # Each command replies on the reply stream, correlated by the ID the console sent ..
-                        if command == 'get_spec':
+                        if handler := _command_handlers.get(command):
                             try:
-                                reply = _handle_get_spec(server, fields)
+                                reply = handler(server, fields)
                             except Exception:
-                                logger.warning('Could not build an OpenAPI document: %s', format_exc())
+                                logger.warning('Could not handle OpenAPI console command `%s`: %s', command, format_exc())
                                 reply = {
                                     'correlation_id': fields['correlation_id'],
                                     'status': 'error',
                                     'data': '',
                                 }
+                            # The reply always maps field names to strings and numbers, which Redis accepts
+                            reply = cast_('any_', reply)
                             _ = redis_conn.xadd(ModuleCtx.Reply_Stream, reply, maxlen=ModuleCtx.Max_Stream_Len)
 
                         # .. unknown commands are logged and skipped.

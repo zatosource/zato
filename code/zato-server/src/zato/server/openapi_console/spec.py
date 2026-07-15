@@ -15,6 +15,7 @@ from inspect import isclass
 from zato.common.api import URL_TYPE
 from zato.common.const import ServiceConst
 from zato.common.crypto.api import is_string_equal
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
 from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
@@ -144,7 +145,7 @@ def _io_definition(value:'any_', models:'stranydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def _is_channel_visible(channel_item:'anydict', security_id:'int', username:'str', password:'str') -> 'bool':
+def is_channel_visible(channel_item:'anydict', security_id:'int', username:'str', password:'str') -> 'bool':
     """ Decides whether a channel is visible to the caller identified by the given security definition.
     """
     # A channel whose own security definition is the caller's one is always visible ..
@@ -237,7 +238,7 @@ def build_spec(server:'ParallelServer', username:'str', password:'str') -> 'anyd
 
         # .. non-admin callers only see channels their credentials can invoke ..
         if not is_admin:
-            if not _is_channel_visible(channel_item, security_id, username, password):
+            if not is_channel_visible(channel_item, security_id, username, password):
                 continue
 
         # .. and each remaining channel contributes one entry per HTTP method.
@@ -247,10 +248,13 @@ def build_spec(server:'ParallelServer', username:'str', password:'str') -> 'anyd
     # Feed the collected metadata into the shared generator ..
     scan_results = {'services': services, 'models': models}
     generator = OpenAPIGenerator(TypeMapper())
-    out = generator.build_spec(scan_results)
+
+    # The generator module carries no type hints, hence the cast
+    out = cast_('anydict', generator.build_spec(scan_results))
 
     # .. and give the document a title the console shows to users.
-    out['info']['title'] = _spec_title
+    info = cast_('anydict', out['info'])
+    info['title'] = _spec_title
 
     return out
 

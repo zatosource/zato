@@ -9,12 +9,13 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import logging
 import os
-from http.client import NOT_FOUND, UNAUTHORIZED
+from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
 
 # Django
 from django.conf import settings
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 # PyYAML
 import yaml
@@ -41,6 +42,17 @@ _no_server_message = 'No server is available, please try again'
 # The one message returned to any caller without a valid session - always the same
 # so that anonymous callers cannot tell apart missing, expired and rejected sessions.
 _unauthorized_message = 'Unauthorized'
+
+# The base URL under which try-it requests are relayed to the servers - the document's servers
+# entry points here, so the browser only ever talks to the console, never to the servers.
+_relay_url_base = '/openapi/console/relay'
+
+# Maps rejection statuses from the reply stream to the HTTP status and message the browser receives
+_relay_rejections = {
+    'unauthorized': (UNAUTHORIZED, _unauthorized_message),
+    'not_found': (NOT_FOUND, 'Not found'),
+    'error': (INTERNAL_SERVER_ERROR, 'The invocation could not be completed'),
+}
 
 # Created lazily so that the console starts even when Redis is briefly unavailable
 _client = None
@@ -108,9 +120,9 @@ def console_view(req):
 
 # ################################################################################################################################
 
-def _get_spec_or_error(req):
-    """ Returns the signed-in caller's filtered document and no error, or no document and an error response
-    when the session or the credentials are not valid.
+def _get_credentials_or_error(req):
+    """ Returns the signed-in caller's credentials and no error, or no credentials and an error response
+    when there is no valid session.
     """
     if not (token := req.session.get(Session_Credentials_Key)):
         return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
@@ -121,6 +133,18 @@ def _get_spec_or_error(req):
         req.session.flush()
         return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
 
+    return credentials, None
+
+# ################################################################################################################################
+
+def _get_spec_or_error(req):
+    """ Returns the signed-in caller's filtered document and no error, or no document and an error response
+    when the session or the credentials are not valid.
+    """
+    credentials, error = _get_credentials_or_error(req)
+    if error:
+        return None, error
+
     username, password = credentials
 
     client = _get_client()
@@ -128,6 +152,9 @@ def _get_spec_or_error(req):
 
     if spec is None:
         return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+
+    # Try-it requests go through the console's relay, never directly to the servers
+    spec['servers'] = [{'url': _relay_url_base}]
 
     return spec, None
 
@@ -157,6 +184,47 @@ def spec_yaml_view(req):
     document = yaml.dump(spec, sort_keys=False, allow_unicode=True)
 
     out = HttpResponse(document, content_type='application/yaml')
+
+    return out
+
+# ################################################################################################################################
+
+@csrf_exempt
+def relay_view(req, relay_path):
+    """ Relays a try-it invocation to the servers over Redis Streams and returns the response,
+    so the browser only ever talks to the console. The target service is invoked with the signed-in
+    user's own credentials and only if those credentials give access to the endpoint.
+    """
+    credentials, error = _get_credentials_or_error(req)
+    if error:
+        return error
+
+    username, password = credentials
+
+    # The relay path arrives without its leading slash, which channels always have
+    url_path = '/' + relay_path
+
+    body = req.body.decode('utf-8')
+    query_string = req.META['QUERY_STRING']
+
+    client = _get_client()
+    reply = client.invoke(username, password, req.method, url_path, query_string, body)
+
+    # No reply means no server was available in time
+    if reply is None:
+        return HttpResponse(_no_server_message, status=BAD_GATEWAY)
+
+    status = reply['status']
+
+    # A successful invocation passes the service's response through ..
+    if status == 'ok':
+        http_status = int(reply['http_status'])
+        out = HttpResponse(reply['data'], status=http_status, content_type=reply['content_type'])
+
+    # .. anything else maps to one of the known rejections.
+    else:
+        http_status, message = _relay_rejections[status]
+        out = HttpResponse(message, status=http_status)
 
     return out
 
