@@ -83,7 +83,8 @@ class SessionState:
 
         receiver_count = len(self.receivers)
         self.receivers.clear()
-        self._logger.info('Stopped %d receiver(s)', receiver_count)
+        suffix = 'receiver' if receiver_count == 1 else 'receivers'
+        self._logger.info('Stopped %d %s', receiver_count, suffix)
 
 # ################################################################################################################################
 

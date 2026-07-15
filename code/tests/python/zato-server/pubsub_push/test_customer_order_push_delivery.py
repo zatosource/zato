@@ -66,7 +66,8 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
             receiver = TestConfig.endpoints[topic_name].receiver
             messages = receiver.wait_for_delivery(expected_count=1)
             delivered_count = len(messages)
-            logger.info('Delivered %d message(s) to %s -> %s', delivered_count, topic_name, messages)
+            suffix = 'message' if delivered_count == 1 else 'messages'
+            logger.info('Delivered %d %s to %s -> %s', delivered_count, suffix, topic_name, messages)
 
             # .. verify exactly 1 message arrived ..
             self.assertEqual(delivered_count, 1)
@@ -102,7 +103,8 @@ class TestCustomerOrderPushDelivery(unittest.TestCase):
         # .. wait for all to be delivered ..
         messages = receiver.wait_for_delivery(expected_count=burst_count)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) to %s -> %s', delivered_count, topic_name, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s to %s -> %s', delivered_count, suffix, topic_name, messages)
 
         # .. and verify the count.
         self.assertEqual(delivered_count, burst_count)

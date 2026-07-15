@@ -106,7 +106,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
             receiver = TestConfig.endpoints[topic_name].receiver
             messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
             delivered_count = len(messages)
-            logger.info('Receiver for %s delivered %d message(s) -> %s', topic_name, delivered_count, messages)
+            suffix = 'message' if delivered_count == 1 else 'messages'
+            logger.info('Receiver for %s delivered %d %s -> %s', topic_name, delivered_count, suffix, messages)
 
             # .. exactly 1 message ..
             self.assertEqual(delivered_count, 1)
@@ -142,7 +143,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         self.assertEqual(delivered_count, 1)
 
@@ -152,7 +154,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
 
         all_messages = receiver.get_delivered_messages()
         final_count = len(all_messages)
-        logger.info('Final count after %s second wait -> %d message(s) -> %s', generous_wait, final_count, all_messages)
+        final_suffix = 'message' if final_count == 1 else 'messages'
+        logger.info('Final count after %s second wait -> %d %s -> %s', generous_wait, final_count, final_suffix, all_messages)
 
         # .. verify still exactly 1.
         self.assertEqual(final_count, 1)
@@ -197,7 +200,8 @@ class TestCrossDomainIsolation(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=thread_count, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify all arrived ..
         self.assertEqual(delivered_count, thread_count)
