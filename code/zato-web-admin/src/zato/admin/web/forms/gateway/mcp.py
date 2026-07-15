@@ -54,7 +54,7 @@ class CreateForm(forms.Form):
     safeguards_pii_lands = forms.MultipleChoiceField(required=False, choices=get_land_choices,
         widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'None selected'}))
     safeguards_pii_detectors = forms.MultipleChoiceField(required=False, choices=get_detector_choices,
-        widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'Default detectors'}))
+        widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'None selected'}))
     safeguards_pii_exclude = forms.MultipleChoiceField(required=False, choices=get_detector_choices,
         widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'Nothing excluded'}))
     safeguards_pii_validate = forms.BooleanField(required=False)

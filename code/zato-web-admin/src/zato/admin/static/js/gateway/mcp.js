@@ -264,7 +264,7 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_strip_base64': 'Replaces long base64-encoded strings, such as<br>embedded images or attachments, with a short<br>marker stating the original size. A single<br>encoded file can otherwise consume thousands<br>of tokens without giving the model anything<br>it can use.',
 
     'id_safeguards_pii_enabled': 'Scans string values for personally identifiable<br>information, such as national identity numbers<br>or IBANs, and replaces each match with a token<br>naming the detector. The underlying data<br>never reaches the client or its model.',
-    'id_safeguards_pii_lands': 'The lands whose detectors run, e.g. Spain,<br>Germany or International. Leave empty<br>to run detectors for all lands.',
+    'id_safeguards_pii_lands': 'The lands whose detectors run, e.g. Spain,<br>Germany or International. Nothing is scanned<br>until at least one land or detector is picked.',
     'id_safeguards_pii_detectors': 'Explicit detectors to run, picked by name.<br>When set, this selection takes precedence<br>over the lands.',
     'id_safeguards_pii_exclude': 'Detectors excluded from the selection made<br>by lands and detectors. Use it to keep one<br>detector out of an otherwise broad selection.',
     'id_safeguards_pii_validate': 'Verifies each match with its checksum algorithm<br>before it is replaced. A number that merely looks<br>like an identifier but fails its checksum is left<br>untouched, which prevents false positives.',
