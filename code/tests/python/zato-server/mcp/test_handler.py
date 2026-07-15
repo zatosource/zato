@@ -110,11 +110,11 @@ def _make_handler(registry:'any_'=None, invoke_func:'callable_'=None) -> 'MCPHan
 
     session_manager = MCPSessionManager()
 
-    # Response shaping stays off in these tests - empty configs keep every stage disabled.
+    # Response shaping and input validation stay off in these tests - empty configs keep every stage disabled.
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

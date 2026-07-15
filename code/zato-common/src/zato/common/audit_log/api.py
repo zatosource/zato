@@ -121,6 +121,7 @@ class AuditSource:
     Email_IMAP    = 'email-imap'
     AS2           = 'as2'
     X12           = 'x12'
+    MCP           = 'mcp'
 
 # ################################################################################################################################
 
@@ -145,6 +146,11 @@ class AuditEvent:
     MDN_Sent             = 'mdn-sent'
     MDN_Received         = 'mdn-received'
     Alert_Raised         = 'alert-raised'
+    MCP_Initialize       = 'mcp-initialize'
+    MCP_Tools_List       = 'mcp-tools-list'
+    MCP_Tools_Call       = 'mcp-tools-call'
+    MCP_Session_Delete   = 'mcp-session-delete'
+    MCP_Batch            = 'mcp-batch'
 
 # ################################################################################################################################
 

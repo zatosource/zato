@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # Zato
+from zato.common.audit_log.api import AuditLog
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler
@@ -40,6 +41,10 @@ class GatewayMCPWrapper:
         self.server = server
         self.handler:'MCPHandler | None' = None
 
+        # The engine behind the audit log is process-wide and cached,
+        # so one instance per wrapper is as cheap as the REST dispatcher's one.
+        self.audit_log = AuditLog(server.name)
+
 # ################################################################################################################################
 
     def build_wrapper(self) -> 'None':
@@ -63,8 +68,15 @@ class GatewayMCPWrapper:
         safeguard_config = build_safeguard_config(self.config)
         token_cap_config = build_token_cap_config(self.config)
 
+        # .. argument validation is on for gateways whose form saved it -
+        # configs predating the field lack the key, which means it is off ..
+        validate_input = self.config.get('validate_input')
+        if validate_input is None:
+            validate_input = False
+
         # .. build the handler with an invoke function that calls services through the server.
-        self.handler = MCPHandler(tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config)
+        self.handler = MCPHandler(
+            tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config, validate_input)
 
         service_suffix = 'service' if len(allowed_services) == 1 else 'services'
         sorted_services = sorted(allowed_services)

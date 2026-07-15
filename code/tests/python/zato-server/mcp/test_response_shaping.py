@@ -59,7 +59,7 @@ def _make_handler(invoke_func:'callable_', gateway_config:'stranydict') -> 'MCPH
     safeguard_config = build_safeguard_config(gateway_config)
     token_cap_config = build_token_cap_config(gateway_config)
 
-    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config, False) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

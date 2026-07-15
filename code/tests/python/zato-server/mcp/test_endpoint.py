@@ -203,6 +203,7 @@ class _MockChannelSecurity:
     """
     def __init__(self) -> 'None':
         self.id = _test_sec_def_id
+        self.name = 'test.sec.def'
         self.username = 'test.user'
 
 # ################################################################################################################################

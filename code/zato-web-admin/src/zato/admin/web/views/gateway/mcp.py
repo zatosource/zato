@@ -43,8 +43,10 @@ _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
 
-# Response shaping checkboxes - absent from POST means unchecked, i.e. False.
+# Checkboxes persisted in the gateway's opaque configuration - absent from POST means unchecked, i.e. False.
 _shaping_checkbox_fields = (
+    'validate_input',
+    'is_audit_log_active',
     'allow_client_filters',
     'safeguards_strip_nulls',
     'safeguards_collapse_whitespace',
@@ -85,6 +87,8 @@ _shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list
 # What each response shaping field renders as in the data table when a gateway's config predates it
 # or when a falsy value was filtered out on the way from the backend.
 _shaping_display_defaults = {
+    'validate_input':                 False,
+    'is_audit_log_active':            False,
     'allow_client_filters':           False,
     'safeguards_strip_nulls':         False,
     'safeguards_collapse_whitespace': False,

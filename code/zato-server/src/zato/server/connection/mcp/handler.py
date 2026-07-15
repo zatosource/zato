@@ -18,7 +18,9 @@ from zato.common.json_internal import dumps, loads
 from zato.common.util.safeguards.api import apply_safeguards
 from zato.common.util.safeguards.config import is_safeguards_active
 from zato.common.util.truncate.tokens import apply_token_cap
+from zato.server.connection.mcp.audit import Method_Batch
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
+from zato.server.connection.mcp.validate import validate_arguments
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +59,9 @@ _mcp_protocol_version = '2025-11-05'
 
 # The initialize method is the only one that may run without an existing session
 _method_initialize = 'initialize'
+
+# The tools/call method is the only one that carries a tool name
+_method_tools_call = 'tools/call'
 
 # Generic error message returned to clients for all session-related rejections
 _message_bad_request = 'Bad request'
@@ -120,10 +125,14 @@ class ResponseRejected(Exception):
 @dataclasses.dataclass(init=False)
 class MCPResponse:
     """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.
+    The method and tool name are recorded during dispatch for the audit log,
+    so the endpoint never has to re-parse the raw body to learn them.
     """
     body:         'any_'
     status_code:  'int'
     session_id:   'strnone'  = None
+    method:       'strnone'  = None
+    tool_name:    'strnone'  = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,12 +192,14 @@ class MCPHandler:
         session_manager:'MCPSessionManager',
         safeguard_config:'SafeguardConfig',
         token_cap_config:'TokenCapConfig',
+        validate_input:'bool',
         ) -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
         self.session_manager = session_manager
         self.safeguard_config = safeguard_config
         self.token_cap_config = token_cap_config
+        self.validate_input = validate_input
 
 # ################################################################################################################################
 
@@ -284,6 +295,7 @@ class MCPHandler:
         if isinstance(parsed, list):
 
             out = self._handle_batch(parsed, session_is_valid, sec_def_id, remote_address)
+            out.method = Method_Batch
             return out
 
         if isinstance(parsed, dict):
@@ -291,6 +303,20 @@ class MCPHandler:
             # .. a single gated method without a valid session is a protocol error and must
             # carry HTTP 400, unlike a batch where each element reports its own JSON-RPC error ..
             method = parsed.get('method')
+
+            # .. record what is being dispatched for the audit log - the method for every
+            # request and, for tool calls, the name of the tool being invoked ..
+            if isinstance(method, str):
+                out.method = method
+
+                if method == _method_tools_call:
+                    params = parsed.get('params')
+
+                    if isinstance(params, dict):
+                        tool_name = params.get('name')
+
+                        if isinstance(tool_name, str):
+                            out.tool_name = tool_name
 
             if method != _method_initialize:
                 if not session_is_valid:
@@ -473,7 +499,7 @@ class MCPHandler:
             out = DispatchResult(body, None)
             return out
 
-        if method == 'tools/call':
+        if method == _method_tools_call:
 
             body = self._handle_tools_call(request_id, params)
             out = DispatchResult(body, None)
@@ -591,6 +617,16 @@ class MCPHandler:
 
         # .. extract arguments - optional per the MCP spec, defaults to empty dict ..
         arguments = params.get('arguments', {})
+
+        # .. when the gateway has input validation on, the arguments must match the tool's
+        # input schema, the same one tools/list advertises - the error names the offending field ..
+        if self.validate_input:
+            schema = self.tool_registry.get_tool_schema(tool_name)
+
+            if error_message := validate_arguments(arguments, schema):
+                logger.info('MCP: Invalid arguments for `%s`: %s', tool_name, error_message)
+                out = _make_error_response(request_id, _error_invalid_params, error_message)
+                return out
 
         # .. invoke the service and serialize its response, treating a serialization
         # failure (e.g. bytes that do not decode or objects that do not dump to JSON)

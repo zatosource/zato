@@ -44,6 +44,7 @@ class ToolRegistry:
         self.service_store = service_store
         self.allowed_services = allowed_services
         self._cached_tools:'strdictlist' = []
+        self._schema_by_name:'stranydict' = {}
 
 # ################################################################################################################################
 
@@ -63,6 +64,7 @@ class ToolRegistry:
 
         # Walk through each allowed service name and try to resolve it ..
         tools:'strdictlist' = []
+        schema_by_name:'stranydict' = {}
 
         for service_name in self.allowed_services:
 
@@ -100,9 +102,11 @@ class ToolRegistry:
             }
 
             tools.append(tool)
+            schema_by_name[service_name] = input_schema
 
-        # .. replace the cached tools list with the newly built one.
+        # .. replace the cached tools list and the schema lookup with the newly built ones.
         self._cached_tools = tools
+        self._schema_by_name = schema_by_name
 
         tool_suffix = 'tool' if len(tools) == 1 else 'tools'
         logger.info('MCP tool registry built with %d %s', len(tools), tool_suffix)
@@ -144,6 +148,16 @@ class ToolRegistry:
 
         # .. and return both the page and the cursor for the next one.
         out = (page, next_cursor)
+        return out
+
+# ################################################################################################################################
+
+    def get_tool_schema(self, service_name:'str') -> 'stranydict':
+        """ Returns the cached inputSchema of a tool - only ever called for tools
+        that is_tool_allowed accepted, which rebuild is guaranteed to have resolved.
+        """
+
+        out = self._schema_by_name[service_name]
         return out
 
 # ################################################################################################################################
