@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # Zato
+from zato.common.util.safeguards.config import build_safeguard_config
+from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler
 from zato.server.connection.mcp.registry import ToolRegistry
 from zato.server.connection.mcp.session import MCPSessionManager
@@ -56,8 +58,13 @@ class GatewayMCPWrapper:
         # .. build the session manager ..
         session_manager = MCPSessionManager()
 
+        # .. response shaping configs come from the same flat gateway config -
+        # editing the gateway rebuilds this wrapper, so changes apply without a restart ..
+        safeguard_config = build_safeguard_config(self.config)
+        token_cap_config = build_token_cap_config(self.config)
+
         # .. build the handler with an invoke function that calls services through the server.
-        self.handler = MCPHandler(tool_registry, self._invoke_service, session_manager)
+        self.handler = MCPHandler(tool_registry, self._invoke_service, session_manager, safeguard_config, token_cap_config)
 
         service_suffix = 'service' if len(allowed_services) == 1 else 'services'
         sorted_services = sorted(allowed_services)

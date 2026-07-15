@@ -21,7 +21,9 @@ from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import API_Key, GENERIC, Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.defaults import http_plain_server_port
+from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.tcp import get_current_ip
+from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -40,6 +42,71 @@ logger = logging.getLogger(__name__)
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
+
+# Response shaping checkboxes - absent from POST means unchecked, i.e. False.
+_shaping_checkbox_fields = (
+    'allow_client_filters',
+    'safeguards_strip_nulls',
+    'safeguards_collapse_whitespace',
+    'safeguards_strip_base64',
+    'safeguards_pii_enabled',
+    'safeguards_pii_validate',
+    'safeguards_pii_stable_tokens',
+    'safeguards_normalize_unicode',
+    'safeguards_sanitize_markup',
+    'safeguards_url_policy_enabled',
+)
+
+# Response shaping integer fields - an empty input means zero, which disables the cap or the threshold.
+_shaping_int_fields = (
+    'max_response_size',
+    'min_size_threshold',
+)
+
+# Response shaping multi-selects - always stored as lists of detector or land names.
+_shaping_list_fields = (
+    'safeguards_pii_lands',
+    'safeguards_pii_detectors',
+    'safeguards_pii_exclude',
+)
+
+# Response shaping selects - these always carry a value and need no processing.
+_shaping_choice_fields = (
+    'size_cap_mode',
+    'safeguards_unicode_mode',
+    'safeguards_markup_mode',
+    'safeguards_url_mode',
+)
+
+# All the response shaping fields the dashboard persists in the gateway's opaque configuration.
+_shaping_fields = _shaping_checkbox_fields + _shaping_int_fields + _shaping_list_fields + _shaping_choice_fields + \
+    ('characters_per_token', 'safeguards_url_allow_list')
+
+# What each response shaping field renders as in the data table when a gateway's config predates it
+# or when a falsy value was filtered out on the way from the backend.
+_shaping_display_defaults = {
+    'allow_client_filters':           False,
+    'safeguards_strip_nulls':         False,
+    'safeguards_collapse_whitespace': False,
+    'safeguards_strip_base64':        False,
+    'safeguards_pii_enabled':         False,
+    'safeguards_pii_validate':        False,
+    'safeguards_pii_stable_tokens':   False,
+    'safeguards_normalize_unicode':   False,
+    'safeguards_sanitize_markup':     False,
+    'safeguards_url_policy_enabled':  False,
+    'max_response_size':              '',
+    'min_size_threshold':             '',
+    'characters_per_token':           Default_Characters_Per_Token,
+    'size_cap_mode':                  Size_Cap_Mode_Truncate,
+    'safeguards_pii_lands':           '',
+    'safeguards_pii_detectors':       '',
+    'safeguards_pii_exclude':         '',
+    'safeguards_unicode_mode':        Mode_Clean,
+    'safeguards_markup_mode':         Mode_Clean,
+    'safeguards_url_allow_list':      '',
+    'safeguards_url_mode':            Url_Mode_Remove,
+}
 
 # The JSON Schema that exported MCP gateway documents conform to
 _export_schema_url = 'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json'
@@ -88,7 +155,7 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active'
-    output_optional = 'url_path', 'services', 'security_groups'
+    output_optional = ('url_path', 'services', 'security_groups') + _shaping_fields
     output_repeated = True
 
     def get_initial_input(self) -> 'strdict':
@@ -111,6 +178,13 @@ class Index(_Index):
         else:
             item.security_member_count = 0
 
+        # Response shaping fields absent from the item - because the gateway predates them
+        # or because a falsy value was filtered out on the way - render as their defaults,
+        # so the data table's hidden columns always carry definite values for the edit form.
+        for name, default_value in _shaping_display_defaults.items():
+            if not hasattr(item, name):
+                setattr(item, name, default_value)
+
         return item
 
     def handle(self) -> 'strdict':
@@ -128,7 +202,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name',
-    input_optional = 'is_active', 'url_path'
+    input_optional = ('is_active', 'url_path') + _shaping_fields
     output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict:'strdict') -> 'None':
@@ -138,6 +212,41 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
 
     def pre_process_input_dict(self, input_dict:'strdict') -> 'None':
+
+        # Checkboxes arrive as 'on' when ticked and are absent from POST otherwise ..
+        for name in _shaping_checkbox_fields:
+            input_dict[name] = input_dict[name] == 'on'
+
+        # .. integer fields arrive as strings and an empty input means zero ..
+        for name in _shaping_int_fields:
+            if value := input_dict[name]:
+                input_dict[name] = int(value)
+            else:
+                input_dict[name] = 0
+
+        # .. the characters-per-token ratio is a float with a well-known default ..
+        if value := input_dict['characters_per_token']:
+            input_dict['characters_per_token'] = float(value)
+        else:
+            input_dict['characters_per_token'] = Default_Characters_Per_Token
+
+        # .. multi-selects arrive as a plain string when only one option is picked
+        # and are absent when nothing is - both normalize to a list ..
+        for name in _shaping_list_fields:
+            value = input_dict[name]
+            if not value:
+                input_dict[name] = []
+            elif isinstance(value, str):
+                input_dict[name] = [value]
+
+        # .. the URL allow list is a comma-separated string of host suffixes ..
+        hosts = []
+        if value := input_dict['safeguards_url_allow_list']:
+            for host in value.split(','):
+                host = host.strip()
+                if host:
+                    hosts.append(host)
+        input_dict['safeguards_url_allow_list'] = hosts
 
         # Collect services from the badge picker hidden inputs ..
         service_keys = [key for key in self.req.POST if key.startswith(_service_input_prefix)]

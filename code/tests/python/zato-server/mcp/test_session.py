@@ -13,6 +13,8 @@ from unittest import TestCase
 # Zato
 from zato.common.json_internal import dumps
 from zato.common.test import _test_sec_def_id
+from zato.common.util.safeguards.config import build_safeguard_config
+from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _mcp_protocol_version
 from zato.server.connection.mcp.session import MCPSessionManager, MCPSessionReaper, \
     Session_Expired, Session_Invalid_Identity, Session_Not_Found, Session_Valid
@@ -99,7 +101,11 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     if session_manager is None:
         session_manager = MCPSessionManager()
 
-    out = MCPHandler(registry, _invoke_noop, session_manager) # pyright: ignore[reportArgumentType]
+    # Response shaping stays off in these tests - empty configs keep every stage disabled.
+    safeguard_config = build_safeguard_config({})
+    token_cap_config = build_token_cap_config({})
+
+    out = MCPHandler(registry, _invoke_noop, session_manager, safeguard_config, token_cap_config) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################

@@ -50,7 +50,28 @@
             '_edit',
             '_delete',
             'id',
-            'is_active'
+            'is_active',
+            'allow_client_filters',
+            'max_response_size',
+            'size_cap_mode',
+            'min_size_threshold',
+            'characters_per_token',
+            'safeguards_strip_nulls',
+            'safeguards_collapse_whitespace',
+            'safeguards_strip_base64',
+            'safeguards_pii_enabled',
+            'safeguards_pii_lands',
+            'safeguards_pii_detectors',
+            'safeguards_pii_exclude',
+            'safeguards_pii_validate',
+            'safeguards_pii_stable_tokens',
+            'safeguards_normalize_unicode',
+            'safeguards_unicode_mode',
+            'safeguards_sanitize_markup',
+            'safeguards_markup_mode',
+            'safeguards_url_policy_enabled',
+            'safeguards_url_allow_list',
+            'safeguards_url_mode'
         ]
     }
     </script>
@@ -91,6 +112,27 @@
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -109,11 +151,32 @@
                         <td><a href="javascript:$.fn.zato.gateway.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.allow_client_filters }}</td>
+                        <td class='ignore'>{{ item.max_response_size }}</td>
+                        <td class='ignore'>{{ item.size_cap_mode }}</td>
+                        <td class='ignore'>{{ item.min_size_threshold }}</td>
+                        <td class='ignore'>{{ item.characters_per_token }}</td>
+                        <td class='ignore'>{{ item.safeguards_strip_nulls }}</td>
+                        <td class='ignore'>{{ item.safeguards_collapse_whitespace }}</td>
+                        <td class='ignore'>{{ item.safeguards_strip_base64 }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_enabled }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_lands|join:"," }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_detectors|join:"," }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_exclude|join:"," }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_validate }}</td>
+                        <td class='ignore'>{{ item.safeguards_pii_stable_tokens }}</td>
+                        <td class='ignore'>{{ item.safeguards_normalize_unicode }}</td>
+                        <td class='ignore'>{{ item.safeguards_unicode_mode }}</td>
+                        <td class='ignore'>{{ item.safeguards_sanitize_markup }}</td>
+                        <td class='ignore'>{{ item.safeguards_markup_mode }}</td>
+                        <td class='ignore'>{{ item.safeguards_url_policy_enabled }}</td>
+                        <td class='ignore'>{{ item.safeguards_url_allow_list|join:"," }}</td>
+                        <td class='ignore'>{{ item.safeguards_url_mode }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='33'>No results</td>
                     </tr>
                 {% endif %}
 

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from math import ceil
 
 # Zato
-from zato.common.typing_ import any_
+from zato.common.typing_ import any_, stranydict
 from zato.common.util.truncate.api import truncate_json
 from zato.common.util.truncate.common import drop_entry_list
 from zato.common.util.truncate.measure import serialize
@@ -69,6 +69,36 @@ class TokenCapResult:
     was_blocked:   bool = False
     was_truncated: bool = False
     did_fit:       bool = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def build_token_cap_config(config:'stranydict') -> 'TokenCapConfig':
+    """ Builds a token cap config out of a flat config dict, e.g. an MCP gateway's opaque configuration.
+    Keys absent from configs that predate a given field fall back to the dataclass defaults,
+    which keep the cap off. Stored values are never None, so None always means an absent key.
+    """
+
+    # Our response to produce
+    out = TokenCapConfig()
+
+    # The cap itself - 0 means no cap at all.
+    if (max_response_size := config.get('max_response_size')) is not None:
+        out.max_response_tokens = max_response_size
+
+    # The activation threshold - 0 means no threshold.
+    if (min_size_threshold := config.get('min_size_threshold')) is not None:
+        out.min_threshold_tokens = min_size_threshold
+
+    # What to do with a response over the cap.
+    if (size_cap_mode := config.get('size_cap_mode')) is not None:
+        out.size_cap_mode = size_cap_mode
+
+    # How many characters one token is assumed to span.
+    if (characters_per_token := config.get('characters_per_token')) is not None:
+        out.characters_per_token = characters_per_token
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

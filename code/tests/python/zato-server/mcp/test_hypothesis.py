@@ -17,6 +17,8 @@ from hypothesis import strategies as st
 # Zato
 from zato.common.json_internal import dumps
 from zato.common.test import _test_sec_def_id
+from zato.common.util.safeguards.config import build_safeguard_config
+from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_request, _error_method_not_found, \
     _error_parse, _jsonrpc_version, _mcp_protocol_version
 from zato.server.connection.mcp.registry import ToolRegistry, _internal_prefix
@@ -78,7 +80,11 @@ def _make_handler(allowed_tools:'any_' = None) -> 'any_':
     def invoke_func(name:'str', payload:'any_') -> 'anydict':
         return {'echoed': payload}
 
-    handler = MCPHandler(registry, invoke_func, session_manager) # pyright: ignore[reportArgumentType]
+    # Response shaping stays off in these tests - empty configs keep every stage disabled.
+    safeguard_config = build_safeguard_config({})
+    token_cap_config = build_token_cap_config({})
+
+    handler = MCPHandler(registry, invoke_func, session_manager, safeguard_config, token_cap_config) # pyright: ignore[reportArgumentType]
     return handler
 
 # ################################################################################################################################

@@ -9,8 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.typing_ import dictlist
 from zato.common.util.truncate.measure import serialize
-from zato.common.util.truncate.tokens import apply_token_cap, Default_Characters_Per_Token, estimate_tokens, \
-    Size_Cap_Mode_Block, Size_Cap_Mode_Truncate, TokenCapConfig
+from zato.common.util.truncate.tokens import apply_token_cap, build_token_cap_config, Default_Characters_Per_Token, \
+    estimate_tokens, Size_Cap_Mode_Block, Size_Cap_Mode_Truncate, TokenCapConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,6 +158,62 @@ class TestEnforcement:
         assert result.was_truncated is True
         assert result.did_fit is True
         assert result.tokens_after <= config.max_response_tokens
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestBuildConfig:
+
+    def test_empty_config_keeps_the_cap_off(self) -> 'None':
+
+        config = build_token_cap_config({})
+
+        assert config.max_response_tokens == 0
+        assert config.min_threshold_tokens == 0
+        assert config.size_cap_mode == Size_Cap_Mode_Truncate
+        assert config.characters_per_token == Default_Characters_Per_Token
+
+    def test_full_config_maps_every_field(self) -> 'None':
+
+        gateway_config = {
+            'max_response_size': 25000,
+            'min_size_threshold': 500,
+            'size_cap_mode': Size_Cap_Mode_Block,
+            'characters_per_token': 3.5,
+        }
+
+        config = build_token_cap_config(gateway_config)
+
+        assert config.max_response_tokens == 25000
+        assert config.min_threshold_tokens == 500
+        assert config.size_cap_mode == Size_Cap_Mode_Block
+        assert config.characters_per_token == 3.5
+
+    def test_stored_zero_is_kept_and_not_replaced_by_a_default(self) -> 'None':
+
+        gateway_config = {
+            'max_response_size': 0,
+            'min_size_threshold': 0,
+        }
+
+        config = build_token_cap_config(gateway_config)
+
+        assert config.max_response_tokens == 0
+        assert config.min_threshold_tokens == 0
+
+    def test_built_config_drives_the_cap(self) -> 'None':
+
+        gateway_config = {
+            'max_response_size': 10,
+            'size_cap_mode': Size_Cap_Mode_Block,
+        }
+
+        config = build_token_cap_config(gateway_config)
+        document = {'rows': _make_rows(500)}
+
+        result = apply_token_cap(document, config)
+
+        assert result.was_blocked is True
 
 # ################################################################################################################################
 # ################################################################################################################################
