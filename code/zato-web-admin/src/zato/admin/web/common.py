@@ -9,16 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 tz_names = sorted([
 
     # Africa
-    'Africa/Algiers',
-    'Africa/Cairo',
     'Africa/Johannesburg',
-    'Africa/Lagos',
-    'Africa/Tunis',
 
     # Americas
     'America/Anchorage',
     'America/Argentina/Buenos_Aires',
-    'America/Bogota',
     'America/Chicago',
     'America/Denver',
     'America/Indiana/Indianapolis',
@@ -31,13 +26,7 @@ tz_names = sorted([
     'America/Sao_Paulo',
 
     # Asia
-    'Asia/Baghdad',
     'Asia/Bangkok',
-    'Asia/Beirut',
-    'Asia/Damascus',
-    'Asia/Dhaka',
-    'Asia/Dubai',
-    'Asia/Ho_Chi_Minh',
     'Asia/Jakarta',
     'Asia/Jerusalem',
     'Asia/Karachi',
@@ -45,7 +34,6 @@ tz_names = sorted([
     'Asia/Kuala_Lumpur',
     'Asia/Manila',
     'Asia/Seoul',
-    'Asia/Shanghai',
     'Asia/Singapore',
     'Asia/Taipei',
     'Asia/Tokyo',
@@ -83,9 +71,7 @@ tz_names = sorted([
     'Europe/London',
     'Europe/Luxembourg',
     'Europe/Madrid',
-    'Europe/Minsk',
     'Europe/Monaco',
-    'Europe/Moscow',
     'Europe/Oslo',
     'Europe/Paris',
     'Europe/Podgorica',
