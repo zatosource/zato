@@ -20,7 +20,7 @@
 	geiger geiger-zato \
 	rust-lint lint \
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
-	quickstart dashboard server listener haproxy dev sbom
+	quickstart dashboard server listener haproxy dev sbom scalar-update
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -35,6 +35,10 @@ ZATO_RUST := $(CURDIR)/code/zato-rust
 MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
 MQ_CLIENT_URL := https://zato.io/mqclient-linux-x64.tar.gz
 MQ_CLIENT_LIB := $(MQ_CLIENT_DIR)/lib64/libmqm_r.so
+
+# Scalar bundle for the OpenAPI console - the version is pinned in package.json
+SCALAR_PACKAGE_JSON := $(CURDIR)/code/zato-openapi/package.json
+SCALAR_BUNDLE := $(CURDIR)/code/zato-openapi/src/zato/openapi/app/static/scalar/scalar.standalone.js
 
 SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
 
@@ -293,6 +297,12 @@ sbom: ## Generate a CycloneDX SBOM of the Python environment.
 	suffix = 'component' if len(components) == 1 else 'components'; \
 	print(f'>>> Wrote $(CURDIR)/sbom/zato.cdx.json ({len(components)} {suffix})'); \
 	"
+
+scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the console's static directory.
+	version=$$($(ZATO_PY) -c "import json; print(json.load(open('$(SCALAR_PACKAGE_JSON)'))['dependencies']['@scalar/api-reference'])") && \
+	echo ">>> Downloading @scalar/api-reference@$$version" && \
+	curl -fL https://cdn.jsdelivr.net/npm/@scalar/api-reference@$$version/dist/browser/standalone.min.js -o $(SCALAR_BUNDLE) && \
+	echo ">>> Wrote $(SCALAR_BUNDLE)"
 
 help:
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \

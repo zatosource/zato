@@ -16,6 +16,9 @@ from django.conf import settings
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
+# PyYAML
+import yaml
+
 # Zato
 from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path
 from zato.openapi.console.client import OpenAPIConsoleClient
@@ -34,6 +37,10 @@ _invalid_credentials_message = 'Invalid username or password'
 
 # The message shown when no server replied in time
 _no_server_message = 'No server is available, please try again'
+
+# The one message returned to any caller without a valid session - always the same
+# so that anonymous callers cannot tell apart missing, expired and rejected sessions.
+_unauthorized_message = 'Unauthorized'
 
 # Created lazily so that the console starts even when Redis is briefly unavailable
 _client = None
@@ -101,18 +108,18 @@ def console_view(req):
 
 # ################################################################################################################################
 
-def spec_view(req):
-    """ Serves the OpenAPI document filtered down to what the signed-in user's credentials give access to.
-    The filtering happens on Zato servers - the document never contains endpoints the caller cannot invoke.
+def _get_spec_or_error(req):
+    """ Returns the signed-in caller's filtered document and no error, or no document and an error response
+    when the session or the credentials are not valid.
     """
     if not (token := req.session.get(Session_Credentials_Key)):
-        return HttpResponse('Not signed in', status=UNAUTHORIZED)
+        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
 
     # The token becomes invalid when the console is restarted, in which case the user signs in again
     credentials = decrypt_credentials(token)
     if not credentials:
         req.session.flush()
-        return HttpResponse('Session expired', status=UNAUTHORIZED)
+        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
 
     username, password = credentials
 
@@ -120,9 +127,36 @@ def spec_view(req):
     spec = client.get_spec(username, password)
 
     if spec is None:
-        return HttpResponse('Credentials rejected', status=UNAUTHORIZED)
+        return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
+
+    return spec, None
+
+# ################################################################################################################################
+
+def spec_view(req):
+    """ Serves the OpenAPI document filtered down to what the signed-in user's credentials give access to.
+    The filtering happens on Zato servers - the document never contains endpoints the caller cannot invoke.
+    """
+    spec, error = _get_spec_or_error(req)
+    if error:
+        return error
 
     out = JsonResponse(spec)
+
+    return out
+
+# ################################################################################################################################
+
+def spec_yaml_view(req):
+    """ Serves the same per-caller filtered OpenAPI document as the JSON view, rendered as YAML.
+    """
+    spec, error = _get_spec_or_error(req)
+    if error:
+        return error
+
+    document = yaml.dump(spec, sort_keys=False, allow_unicode=True)
+
+    out = HttpResponse(document, content_type='application/yaml')
 
     return out
 
