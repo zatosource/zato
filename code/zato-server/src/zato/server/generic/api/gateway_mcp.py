@@ -40,10 +40,20 @@ class GatewayMCPWrapper:
         self.config = config
         self.server = server
         self.handler:'MCPHandler | None' = None
+        self._audit_log:'AuditLog | None' = None
 
-        # The engine behind the audit log is process-wide and cached,
-        # so one instance per wrapper is as cheap as the REST dispatcher's one.
-        self.audit_log = AuditLog(server.name)
+# ################################################################################################################################
+
+    def get_audit_log(self) -> 'AuditLog':
+        """ Returns this wrapper's audit log, created on first use so gateways that never
+        audit never touch the audit database. The engine behind it is process-wide and cached.
+        """
+
+        if self._audit_log is None:
+            self._audit_log = AuditLog(self.server.name)
+
+        out = self._audit_log
+        return out
 
 # ################################################################################################################################
 

@@ -46,6 +46,7 @@ class GatewayMCPImporter(GenericConnectionImporter):
         'url_path': '/mcp',
         'services': '',
         'security_groups': [],
+        'is_audit_log_active': False,
     }
 
     connection_secret_keys = []

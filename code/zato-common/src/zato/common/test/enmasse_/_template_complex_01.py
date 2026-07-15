@@ -313,6 +313,7 @@ mcp_gateway:
 
   - name: enmasse.mcp.gateway.1
     is_active: true
+    is_audit_log_active: true
     url_path: /mcp/enmasse-1
     services: crm.get-customer,crm.update-customer
     security_groups:

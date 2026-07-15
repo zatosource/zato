@@ -244,13 +244,16 @@ class MCPEndpoint(AdminService):
         are never recorded, only their sizes are.
         """
 
-        # The caller is always authenticated by the time an audit event is built,
-        # so the security definition's name is always present.
+        # The caller is always authenticated by the time an audit event is built, so both
+        # the gateway's channel name and the security definition's name are always present.
+        gateway_name = self.channel.name
         sec_def_name = self.channel.security.name
+
+        assert gateway_name is not None
         assert sec_def_name is not None
 
         event = build_audit_event(
-            gateway_name=self.channel.name,
+            gateway_name=gateway_name,
             sec_def_name=sec_def_name,
             cid=self.cid,
             method=method,
@@ -264,7 +267,7 @@ class MCPEndpoint(AdminService):
             request_size=request_size,
         )
 
-        wrapper.audit_log.insert(**event)
+        wrapper.get_audit_log().insert(**event)
 
 # ################################################################################################################################
 # ################################################################################################################################

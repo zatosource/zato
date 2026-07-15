@@ -453,6 +453,11 @@ def zato_server(request:'any_') -> 'any_':
     server_env['Zato_MCP_Check_Origin'] = 'true'
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
+    # Point the audit log at a file inside the temp directory so the live server
+    # never writes into the real environment's audit database.
+    audit_db_path = os.path.join(_temp_directory, 'audit.db')
+    server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
+
     if use_coverage:
         server_env['COVERAGE_PROCESS_START'] = coveragerc_path # pyright: ignore[reportArgumentType]
 
@@ -563,6 +568,8 @@ def zato_server(request:'any_') -> 'any_':
         'bearer_static_token': _mcp_bearer_static_token,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
+        'audit_db_path': audit_db_path,
+        'mcp_sec_def_name': _mcp_sec_def_name,
     }
 
     # Teardown: stop the server, optionally generate coverage report ..
