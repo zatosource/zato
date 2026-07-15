@@ -1,0 +1,43 @@
+/* ------------------------------------------------------------ */
+/* PII multi-selects - subtle badges                             */
+/* ------------------------------------------------------------ */
+
+.chosen-container-multi .chosen-choices {
+    background-image: none;
+}
+
+.chosen-container-multi .chosen-choices li.search-choice {
+    padding: 3px 20px 3px 7px;
+    border: 1px solid #dde3ea;
+    background-color: #f6f8fa;
+    background-image: none;
+    color: #333;
+}
+
+/* The inline search box is part of the field, never a field of its own */
+.chosen-container-multi .chosen-choices li.search-field input[type="text"]:focus {
+    box-shadow: none;
+}
+
+/* The land prefix on a chip is quiet but still readable */
+.chosen-container-multi .chosen-choices li.search-choice .group-name {
+    color: #717171;
+}
+
+/* The remove sign stays quiet until pointed at */
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close {
+    opacity: 0.6;
+}
+
+.chosen-container-multi .chosen-choices li.search-choice .search-choice-close:hover {
+    opacity: 0.8;
+}
+
+/* Entries already picked are dimmed in the dropdown, hover included */
+.chosen-container-multi .chosen-results li.result-selected,
+.chosen-container-multi .chosen-results li.result-selected.highlighted,
+.chosen-container-multi .chosen-results li.result-selected:hover {
+    color: #b8c0c8 !important;
+    background-color: transparent;
+    cursor: default;
+}

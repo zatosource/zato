@@ -5,6 +5,8 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/chosen/chosen.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
@@ -17,6 +19,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.min.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
@@ -127,7 +130,6 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
                         <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
-                        <button type="button" class="dashboard-tab" data-tab="compaction" role="tab" aria-selected="false">Compaction</button>
                         <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
                         <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
                     </div>
@@ -196,13 +198,7 @@
                     <div class="dashboard-tab-panel" id="mcp-create-tab-panel-response_shaping" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td colspan="2" class="form-data-section">Projection</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label" style="vertical-align:top; padding-top:8px"><label for="id_filter_expression">Filter expression</label></td>
-                                <td>
-                                    <div id="filter-expression-pane-create"></div>
-                                </td>
+                                <td colspan="2" class="form-data-section">Filtering</td>
                             </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_allow_client_filters">Allow client filters</label></td>
@@ -223,11 +219,9 @@
                                 <td class="form-data-label"><label for="id_min_size_threshold">Activation threshold</label></td>
                                 <td>{{ create_form.min_size_threshold }}</td>
                             </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-compaction" role="tabpanel" hidden>
-                        <table class="form-data">
+                            <tr>
+                                <td colspan="2" class="form-data-section">Compaction</td>
+                            </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_safeguards_strip_nulls">Strip null fields</label></td>
                                 <td>{{ create_form.safeguards_strip_nulls }}</td>
@@ -337,7 +331,6 @@
                     <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
                         <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
                         <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
-                        <button type="button" class="dashboard-tab" data-tab="compaction" role="tab" aria-selected="false">Compaction</button>
                         <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
                         <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
                     </div>
@@ -406,13 +399,7 @@
                     <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-response_shaping" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td colspan="2" class="form-data-section">Projection</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label" style="vertical-align:top; padding-top:8px"><label for="id_edit-filter_expression">Filter expression</label></td>
-                                <td>
-                                    <div id="filter-expression-pane-edit"></div>
-                                </td>
+                                <td colspan="2" class="form-data-section">Filtering</td>
                             </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_edit-allow_client_filters">Allow client filters</label></td>
@@ -433,11 +420,9 @@
                                 <td class="form-data-label"><label for="id_edit-min_size_threshold">Activation threshold</label></td>
                                 <td>{{ edit_form.min_size_threshold }}</td>
                             </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-compaction" role="tabpanel" hidden>
-                        <table class="form-data">
+                            <tr>
+                                <td colspan="2" class="form-data-section">Compaction</td>
+                            </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_edit-safeguards_strip_nulls">Strip null fields</label></td>
                                 <td>{{ edit_form.safeguards_strip_nulls }}</td>

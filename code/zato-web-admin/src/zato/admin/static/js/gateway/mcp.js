@@ -30,17 +30,6 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = function(form) {
         var action = form.attr('id').replace('-form', '');
 
-        // The filter expression travels as a hidden input filled from the editor pane
-        form.find('input[name="filter_expression"]').remove();
-        var pane = $.fn.zato.gateway.mcp._filter_panes[action];
-        if (pane) {
-            form.append($('<input/>', {
-                type: 'hidden',
-                name: 'filter_expression',
-                value: pane.getValue()
-            }));
-        }
-
         // Inject hidden inputs for both badge pickers into the same form
         $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.gateway.mcp.badge_picker_config);
 
@@ -244,7 +233,6 @@ $.fn.zato.gateway.mcp.security_badge_picker.load = function(action, gateway_id) 
 $.fn.zato.gateway.mcp.tab_labels = {
     access_control:   'Access control',
     response_shaping: 'Response shaping',
-    compaction:       'Compaction',
     pii_removal:      'PII removal',
     content_safety:   'Content safety'
 };
@@ -266,7 +254,6 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_is_active': 'Whether this gateway accepts requests.<br>MCP clients cannot reach inactive gateways.',
     'id_url_path': 'URL path the MCP endpoint is exposed under,<br>e.g. /mcp/. This is the address MCP clients,<br>such as AI assistants, connect to in order<br>to discover and invoke the assigned services.',
 
-    'id_filter_expression': 'A JSONata expression applied to every tool response<br>before it is returned. Only the fields the expression<br>selects are delivered, so a large upstream response<br>becomes a small, purpose-built one and the client<br>spends context only on data it actually needs.',
     'id_allow_client_filters': 'Adds an optional response_filter parameter to every<br>tool, letting an AI agent pass its own JSONata<br>expression per call. The expression runs on the server<br>and the agent receives only the fields it asked for,<br>which cuts its context usage on every invocation.',
     'id_max_response_size': 'The maximum size of a tool response in characters,<br>empty means no cap. Oversized tool responses are<br>the main way context windows get flooded - one<br>unbounded call can crowd out everything the agent<br>learned before it.',
     'id_size_cap_mode': 'Truncate degrades an over-cap JSON response<br>structurally - array tails and longest strings<br>are dropped first, the document stays valid<br>and a report states what was removed.<br>Block refuses the response with an error naming<br>the size and the cap, for endpoints where<br>a partial answer would be misleading.',
@@ -277,9 +264,9 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_safeguards_strip_base64': 'Replaces long base64-encoded strings, such as<br>embedded images or attachments, with a short<br>marker stating the original size. A single<br>encoded file can otherwise consume thousands<br>of tokens without giving the model anything<br>it can use.',
 
     'id_safeguards_pii_enabled': 'Scans string values for personally identifiable<br>information, such as national identity numbers<br>or IBANs, and replaces each match with a token<br>naming the detector. The underlying data<br>never reaches the client or its model.',
-    'id_safeguards_pii_lands': 'Comma-separated land codes selecting which<br>detectors run, e.g. es, de, fr, us, intl.<br>Leave empty to run detectors for all lands.',
-    'id_safeguards_pii_detectors': 'Explicit detector names to run, e.g. es_dni<br>or intl_iban. When set, this list takes<br>precedence over the lands selection.',
-    'id_safeguards_pii_exclude': 'Detector names excluded from the selection made<br>by lands and detectors, e.g. us_ssn. Use it to keep<br>one detector out of an otherwise broad selection.',
+    'id_safeguards_pii_lands': 'The lands whose detectors run, e.g. Spain,<br>Germany or International. Leave empty<br>to run detectors for all lands.',
+    'id_safeguards_pii_detectors': 'Explicit detectors to run, picked by name.<br>When set, this selection takes precedence<br>over the lands.',
+    'id_safeguards_pii_exclude': 'Detectors excluded from the selection made<br>by lands and detectors. Use it to keep one<br>detector out of an otherwise broad selection.',
     'id_safeguards_pii_validate': 'Verifies each match with its checksum algorithm<br>before it is replaced. A number that merely looks<br>like an identifier but fails its checksum is left<br>untouched, which prevents false positives.',
     'id_safeguards_pii_stable_tokens': 'The same value receives the same numbered token<br>throughout one response, so the model can still<br>correlate occurrences of one person or account<br>without ever seeing the underlying value.',
 
@@ -295,29 +282,72 @@ $.fn.zato.gateway.mcp.field_descriptions = {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Response shaping - the filter expression editor pane.
+// PII removal - the lands, detectors and exclude fields are Chosen multi-selects.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp._filter_panes = {};
+$.fn.zato.gateway.mcp.pii_select_config = {
+    width: '100%',
+    include_group_label_in_selected: true,
+    search_contains: true
+};
 
-$.fn.zato.gateway.mcp._init_filter_pane = function(action) {
+$.fn.zato.gateway.mcp.pii_select_names = [
+    'safeguards_pii_lands',
+    'safeguards_pii_detectors',
+    'safeguards_pii_exclude'
+];
 
-    // Tear down the pane from a previous opening of this dialog ..
-    var previous = $.fn.zato.gateway.mcp._filter_panes[action];
-    if (previous) {
-        previous.destroy();
-    }
+// Chips of this group carry no land prefix - its detector names are global already.
+$.fn.zato.gateway.mcp.pii_prefixless_group = 'International';
 
-    // .. and mount a fresh editor - the pane is the only holder of the expression.
-    var pane = $.fn.zato.highlight_pane.init({
-        container: '#filter-expression-pane-' + action,
-        text: '',
-        editable: true,
-        ace_mode: 'ace/mode/javascript',
-        ace_options: {minLines: 5, maxLines: 8}
+$.fn.zato.gateway.mcp._format_chip_prefixes = function(select) {
+
+    // The chips live in the Chosen container that follows the underlying select ..
+    var chosen = select.data('chosen');
+    var container = select.next('.chosen-container');
+
+    container.find('li.search-choice').each(function() {
+        var chip = $(this);
+        var group_label = chip.find('.group-name');
+
+        if (!group_label.length) {
+            return;
+        }
+
+        // .. chips of the prefixless group lose their land label entirely ..
+        if (group_label.text() === $.fn.zato.gateway.mcp.pii_prefixless_group) {
+            group_label.hide();
+            return;
+        }
+
+        // .. and other chips show the short land code taken from the detector name.
+        var option_index = chip.find('.search-choice-close').data('option-array-index');
+        var detector_name = chosen.results_data[option_index].value;
+        var land_code = detector_name.split('_')[0].toUpperCase();
+        group_label.text(land_code);
     });
+};
 
-    $.fn.zato.gateway.mcp._filter_panes[action] = pane;
+$.fn.zato.gateway.mcp._init_pii_selects = function(action) {
+
+    var prefix = action === 'edit' ? 'id_edit-' : 'id_';
+    var select_names = $.fn.zato.gateway.mcp.pii_select_names;
+
+    for (var select_idx = 0; select_idx < select_names.length; select_idx++) {
+
+        // Initialize Chosen on the select - a repeated call is a no-op ..
+        var select = $('#' + prefix + select_names[select_idx]);
+        select.chosen($.fn.zato.gateway.mcp.pii_select_config);
+
+        // .. refresh the badges so a reopened dialog reflects the underlying options ..
+        select.trigger('chosen:updated');
+
+        // .. and keep the chip prefixes formatted, now and after every selection.
+        select.off('change.pii_prefix').on('change.pii_prefix', function() {
+            $.fn.zato.gateway.mcp._format_chip_prefixes($(this));
+        });
+        $.fn.zato.gateway.mcp._format_chip_prefixes(select);
+    }
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -363,6 +393,11 @@ $.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
                 var dependent = $('#' + prefix + dependent_name);
                 dependent.prop('disabled', !is_enabled);
                 dependent.toggleClass('routing-disabled', !is_enabled);
+
+                // Chosen mirrors the disabled state only when told the select changed
+                if (dependent.hasClass('chosen-multi')) {
+                    dependent.trigger('chosen:updated');
+                }
             });
         };
 
@@ -376,8 +411,8 @@ $.fn.zato.gateway.mcp._init_safeguard_toggles = function(action) {
 
 $.fn.zato.gateway.mcp.create = function() {
     $.fn.zato.gateway.mcp._reset_tabs('create');
+    $.fn.zato.gateway.mcp._init_pii_selects('create');
     $.fn.zato.gateway.mcp._init_safeguard_toggles('create');
-    $.fn.zato.gateway.mcp._init_filter_pane('create');
     $.fn.zato.gateway.mcp.badge_picker.load('create', null);
     $.fn.zato.gateway.mcp.security_badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a new MCP gateway', null);
@@ -394,8 +429,8 @@ $.fn.zato.gateway.mcp.create = function() {
 $.fn.zato.gateway.mcp.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.gateway.mcp._reset_tabs('edit');
+    $.fn.zato.gateway.mcp._init_pii_selects('edit');
     $.fn.zato.gateway.mcp._init_safeguard_toggles('edit');
-    $.fn.zato.gateway.mcp._init_filter_pane('edit');
     $.fn.zato.gateway.mcp.badge_picker.load('edit', instance.id);
     $.fn.zato.gateway.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
