@@ -14,6 +14,7 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import HTTP_SOAP, URL_TYPE
+from zato.common.marshal_.api import Model
 from zato.server.openapi_console.spec import is_channel_visible, resolve_caller
 
 # ################################################################################################################################
@@ -116,6 +117,10 @@ def _serialize_response(response:'any_') -> 'str':
         out = response
         return out
 
+    # .. typed services reply with a dataclass model, which serializes through its own to_dict ..
+    if isinstance(response, Model):
+        response = response.to_dict()
+
     # .. and anything else is serialized to JSON.
     out = json_dumps(response)
 
@@ -165,7 +170,11 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     data = _serialize_response(response)
 
     out['status'] = 'ok'
-    out['http_status'] = OK
+
+    # The reply goes onto a Redis stream, whose client library accepts plain ints only,
+    # so the enum member cannot be sent as it is.
+    out['http_status'] = OK.value
+
     out['content_type'] = _content_type
     out['data'] = data
 
