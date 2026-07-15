@@ -286,6 +286,43 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_channel_rest_openapi_flag(self) -> 'None':
+        """ Test that the OpenAPI flag is stored in opaque1, off when the YAML says so and on by default.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Process channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # Find the channel with the flag off and one that relies on the default
+        channel_rest_1 = cast_('any_', None)
+        channel_rest_2 = cast_('any_', None)
+
+        for channel in channels_created:
+            if channel.name == 'enmasse.channel.rest.1':
+                channel_rest_1 = channel
+            elif channel.name == 'enmasse.channel.rest.2':
+                channel_rest_2 = channel
+
+        # The template excludes channel rest.2 from OpenAPI documents
+        self.assertIsNotNone(channel_rest_2, 'Channel enmasse.channel.rest.2 not found')
+        opaque_2 = json.loads(channel_rest_2.opaque1)
+        self.assertIs(opaque_2['should_include_in_openapi'], False)
+
+        # A channel without the flag in YAML has it on
+        self.assertIsNotNone(channel_rest_1, 'Channel enmasse.channel.rest.1 not found')
+        opaque_1 = json.loads(channel_rest_1.opaque1)
+        self.assertIs(opaque_1['should_include_in_openapi'], True)
+
+# ################################################################################################################################
+
     def test_channel_rest_rate_limiting_update(self) -> 'None':
         """ Test that rate_limiting is correctly updated on an existing channel.
         """

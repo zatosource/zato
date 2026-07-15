@@ -141,6 +141,9 @@
                 'match_slash',
                 'http_accept',
             {% endif %}
+            {% if connection == 'channel' and transport == 'plain_http' %}
+                'should_include_in_openapi',
+            {% endif %}
 
             // 24, 25, 26, 27
             {% if connection == 'outgoing' %}
@@ -312,6 +315,9 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
                         {% endif %}
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} should_include_in_openapi {% endcomment %}
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}
@@ -469,6 +475,9 @@
                             <td class='ignore'>{{ item.match_slash }}</td>
                             <td class='ignore'>{{ item.http_accept|default:"" }}</td>
                         {% endif %}
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <td class='ignore'>{{ item.should_include_in_openapi }}</td>
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}
@@ -597,6 +606,13 @@
                                     Audit log
                                     {{ create_form.is_audit_log_active }}
                                 </label>
+                                {% if connection == 'channel' and transport == 'plain_http' %}
+                                    |
+                                    <label for="id_should_include_in_openapi">
+                                        OpenAPI
+                                        {{ create_form.should_include_in_openapi }}
+                                    </label>
+                                {% endif %}
                                 {% if transport == 'plain_http' %}
                                     |
                                     <label for="{{ create_form.data_format.id_for_label }}">
@@ -882,6 +898,13 @@
                                     Audit log
                                     {{ edit_form.is_audit_log_active }}
                                 </label>
+                                {% if connection == 'channel' and transport == 'plain_http' %}
+                                    |
+                                    <label for="id_edit-should_include_in_openapi">
+                                        OpenAPI
+                                        {{ edit_form.should_include_in_openapi }}
+                                    </label>
+                                {% endif %}
                                 |
                                 <label for="{{ edit_form.data_format.id_for_label }}">
                                     Data format

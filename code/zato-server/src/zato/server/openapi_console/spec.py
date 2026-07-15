@@ -13,7 +13,6 @@ from inspect import isclass
 
 # Zato
 from zato.common.api import URL_TYPE
-from zato.common.const import ServiceConst
 from zato.common.crypto.api import is_string_equal
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
@@ -24,7 +23,7 @@ from zato.openapi.generator.openapi_ import OpenAPIGenerator
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, dictlist, intnone, stranydict
+    from zato.common.typing_ import any_, anydict, dictlist, intnone, stranydict, tuple_
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -203,22 +202,16 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
 
 # ################################################################################################################################
 
-def build_spec(server:'ParallelServer', username:'str', password:'str') -> 'anydictnone':
-    """ Builds an OpenAPI document filtered down to what the caller's credentials give access to.
-    Returns None if the credentials are not valid. Admin credentials see all non-internal channels.
+def build_full_spec(server:'ParallelServer') -> 'tuple_[anydict, anydict]':
+    """ Builds the complete OpenAPI document out of all the eligible channels, with no per-caller filtering.
+    Returns the document and a channel map of path -> HTTP method -> channel ID, which is what
+    per-caller filtering later uses to decide which operations a caller can see.
     """
-    # Reject the request outright if the credentials do not match any active definition ..
-    security_id = validate_credentials(server, username, password)
-    if not security_id:
-        return None
-
-    # .. the admin account sees every endpoint, other accounts only what they can invoke ..
-    is_admin = username == ServiceConst.API_Admin_Invoke_Username
-
     url_data = server.config_manager.request_dispatcher.url_data
 
     models:'stranydict' = {}
     services = []
+    channel_map:'anydict' = {}
 
     for channel_item in url_data.channel_data:
 
@@ -236,25 +229,131 @@ def build_spec(server:'ParallelServer', username:'str', password:'str') -> 'anyd
         if not channel_item['service_name']:
             continue
 
-        # .. non-admin callers only see channels their credentials can invoke ..
-        if not is_admin:
-            if not is_channel_visible(channel_item, security_id, username, password):
-                continue
+        # .. channels can opt out of OpenAPI documents - only an explicit off flag excludes them,
+        # channels that predate the flag carry no value and are included ..
+        if channel_item.get('should_include_in_openapi') is False:
+            continue
 
-        # .. and each remaining channel contributes one entry per HTTP method.
+        # .. each remaining channel contributes one entry per HTTP method,
+        # and the channel map remembers which channel produced which operation.
         entries = _service_entries(server, channel_item, models)
+
+        for entry in entries:
+            path_methods = channel_map.setdefault(entry['url_path'], {})
+            path_methods[entry['http_method']] = channel_item['id']
+
         services.extend(entries)
 
     # Feed the collected metadata into the shared generator ..
     scan_results = {'services': services, 'models': models}
     generator = OpenAPIGenerator(TypeMapper())
 
-    # The generator module carries no type hints, hence the cast
-    out = cast_('anydict', generator.build_spec(scan_results))
+    # .. the generator itself is annotated, so its result needs no cast ..
+    out = generator.build_spec(scan_results)
 
     # .. and give the document a title the console shows to users.
     info = cast_('anydict', out['info'])
     info['title'] = _spec_title
+
+    return out, channel_map
+
+# ################################################################################################################################
+
+def _collect_schema_refs(node:'any_', out:'any_') -> 'None':
+    """ Walks a document fragment and adds the names of all the referenced component schemas to the output set.
+    """
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == '$ref':
+                schema_name = value.rsplit('/', 1)[1]
+                out.add(schema_name)
+            else:
+                _collect_schema_refs(value, out)
+
+    elif isinstance(node, list):
+        for item in node:
+            _collect_schema_refs(item, out)
+
+# ################################################################################################################################
+
+def filter_spec(
+    server:'ParallelServer',
+    spec:'anydict',
+    channel_map:'anydict',
+    security_id:'int',
+    username:'str',
+    password:'str',
+) -> 'anydict':
+    """ Filters the cached full document down to the operations the caller's credentials can invoke.
+    Tags and component schemas that no remaining operation uses are dropped too, so the filtered
+    document reveals nothing about endpoints the caller cannot see.
+    """
+    url_data = server.config_manager.request_dispatcher.url_data
+
+    # Visibility is checked against live channel data so that security changes take effect immediately
+    channel_by_id = {item['id']: item for item in url_data.channel_data}
+
+    paths = {}
+
+    for path, path_item in spec['paths'].items():
+
+        kept_operations = {}
+
+        for http_method, operation in path_item.items():
+
+            channel_id = channel_map[path][http_method]
+
+            # The channel may have just been deleted and the rebuild not have completed yet,
+            # in which case the operation is simply not visible.
+            channel_item = channel_by_id.get(channel_id)
+            if channel_item is None:
+                continue
+
+            if not is_channel_visible(channel_item, security_id, username, password):
+                continue
+
+            kept_operations[http_method] = operation
+
+        if kept_operations:
+            paths[path] = kept_operations
+
+    # Only the schemas the remaining operations reference are kept, including schemas
+    # that other kept schemas reference, hence the loop runs until no new names appear.
+    schemas = cast_('anydict', spec['components']['schemas'])
+    kept_schema_names:'any_' = set()
+    _collect_schema_refs(paths, kept_schema_names)
+
+    while True:
+        new_names:'any_' = set()
+        for schema_name in kept_schema_names:
+            if schema_name in schemas:
+                _collect_schema_refs(schemas[schema_name], new_names)
+
+        # No schema referenced anything new, so the closure is complete
+        if new_names <= kept_schema_names:
+            break
+
+        kept_schema_names |= new_names
+
+    kept_schemas = {name: schema for name, schema in schemas.items() if name in kept_schema_names}
+
+    # Only the tags the remaining operations use are kept
+    tag_names:'any_' = set()
+    for path_item in paths.values():
+        for operation in path_item.values():
+            tag_names.update(operation['tags'])
+
+    # The filtered document shares the operation and schema objects with the cached one,
+    # which is safe because callers only ever serialize the document, never modify it.
+    out:'anydict' = {
+        'openapi': spec['openapi'],
+        'info': spec['info'],
+        'paths': paths,
+        'components': {'schemas': kept_schemas},
+    }
+
+    if tag_names:
+        out['tags'] = [{'name': tag_name} for tag_name in sorted(tag_names)]
 
     return out
 

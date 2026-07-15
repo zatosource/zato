@@ -148,6 +148,11 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
         'gateway_service_list': params.get(prefix + 'gateway_service_list'),
     }
 
+    # The OpenAPI checkbox exists only in the forms of REST channels
+    if params['connection'] == 'channel':
+        if params['transport'] == 'plain_http':
+            message['should_include_in_openapi'] = bool(params.get(prefix + 'should_include_in_openapi'))
+
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
         message[name] = params.get(prefix + name)
@@ -328,6 +333,14 @@ def index(req): # type: ignore
 
                 http_soap.match_slash = match_slash
                 http_soap.http_accept = item.get('http_accept') or ''
+
+                # The OpenAPI flag is an opaque attribute, so channels that predate it carry no value,
+                # which means they are included in OpenAPI documents.
+                should_include_in_openapi = item.get('should_include_in_openapi')
+                if should_include_in_openapi is None:
+                    should_include_in_openapi = True
+
+                http_soap.should_include_in_openapi = should_include_in_openapi
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size
