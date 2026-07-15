@@ -128,7 +128,6 @@ class OpenAPIConsoleClient:
             'auth_type': auth['auth_type'],
             'username': auth['username'],
             'password': auth['password'],
-            'is_admin': auth['is_admin'],
         }, maxlen=ModuleCtx.Max_Stream_Len)
 
         reply = self._wait_for_reply(correlation_id)
@@ -165,7 +164,6 @@ class OpenAPIConsoleClient:
             'auth_type': auth['auth_type'],
             'username': auth['username'],
             'password': auth['password'],
-            'is_admin': auth['is_admin'],
             'http_method': http_method,
             'url_path': url_path,
             'query_string': query_string,

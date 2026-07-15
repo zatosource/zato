@@ -24,7 +24,6 @@ _all_env_keys = [
     'Zato_Dashboard_Auth_Entra_Client_Id',
     'Zato_Dashboard_Auth_Entra_Client_Secret',
     'Zato_Dashboard_Auth_Entra_Redirect_URL',
-    'Zato_Dashboard_Auth_Entra_Group_Allowed',
     'Zato_Dashboard_Auth_Entra_Group_Admin',
     'Zato_Dashboard_Auth_Entra_Auto_Login',
     'Zato_Dashboard_Auth_Entra_Authority_URL',
@@ -52,7 +51,6 @@ class TestAuthConfig:
         assert config.client_secret == ''
         assert config.redirect_url == ''
         assert config.authority_url == 'https://login.microsoftonline.com'
-        assert config.group_allowed == []
         assert config.group_admin == []
         assert config.auto_login is False
 
@@ -82,13 +80,11 @@ class TestAuthConfig:
     def test_group_lists_are_parsed(self:'any_', monkeypatch:'any_') -> 'None':
         _clear_environment(monkeypatch)
 
-        monkeypatch.setenv('Zato_Dashboard_Auth_Entra_Group_Allowed', 'group-one, group-two ,group-three')
-        monkeypatch.setenv('Zato_Dashboard_Auth_Entra_Group_Admin', 'group-admin')
+        monkeypatch.setenv('Zato_Dashboard_Auth_Entra_Group_Admin', 'group-one, group-two ,group-three')
 
         config = build_auth_config()
 
-        assert config.group_allowed == ['group-one', 'group-two', 'group-three']
-        assert config.group_admin == ['group-admin']
+        assert config.group_admin == ['group-one', 'group-two', 'group-three']
 
 # ################################################################################################################################
 

@@ -22,8 +22,7 @@ class TestConfig:
     client_id     = 'e94f2d81-63b7-4c5a-8f2e-1a9d7b3c4e60'
     client_secret = 'client-secret-' + CryptoManager.generate_hex_string()
 
-    group_allowed = '2b8e4f6a-1c3d-4e5f-8a9b-0c1d2e3f4a5b'
-    group_admin   = '9d7c5b3a-8e6f-4a2b-9c1d-3e5f7a9b1c2d'
+    group_admin = '9d7c5b3a-8e6f-4a2b-9c1d-3e5f7a9b1c2d'
 
     user_principal_name = 'test.user@example.com'
     user_display_name   = 'Test User'

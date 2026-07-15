@@ -616,12 +616,10 @@ class MISC:
 
 class OpenAPI_Console_Auth:
     """ How a caller of the OpenAPI console authenticated - the values travel in console commands
-    over Redis Streams, which carry strings only, hence the admin flag is spelled out as one too.
+    over Redis Streams.
     """
     Type_Credentials = 'credentials'
     Type_Entra = 'entra'
-    Is_Admin_True = 'true'
-    Is_Admin_False = 'false'
 
 # ################################################################################################################################
 # ################################################################################################################################
