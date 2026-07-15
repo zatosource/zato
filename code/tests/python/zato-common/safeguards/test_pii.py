@@ -87,17 +87,19 @@ class TestLandSelection:
         assert _email in cleaned['note']
         assert result.pii_removed == {'intl_iban': 1}
 
-    def test_empty_selection_means_all_default_detectors(self) -> 'None':
+    def test_empty_selection_runs_no_detectors(self) -> 'None':
 
+        # With no lands and no detectors picked, nothing is scanned and everything survives.
         result = _new_result()
         config = _new_config([], [], [])
         value = {'note': f'SSN 536-90-4399 pays to {_valid_iban} from {_email}'}
 
         cleaned = remove_pii(value, result, config)
 
-        assert '536-90-4399' not in cleaned['note']
-        assert _valid_iban not in cleaned['note']
-        assert _email not in cleaned['note']
+        assert '536-90-4399' in cleaned['note']
+        assert _valid_iban in cleaned['note']
+        assert _email in cleaned['note']
+        assert result.pii_removed == {}
 
 # ################################################################################################################################
 # ################################################################################################################################

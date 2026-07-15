@@ -11,8 +11,12 @@ from piigex import Match, Scrubber
 
 # Zato
 from zato.common.typing_ import any_, anytuple, strlistnone
+from zato.common.util.safeguards import detectors
 from zato.common.util.safeguards.common import Max_Cleaner_Cache_Entries, SafeguardConfig, SafeguardResult
 from zato.common.util.safeguards.walk import walk_strings
+
+# The import above registers Zato's own detectors with the library's registry - this line keeps flake8 quiet about it.
+detectors = detectors
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,7 +59,8 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
         cleaner_detectors = None
         cleaner_lands = list(lands)
 
-    # .. and with neither given, every default detector is active.
+    # .. and with neither given, the underlying library would activate its full default set -
+    # remove_pii never takes this path, it returns early without a selection.
     else:
         cleaner_detectors = None
         cleaner_lands = None
@@ -91,7 +96,14 @@ def get_cleaner(config:'SafeguardConfig') -> 'Scrubber':
 
 def remove_pii(value:'any_', result:'SafeguardResult', config:'SafeguardConfig') -> 'any_':
     """ Replaces PII matches in string values with their detector tokens, counting the matches per detector.
+    An explicit selection is required - with no lands and no detectors picked, no detector runs at all.
     """
+
+    # Nothing is scanned until the config names at least one land or detector.
+    if not config.pii_lands:
+        if not config.pii_detectors:
+            return value
+
     cleaner = get_cleaner(config)
 
     def visit(text:'str', path:'str') -> 'str':
