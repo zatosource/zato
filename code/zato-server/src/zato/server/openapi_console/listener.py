@@ -20,8 +20,8 @@ from redis import Redis
 
 # Zato
 from zato.common.typing_ import cast_
+from zato.server.openapi_console.cache import get_spec
 from zato.server.openapi_console.invoke import handle_invoke
-from zato.server.openapi_console.spec import build_spec
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,8 +63,8 @@ def _handle_get_spec(server:'ParallelServer', fields:'anydict') -> 'anydict':
     # Our response to produce
     out = {'correlation_id': fields['correlation_id']}
 
-    # Build the document for this caller - None means the credentials were not valid ..
-    spec = build_spec(server, username, password)
+    # Filter the cached document down to this caller - None means the credentials were not valid ..
+    spec = get_spec(server, username, password)
 
     if spec is None:
         out['status'] = 'unauthorized'

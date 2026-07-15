@@ -581,7 +581,8 @@ class URLData(PyURLData):
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
             'match_slash',
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
-            'security_groups', 'security_groups_ctx', 'gateway_service_list', 'use_mtom', 'is_audit_log_active'):
+            'security_groups', 'security_groups_ctx', 'gateway_service_list', 'use_mtom', 'is_audit_log_active',
+            'should_include_in_openapi'):
 
             channel_item[name] = msg.get(name)
 

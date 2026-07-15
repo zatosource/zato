@@ -864,7 +864,7 @@ class Create(_CreateEdit):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list', Boolean('-is_audit_log_active'), \
+        '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_as4_input, \
@@ -886,6 +886,9 @@ class Create(_CreateEdit):
         input.is_internal = input.get('is_internal', False)
 
         input.is_audit_log_active = input.get('is_audit_log_active', True)
+
+        # Channels are included in OpenAPI documents unless the flag turns it off
+        input.should_include_in_openapi = input.get('should_include_in_openapi', True)
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
@@ -1063,7 +1066,7 @@ class Edit(_CreateEdit):
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list', Boolean('-is_audit_log_active'), \
+        '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_as4_input, \
@@ -1085,6 +1088,9 @@ class Edit(_CreateEdit):
         input.is_internal = input.get('is_internal', False)
 
         input.is_audit_log_active = input.get('is_audit_log_active', True)
+
+        # Channels are included in OpenAPI documents unless the flag turns it off
+        input.should_include_in_openapi = input.get('should_include_in_openapi', True)
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id

@@ -163,6 +163,10 @@ class TestEnmasseChannelRESTExporter(TestCase):
                 if channel_def.get('is_audit_log_active') is False:
                     channel_required['is_audit_log_active'] = False
 
+                # The OpenAPI flag is exported only when it is off
+                if channel_def.get('should_include_in_openapi') is False:
+                    channel_required['should_include_in_openapi'] = False
+
                 # Add this channel's requirements to our dictionary
                 required_channel_fields[channel_name] = channel_required
 

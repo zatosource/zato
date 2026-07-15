@@ -411,6 +411,7 @@ $.fn.zato.http_soap.field_descriptions = {
     'id_name': 'A unique name for this endpoint.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this endpoint accepts messages.<br>Requests to inactive endpoints are rejected.',
     'id_is_audit_log_active': 'Whether this endpoint\'s traffic is recorded<br>in the audit log. On by default.',
+    'id_should_include_in_openapi': 'Whether this endpoint appears<br>in OpenAPI documents. On by default.',
     'id_url_path': 'URL path this endpoint listens on,<br>e.g. /services/endpoint.',
     'id_service': 'The service invoked for each message<br>this endpoint receives.',
     'id_security': 'Security definition each incoming message<br>must satisfy, e.g. WS-Security<br>or Basic Auth.',
@@ -669,6 +670,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_channel) {
         row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
         row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
+    }
+    if(is_channel && !is_soap) {
+        row += String.format("<td class='ignore'>{0}</td>", item.should_include_in_openapi == true);
     }
 
     /* 24, 25, 26, 27 */

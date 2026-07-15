@@ -149,6 +149,10 @@ class ChannelExporter:
             if channel_row.get('is_audit_log_active') is False:
                 exported_channel['is_audit_log_active'] = False
 
+            # Channels are included in OpenAPI documents by default so only the off state is exported
+            if channel_row.get('should_include_in_openapi') is False:
+                exported_channel['should_include_in_openapi'] = False
+
             exported_channels.append(exported_channel)
 
         logger.info('Successfully prepared %d REST Channel definitions for export', len(exported_channels))
