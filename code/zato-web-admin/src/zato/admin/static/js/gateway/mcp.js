@@ -43,6 +43,14 @@ $(document).ready(function() {
         return true;
     };
 
+    // Multi-selects serialize one entry per selected option - the data table instance
+    // needs all of them joined into one comma-separated value.
+    $.fn.zato.data_table.add_row_hook = function(instance, name, html_elem, data) {
+        if($.fn.zato.gateway.mcp.pii_select_names.indexOf(name) !== -1) {
+            instance[name] = html_elem.val().join(',');
+        }
+    };
+
     $.fn.zato.gateway.mcp._init_token_combos();
 })
 
@@ -285,6 +293,35 @@ $.fn.zato.gateway.mcp.field_descriptions = {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Response shaping fields kept in the data table's hidden columns - the order matches
+// get_columns in the page and each value is what a field defaults to when an instance lacks it.
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.shaping_field_defaults = {
+    'allow_client_filters': false,
+    'max_response_size': '',
+    'size_cap_mode': 'truncate',
+    'min_size_threshold': '',
+    'characters_per_token': '4.0',
+    'safeguards_strip_nulls': false,
+    'safeguards_collapse_whitespace': false,
+    'safeguards_strip_base64': false,
+    'safeguards_pii_enabled': false,
+    'safeguards_pii_lands': '',
+    'safeguards_pii_detectors': '',
+    'safeguards_pii_exclude': '',
+    'safeguards_pii_validate': false,
+    'safeguards_pii_stable_tokens': false,
+    'safeguards_normalize_unicode': false,
+    'safeguards_unicode_mode': 'clean',
+    'safeguards_sanitize_markup': false,
+    'safeguards_markup_mode': 'clean',
+    'safeguards_url_policy_enabled': false,
+    'safeguards_url_allow_list': '',
+    'safeguards_url_mode': 'remove'
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Size caps - the two token fields are editable jQuery UI comboboxes with preset values.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -381,6 +418,31 @@ $.fn.zato.gateway.mcp._init_pii_selects = function(action) {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp._populate_pii_selects = function(instance) {
+
+    var select_names = $.fn.zato.gateway.mcp.pii_select_names;
+
+    for(var select_idx = 0; select_idx < select_names.length; select_idx++) {
+
+        // The instance keeps each multi-select's value as a comma-separated string ..
+        var name = select_names[select_idx];
+        var value = instance[name];
+        var selected = [];
+
+        if(value) {
+            selected = value.split(',');
+        }
+
+        // .. apply it to the underlying select and let Chosen redraw its chips.
+        var select = $('#id_edit-' + name);
+        select.val(selected);
+        select.trigger('chosen:updated');
+        $.fn.zato.gateway.mcp._format_chip_prefixes(select);
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Master toggles in the response safeguards tab - each key is a checkbox that
 // enables or disables the inputs listed under it.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -460,10 +522,14 @@ $.fn.zato.gateway.mcp.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.gateway.mcp._reset_tabs('edit');
     $.fn.zato.gateway.mcp._init_pii_selects('edit');
-    $.fn.zato.gateway.mcp._init_safeguard_toggles('edit');
     $.fn.zato.gateway.mcp.badge_picker.load('edit', instance.id);
     $.fn.zato.gateway.mcp.security_badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
+
+    // The generic populate above cannot handle multi-selects, so their values
+    // are applied here, and only then can the master toggles reflect the populated state.
+    $.fn.zato.gateway.mcp._populate_pii_selects(instance);
+    $.fn.zato.gateway.mcp._init_safeguard_toggles('edit');
 
     $('#edit-div').dialog('option', 'width', '45em');
     $.fn.zato.how_it_works.init({
@@ -502,6 +568,17 @@ $.fn.zato.gateway.mcp.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+
+    // The response shaping fields live in hidden columns so a later edit sees fresh values -
+    // fields the instance lacks, e.g. unchecked checkboxes absent from form serialization,
+    // render as their defaults.
+    $.each($.fn.zato.gateway.mcp.shaping_field_defaults, function(field_name, default_value) {
+        var field_value = item[field_name];
+        if(field_value === undefined) {
+            field_value = default_value;
+        }
+        row += String.format("<td class='ignore'>{0}</td>", field_value);
+    });
 
     if(include_tr) {
         row += '</tr>';

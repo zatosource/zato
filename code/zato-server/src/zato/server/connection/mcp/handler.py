@@ -15,6 +15,9 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.json_internal import dumps, loads
+from zato.common.util.safeguards.api import apply_safeguards
+from zato.common.util.safeguards.config import is_safeguards_active
+from zato.common.util.truncate.tokens import apply_token_cap
 from zato.server.connection.mcp.session import Session_Invalid_Identity, Session_Valid
 
 # ################################################################################################################################
@@ -22,6 +25,8 @@ from zato.server.connection.mcp.session import Session_Invalid_Identity, Session
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, strdictlist, stranydict, strnone
+    from zato.common.util.safeguards.common import SafeguardConfig
+    from zato.common.util.truncate.tokens import TokenCapConfig
     from zato.server.connection.mcp.registry import ToolRegistry
     from zato.server.connection.mcp.session import MCPSessionManager
     from zato.server.service.store import ServiceStore
@@ -105,6 +110,13 @@ _message_batch_too_large = 'Invalid request: batch too large'
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ResponseRejected(Exception):
+    """ Raised when a response safeguard or size cap refuses a tool response - the message is returned to the client.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclasses.dataclass(init=False)
 class MCPResponse:
     """ Wraps a JSON-RPC response body, HTTP status code, and optional session ID.
@@ -164,10 +176,19 @@ class MCPHandler:
     Routes initialize, tools/list, tools/call, and ping methods.
     """
 
-    def __init__(self, tool_registry:'ToolRegistry', invoke_func:'any_', session_manager:'MCPSessionManager') -> 'None':
+    def __init__(
+        self,
+        tool_registry:'ToolRegistry',
+        invoke_func:'any_',
+        session_manager:'MCPSessionManager',
+        safeguard_config:'SafeguardConfig',
+        token_cap_config:'TokenCapConfig',
+        ) -> 'None':
         self.tool_registry = tool_registry
         self.invoke_func = invoke_func
         self.session_manager = session_manager
+        self.safeguard_config = safeguard_config
+        self.token_cap_config = token_cap_config
 
 # ################################################################################################################################
 
@@ -577,6 +598,25 @@ class MCPHandler:
         try:
             service_response = self.invoke_func(tool_name, arguments)
             response_text = self._serialize_service_response(service_response)
+
+        # .. a safeguard or size cap refused the response - the message names the reason,
+        # unlike a service exception, which is never revealed to the client ..
+        except ResponseRejected as e:
+            logger.info('MCP: Response of `%s` was refused: %s', tool_name, e)
+
+            refused_result:'stranydict' = {
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': str(e),
+                    },
+                ],
+                'isError': True,
+            }
+
+            out = _make_success_response(request_id, refused_result)
+            return out
+
         except Exception:
             exception_detail = format_exc()
             logger.warning('MCP: Service `%s` raised an exception:\n%s', tool_name, exception_detail)
@@ -611,22 +651,44 @@ class MCPHandler:
 # ################################################################################################################################
 
     def _serialize_service_response(self, response:'any_') -> 'str':
-        """ Converts a service response to a text string suitable for MCP content.
+        """ Converts a service response to a text string suitable for MCP content,
+        applying the gateway's response safeguards and token cap on the way.
+        Raises ResponseRejected when a safeguard or the cap refuses the response.
         """
 
-        # If the response is already a string, return it directly ..
+        # Bytes are decoded up front so every later stage sees a JSON-serializable value ..
+        if isinstance(response, bytes):
+            response = response.decode('utf8')
+
+        # .. safeguards run on the structured value, before any serialization,
+        # and only when at least one stage is enabled, to skip the deep copy otherwise ..
+        if is_safeguards_active(self.safeguard_config):
+            safeguard_result = apply_safeguards(response, self.safeguard_config)
+
+            # .. a rejection refuses the whole response, naming the kind of finding that caused it ..
+            if safeguard_result.was_rejected:
+                raise ResponseRejected(f'Response rejected: {safeguard_result.reject_kind}')
+
+            response = safeguard_result.value
+
+        # .. the token cap runs on the possibly cleaned value, only when a cap is set at all ..
+        if self.token_cap_config.max_response_tokens:
+            cap_result = apply_token_cap(response, self.token_cap_config)
+
+            # .. block mode refuses an oversized response outright, naming the size and the cap ..
+            if cap_result.was_blocked:
+                cap = self.token_cap_config.max_response_tokens
+                raise ResponseRejected(f'Response too large: {cap_result.tokens_before} tokens, cap is {cap}')
+
+            response = cap_result.value
+
+        # .. a string result is returned as it is ..
         if isinstance(response, str):
 
             out = response
             return out
 
-        # .. if it is bytes, decode it ..
-        if isinstance(response, bytes):
-
-            out = response.decode('utf8')
-            return out
-
-        # .. otherwise serialize it to JSON.
+        # .. and everything else serializes to JSON.
         out = dumps(response)
         return out
 

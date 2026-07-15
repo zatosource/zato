@@ -21,7 +21,7 @@ _mode_choices = (
 
 _url_mode_choices = (
     ('remove', 'Remove'),
-    ('defang', 'Defang'),
+    ('neutralize', 'Defang'),
     ('reject', 'Reject'),
 )
 
