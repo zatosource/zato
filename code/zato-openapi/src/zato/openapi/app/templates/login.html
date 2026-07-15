@@ -30,6 +30,12 @@
             <input class="console-login-input" type="password" id="password" name="password" autocomplete="current-password" required>
 
             <button class="console-login-button" type="submit">Sign in</button>
+
+            {% if entra_enabled %}
+            <div class="console-login-entra">
+                <a href="/openapi/console/login?auth=entra">Sign in with Microsoft</a>
+            </div>
+            {% endif %}
         </form>
     </main>
 

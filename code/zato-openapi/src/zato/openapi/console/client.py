@@ -23,7 +23,8 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydictnone, anylist
+    from zato.common.typing_ import anydict, anydictnone, anylist
+    anydict = anydict
     anylist = anylist
 
 # ################################################################################################################################
@@ -115,17 +116,19 @@ class OpenAPIConsoleClient:
 
 # ################################################################################################################################
 
-    def get_spec(self, username:'str', password:'str') -> 'anydictnone':
-        """ Asks a server for the OpenAPI document filtered down to the given credentials.
-        Returns the document as a dict, or None if the credentials were rejected or no server replied.
+    def get_spec(self, auth:'anydict') -> 'anydictnone':
+        """ Asks a server for the OpenAPI document filtered down to the given caller.
+        Returns the document as a dict, or None if the caller was rejected or no server replied.
         """
         correlation_id = uuid4().hex
 
         _ = self.redis.xadd(ModuleCtx.Request_Stream, {
             'command': 'get_spec',
             'correlation_id': correlation_id,
-            'username': username,
-            'password': password,
+            'auth_type': auth['auth_type'],
+            'username': auth['username'],
+            'password': auth['password'],
+            'is_admin': auth['is_admin'],
         }, maxlen=ModuleCtx.Max_Stream_Len)
 
         reply = self._wait_for_reply(correlation_id)
@@ -134,7 +137,7 @@ class OpenAPIConsoleClient:
             return None
 
         if reply['status'] != 'ok':
-            logger.info('OpenAPI document request rejected, status=%s username=%s', reply['status'], username)
+            logger.info('OpenAPI document request rejected, status=%s username=%s', reply['status'], auth['username'])
             return None
 
         out = json.loads(reply['data'])
@@ -145,8 +148,7 @@ class OpenAPIConsoleClient:
 
     def invoke(
         self,
-        username:'str',
-        password:'str',
+        auth:'anydict',
         http_method:'str',
         url_path:'str',
         query_string:'str',
@@ -160,8 +162,10 @@ class OpenAPIConsoleClient:
         _ = self.redis.xadd(ModuleCtx.Request_Stream, {
             'command': 'invoke',
             'correlation_id': correlation_id,
-            'username': username,
-            'password': password,
+            'auth_type': auth['auth_type'],
+            'username': auth['username'],
+            'password': auth['password'],
+            'is_admin': auth['is_admin'],
             'http_method': http_method,
             'url_path': url_path,
             'query_string': query_string,

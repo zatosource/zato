@@ -1133,6 +1133,12 @@ class ServiceStore:
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
 
+        # The newly deployed services may need auto-created REST channels, handled as one batch
+        # on the deployment session, whose owner commits it along with the deployment itself.
+        if session is not None:
+            from zato.server.auto_channel import create_auto_channels
+            create_auto_channels(self.server, [item.name for item in info.to_process], session)
+
         # The deployed services may change the OpenAPI document, so it is rebuilt now,
         # with breaking changes against the previous document reported in the deploy output.
         from zato.server.openapi_console.cache import rebuild_spec_cache

@@ -55,16 +55,13 @@ class ModuleCtx:
 # ################################################################################################################################
 
 def _handle_get_spec(server:'ParallelServer', fields:'anydict') -> 'anydict':
-    """ Builds a reply to a get_spec command - the spec filtered down to the caller's credentials.
+    """ Builds a reply to a get_spec command - the spec filtered down to the caller.
     """
-    username = fields['username']
-    password = fields['password']
-
     # Our response to produce
     out = {'correlation_id': fields['correlation_id']}
 
-    # Filter the cached document down to this caller - None means the credentials were not valid ..
-    spec = get_spec(server, username, password)
+    # Filter the cached document down to this caller - None means the caller could not be identified ..
+    spec = get_spec(server, fields)
 
     if spec is None:
         out['status'] = 'unauthorized'
