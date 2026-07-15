@@ -11,8 +11,8 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 # Zato
-from zato.openapi.app.views import branding_view, console_view, login_view, logout_view, spec_view, spec_yaml_view, \
-    static_view
+from zato.openapi.app.views import branding_view, console_view, login_view, logout_view, relay_view, spec_view, \
+    spec_yaml_view, static_view
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,6 +24,7 @@ urlpatterns = [
     path('openapi/console/logout', logout_view, name='logout'),
     path('openapi/console/openapi.json', spec_view, name='spec'),
     path('openapi/console/openapi.yaml', spec_yaml_view, name='spec-yaml'),
+    path('openapi/console/relay/<path:relay_path>', relay_view, name='relay'),
     path('openapi/console/branding/<str:file_name>', branding_view, name='branding'),
     path('static/<path:file_path>', static_view, name='static'),
 ]

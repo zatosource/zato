@@ -16,11 +16,15 @@ from uuid import uuid4
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.typing_ import cast_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydictnone
+    from zato.common.typing_ import anydictnone, anylist
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +97,9 @@ class OpenAPIConsoleClient:
                 block=1000,
             )
 
+            # A synchronous Redis client always returns a list here, never an awaitable
+            result = cast_('anylist', result)
+
             if not result:
                 continue
 
@@ -131,6 +138,37 @@ class OpenAPIConsoleClient:
             return None
 
         out = json.loads(reply['data'])
+
+        return out
+
+# ################################################################################################################################
+
+    def invoke(
+        self,
+        username:'str',
+        password:'str',
+        http_method:'str',
+        url_path:'str',
+        query_string:'str',
+        body:'str',
+        ) -> 'anydictnone':
+        """ Relays a try-it invocation to a server and returns the reply fields,
+        or None if no server replied in time.
+        """
+        correlation_id = uuid4().hex
+
+        _ = self.redis.xadd(ModuleCtx.Request_Stream, {
+            'command': 'invoke',
+            'correlation_id': correlation_id,
+            'username': username,
+            'password': password,
+            'http_method': http_method,
+            'url_path': url_path,
+            'query_string': query_string,
+            'body': body,
+        }, maxlen=ModuleCtx.Max_Stream_Len)
+
+        out = self._wait_for_reply(correlation_id)
 
         return out
 
