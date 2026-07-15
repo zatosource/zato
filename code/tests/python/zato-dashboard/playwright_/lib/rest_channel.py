@@ -190,6 +190,10 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'is_active' in options:
         page.set_checked(f'#id_{prefix}is_active', options['is_active'])
 
+    # .. the OpenAPI inclusion checkbox, shown for REST channels only ..
+    if 'should_include_in_openapi' in options:
+        page.set_checked(f'#id_{prefix}should_include_in_openapi', options['should_include_in_openapi'])
+
     # .. the audit log checkbox ..
     if 'is_audit_log_active' in options:
         page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])

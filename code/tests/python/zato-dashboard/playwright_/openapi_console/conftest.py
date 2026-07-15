@@ -83,6 +83,15 @@ _Module_Order = [
     'test_openapi_console_signin_types',
     'test_openapi_console_recreate_after_delete',
     'test_openapi_console_contract_diffing',
+    'test_openapi_console_security_no_session',
+    'test_openapi_console_security_bad_credentials',
+    'test_openapi_console_security_two_users',
+    'test_openapi_console_security_no_grants',
+    'test_openapi_console_security_inactive_invisible',
+    'test_openapi_console_security_relay_enforcement',
+    'test_openapi_console_security_logout',
+    'test_openapi_console_security_spec_optout',
+    'test_openapi_console_security_default_posture',
 ]
 
 # Every process spawned by the fixture registers here so the atexit hook below can kill
