@@ -43,7 +43,7 @@ _rebuild_poll_interval = 0.5
 _invoke_timeout = 30
 
 # The response shaping fields the test toggles on and then restores - the cap must stay
-# above the minimum usable byte budget for graceful trimming, i.e. 1024 tokens at 4 characters each.
+# above the minimum usable byte budget for graceful trimming, i.e. 1000 tokens at 4 characters each.
 _shaping_on = {
     'safeguards_strip_nulls': True,
     'max_response_size': 2048,
