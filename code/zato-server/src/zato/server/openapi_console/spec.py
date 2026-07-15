@@ -9,14 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import typing
+from base64 import b64decode
+from contextlib import closing
+from hashlib import pbkdf2_hmac
+from hmac import compare_digest
 from inspect import isclass
+
+# SQLAlchemy
+from sqlalchemy import text
 
 # Zato
 from zato.common.api import OpenAPI_Console_Auth, URL_TYPE
-from zato.common.const import ServiceConst
 from zato.common.crypto.api import is_string_equal
 from zato.common.typing_ import cast_
-from zato.common.util.api import new_cid
 from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
 
@@ -41,16 +46,61 @@ _spec_title = 'Zato API'
 # The HTTP method used when a service has no method-specific handlers
 _default_http_method = 'post'
 
+# The only password hash algorithm the Dashboard's Django users are stored with
+_django_hash_algorithm = 'pbkdf2_sha256'
+
+# The Dashboard keeps its users in the same database the server uses, in Django's own table
+_dashboard_user_query = 'select password from auth_user where username = :username and is_active = :is_active'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _verify_django_password(password:'str', encoded:'str') -> 'bool':
+    """ Checks a password against a hash in Django's storage format - algorithm$iterations$salt$hash.
+    """
+    algorithm, iterations, salt, stored_hash = encoded.split('$', 3)
+
+    # Only the one algorithm the Dashboard uses is supported
+    if algorithm != _django_hash_algorithm:
+        return False
+
+    # Derive the hash from the incoming password the same way Django does ..
+    derived = pbkdf2_hmac('sha256', password.encode('utf8'), salt.encode('utf8'), int(iterations))
+
+    # .. and compare in constant time.
+    out = compare_digest(derived, b64decode(stored_hash))
+
+    return out
+
+# ################################################################################################################################
+
+def is_dashboard_admin(server:'ParallelServer', username:'str', password:'str') -> 'bool':
+    """ Checks the credentials against the Dashboard's own users - anyone who can sign in
+    to the Dashboard is the console's admin, with the same username and password.
+    """
+    with closing(server.odb.session()) as session:
+        row = session.execute(text(_dashboard_user_query), {'username':username, 'is_active':True}).fetchone()
+
+    # No such Dashboard user
+    if row is None:
+        return False
+
+    out = _verify_django_password(password, row[0])
+
+    return out
+
+# ################################################################################################################################
+
 def validate_credentials(server:'ParallelServer', username:'str', password:'str') -> 'intnone':
-    """ Checks the username and password against all the active Basic Auth security definitions.
+    """ Checks the username and password against all the active security definitions of the types
+    REST channels support - Basic Auth, API keys and Bearer tokens. API key callers sign in with
+    the definition's name as the username and the key itself as the password, Bearer token callers
+    with the definition's username and its secret.
     Returns the matching definition's ID or None if the credentials are not valid.
     """
     url_data = server.config_manager.request_dispatcher.url_data
 
-    # Go through all the definitions and find one whose username and password match ..
+    # Go through all the Basic Auth definitions and find one whose username and password match ..
     for sec_def in url_data.basic_auth_config.values():
         config = sec_def['config']
 
@@ -59,6 +109,34 @@ def validate_credentials(server:'ParallelServer', username:'str', password:'str'
             continue
 
         # .. both the username and the password have to be equal ..
+        if config['username'] == username:
+            if is_string_equal(password, config['password']):
+                return config['id']
+
+    # .. then through the API key definitions, whose generated usernames mean nothing to callers,
+    # so it is the definition's name that identifies it on the sign-in form ..
+    for name, sec_def in url_data.apikey_config.items():
+        config = sec_def['config']
+
+        # .. inactive definitions can never match ..
+        if not config['is_active']:
+            continue
+
+        # .. the name has to match and the password field has to carry the key.
+        if name == username:
+            if is_string_equal(password, config['password']):
+                return config['id']
+
+    # .. and finally through the Bearer token definitions, whose secrets are stored
+    # in the password field, so they are checked the same way Basic Auth ones are.
+    for sec_def in url_data.oauth_config.values():
+        config = sec_def['config']
+
+        # .. inactive definitions can never match ..
+        if not config['is_active']:
+            continue
+
+        # .. both the username and the secret have to be equal.
         if config['username'] == username:
             if is_string_equal(password, config['password']):
                 return config['id']
@@ -101,12 +179,14 @@ def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone
         security_id = get_security_id_by_username(server, username)
         return security_id, False
 
-    # Credential callers are checked against the Basic Auth definitions
-    # and the admin account is recognized by its username.
-    security_id = validate_credentials(server, username, fields['password'])
-    is_admin = bool(security_id) and username == ServiceConst.API_Admin_Invoke_Username
+    # Dashboard users are the console's admins, so their credentials are checked first ..
+    if is_dashboard_admin(server, username, fields['password']):
+        return None, True
 
-    return security_id, is_admin
+    # .. and every other caller is checked against the security definitions.
+    security_id = validate_credentials(server, username, fields['password'])
+
+    return security_id, False
 
 # ################################################################################################################################
 
@@ -190,17 +270,18 @@ def _io_definition(value:'any_', models:'stranydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def is_channel_visible(channel_item:'anydict', security_id:'int', username:'str', password:'str') -> 'bool':
+def is_channel_visible(channel_item:'anydict', security_id:'int') -> 'bool':
     """ Decides whether a channel is visible to the caller identified by the given security definition.
+    The caller's credentials were already verified at sign-in, so visibility is pure membership.
     """
     # A channel whose own security definition is the caller's one is always visible ..
     if channel_item.get('security_id') == security_id:
         return True
 
-    # .. otherwise, the caller may be a member of one of the channel's security groups.
+    # .. otherwise, the caller's definition may belong to one of the channel's security groups,
+    # which covers Basic Auth, API key and Bearer token members alike.
     if security_groups_ctx := channel_item.get('security_groups_ctx'):
-        cid = new_cid()
-        if security_groups_ctx.check_security_basic_auth(cid, channel_item['name'], username, password):
+        if security_groups_ctx.has_security_id(security_id):
             return True
 
     return False
@@ -327,8 +408,6 @@ def filter_spec(
     spec:'anydict',
     channel_map:'anydict',
     security_id:'int',
-    username:'str',
-    password:'str',
 ) -> 'anydict':
     """ Filters the cached full document down to the operations the caller's credentials can invoke.
     Tags and component schemas that no remaining operation uses are dropped too, so the filtered
@@ -355,7 +434,7 @@ def filter_spec(
             if channel_item is None:
                 continue
 
-            if not is_channel_visible(channel_item, security_id, username, password):
+            if not is_channel_visible(channel_item, security_id):
                 continue
 
             kept_operations[http_method] = operation

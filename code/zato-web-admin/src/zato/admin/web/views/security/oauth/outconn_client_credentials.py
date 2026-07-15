@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from http import HTTPStatus
 from json import dumps, loads
 from traceback import format_exc
 
@@ -75,6 +76,24 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'security-oauth-outconn-client-credentials-create'
     service_name = 'zato.security.oauth.create'
+
+    def __call__(self, req, *args, **kwargs):
+
+        # The create service generates a random secret, so the one from the create form
+        # is stored in a follow-up call, the same way API key definitions do it.
+        response = super().__call__(req, *args, **kwargs)
+
+        if response.status_code == HTTPStatus.OK:
+            data = loads(response.content)
+            secret = req.POST.get('secret', '')
+
+            if secret:
+                _ = req.zato.client.invoke('zato.security.oauth.change-password', {
+                    'id': data['id'],
+                    'password': secret,
+                })
+
+        return response
 
 # ################################################################################################################################
 # ################################################################################################################################
