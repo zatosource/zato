@@ -10,10 +10,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from http.client import FORBIDDEN, NO_CONTENT, NOT_FOUND
+from time import monotonic
 
 # Zato
 from zato.common.json_internal import dumps
+from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strnone
+    from zato.server.connection.mcp.handler import MCPResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +59,9 @@ check_origin = os.environ.get(_check_origin_env_key) == 'true'
 # Origin values allowed by default when Origin validation is enabled
 _default_allowed_origins:'tuple' = ()
 
+# How many milliseconds one second has, for request duration measurements
+_ms_per_second = 1000
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,7 +85,9 @@ class MCPEndpoint(AdminService):
         channel_security = self.channel.security
 
         if not channel_security.id:
-            logger.info('MCP gateway `%s` rejected unauthenticated request', self.channel.name)
+            logger.info(
+                'MCP gateway `%s` rejected unauthenticated request (sec name=`%s` username=`%s`)',
+                self.channel.name, channel_security.name, channel_security.username)
             self.response.status_code = FORBIDDEN
             self.response.payload = ''
             return
@@ -88,7 +102,9 @@ class MCPEndpoint(AdminService):
         gateway_config = self.server.config_manager.gateway_mcp.get(self.channel.name)
 
         if gateway_config is None:
-            logger.info('MCP gateway `%s` has no config entry (gateway deleted)', self.channel.name)
+            logger.info(
+                'MCP gateway `%s` has no config entry (gateway deleted) (sec name=`%s` username=`%s`)',
+                self.channel.name, channel_security.name, channel_security.username)
             self.response.status_code = NOT_FOUND
             self.response.payload = ''
             return
@@ -104,7 +120,9 @@ class MCPEndpoint(AdminService):
                 allowed_origins = wrapper.config.get('allowed_origins') or _default_allowed_origins
 
                 if origin not in allowed_origins:
-                    logger.info('MCP gateway `%s` rejected origin `%s`', self.channel.name, origin)
+                    logger.info(
+                        'MCP gateway `%s` rejected origin `%s` (sec name=`%s` username=`%s`)',
+                        self.channel.name, origin, channel_security.name, channel_security.username)
                     self.response.status_code = FORBIDDEN
                     self.response.payload = ''
                     return
@@ -128,22 +146,42 @@ class MCPEndpoint(AdminService):
         # .. no handler means the gateway is not usable - it was not built yet,
         # its build failed, or it is being deleted - in all cases the resource does not exist ..
         if handler is None:
-            logger.info('MCP gateway `%s` has no handler (not built yet, build failed, or gateway deleted)', self.channel.name)
+            logger.info(
+                'MCP gateway `%s` has no handler (not built yet, build failed, or gateway deleted) ' + \
+                '(sec name=`%s` username=`%s`)',
+                self.channel.name, channel_security.name, channel_security.username)
             self.response.status_code = NOT_FOUND
             self.response.payload = ''
             return
 
+        # .. whether this gateway's traffic goes to the audit log - the key is absent
+        # in configurations predating the field, which means it is off ..
+        is_audit_log_active = wrapper.config.get('is_audit_log_active')
+
         # .. handle DELETE requests for session termination ..
         if self.request.http.method == 'DELETE':
 
+            # .. measure how long the dispatch takes for the audit log ..
+            start_time = monotonic()
             mcp_response = handler.handle_delete_session(session_id, sec_def_id, protocol_version_header)
+            duration_ms = (monotonic() - start_time) * _ms_per_second
+
             self.response.status_code = mcp_response.status_code
 
             if mcp_response.body:
-                self.response.payload = dumps(mcp_response.body)
+                payload = dumps(mcp_response.body)
                 self.response.data_format = _content_type_json
             else:
-                self.response.payload = ''
+                payload = ''
+
+            self.response.payload = payload
+
+            # .. one audit event per request, when this gateway has its audit log on - a DELETE
+            # has no JSON-RPC method, it audits under its own marker and carries no request body.
+            if is_audit_log_active:
+                self._insert_audit_event(
+                    wrapper, Method_Session_Delete, None, session_id, remote_address,
+                    mcp_response, payload, duration_ms, 0)
 
             return
 
@@ -153,23 +191,80 @@ class MCPEndpoint(AdminService):
         if isinstance(raw_request, str):
             raw_request = raw_request.encode('utf8')
 
-        # .. dispatch through the MCP handler ..
+        # .. dispatch through the MCP handler, measuring how long it takes for the audit log ..
+        start_time = monotonic()
         mcp_response = handler.handle_raw_request(
             raw_request, sec_def_id, session_id, remote_address, protocol_version_header)
+        duration_ms = (monotonic() - start_time) * _ms_per_second
 
         # .. if the handler returned a session ID (from initialize), set it as a response header ..
         if mcp_response.session_id:
             self.response.headers[_session_response_header] = mcp_response.session_id
 
-        # .. set the response.
+        # .. set the response ..
         self.response.status_code = mcp_response.status_code
 
         if mcp_response.status_code == NO_CONTENT:
-            self.response.payload = ''
+            payload = ''
 
         else:
-            self.response.payload = dumps(mcp_response.body)
+            payload = dumps(mcp_response.body)
             self.response.data_format = _content_type_json
+
+        self.response.payload = payload
+
+        # .. and record the one audit event of this request, when this gateway has its audit log on.
+        if is_audit_log_active:
+
+            # A session created by initialize takes precedence over the one the request carried
+            if mcp_response.session_id:
+                audit_session_id = mcp_response.session_id
+            else:
+                audit_session_id = session_id
+
+            self._insert_audit_event(
+                wrapper, mcp_response.method, mcp_response.tool_name, audit_session_id, remote_address,
+                mcp_response, payload, duration_ms, len(raw_request))
+
+# ################################################################################################################################
+
+    def _insert_audit_event(
+        self,
+        wrapper:'any_',
+        method:'strnone',
+        tool_name:'strnone',
+        session_id:'strnone',
+        remote_address:'str',
+        mcp_response:'MCPResponse',
+        payload:'str',
+        duration_ms:'float',
+        request_size:'int',
+        ) -> 'None':
+        """ Builds and writes the one audit event of this request - the payloads themselves
+        are never recorded, only their sizes are.
+        """
+
+        # The caller is always authenticated by the time an audit event is built,
+        # so the security definition's name is always present.
+        sec_def_name = self.channel.security.name
+        assert sec_def_name is not None
+
+        event = build_audit_event(
+            gateway_name=self.channel.name,
+            sec_def_name=sec_def_name,
+            cid=self.cid,
+            method=method,
+            tool_name=tool_name,
+            session_id=session_id,
+            remote_address=remote_address,
+            response_body=mcp_response.body,
+            response_size=len(payload.encode('utf8')),
+            status_code=mcp_response.status_code,
+            duration_ms=duration_ms,
+            request_size=request_size,
+        )
+
+        wrapper.audit_log.insert(**event)
 
 # ################################################################################################################################
 # ################################################################################################################################

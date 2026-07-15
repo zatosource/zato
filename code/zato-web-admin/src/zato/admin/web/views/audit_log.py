@@ -50,8 +50,8 @@ _default_page_size = 25
 _data_preview_len = 200
 
 # The columns returned to the frontend, in the order they appear in the select below
-_row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'endpoint', 'outcome', 'size',
-    'data')
+_row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'endpoint', 'ext_client_id',
+    'outcome', 'size', 'data')
 
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
@@ -69,6 +69,7 @@ _source_title = {
     'email-imap': 'IMAP audit log',
     'as2': 'AS2 audit log',
     'x12': 'X12 audit log',
+    'mcp': 'MCP audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -158,6 +159,17 @@ _x12_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_mcp_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Tool', 'type': 'text'},
+    {'key': 'ext_client_id', 'label': 'Caller', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # Per-source table columns
 _source_columns = {
     'pubsub': _pubsub_columns,
@@ -168,6 +180,7 @@ _source_columns = {
     'email-imap': _email_imap_columns,
     'as2': _as2_columns,
     'x12': _x12_columns,
+    'mcp': _mcp_columns,
 }
 
 # ################################################################################################################################

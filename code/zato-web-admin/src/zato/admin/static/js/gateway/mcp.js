@@ -263,6 +263,8 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_name': 'A unique name for this gateway.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this gateway accepts requests.<br>MCP clients cannot reach inactive gateways.',
     'id_url_path': 'URL path the MCP endpoint is exposed under,<br>e.g. /mcp/. This is the address MCP clients,<br>such as AI assistants, connect to in order<br>to discover and invoke the assigned services.',
+    'id_validate_input': 'Whether tool call arguments are validated against<br>each tool\'s input schema before the tool runs -<br>required fields present, no unknown fields,<br>types matching what tools/list advertises.<br>Invalid calls are refused with an error<br>naming the offending field.',
+    'id_is_audit_log_active': 'Whether this gateway\'s traffic is recorded<br>in the audit log - one event per request<br>with the method, tool, caller and outcome.<br>Payloads themselves are never recorded,<br>only their sizes are.',
 
     'id_allow_client_filters': 'Adds an optional response_filter parameter to every<br>tool, letting an AI agent pass its own JSONata<br>expression per call. The expression runs on the server<br>and the agent receives only the fields it asked for,<br>which cuts its context usage on every invocation.',
     'id_max_response_size': 'The maximum size of a tool response in tokens,<br>empty means no cap. Oversized tool responses are<br>the main way context windows get flooded - one<br>unbounded call can crowd out everything the agent<br>learned before it.<br><br>In truncate mode the cap must span at least<br>4,000 bytes, i.e. 1,000 tokens at 4 characters<br>per token - trimming needs room for both a<br>meaningful payload and the truncation report,<br>so smaller caps are ignored.',
@@ -297,7 +299,13 @@ $.fn.zato.gateway.mcp.field_descriptions = {
 // get_columns in the page and each value is what a field defaults to when an instance lacks it.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.gateway.mcp.config = {
+    'cluster_id': '1'
+};
+
 $.fn.zato.gateway.mcp.shaping_field_defaults = {
+    'validate_input': false,
+    'is_audit_log_active': false,
     'allow_client_filters': false,
     'max_response_size': '',
     'size_cap_mode': 'truncate',
@@ -561,6 +569,9 @@ $.fn.zato.gateway.mcp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', url_path);
     row += String.format('<td class="text-center" id="service_count_{0}">{1}</td>', item.id, service_count);
     row += String.format('<td class="text-center" id="security_count_{0}">{1}</td>', item.id, security_count);
+
+    row += String.format('<td><a href="/zato/audit-log/?source=mcp&object_name={0}&cluster={1}">Audit log</a></td>',
+        encodeURIComponent(item.name), $.fn.zato.gateway.mcp.config.cluster_id);
 
     row += String.format('<td>{0}</td>', String.format('<a href="/zato/gateway/mcp/export/{0}/">Export</a>', item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.gateway.mcp.edit('{0}')\">Edit</a>", item.id));

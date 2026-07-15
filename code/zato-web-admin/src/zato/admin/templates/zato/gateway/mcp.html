@@ -46,12 +46,15 @@
             'url_path',
             '_services',
             '_security',
+            '_audit_log',
             '_export',
             '_edit',
             '_delete',
-            'id',
-            'is_active',
-            'allow_client_filters',
+                'id',
+                'is_active',
+                'validate_input',
+                'is_audit_log_active',
+                'allow_client_filters',
             'max_response_size',
             'size_cap_mode',
             'min_size_threshold',
@@ -110,6 +113,9 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -146,11 +152,14 @@
                         <td>{{ item.url_path }}</td>
                         <td class="text-center" id="service_count_{{ item.id }}">{{ item.services|length }}</td>
                         <td class="text-center" id="security_count_{{ item.id }}">{{ item.security_member_count }}</td>
+                        <td><a href="/zato/audit-log/?source=mcp&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "gateway-mcp-export" item.id %}">Export</a></td>
                         <td><a href="javascript:$.fn.zato.gateway.mcp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.gateway.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.validate_input }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                         <td class='ignore'>{{ item.allow_client_filters }}</td>
                         <td class='ignore'>{{ item.max_response_size }}</td>
                         <td class='ignore'>{{ item.size_cap_mode }}</td>
@@ -176,7 +185,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='33'>No results</td>
+                        <td colspan='36'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -210,6 +219,14 @@
                         <tr>
                             <td style="vertical-align:middle"><label for="id_url_path">URL path</label></td>
                             <td>{{ create_form.url_path }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_validate_input">Validate input</label></td>
+                            <td>{{ create_form.validate_input }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_is_audit_log_active">Audit log</label></td>
+                            <td>{{ create_form.is_audit_log_active }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">
@@ -417,6 +434,14 @@
                         <tr>
                             <td style="vertical-align:middle"><label for="id_edit-url_path">URL path</label></td>
                             <td>{{ edit_form.url_path }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-validate_input">Validate input</label></td>
+                            <td>{{ edit_form.validate_input }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-is_audit_log_active">Audit log</label></td>
+                            <td>{{ edit_form.is_audit_log_active }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">

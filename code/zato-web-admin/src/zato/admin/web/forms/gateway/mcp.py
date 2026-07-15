@@ -37,6 +37,12 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(initial='/mcp/', widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
+    # Validation of tools/call arguments against each tool's input schema - on by default for new gateways
+    validate_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
+    # Whether this gateway's traffic is recorded in the audit log - on by default for new gateways
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
     # Response shaping - the filter expression itself has no form field, an editor pane
     # holds it in the page and the page's JS injects it as a hidden input on submit.
     allow_client_filters = forms.BooleanField(required=False)
@@ -79,5 +85,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    validate_input = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################

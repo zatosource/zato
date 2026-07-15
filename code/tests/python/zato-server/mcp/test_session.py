@@ -101,11 +101,11 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     if session_manager is None:
         session_manager = MCPSessionManager()
 
-    # Response shaping stays off in these tests - empty configs keep every stage disabled.
+    # Response shaping and input validation stay off in these tests - empty configs keep every stage disabled.
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
 
-    out = MCPHandler(registry, _invoke_noop, session_manager, safeguard_config, token_cap_config) # pyright: ignore[reportArgumentType]
+    out = MCPHandler(registry, _invoke_noop, session_manager, safeguard_config, token_cap_config, False) # pyright: ignore[reportArgumentType]
     return out
 
 # ################################################################################################################################
