@@ -14,8 +14,7 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import HTTP_SOAP, URL_TYPE
-from zato.common.const import ServiceConst
-from zato.server.openapi_console.spec import is_channel_visible, validate_credentials
+from zato.server.openapi_console.spec import is_channel_visible, resolve_caller
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,20 +125,19 @@ def _serialize_response(response:'any_') -> 'str':
 
 def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     """ Builds a reply to an invoke command - a try-it request relayed by the console.
-    The target service is invoked only if the caller's credentials are valid and give access to the matched channel.
+    The target service is invoked only if the caller is identified and has access to the matched channel.
     """
-    username = fields['username']
-    password = fields['password']
-
     # Our response to produce
     out = {'correlation_id': fields['correlation_id']}
 
-    # Reject the request outright if the credentials do not match any active definition ..
-    security_id = validate_credentials(server, username, password)
+    # Reject the request outright if the caller cannot be identified ..
+    security_id, is_admin = resolve_caller(server, fields)
+
     if not security_id:
-        out['status'] = 'unauthorized'
-        out['data'] = ''
-        return out
+        if not is_admin:
+            out['status'] = 'unauthorized'
+            out['data'] = ''
+            return out
 
     # .. match the method and path against REST channels ..
     path_params, channel_item = _find_channel(server, fields['http_method'], fields['url_path'])
@@ -150,13 +148,11 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
         out['data'] = ''
         return out
 
-    # .. the admin account can invoke every endpoint, other accounts only what their credentials
-    # give access to, and a channel the caller cannot see produces the same reply as an unknown path,
+    # .. admin callers can invoke every endpoint, other callers only what their identity
+    # gives access to, and a channel the caller cannot see produces the same reply as an unknown path,
     # so that callers cannot probe for endpoints that are not theirs ..
-    is_admin = username == ServiceConst.API_Admin_Invoke_Username
-
     if not is_admin:
-        if not is_channel_visible(channel_item, security_id, username, password):
+        if not is_channel_visible(channel_item, security_id, fields['username'], fields['password']):
             out['status'] = 'not_found'
             out['data'] = ''
             return out

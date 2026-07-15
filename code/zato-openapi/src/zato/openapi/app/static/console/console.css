@@ -167,3 +167,18 @@ body.console-login-body {
     border: 1px solid var(--console-error-border);
     border-radius: 6px;
 }
+
+.console-login-entra {
+    margin-top: 14px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.console-login-entra a {
+    color: var(--console-accent);
+    text-decoration: none;
+}
+
+.console-login-entra a:hover {
+    text-decoration: underline;
+}

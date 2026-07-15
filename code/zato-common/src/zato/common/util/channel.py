@@ -9,6 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anylist, strnone
+    any_ = any_
+    anylist = anylist
+    strnone = strnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 openapi_channel_name = 'zato.channel.openapi.get'
 openapi_channel_url_path = '/openapi/{name}'
 openapi_service_name = 'zato.server.service.internal.helpers.OpenAPIHandler'
@@ -101,6 +110,40 @@ def ensure_as2_channel_exists(session, cluster_id):
     session.add(channel)
 
     return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def find_channel_collision(
+    url_path,      # type: str
+    http_accept,   # type: strnone
+    http_method,   # type: strnone
+    soap_action,   # type: str
+    existing_items # type: anylist
+) -> 'strnone':
+    """ The one collision rule for HTTP channels - a candidate collides with an existing channel
+    when both sit at the same URL path with the same SOAP action and their HTTP method and Accept
+    header are equal too. Each existing item carries name, url_path, method, soap_action and http_accept.
+    Returns the name of the colliding channel or None. Callers differ only in how they load
+    the existing items - zato.http-soap.create with its per-candidate query, the auto-channel
+    batch with its one SELECT for everything.
+    """
+    for item in existing_items:
+
+        # A different URL path can never collide ..
+        if item['url_path'] != url_path:
+            continue
+
+        # .. neither can a different SOAP action ..
+        if item['soap_action'] != soap_action:
+            continue
+
+        # .. it takes both the same method and the same Accept header to collide.
+        if item['method'] == http_method:
+            if item['http_accept'] == http_accept:
+                return item['name']
+
+    return None
 
 # ################################################################################################################################
 # ################################################################################################################################

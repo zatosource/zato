@@ -173,9 +173,10 @@ def _verify_id_token(id_token:'str') -> 'None':
 
 # ################################################################################################################################
 
-def handle_callback(req:'any_') -> 'str':
-    """ Completes an Entra ID sign-in - exchanges the code for tokens, checks group membership,
-    provisions the Django user and logs the person in. Returns the path to redirect to afterwards.
+def complete_auth_code_flow(req:'any_') -> 'any_':
+    """ Completes the Entra ID part of a sign-in - exchanges the code for tokens, verifies the ID token
+    and checks group membership. Returns the username, the display name, the admin flag and the path
+    to redirect to afterwards - what to do with the authenticated identity is up to the caller.
     """
 
     # Without a flow in the session the response cannot be matched to any sign-in attempt ..
@@ -225,7 +226,17 @@ def handle_callback(req:'any_') -> 'str':
     username = claims['preferred_username']
     display_name = claims['name']
 
-    # .. the Django user comes into being or is refreshed now ..
+    return username, display_name, is_admin, next_path
+
+# ################################################################################################################################
+
+def handle_callback(req:'any_') -> 'str':
+    """ Completes an Entra ID sign-in - exchanges the code for tokens, checks group membership,
+    provisions the Django user and logs the person in. Returns the path to redirect to afterwards.
+    """
+    username, display_name, is_admin, next_path = complete_auth_code_flow(req)
+
+    # The Django user comes into being or is refreshed now ..
     user = provision_user(username, display_name, is_admin)
 
     # .. and the session starts.

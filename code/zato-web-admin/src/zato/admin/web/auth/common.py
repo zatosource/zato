@@ -10,10 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 
-# Django
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-
 # Zato
 from zato.common.util.api import asbool
 from zato.common.util.env import get_list_from_environment
@@ -136,6 +132,10 @@ def provision_user(username:'str', display_name:'str', is_admin:'bool') -> 'any_
     """ Creates or updates a Django user for a person authenticated by an external identity provider.
     Such accounts never keep a local password and their admin rights follow group membership.
     """
+    # Imported here so that applications without Django's auth models, such as the OpenAPI console,
+    # can still import this module for its configuration.
+    from django.contrib.auth.models import User
+    from django.core.exceptions import ObjectDoesNotExist
 
     # Find the user or start a new one - external accounts cannot log in with a local password ..
     try:

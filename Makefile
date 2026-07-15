@@ -5,7 +5,7 @@
 	health-install health-build health-clean \
 	ruff pyright qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
-	stop-dashboard restart-dashboard scheduler queue-bridge file-listener \
+	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
@@ -156,6 +156,9 @@ queue-bridge:
 
 file-listener:
 	$(CURDIR)/code/bin/py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py
+
+openapi-console:
+	$(ZATO_PY) -m zato.openapi.app.run
 
 # ############################################################################
 # Quickstart dev targets

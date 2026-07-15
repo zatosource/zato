@@ -976,6 +976,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # All services are deployed, build MCP tool registries now ..
         self._build_mcp_tool_registries()
 
+        # All services are deployed, so the auto-created REST channels can be filled in now,
+        # idempotently - after the first start there is usually nothing missing and the pass
+        # costs one SELECT and no writes at all.
+        self._create_auto_rest_channels()
+
         # The server is started so we can deploy what we were told to handle on startup.
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
@@ -1045,6 +1050,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._mcp_session_reaper = MCPSessionReaper(gateway_mcp_dict)
 
         _ = spawn(self._mcp_session_reaper.run)
+
+# ################################################################################################################################
+
+    def _create_auto_rest_channels(self) -> 'None':
+        """ The startup pass over auto-created REST channels - the same batch logic as at deployment
+        time, run over all the deployed services as a whole. A failure never stops the server.
+        """
+        try:
+            from zato.server.auto_channel import create_auto_channels
+            service_names = list(self.service_store.name_to_impl_name)
+            create_auto_channels(self, service_names)
+        except Exception:
+            logger.warning('Auto-created REST channels could not be built -> %s', format_exc())
 
 # ################################################################################################################################
 

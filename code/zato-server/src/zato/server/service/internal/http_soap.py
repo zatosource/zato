@@ -27,6 +27,7 @@ from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import http_soap, http_soap_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
+from zato.common.util.channel import find_channel_collision
 from zato.common.util.imap_scheduler import interval_from_unit
 from zato.common.util.rest_invocation import parse_param_rows, update_linked_job_fields, validate_jsonata, validate_xpath
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
@@ -43,6 +44,7 @@ if 0:
     from zato.common.typing_ import any_, anylist, intnone, strdict, strintdict
 
     Bunch = Bunch
+    intnone = intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -685,23 +687,23 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
         # At least one channel with this kind of basic information already exists
         # but it is possible that it requires different HTTP headers (e.g. Accept, Method)
-        # so we need to check each one manually.
-        if existing_ones:
-            for item in existing_ones:
-                opaque = parse_instance_opaque_attr(item)
-                item_http_accept = opaque.get('http_accept')
+        # so the shared collision rule needs to look at each one.
+        existing_items = []
 
-                # Raise an exception if the existing channel's method is equal to ours
-                # but only if they use different Accept headers.
-                if http_method:
-                    if item.method == http_method:
-                        if item_http_accept == http_accept:
-                            self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk1')
+        for item in existing_ones:
+            opaque = parse_instance_opaque_attr(item)
+            existing_items.append({
+                'name': item.name,
+                'url_path': item.url_path,
+                'method': item.method,
+                'soap_action': item.soap_action,
+                'http_accept': opaque.get('http_accept'),
+            })
 
-                # Similar, but from the Accept header's perspective
-                if item_http_accept == http_accept:
-                    if item.method == http_method:
-                        self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
+        colliding_name = find_channel_collision(url_path, http_accept, http_method, soap_action, existing_items)
+
+        if colliding_name:
+            self._raise_error(colliding_name, url_path, http_accept, http_method, soap_action, 'chk1')
 
 # ################################################################################################################################
 
