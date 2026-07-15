@@ -43,7 +43,7 @@ Max_Node_Count = 10_000
 Array_Element_Floor = 1
 
 # Bytes reserved below the size cap for the embedded truncation report.
-Report_Budget = 3072
+Report_Budget = 3000
 
 # At most this many drop entries are listed individually in a report.
 Max_Report_Entries = 5
@@ -51,8 +51,9 @@ Max_Report_Entries = 5
 # Paths longer than this many characters are shortened at a segment boundary.
 Max_Path_Length = 100
 
-# Size caps below this value cannot accommodate meaningful trimming and are refused.
-Min_Usable_Cap = 4096
+# Size caps below this value cannot accommodate meaningful trimming and are refused -
+# it is the report budget plus a minimum of 1000 bytes of actual payload.
+Min_Usable_Cap = 4000
 
 # Kinds of drops that can appear in a report.
 Kind_Array_Tail = 'array_tail'
