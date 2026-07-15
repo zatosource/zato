@@ -134,6 +134,7 @@ channel_rest:
     url_path: /enmasse.rest.2
     data_format: json
     is_audit_log_active: false
+    should_include_in_openapi: false
     rate_limiting:
       - cidr_list:
           - 0.0.0.0/0

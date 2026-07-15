@@ -2092,6 +2092,10 @@ class ConfigManager(_ConfigManagerBase):
 
         self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
+        # The channel change may alter the OpenAPI document, so it is rebuilt now
+        from zato.server.openapi_console.cache import rebuild_spec_cache
+        rebuild_spec_cache(self.server)
+
     def on_config_event_CHANNEL_HTTP_SOAP_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates rate limiting configuration for an HTTP/SOAP channel.
         """
@@ -2110,6 +2114,10 @@ class ConfigManager(_ConfigManagerBase):
 
         # Delete the channel object now
         self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+
+        # The channel is gone, so the OpenAPI document is rebuilt without it now
+        from zato.server.openapi_console.cache import rebuild_spec_cache
+        rebuild_spec_cache(self.server)
 
 # ################################################################################################################################
 

@@ -1133,6 +1133,11 @@ class ServiceStore:
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
         self.server.config.service.update(service_list._impl)
 
+        # The deployed services may change the OpenAPI document, so it is rebuilt now,
+        # with breaking changes against the previous document reported in the deploy output.
+        from zato.server.openapi_console.cache import rebuild_spec_cache
+        rebuild_spec_cache(self.server)
+
 # ################################################################################################################################
 
     def _should_ignore_file(self, file_name:'str', base_dir:'str') -> 'bool':

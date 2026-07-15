@@ -30,16 +30,6 @@ _size_cap_mode_choices = (
     ('block', 'Block'),
 )
 
-_size_cap_kilobyte_choices = (
-    ('', '---'),
-    ('2', '2'),
-    ('5', '5'),
-    ('10', '10'),
-    ('20', '20'),
-    ('50', '50'),
-    ('100', '100'),
-)
-
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
@@ -50,9 +40,10 @@ class CreateForm(forms.Form):
     # Response shaping - the filter expression itself has no form field, an editor pane
     # holds it in the page and the page's JS injects it as a hidden input on submit.
     allow_client_filters = forms.BooleanField(required=False)
-    max_response_size = forms.IntegerField(required=False, widget=forms.Select(choices=_size_cap_kilobyte_choices))
+    max_response_size = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
     size_cap_mode = forms.ChoiceField(choices=_size_cap_mode_choices)
-    min_size_threshold = forms.IntegerField(required=False, widget=forms.Select(choices=_size_cap_kilobyte_choices))
+    min_size_threshold = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
+    characters_per_token = forms.FloatField(initial=4.0, widget=forms.TextInput(attrs={'style':'width:5em'}))
 
     # Response safeguards - compaction
     safeguards_strip_nulls = forms.BooleanField(required=False)
