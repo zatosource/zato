@@ -123,14 +123,6 @@
 {% include "zato/paginate/action-panel.html" %}
         </div>
 
-        <datalist id="size-cap-kilobytes">
-            <option value="2"></option>
-            <option value="5"></option>
-            <option value="10"></option>
-            <option value="20"></option>
-            <option value="50"></option>
-        </datalist>
-
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form novalidate action="{% url "gateway-mcp-create" %}" method="post" id="create-form">
@@ -220,18 +212,15 @@
                                     <label for="id_max_response_size">Max response size</label><br/>
                                     <span class="form_hint">In kilobytes</span>
                                 </td>
-                                <td>{{ create_form.max_response_size }}</td>
+                                <td>
+                                    {{ create_form.max_response_size }}
+                                    &nbsp;&nbsp;<label for="id_min_size_threshold">Activation threshold</label>
+                                    {{ create_form.min_size_threshold }}
+                                </td>
                             </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_size_cap_mode">Cap mode</label></td>
                                 <td>{{ create_form.size_cap_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label">
-                                    <label for="id_min_size_threshold">Activation threshold</label><br/>
-                                    <span class="form_hint">In kilobytes</span>
-                                </td>
-                                <td>{{ create_form.min_size_threshold }}</td>
                             </tr>
                             <tr>
                                 <td colspan="2" class="form-data-section">Compaction</td>
@@ -427,18 +416,15 @@
                                     <label for="id_edit-max_response_size">Max response size</label><br/>
                                     <span class="form_hint">In kilobytes</span>
                                 </td>
-                                <td>{{ edit_form.max_response_size }}</td>
+                                <td>
+                                    {{ edit_form.max_response_size }}
+                                    &nbsp;&nbsp;<label for="id_edit-min_size_threshold">Activation threshold</label>
+                                    {{ edit_form.min_size_threshold }}
+                                </td>
                             </tr>
                             <tr>
                                 <td class="form-data-label"><label for="id_edit-size_cap_mode">Cap mode</label></td>
                                 <td>{{ edit_form.size_cap_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label">
-                                    <label for="id_edit-min_size_threshold">Activation threshold</label><br/>
-                                    <span class="form_hint">In kilobytes</span>
-                                </td>
-                                <td>{{ edit_form.min_size_threshold }}</td>
                             </tr>
                             <tr>
                                 <td colspan="2" class="form-data-section">Compaction</td>
