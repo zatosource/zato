@@ -11,6 +11,10 @@ from piigex.detectors import get_registry
 
 # Zato
 from zato.common.typing_ import strset, strstrdict
+from zato.common.util.safeguards import detectors
+
+# The import above registers Zato's own detectors with the library's registry - this line keeps flake8 quiet about it.
+detectors = detectors
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,11 +32,14 @@ choice_dict         = dict[str, choice_list]
 # The land whose detectors are not tied to any single country - it always sorts first.
 Land_International = 'intl'
 
-# Full names of the lands whose detectors the underlying library ships.
+# Full names of the lands whose detectors are registered, whether by the underlying library or by Zato itself.
 Land_Names:'strstrdict' = {
     'at':   'Austria',
+    'au':   'Australia',
     'be':   'Belgium',
     'bg':   'Bulgaria',
+    'br':   'Brazil',
+    'ca':   'Canada',
     'cz':   'Czech Republic',
     'de':   'Germany',
     'dk':   'Denmark',
@@ -44,24 +51,41 @@ Land_Names:'strstrdict' = {
     'hr':   'Croatia',
     'hu':   'Hungary',
     'ie':   'Ireland',
+    'in':   'India',
     'intl': 'International',
+    'is':   'Iceland',
     'it':   'Italy',
+    'jp':   'Japan',
+    'kr':   'South Korea',
     'lt':   'Lithuania',
+    'lu':   'Luxembourg',
+    'mx':   'Mexico',
     'nl':   'Netherlands',
+    'no':   'Norway',
+    'nz':   'New Zealand',
+    'ph':   'Philippines',
     'pl':   'Poland',
     'pt':   'Portugal',
     'ro':   'Romania',
     'se':   'Sweden',
+    'sg':   'Singapore',
     'si':   'Slovenia',
     'sk':   'Slovakia',
     'us':   'United States',
+    'za':   'South Africa',
 }
 
-# Full labels of every detector the underlying library ships, keyed by detector name.
+# Full labels of every registered detector, keyed by detector name.
 Detector_Labels:'strstrdict' = {
 
     # Austria
     'at_vnr': 'Social insurance number (VNR)',
+
+    # Australia
+    'au_tfn':      'Tax file number (TFN)',
+    'au_abn':      'Business number (ABN)',
+    'au_medicare': 'Medicare card number',
+    'au_passport': 'Passport number',
 
     # Belgium
     'be_bis':               'BIS number',
@@ -74,6 +98,15 @@ Detector_Labels:'strstrdict' = {
     # Bulgaria
     'bg_egn': 'Personal number (EGN)',
     'bg_pnf': 'Foreigner personal number (PNF)',
+
+    # Brazil
+    'br_cpf':      'Taxpayer number (CPF)',
+    'br_cnpj':     'Company number (CNPJ)',
+    'br_passport': 'Passport number',
+
+    # Canada
+    'ca_sin':      'Social insurance number (SIN)',
+    'ca_passport': 'Passport number',
 
     # Czech Republic
     'cz_dic': 'Tax identifier (DIC)',
@@ -90,7 +123,8 @@ Detector_Labels:'strstrdict' = {
     'dk_cvr': 'Business number (CVR)',
 
     # Estonia
-    'ee_ik': 'Personal code (Isikukood)',
+    'ee_ik':       'Personal code (Isikukood)',
+    'ee_passport': 'Passport number',
 
     # Spain
     'es_ccc':                  'Bank account code (CCC)',
@@ -104,8 +138,9 @@ Detector_Labels:'strstrdict' = {
     'es_referencia_catastral': 'Cadastral reference',
 
     # Finland
-    'fi_hetu':    'Personal identity code (HETU)',
-    'fi_ytunnus': 'Business ID (Y-tunnus)',
+    'fi_hetu':     'Personal identity code (HETU)',
+    'fi_passport': 'Passport number',
+    'fi_ytunnus':  'Business ID (Y-tunnus)',
 
     # France
     'fr_cni':   'Identity card number (CNI)',
@@ -128,6 +163,14 @@ Detector_Labels:'strstrdict' = {
     # Ireland
     'ie_pps': 'Personal public service number (PPS)',
 
+    # Iceland
+    'is_kennitala': 'Identity number (Kennitala)',
+
+    # India
+    'in_aadhaar':  'Aadhaar number',
+    'in_pan':      'Tax account number (PAN)',
+    'in_passport': 'Passport number',
+
     # International
     'intl_bic':         'Bank identifier code (BIC)',
     'intl_credit_card': 'Credit card number',
@@ -144,14 +187,41 @@ Detector_Labels:'strstrdict' = {
     'it_partita_iva':    'VAT number (Partita IVA)',
     'it_phone':          'Phone number',
 
+    # Japan
+    'jp_my_number':        'My Number (個人番号)',
+    'jp_corporate_number': 'Corporate number (法人番号)',
+    'jp_passport':         'Passport number',
+
+    # South Korea
+    'kr_rrn':      'Resident registration number (주민등록번호)',
+    'kr_passport': 'Passport number',
+
     # Lithuania
     'lt_asmens': 'Personal code (Asmens kodas)',
+
+    # Luxembourg
+    'lu_matricule': 'National number (Matricule)',
+
+    # Mexico
+    'mx_curp': 'Population registry code (CURP)',
+    'mx_rfc':  'Taxpayer registry code (RFC)',
 
     # Netherlands
     'nl_bsn':      'Citizen service number (BSN)',
     'nl_btw':      'VAT number (BTW)',
     'nl_passport': 'Passport number',
     'nl_phone':    'Phone number',
+
+    # Norway
+    'no_fnr': 'Birth number (Fødselsnummer)',
+
+    # New Zealand
+    'nz_ird': 'Tax number (IRD)',
+    'nz_nhi': 'Health index number (NHI)',
+
+    # Philippines
+    'ph_psn': 'PhilSys number (PSN)',
+    'ph_pcn': 'PhilSys card number (PCN)',
 
     # Poland
     'pl_nip':   'Tax identifier (NIP)',
@@ -173,6 +243,9 @@ Detector_Labels:'strstrdict' = {
     'se_orgnr':        'Business number (Organisationsnummer)',
     'se_personnummer': 'Personal number (Personnummer)',
 
+    # Singapore
+    'sg_nric': 'Identity card number (NRIC/FIN)',
+
     # Slovenia
     'si_emso':    'Personal number (EMSO)',
     'si_maticna': 'Business registration number (Maticna)',
@@ -192,6 +265,10 @@ Detector_Labels:'strstrdict' = {
     'us_ptin':     'Preparer taxpayer number (PTIN)',
     'us_rtn':      'Bank routing number (RTN)',
     'us_ssn':      'Social Security number',
+
+    # South Africa
+    'za_id':       'Identity number',
+    'za_passport': 'Passport number',
 }
 
 # ################################################################################################################################
