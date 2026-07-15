@@ -529,6 +529,7 @@ _test-mcp:
 		2>&1 | $(TS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_response_controls.py \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_mcp_audit_log.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)

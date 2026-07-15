@@ -31,11 +31,11 @@ if 0:
 logger = logging.getLogger(__name__)
 
 GATEWAY_OPTIONAL_FIELDS = [
-    'url_path', 'services', 'security_groups',
+    'url_path', 'services', 'security_groups', 'is_audit_log_active',
 ]
 
 GATEWAY_OPAQUE_FIELDS = [
-    'url_path', 'services', 'security_groups',
+    'url_path', 'services', 'security_groups', 'is_audit_log_active',
 ]
 
 # ################################################################################################################################

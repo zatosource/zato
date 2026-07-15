@@ -97,6 +97,10 @@ class TestEnmasseGatewayMCPExport(TestCase):
             exported_def = exported_by_name[name]
             self.assertEqual(exported_def['name'], yaml_def['name'])
 
+        # The audit log toggle round-trips - exported when on, skipped when off.
+        self.assertTrue(exported_by_name['enmasse.mcp.gateway.1']['is_audit_log_active'])
+        self.assertNotIn('is_audit_log_active', exported_by_name['enmasse.mcp.gateway.2'])
+
 # ################################################################################################################################
 # ################################################################################################################################
 

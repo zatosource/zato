@@ -217,9 +217,12 @@ class _CreateEdit(CreateEdit):
 
     def pre_process_input_dict(self, input_dict:'strdict') -> 'None':
 
-        # Checkboxes arrive as 'on' when ticked and are absent from POST otherwise ..
+        # Checkboxes arrive as 'on' when ticked and are absent from POST otherwise, except that
+        # names with a boolean prefix, e.g. is_audit_log_active, were already turned
+        # into a bool by set_input upstream ..
         for name in _shaping_checkbox_fields:
-            input_dict[name] = input_dict[name] == 'on'
+            value = input_dict[name]
+            input_dict[name] = value is True or value == 'on'
 
         # .. integer fields arrive as strings and an empty input means zero ..
         for name in _shaping_int_fields:

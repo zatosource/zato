@@ -21,6 +21,7 @@ from zato.common.odb.model import GenericConn
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,6 +87,19 @@ class TestEnmasseGatewayMCPFromYAML(TestCase):
             type_=GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
         ).one()
         self.assertTrue(conn.is_active)
+
+        # The audit log toggle from YAML lands in the opaque configuration ..
+        opaque = parse_instance_opaque_attr(conn)
+        self.assertTrue(opaque['is_audit_log_active'])
+
+        # .. while a gateway without the key in YAML gets the off default.
+        conn2 = self.session.query(GenericConn).filter_by(
+            name='enmasse.mcp.gateway.2',
+            type_=GENERIC.CONNECTION.TYPE.GATEWAY_MCP,
+        ).one()
+
+        opaque2 = parse_instance_opaque_attr(conn2)
+        self.assertFalse(opaque2['is_audit_log_active'])
 
 # ################################################################################################################################
 
