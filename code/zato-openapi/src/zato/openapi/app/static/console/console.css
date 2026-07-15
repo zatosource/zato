@@ -58,14 +58,21 @@ body.console-login-body {
     letter-spacing: 0.02em;
 }
 
-.console-header-logout {
+.console-header-links {
+    display: flex;
+    gap: 14px;
     margin-left: auto;
+}
+
+.console-header-link,
+.console-header-logout {
     font-size: 13px;
     color: var(--console-header-foreground);
     text-decoration: none;
     opacity: 0.85;
 }
 
+.console-header-link:hover,
 .console-header-logout:hover {
     opacity: 1;
     text-decoration: underline;

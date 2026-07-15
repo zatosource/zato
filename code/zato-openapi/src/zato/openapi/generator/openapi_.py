@@ -15,6 +15,15 @@ import yaml
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, anydict, dictlist
+    any_ = any_
+    anydict = anydict
+    dictlist = dictlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Logger for this module
 logger = logging.getLogger(__name__)
 
@@ -23,6 +32,24 @@ logger = logging.getLogger(__name__)
 
 # Services without typed input or output are documented with this schema - any JSON object is accepted or returned.
 _any_object_schema = {'type': 'object', 'additionalProperties': True}
+
+# The tag for services whose names have no dotted prefix to derive a group from
+_default_tag = 'General'
+
+# Example values by schema format - formats take precedence over types
+_example_by_format = {
+    'date-time': '2026-01-01T12:00:00+00:00',
+    'date': '2026-01-01',
+    'binary': 'ZGF0YQ==',
+}
+
+# Example values by schema type
+_example_by_type = {
+    'string': 'string',
+    'integer': 1,
+    'number': 1.0,
+    'boolean': True,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,13 +205,86 @@ class OpenAPIGenerator:
             f'Cannot map service output {service_output["type"]} to OpenAPI schema. '
             'Add handling for this output type in _create_response_schema method')
 
+    def _build_example(self, schema:'anydict', visited:'any_'=None) -> 'any_':
+        """ Builds an example value for a schema, resolving references into registered components.
+        Self-referential models stop the recursion with an empty object.
+        """
+        if visited is None:
+            visited = set()
+
+        # References are resolved into the component schema they point to ..
+        if '$ref' in schema:
+            ref_name = schema['$ref'].rsplit('/', 1)[-1]
+
+            if ref_name in visited:
+                return {}
+            visited.add(ref_name)
+
+            components = self.type_mapper.get_schema_components()
+            if ref_name not in components:
+                return {}
+
+            out = self._build_example(components[ref_name], visited)
+            return out
+
+        # .. composed schemas take their example from the first alternative ..
+        for composed_key in ('anyOf', 'oneOf'):
+            if composed_key in schema:
+                out = self._build_example(schema[composed_key][0], visited)
+                return out
+
+        # .. type lists come from nullable fields, whose first entry is the actual type ..
+        schema_type = schema.get('type')
+        if isinstance(schema_type, list):
+            schema_type = schema_type[0]
+
+        # .. objects build one example value per property ..
+        if schema_type == 'object':
+            properties = schema.get('properties')
+            if not properties:
+                return {}
+
+            out = {}
+            for property_name, property_schema in properties.items():
+                out[property_name] = self._build_example(property_schema, visited)
+
+            return out
+
+        # .. arrays wrap one example element ..
+        if schema_type == 'array':
+            items = schema.get('items')
+            if not items:
+                return []
+
+            element = self._build_example(items, visited)
+
+            out = [element]
+            return out
+
+        # .. a scalar default from the model definition wins over generic values ..
+        if 'default' in schema:
+            out = schema['default']
+            return out
+
+        # .. otherwise the example comes from the format or the type.
+        schema_format = schema.get('format')
+        if schema_format in _example_by_format:
+            out = _example_by_format[schema_format]
+            return out
+
+        if schema_type in _example_by_type:
+            out = _example_by_type[schema_type]
+            return out
+
+        return {}
+
     def build_spec(self, scan_results):
         """ Build an OpenAPI specification document from the scanned services and models and return it as a dict.
         """
         services = scan_results['services']
         models = scan_results['models']
 
-        openapi = {
+        openapi:'anydict' = {
             'openapi': '3.1.0',
             'info': {
                 'title': 'API Specification',
@@ -206,11 +306,19 @@ class OpenAPIGenerator:
             # Use url_path and http_method from DB-driven scan if present
             path = service.get('url_path') or f'/{service_name.replace(".", "/")}'
             http_method = service.get('http_method', 'post').lower()
+
+            # Endpoints are grouped by the dotted prefix of the service name,
+            # so package and module structure becomes the tag structure.
+            if '.' in service_name:
+                tag = service_name.rsplit('.', 1)[0]
+            else:
+                tag = _default_tag
+
             operation = {
                 'summary': f'Invoke {service_name}',
                 'description': f'Invoke the {service.get('class_name', '')} service',
                 'operationId': service_name.replace('.', '_').replace('-', '_'),
-                'tags': ['API Endpoints'],
+                'tags': [tag],
                 'responses': {
                     '200': {
                         'description': 'Successful response'
@@ -229,13 +337,18 @@ class OpenAPIGenerator:
                 try:
                     request_schema = self._create_request_schema(service['input'], models)
                     if request_schema:
+                        request_content = {'schema': request_schema}
+
+                        # An example derived from the schema, so the docs are never bare schemas
+                        request_example = self._build_example(request_schema)
+                        if request_example:
+                            request_content['example'] = request_example
+
                         operation['requestBody'] = {
                             'description': 'Input parameters',
                             'required': True,
                             'content': {
-                                'application/json': {
-                                    'schema': request_schema
-                                }
+                                'application/json': request_content
                             }
                         }
                 except TypeConversionError as e:
@@ -248,10 +361,15 @@ class OpenAPIGenerator:
                 try:
                     response_schema = self._create_response_schema(service['output'], models)
                     if response_schema:
+                        response_content = {'schema': response_schema}
+
+                        # An example derived from the schema, same as for the request body
+                        response_example = self._build_example(response_schema)
+                        if response_example:
+                            response_content['example'] = response_example
+
                         operation['responses']['200']['content'] = {
-                            'application/json': {
-                                'schema': response_schema
-                            }
+                            'application/json': response_content
                         }
                 except TypeConversionError as e:
                     file_path = service.get('file_path', 'unknown_file')
@@ -267,6 +385,21 @@ class OpenAPIGenerator:
         schema_components = self.type_mapper.get_schema_components()
         if schema_components:
             openapi['components']['schemas'].update(schema_components)
+
+        # Collect all the tags used by operations into the document-level list, sorted by name
+        tag_names:'any_' = set()
+        paths:'anydict' = openapi['paths']
+
+        for path_item in paths.values():
+            for operation in path_item.values():
+                tag_names.update(operation['tags'])
+
+        document_tags:'dictlist' = []
+        for tag_name in sorted(tag_names):
+            document_tags.append({'name': tag_name})
+
+        if document_tags:
+            openapi['tags'] = document_tags
 
         return openapi
 
