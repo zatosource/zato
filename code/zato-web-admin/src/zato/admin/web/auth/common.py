@@ -38,7 +38,6 @@ _tenant_id_env     = 'Zato_Dashboard_Auth_Entra_Tenant_Id'
 _client_id_env     = 'Zato_Dashboard_Auth_Entra_Client_Id'
 _client_secret_env = 'Zato_Dashboard_Auth_Entra_Client_Secret'
 _redirect_url_env  = 'Zato_Dashboard_Auth_Entra_Redirect_URL'
-_group_allowed_env = 'Zato_Dashboard_Auth_Entra_Group_Allowed'
 _group_admin_env   = 'Zato_Dashboard_Auth_Entra_Group_Admin'
 _auto_login_env    = 'Zato_Dashboard_Auth_Entra_Auto_Login'
 _authority_url_env = 'Zato_Dashboard_Auth_Entra_Authority_URL'
@@ -70,9 +69,8 @@ class AuthConfig:
     redirect_url:  'str'
     authority_url: 'str'
 
-    # Entra ID group object IDs deciding access and admin rights
-    group_allowed: 'strlist'
-    group_admin:   'strlist'
+    # Entra ID group object IDs deciding access
+    group_admin: 'strlist'
 
     # Whether a GET on the login page goes straight to Microsoft
     auto_login: 'bool'
@@ -109,9 +107,8 @@ def build_auth_config() -> 'AuthConfig':
     out.redirect_url  = _get_from_environment(_redirect_url_env, _default_entra_value)
     out.authority_url = _get_from_environment(_authority_url_env, _default_authority_url)
 
-    # .. the group lists ..
-    out.group_allowed = get_list_from_environment(_group_allowed_env, _group_list_separator)
-    out.group_admin   = get_list_from_environment(_group_admin_env, _group_list_separator)
+    # .. the group list ..
+    out.group_admin = get_list_from_environment(_group_admin_env, _group_list_separator)
 
     # .. and the auto-login flag.
     auto_login = _get_from_environment(_auto_login_env, _default_auto_login)
@@ -128,9 +125,9 @@ auth_config = build_auth_config()
 # ################################################################################################################################
 # ################################################################################################################################
 
-def provision_user(username:'str', display_name:'str', is_admin:'bool') -> 'any_':
+def provision_user(username:'str', display_name:'str') -> 'any_':
     """ Creates or updates a Django user for a person authenticated by an external identity provider.
-    Such accounts never keep a local password and their admin rights follow group membership.
+    Such accounts never keep a local password.
     """
     # Imported here so that applications without Django's auth models, such as the OpenAPI console,
     # can still import this module for its configuration.
@@ -149,9 +146,8 @@ def provision_user(username:'str', display_name:'str', is_admin:'bool') -> 'any_
     user.first_name = first_name
     user.last_name = last_name
 
-    # .. admin group membership decides both flags ..
-    user.is_staff = is_admin
-    user.is_superuser = is_admin
+    user.is_staff = True
+    user.is_superuser = True
 
     # .. and the user is ready now.
     user.save()

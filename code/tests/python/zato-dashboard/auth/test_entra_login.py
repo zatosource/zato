@@ -149,9 +149,9 @@ class TestSignInFlow:
         assert user.first_name == 'Test'
         assert user.last_name == 'User'
 
-        # .. membership in the allowed group alone grants no admin rights ..
-        assert not user.is_superuser
-        assert not user.is_staff
+        # .. the account has admin rights ..
+        assert user.is_superuser
+        assert user.is_staff
 
         # .. and the code exchange was a real PKCE-protected one.
         token_requests = []
@@ -162,49 +162,6 @@ class TestSignInFlow:
         token_request = token_requests[0]
         assert token_request['form']['grant_type'] == 'authorization_code'
         assert 'code_verifier' in token_request['form']
-
-# ################################################################################################################################
-
-    def test_admin_group_grants_admin_rights(self:'any_', entra_server:'any_') -> 'None':
-        entra_server.set_user(
-            TestConfig.user_principal_name, TestConfig.user_display_name, [TestConfig.group_admin])
-
-        client = Client()
-
-        response = _sign_in(client, {'auth': 'entra', 'next': '/zato/'})
-        assert response.status_code == FOUND
-
-        user = User.objects.get(username=TestConfig.user_principal_name)
-        assert user.is_superuser
-        assert user.is_staff
-
-# ################################################################################################################################
-
-    def test_admin_rights_follow_group_changes(self:'any_', entra_server:'any_') -> 'None':
-
-        # The first sign-in happens with admin rights ..
-        entra_server.set_user(
-            TestConfig.user_principal_name, TestConfig.user_display_name, [TestConfig.group_admin])
-
-        client = Client()
-        response = _sign_in(client, {'auth': 'entra', 'next': '/zato/'})
-        assert response.status_code == FOUND
-
-        user = User.objects.get(username=TestConfig.user_principal_name)
-        assert user.is_superuser
-
-        # .. then the person leaves the admin group and signs in again ..
-        entra_server.set_user(
-            TestConfig.user_principal_name, TestConfig.user_display_name, [TestConfig.group_allowed])
-
-        client = Client()
-        response = _sign_in(client, {'auth': 'entra', 'next': '/zato/'})
-        assert response.status_code == FOUND
-
-        # .. and the admin rights are gone now.
-        user = User.objects.get(username=TestConfig.user_principal_name)
-        assert not user.is_superuser
-        assert not user.is_staff
 
 # ################################################################################################################################
 

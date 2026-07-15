@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
@@ -642,8 +642,16 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 
 test-ui: ## Dashboard backend and Playwright tests.
 	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
+	$(MAKE) test-ui-openapi 2>&1 | tee /tmp/logs-test-ui-openapi.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
+
+test-ui-openapi:
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/openapi_console/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_openapi \
+		-o log_cli_level=WARNING -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ui-pubsub:
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

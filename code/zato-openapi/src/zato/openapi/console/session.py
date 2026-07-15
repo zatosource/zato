@@ -74,10 +74,10 @@ def decrypt_credentials(token:'str') -> 'strtuplenone':
 
 # ################################################################################################################################
 
-def encrypt_entra_identity(username:'str', is_admin:'bool') -> 'str':
+def encrypt_entra_identity(username:'str') -> 'str':
     """ Encrypts an Entra ID identity into an opaque token that can be stored in the session cookie.
     """
-    data = json.dumps({'username': username, 'is_admin': is_admin})
+    data = json.dumps({'username': username})
     token = _credentials_fernet.encrypt(data.encode('utf8'))
 
     out = token.decode('utf8')
@@ -87,7 +87,7 @@ def encrypt_entra_identity(username:'str', is_admin:'bool') -> 'str':
 # ################################################################################################################################
 
 def decrypt_entra_identity(token:'str') -> 'any_':
-    """ Decrypts an Entra ID identity from a session token. Returns the username and the admin flag,
+    """ Decrypts an Entra ID identity from a session token. Returns the username,
     or None if the token is not valid, e.g. it was issued before the console was last restarted.
     """
     try:
@@ -98,7 +98,7 @@ def decrypt_entra_identity(token:'str') -> 'any_':
 
     identity = json.loads(data)
 
-    out = (identity['username'], identity['is_admin'])
+    out = identity['username']
 
     return out
 

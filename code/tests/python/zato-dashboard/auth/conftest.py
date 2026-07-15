@@ -106,7 +106,6 @@ os.environ['Zato_Dashboard_Auth_Entra_Tenant_Id'] = TestConfig.tenant_id
 os.environ['Zato_Dashboard_Auth_Entra_Client_Id'] = TestConfig.client_id
 os.environ['Zato_Dashboard_Auth_Entra_Client_Secret'] = TestConfig.client_secret
 os.environ['Zato_Dashboard_Auth_Entra_Redirect_URL'] = TestConfig.redirect_url
-os.environ['Zato_Dashboard_Auth_Entra_Group_Allowed'] = TestConfig.group_allowed
 os.environ['Zato_Dashboard_Auth_Entra_Group_Admin'] = TestConfig.group_admin
 os.environ['Zato_Dashboard_Auth_Entra_Auto_Login'] = 'false'
 os.environ['Zato_Dashboard_Auth_Entra_Authority_URL'] = _server.address
@@ -138,7 +137,7 @@ def entra_server() -> 'any_':
     """ Returns the test server, put back into its successful default state before every test.
     """
     _server.reset()
-    _server.set_user(TestConfig.user_principal_name, TestConfig.user_display_name, [TestConfig.group_allowed])
+    _server.set_user(TestConfig.user_principal_name, TestConfig.user_display_name, [TestConfig.group_admin])
 
     yield _server
 

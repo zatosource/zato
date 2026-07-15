@@ -143,41 +143,15 @@ def validate_credentials(server:'ParallelServer', username:'str', password:'str'
 
 # ################################################################################################################################
 
-def get_security_id_by_username(server:'ParallelServer', username:'str') -> 'intnone':
-    """ Returns the ID of the active Basic Auth definition of the given username, or None if there is none.
-    Used with callers that an external identity provider authenticated, where the username is confirmed
-    but no password is available.
-    """
-    url_data = server.config_manager.request_dispatcher.url_data
-
-    for sec_def in url_data.basic_auth_config.values():
-        config = sec_def['config']
-
-        # Inactive definitions can never match ..
-        if not config['is_active']:
-            continue
-
-        # .. the identity provider vouches for the username, so the username alone decides.
-        if config['username'] == username:
-            return config['id']
-
-# ################################################################################################################################
-
 def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone, bool]':
     """ Resolves a console command's auth fields into the caller's security definition ID and admin flag.
     A caller with no ID and no admin flag could not be identified and gets nothing.
     """
     username = fields['username']
 
-    # Entra ID has already authenticated this caller - admin rights follow the Entra group membership
-    # and other callers map to a Basic Auth definition by username alone, with no password involved.
+    # Entra ID has already authenticated this caller
     if fields['auth_type'] == OpenAPI_Console_Auth.Type_Entra:
-
-        if fields['is_admin'] == OpenAPI_Console_Auth.Is_Admin_True:
-            return None, True
-
-        security_id = get_security_id_by_username(server, username)
-        return security_id, False
+        return None, True
 
     # Dashboard users are the console's admins, so their credentials are checked first ..
     if is_dashboard_admin(server, username, fields['password']):

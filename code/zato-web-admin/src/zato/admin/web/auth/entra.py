@@ -175,8 +175,8 @@ def _verify_id_token(id_token:'str') -> 'None':
 
 def complete_auth_code_flow(req:'any_') -> 'any_':
     """ Completes the Entra ID part of a sign-in - exchanges the code for tokens, verifies the ID token
-    and checks group membership. Returns the username, the display name, the admin flag and the path
-    to redirect to afterwards - what to do with the authenticated identity is up to the caller.
+    and checks group membership. Returns the username, the display name and the path to redirect to
+    afterwards - what to do with the authenticated identity is up to the caller.
     """
 
     # Without a flow in the session the response cannot be matched to any sign-in attempt ..
@@ -211,22 +211,17 @@ def complete_auth_code_flow(req:'any_') -> 'any_':
         raise EntraAuthError('No groups claim in the ID token - the app registration must emit group claims')
 
     groups = set(claims['groups'])
-    allowed_groups = set(auth_config.group_allowed) | set(auth_config.group_admin)
-    admin_groups = set(auth_config.group_admin)
+    allowed_groups = set(auth_config.group_admin)
 
-    # .. membership in any allowed or admin group grants access ..
+    # .. membership in any of the configured groups grants access ..
     matched_allowed = groups & allowed_groups
     if not matched_allowed:
         raise EntraAuthError('User is not a member of any allowed group')
 
-    # .. membership in an admin group grants admin rights ..
-    matched_admin = groups & admin_groups
-    is_admin = bool(matched_admin)
-
     username = claims['preferred_username']
     display_name = claims['name']
 
-    return username, display_name, is_admin, next_path
+    return username, display_name, next_path
 
 # ################################################################################################################################
 
@@ -234,15 +229,15 @@ def handle_callback(req:'any_') -> 'str':
     """ Completes an Entra ID sign-in - exchanges the code for tokens, checks group membership,
     provisions the Django user and logs the person in. Returns the path to redirect to afterwards.
     """
-    username, display_name, is_admin, next_path = complete_auth_code_flow(req)
+    username, display_name, next_path = complete_auth_code_flow(req)
 
     # The Django user comes into being or is refreshed now ..
-    user = provision_user(username, display_name, is_admin)
+    user = provision_user(username, display_name)
 
     # .. and the session starts.
     django_login(req, user, backend=_django_backend)
 
-    logger.info('User `%s` logged in through Entra ID (is_admin=%s)', username, is_admin)
+    logger.info('User `%s` logged in through Entra ID', username)
 
     out = next_path
     return out

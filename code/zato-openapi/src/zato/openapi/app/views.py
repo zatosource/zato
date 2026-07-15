@@ -109,7 +109,6 @@ def login_view(req):
             'auth_type': OpenAPI_Console_Auth.Type_Credentials,
             'username': username,
             'password': password,
-            'is_admin': OpenAPI_Console_Auth.Is_Admin_False,
         })
 
         # .. a document means the credentials are valid and the session can be established ..
@@ -126,21 +125,21 @@ def login_view(req):
 
 def login_callback_view(req):
     """ Completes an Entra ID sign-in - the identity confirmed by Microsoft is stored encrypted
-    in the session cookie, admin rights following the Entra group membership.
+    in the session cookie.
     """
     context = get_branding_context()
     context['entra_enabled'] = is_entra_enabled()
 
     try:
-        username, _display_name, is_admin, _next_path = complete_auth_code_flow(req)
+        username, _display_name, _next_path = complete_auth_code_flow(req)
     except EntraAuthError as e:
         logger.warning('Entra ID sign-in error -> `%s`', e.args[0])
         context['error'] = e.args[0]
         return render(req, 'login.html', context)
 
-    req.session[Session_Entra_Key] = encrypt_entra_identity(username, is_admin)
+    req.session[Session_Entra_Key] = encrypt_entra_identity(username)
 
-    logger.info('User `%s` signed in to the console through Entra ID (is_admin=%s)', username, is_admin)
+    logger.info('User `%s` signed in to the console through Entra ID', username)
 
     return redirect('console')
 
@@ -192,30 +191,21 @@ def _get_auth_or_error(req):
             'auth_type': OpenAPI_Console_Auth.Type_Credentials,
             'username': username,
             'password': password,
-            'is_admin': OpenAPI_Console_Auth.Is_Admin_False,
         }
         return auth, None
 
     # .. an Entra ID session carries the identity Microsoft confirmed instead ..
     if token := req.session.get(Session_Entra_Key):
 
-        identity = decrypt_entra_identity(token)
-        if not identity:
+        username = decrypt_entra_identity(token)
+        if not username:
             req.session.flush()
             return None, HttpResponse(_unauthorized_message, status=UNAUTHORIZED)
-
-        username, is_admin = identity
-
-        if is_admin:
-            is_admin_value = OpenAPI_Console_Auth.Is_Admin_True
-        else:
-            is_admin_value = OpenAPI_Console_Auth.Is_Admin_False
 
         auth = {
             'auth_type': OpenAPI_Console_Auth.Type_Entra,
             'username': username,
             'password': '',
-            'is_admin': is_admin_value,
         }
         return auth, None
 
