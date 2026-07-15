@@ -17,7 +17,6 @@ from http.client import OK
 import yaml
 
 # Zato
-from zato.common.const import ServiceConst
 from zato.common.crypto.api import CryptoManager
 
 from rest_channel import deploy_service_file, edit_channel, get_channel_id, find_channel_row, open_channel_page, \
@@ -49,8 +48,8 @@ Spec_JSON_Path     = '/openapi/console/openapi.json'
 Spec_YAML_Path     = '/openapi/console/openapi.yaml'
 Relay_Base_Path    = '/openapi/console/relay'
 
-# The admin account signs in to the console with the environment's admin API credentials
-Admin_Username = ServiceConst.API_Admin_Invoke_Username
+# The console's admin is the Dashboard's own admin user, with the same username and password
+Admin_Username = 'admin'
 
 # ################################################################################################################################
 # ################################################################################################################################

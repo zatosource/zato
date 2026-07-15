@@ -109,7 +109,7 @@ def get_spec(server:'ParallelServer', fields:'anydict') -> 'anydictnone':
     # .. and other callers only what their identity can invoke - a non-admin caller
     # got past the check above only with a security definition, hence the cast.
     security_id = cast_('int', security_id)
-    out = filter_spec(server, spec, channel_map, security_id, fields['username'], fields['password'])
+    out = filter_spec(server, spec, channel_map, security_id)
 
     return out
 

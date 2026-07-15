@@ -80,6 +80,7 @@ _Module_Order = [
     'test_openapi_console_untyped_schema',
     'test_openapi_console_methods',
     'test_openapi_console_typed_schema',
+    'test_openapi_console_signin_types',
     'test_openapi_console_recreate_after_delete',
     'test_openapi_console_contract_diffing',
 ]

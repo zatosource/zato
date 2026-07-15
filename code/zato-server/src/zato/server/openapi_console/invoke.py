@@ -157,14 +157,16 @@ def handle_invoke(server:'ParallelServer', fields:'anydict') -> 'anydict':
     # gives access to, and a channel the caller cannot see produces the same reply as an unknown path,
     # so that callers cannot probe for endpoints that are not theirs ..
     if not is_admin:
-        if not is_channel_visible(channel_item, security_id, fields['username'], fields['password']):
+        if not is_channel_visible(channel_item, security_id):
             out['status'] = 'not_found'
             out['data'] = ''
             return out
 
-    # .. build the payload and invoke the target service ..
+    # .. build the payload and invoke the target service - the method travels in the WSGI environment
+    # so that services with per-verb handlers, e.g. handle_GET, dispatch the same way they do over HTTP ..
     payload = _build_payload(fields, path_params)
-    response = server.invoke(channel_item['service_name'], payload)
+    wsgi_environ = {'REQUEST_METHOD': fields['http_method']}
+    response = server.invoke(channel_item['service_name'], payload, wsgi_environ=wsgi_environ)
 
     # .. and relay the response back to the console.
     data = _serialize_response(response)
