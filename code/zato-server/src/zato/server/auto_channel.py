@@ -10,18 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from contextlib import closing
 
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
 # Zato
 from zato.common.api import CONNECTION, DATA_FORMAT, HTTP_SOAP, MISC, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.broker_message import CHANNEL
-from zato.common.json_internal import dumps, loads
+from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP, Service
 from zato.common.typing_ import cast_
 from zato.common.util.auto_channel import get_auto_channel_config, get_auto_channel_url_path, is_channel_active, \
     should_create_channel
-from zato.common.util.channel import find_channel_collision
 from zato.server.openapi_console.cache import suppressed_rebuilds
 
 # ################################################################################################################################
@@ -101,38 +97,13 @@ def _create_missing_channels(
     """ Creates the channels that do not exist yet and returns them, IDs included, for the caller
     to publish configuration events about. One SELECT, an in-memory set difference, one bulk INSERT.
     """
-    # One SELECT covers both the name-based set difference and the collision rule
-    rows = session.query(
-        HTTPSOAP.name,
-        HTTPSOAP.url_path,
-        HTTPSOAP.method,
-        HTTPSOAP.soap_action,
-        HTTPSOAP.opaque1,
-        ).\
+    # One SELECT loads the names of all the existing channels for the set difference
+    rows = session.query(HTTPSOAP.name).\
         filter(HTTPSOAP.cluster_id==cluster_id).\
         filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
         all()
 
     existing_names = {row.name for row in rows}
-
-    # The collision rule needs each existing channel's Accept header, which lives in opaque1,
-    # and opaque1 itself is genuinely optional on rows created before it existed.
-    existing_items = []
-
-    for row in rows:
-
-        if row.opaque1:
-            opaque = loads(row.opaque1)
-        else:
-            opaque = {}
-
-        existing_items.append({
-            'name': row.name,
-            'url_path': row.url_path,
-            'method': row.method,
-            'soap_action': row.soap_action,
-            'http_accept': opaque.get('http_accept'),
-        })
 
     # The set difference - a channel named after its service already exists, whether auto-created
     # earlier or hand-made, and this is how a hand-made one takes precedence.
@@ -145,21 +116,7 @@ def _create_missing_channels(
 
     for name in missing:
         url_path = get_auto_channel_url_path(name, config)
-
-        # The same collision rule that zato.http-soap.create enforces - there is no database
-        # constraint behind it, so a colliding candidate gets no channel and a log line instead.
-        colliding_name = find_channel_collision(
-            url_path, HTTP_SOAP.ACCEPT.ANY, MISC.DEFAULT_HTTP_METHOD, '', existing_items)
-
-        if colliding_name:
-            logger.info('Auto channel for `%s` skipped, url_path `%s` collides with channel `%s`',
-                name, url_path, colliding_name)
-            continue
-
         to_create.append({'name':name, 'url_path':url_path})
-
-    if not to_create:
-        return []
 
     # One query resolves all the target services to their IDs
     service_name_column = cast_('any_', Service.name)
@@ -201,16 +158,8 @@ def _create_missing_channels(
             'opaque1': opaque,
         })
 
-    # The bulk INSERT sits in a savepoint because two servers starting at once can both compute
-    # the same missing set - the unique constraint on (name, connection, transport, cluster_id)
-    # makes one of them lose, which only means the other server has already created the channels.
-    try:
-        with session.begin_nested():
-            _ = session.execute(HTTPSOAP.__table__.insert(), mappings)
-    except IntegrityError:
-        logger.info('Auto channels already created by another server -> %s',
-            sorted(item['name'] for item in mappings))
-        return []
+    # One bulk INSERT creates all the missing channels
+    _ = session.execute(HTTPSOAP.__table__.insert(), mappings)
 
     # One SELECT gives the new rows their IDs for the configuration events
     created_names = [item['name'] for item in mappings]
