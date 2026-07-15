@@ -255,9 +255,9 @@ $.fn.zato.gateway.mcp.field_descriptions = {
     'id_url_path': 'URL path the MCP endpoint is exposed under,<br>e.g. /mcp/. This is the address MCP clients,<br>such as AI assistants, connect to in order<br>to discover and invoke the assigned services.',
 
     'id_allow_client_filters': 'Adds an optional response_filter parameter to every<br>tool, letting an AI agent pass its own JSONata<br>expression per call. The expression runs on the server<br>and the agent receives only the fields it asked for,<br>which cuts its context usage on every invocation.',
-    'id_max_response_size': 'The maximum size of a tool response in characters,<br>empty means no cap. Oversized tool responses are<br>the main way context windows get flooded - one<br>unbounded call can crowd out everything the agent<br>learned before it.',
+    'id_max_response_size': 'The maximum size of a tool response in kilobytes,<br>empty means no cap. Oversized tool responses are<br>the main way context windows get flooded - one<br>unbounded call can crowd out everything the agent<br>learned before it.',
     'id_size_cap_mode': 'Truncate degrades an over-cap JSON response<br>structurally - array tails and longest strings<br>are dropped first, the document stays valid<br>and a report states what was removed.<br>Block refuses the response with an error naming<br>the size and the cap, for endpoints where<br>a partial answer would be misleading.',
-    'id_min_size_threshold': 'Responses smaller than this many characters skip<br>all shaping and are delivered as they are, so<br>ordinary small responses pay no processing cost.',
+    'id_min_size_threshold': 'Responses smaller than this many kilobytes skip<br>all shaping and are delivered as they are, so<br>ordinary small responses pay no processing cost.',
 
     'id_safeguards_strip_nulls': 'Removes keys whose value is null from objects<br>at every nesting level. Array elements are kept,<br>so positions never shift. Null-heavy API responses<br>shrink substantially, which lowers the token cost<br>of every tool call.',
     'id_safeguards_collapse_whitespace': 'Collapses runs of spaces, tabs and line breaks<br>inside string values into a single space.<br>Formatting whitespace carries no meaning<br>for a model, yet it is billed as tokens<br>like any other content.',
