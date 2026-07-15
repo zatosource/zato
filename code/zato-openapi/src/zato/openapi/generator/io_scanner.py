@@ -18,6 +18,13 @@ import typing
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import anydict
+    anydict = anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Logger for this module
 logger = logging.getLogger(__name__)
 
@@ -314,36 +321,135 @@ class IOVisitor(ast.NodeVisitor):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _make_nullable(schema:'anydict') -> 'anydict':
+    """ Returns a schema that also accepts null, expressed the OpenAPI 3.1 way - references
+    and composed schemas are wrapped in anyOf, plain schemas get null added to their type.
+    """
+    # References and composed schemas cannot carry a type of their own ..
+    if 'type' not in schema:
+        out = {'anyOf': [schema, {'type': 'null'}]}
+        return out
+
+    # .. plain schemas express nullability with a type list.
+    out = dict(schema)
+    type_value = out['type']
+
+    if isinstance(type_value, list):
+        if 'null' not in type_value:
+            out['type'] = type_value + ['null']
+    else:
+        out['type'] = [type_value, 'null']
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TypeMapper:
-    """ Maps Zato types to OpenAPI types.
+    """ Maps Zato types to OpenAPI types. Nullability is expressed with type lists,
+    e.g. ['string', 'null'], which is the OpenAPI 3.1 form the generator emits.
     """
     # Basic type mappings
     BASIC_TYPES = {
+
+        # Any type
+        'any_': {'description': 'Any type'},
+        'anynone': {'description': 'Any type, including null'},
+
+        # Strings
         'str': {'type': 'string'},
         'str_': {'type': 'string'},
-        'strnone': {'type': 'string', 'nullable': True},
+        'strnone': {'type': ['string', 'null']},
+        'path_': {'type': 'string'},
+
+        # Integers
         'int': {'type': 'integer', 'format': 'int32'},
-        'intnone': {'type': 'integer', 'format': 'int32', 'nullable': True},
+        'intnone': {'type': ['integer', 'null'], 'format': 'int32'},
+
+        # Floating-point and decimal numbers
         'float': {'type': 'number', 'format': 'float'},
-        'floatnone': {'type': 'number', 'format': 'float', 'nullable': True},
+        'floatnone': {'type': ['number', 'null'], 'format': 'float'},
+        'decimal_': {'type': 'number'},
+        'decnone': {'type': ['number', 'null']},
+
+        # Booleans
         'bool': {'type': 'boolean'},
-        'boolnone': {'type': 'boolean', 'nullable': True},
+        'boolnone': {'type': ['boolean', 'null']},
+
+        # Bytes
         'bytes': {'type': 'string', 'format': 'binary'},
-        'bytesnone': {'type': 'string', 'format': 'binary', 'nullable': True},
+        'bytesnone': {'type': ['string', 'null'], 'format': 'binary'},
+        'strbytes': {'type': 'string'},
+
+        # Dates and times
+        'datetime': {'type': 'string', 'format': 'date-time'},
         'datetime_': {'type': 'string', 'format': 'date-time'},
         'datetimez': {'type': 'string', 'format': 'date-time'},
+        'isotimestamp': {'type': 'string', 'format': 'date-time'},
+        'dtnone': {'type': ['string', 'null'], 'format': 'date-time'},
         'date': {'type': 'string', 'format': 'date'},
-        'decimal_': {'type': 'number'},
+        'date_': {'type': 'string', 'format': 'date'},
+
+        # Dicts
+        'dict': {'type': 'object'},
         'dict_': {'type': 'object'},
+        'anydict': {'type': 'object'},
+        'anydictnone': {'type': ['object', 'null']},
+        'dictnone': {'type': ['object', 'null']},
+        'stranydict': {'type': 'object'},
+        'strdict': {'type': 'object'},
+        'strdictnone': {'type': ['object', 'null']},
+        'commondict': {'type': 'object'},
         'object': {'type': 'object'},
+
+        # Dicts with typed values
+        'strstrdict': {'type': 'object', 'additionalProperties': {'type': 'string'}},
+        'strintdict': {'type': 'object', 'additionalProperties': {'type': 'integer'}},
+        'strbooldict': {'type': 'object', 'additionalProperties': {'type': 'boolean'}},
+        'strfloatdict': {'type': 'object', 'additionalProperties': {'type': 'number'}},
+        'strdictdict': {'type': 'object', 'additionalProperties': {'type': 'object'}},
+        'strlistdict': {'type': 'object', 'additionalProperties': {'type': 'array', 'items': {'type': 'object'}}},
+        'strcalldict': {'type': 'object'},
+
+        # Lists
         'strlist': {'type': 'array', 'items': {'type': 'string'}},
-        'strlistnone': {'type': 'array', 'items': {'type': 'string'}, 'nullable': True},
+        'strlistnone': {'type': ['array', 'null'], 'items': {'type': 'string'}},
+        'strlistempty': {'type': 'array', 'items': {'type': ['string', 'null']}},
+        'intlist': {'type': 'array', 'items': {'type': 'integer'}},
+        'intlistnone': {'type': ['array', 'null'], 'items': {'type': 'integer'}},
+        'intlistempty': {'type': 'array', 'items': {'type': ['integer', 'null']}},
+        'byteslist': {'type': 'array', 'items': {'type': 'string', 'format': 'binary'}},
+        'pathlist': {'type': 'array', 'items': {'type': 'string'}},
         'anylist': {'type': 'array', 'items': {'type': 'object'}},
-        'anylistnone': {'type': 'array', 'items': {'type': 'object'}, 'nullable': True},
+        'anylistnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
+        'listnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
         'dictlist': {'type': 'array', 'items': {'type': 'object'}},
-        'union': {'type': 'object'},
+        'strdictlist': {'type': 'array', 'items': {'type': 'object'}},
+        'strdictlistnone': {'type': ['array', 'null'], 'items': {'type': 'object'}},
+
+        # Tuples are documented as arrays
         'tuple': {'type': 'array', 'items': {'type': 'object'}},
-        'CompletedCourse': {'type': 'object', 'properties': {'id': {'type': 'string'}}},
+        'strtuple': {'type': 'array', 'items': {'type': 'string'}},
+        'anytuple': {'type': 'array', 'items': {'type': 'object'}},
+        'tuplist': {'type': 'array', 'items': {'type': 'object'}},
+
+        # Sets are documented as arrays with unique items
+        'strset': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
+        'intset': {'type': 'array', 'items': {'type': 'integer'}, 'uniqueItems': True},
+        'anyset': {'type': 'array', 'items': {'type': 'object'}, 'uniqueItems': True},
+
+        # Unions of scalar types
+        'union': {'type': 'object'},
+        'strint': {'type': ['string', 'integer']},
+        'strintnone': {'type': ['string', 'integer', 'null']},
+        'strintbool': {'type': ['string', 'integer', 'boolean']},
+        'strorfloat': {'type': ['string', 'number']},
+        'strordict': {'type': ['string', 'object']},
+        'strordictnone': {'type': ['string', 'object', 'null']},
+        'strorlist': {'type': ['string', 'array'], 'items': {'type': 'object'}},
+        'listorstr': {'type': ['string', 'array'], 'items': {'type': 'object'}},
+        'strorlistnone': {'type': ['string', 'array', 'null'], 'items': {'type': 'object'}},
+        'dictorlist': {'type': ['object', 'array'], 'items': {'type': 'object'}},
     }
 
     def __init__(self):
@@ -355,9 +461,9 @@ class TypeMapper:
         """
         model_definitions = model_definitions or {}
 
-        # Handle basic types
+        # Handle basic types - a copy is returned so that callers can never mutate the shared mapping
         if isinstance(zato_type, str) and zato_type in self.BASIC_TYPES:
-            return self.BASIC_TYPES[zato_type]
+            return dict(self.BASIC_TYPES[zato_type])
 
         # Handle model references
         if isinstance(zato_type, str) and zato_type in model_definitions:
@@ -414,8 +520,7 @@ class TypeMapper:
         # Handle optional types
         if isinstance(zato_type, dict) and 'optional' in zato_type and zato_type['optional']:
             mapped_type = self.map_type(zato_type['type'], model_definitions)
-            mapped_type['nullable'] = True # type: ignore
-            return mapped_type
+            return _make_nullable(mapped_type)
 
         # If we can't map the type, raise an exception
         raise TypeConversionError(f'Cannot map Zato type \'{zato_type}\' to OpenAPI type. Add this type to BASIC_TYPES in TypeMapper class')
@@ -445,6 +550,11 @@ class TypeMapper:
             field_type = field_info['type']
             try:
                 properties[field_name] = self.map_type(field_type, model_definitions)
+
+                # Scalar defaults from the model definition are carried over into the schema
+                default = field_info.get('default')
+                if isinstance(default, (str, int, float, bool)):
+                    properties[field_name]['default'] = default
 
                 # Add to required list if the field is required
                 if field_info.get('required', True):
