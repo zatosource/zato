@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Django
 from django import forms
 
+# Zato
+from zato.common.util.safeguards.names import get_detector_choices, get_land_choices
+
 # ################################################################################################################################
 
 _mode_choices = (
@@ -48,11 +51,12 @@ class CreateForm(forms.Form):
 
     # Response safeguards - PII removal
     safeguards_pii_enabled = forms.BooleanField(required=False)
-    safeguards_pii_lands = forms.CharField(required=False, widget=forms.TextInput(
-        attrs={'style':'width:100%', 'placeholder':'es, de, fr, us, intl'}))
-    safeguards_pii_detectors = forms.CharField(required=False, widget=forms.TextInput(
-        attrs={'style':'width:100%', 'placeholder':'es_dni, intl_iban'}))
-    safeguards_pii_exclude = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    safeguards_pii_lands = forms.MultipleChoiceField(required=False, choices=get_land_choices,
+        widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'None selected'}))
+    safeguards_pii_detectors = forms.MultipleChoiceField(required=False, choices=get_detector_choices,
+        widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'Default detectors'}))
+    safeguards_pii_exclude = forms.MultipleChoiceField(required=False, choices=get_detector_choices,
+        widget=forms.SelectMultiple(attrs={'class':'chosen-multi', 'data-placeholder':'Nothing excluded'}))
     safeguards_pii_validate = forms.BooleanField(required=False)
     safeguards_pii_stable_tokens = forms.BooleanField(required=False)
 

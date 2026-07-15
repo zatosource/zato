@@ -160,7 +160,7 @@
 /* The first group heading sits right under the tab strip,
    only the later ones need the separation from fields above. */
 .data-popup .form-data tr:first-child td.form-data-section {
-    padding-top: 2px;
+    padding-top: 6px;
 }
 
 /* A label cell as wide as its longest label and no wider. */
@@ -170,4 +170,3 @@
     padding-right: 14px;
     vertical-align: middle;
 }
-
