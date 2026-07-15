@@ -41,3 +41,37 @@
     background-color: transparent;
     cursor: default;
 }
+
+/* ------------------------------------------------------------ */
+/* Token preset dropdowns - the jQuery UI theme stylesheet is    */
+/* not loaded, so the autocomplete menu is styled here           */
+/* ------------------------------------------------------------ */
+
+/* The menu lives inside the dialog, so ".ui-widget .ui-widget" from jquery.ui.custom.css
+   matches it at (0,2,0) - the extra .ui-menu class keeps this selector above that. */
+ul.ui-menu.ui-autocomplete {
+    position: absolute;
+    z-index: 1010;
+    margin: 0;
+    padding: 2px 0;
+    list-style: none;
+    background-color: #fff;
+    border: 1px solid #dde3ea;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-family: sans-serif;
+    font-size: 12px;
+}
+
+ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper {
+    display: block;
+    padding: 3px 6px;
+    border: none;
+    margin: 0;
+    background-image: none;
+    color: #333;
+}
+
+ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
+    background-color: #f6f8fa;
+}

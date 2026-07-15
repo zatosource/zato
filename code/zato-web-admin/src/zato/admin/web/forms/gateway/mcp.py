@@ -43,7 +43,7 @@ class CreateForm(forms.Form):
     max_response_size = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
     size_cap_mode = forms.ChoiceField(choices=_size_cap_mode_choices)
     min_size_threshold = forms.IntegerField(required=False, widget=forms.TextInput(attrs={'style':'width:5em'}))
-    characters_per_token = forms.FloatField(initial=4.0, widget=forms.TextInput(attrs={'style':'width:5em'}))
+    characters_per_token = forms.FloatField(initial=4.0, widget=forms.TextInput(attrs={'style':'width:3em'}))
 
     # Response safeguards - compaction
     safeguards_strip_nulls = forms.BooleanField(required=False)
