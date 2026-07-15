@@ -1342,7 +1342,9 @@ class ConfigManager(_ConfigManagerBase):
             if backend_config['amqp_channel_name']:
                 self._apply_amqp_channel_override(backend_config)
 
-        logger.info('Synced %d AMQP-backed pub/sub topic(s) to the backend registry', len(self._topic_backends))
+        topic_count = len(self._topic_backends)
+        suffix = 'topic' if topic_count == 1 else 'topics'
+        logger.info('Synced %d AMQP-backed pub/sub %s to the backend registry', topic_count, suffix)
 
 # ################################################################################################################################
 

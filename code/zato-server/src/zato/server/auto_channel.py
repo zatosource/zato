@@ -86,7 +86,9 @@ def create_auto_channels(server:'ParallelServer', service_names:'strlist', sessi
         for item in created:
             _publish_create_event(server, item)
 
-    logger.info('Auto-created %d REST channel(s) -> %s', len(created), sorted(item['name'] for item in created))
+    created_count = len(created)
+    suffix = 'channel' if created_count == 1 else 'channels'
+    logger.info('Auto-created %d REST %s -> %s', created_count, suffix, sorted(item['name'] for item in created))
 
 # ################################################################################################################################
 

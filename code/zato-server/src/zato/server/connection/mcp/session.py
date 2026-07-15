@@ -295,7 +295,8 @@ class MCPSessionReaper:
             # .. log how many were removed, if any.
             if removed:
                 gateway_name = wrapper.config.name
-                logger.info('MCP: Reaper removed %d expired session(s) from gateway `%s`', removed, gateway_name)
+                suffix = 'session' if removed == 1 else 'sessions'
+                logger.info('MCP: Reaper removed %d expired %s from gateway `%s`', removed, suffix, gateway_name)
 
 # ################################################################################################################################
 

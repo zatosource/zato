@@ -63,7 +63,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify exactly 1 message arrived ..
         self.assertEqual(delivered_count, 1)
@@ -104,7 +105,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify exactly 1 message arrived (no duplicates).
         self.assertEqual(delivered_count, 1)
@@ -134,7 +136,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify exactly 1 message arrived (no duplicate from premature retry).
         self.assertEqual(delivered_count, 1)
@@ -158,7 +161,8 @@ class TestDeliveryFailure(unittest.TestCase):
         ttl_seconds = 1
         publish_data:'anydict' = {'order_id': 'expired_test', 'source': 'test_expired_not_pushed'}
         _ = self.publisher.publish(topic_name, publish_data, expiration=ttl_seconds)
-        logger.info('Published message to %s with TTL=%d second(s), receiver rejecting', topic_name, ttl_seconds)
+        ttl_suffix = 'second' if ttl_seconds == 1 else 'seconds'
+        logger.info('Published message to %s with TTL=%d %s, receiver rejecting', topic_name, ttl_seconds, ttl_suffix)
 
         # .. wait for the message to expire and the delivery task to give up ..
         expiry_wait = 3.0
@@ -176,7 +180,8 @@ class TestDeliveryFailure(unittest.TestCase):
         # .. check what arrived ..
         messages = receiver.get_delivered_messages()
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) after expiry -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s after expiry -> %s', delivered_count, suffix, messages)
 
         # .. verify nothing was delivered (message expired before successful push).
         self.assertEqual(delivered_count, 0)
@@ -211,7 +216,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 30.0
         messages = healthy_receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Healthy receiver delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Healthy receiver delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify the healthy endpoint got exactly 1 message ..
         self.assertEqual(delivered_count, 1)
@@ -219,7 +225,8 @@ class TestDeliveryFailure(unittest.TestCase):
         # .. verify the failing receiver got nothing.
         failing_messages = failing_receiver.get_delivered_messages()
         failing_count = len(failing_messages)
-        logger.info('Failing receiver delivered %d message(s) -> %s', failing_count, failing_messages)
+        failing_suffix = 'message' if failing_count == 1 else 'messages'
+        logger.info('Failing receiver delivered %d %s -> %s', failing_count, failing_suffix, failing_messages)
         self.assertEqual(failing_count, 0)
 
 # ################################################################################################################################
@@ -246,7 +253,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 30.0
         messages = receiver.wait_for_delivery(expected_count=1, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         self.assertEqual(delivered_count, 1)
 
@@ -257,7 +265,8 @@ class TestDeliveryFailure(unittest.TestCase):
         # .. re-check the total count ..
         all_messages = receiver.get_delivered_messages()
         final_count = len(all_messages)
-        logger.info('Final count after %s second wait -> %d message(s) -> %s', generous_wait, final_count, all_messages)
+        final_suffix = 'message' if final_count == 1 else 'messages'
+        logger.info('Final count after %s second wait -> %d %s -> %s', generous_wait, final_count, final_suffix, all_messages)
 
         # .. verify still exactly 1 (no duplicates).
         self.assertEqual(final_count, 1)
@@ -292,7 +301,8 @@ class TestDeliveryFailure(unittest.TestCase):
         delivery_timeout = 60.0
         messages = receiver.wait_for_delivery(expected_count=burst_count, timeout=delivery_timeout)
         delivered_count = len(messages)
-        logger.info('Delivered %d message(s) -> %s', delivered_count, messages)
+        suffix = 'message' if delivered_count == 1 else 'messages'
+        logger.info('Delivered %d %s -> %s', delivered_count, suffix, messages)
 
         # .. verify all messages arrived ..
         self.assertEqual(delivered_count, burst_count)
