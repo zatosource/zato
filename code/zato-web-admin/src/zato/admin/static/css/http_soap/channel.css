@@ -7,9 +7,8 @@
     height: 8em;
 }
 
-.gateway-badge {
+.gateway-badge, .deprecated-badge {
     display: inline-block;
-    background-color: #8b5cf6;
     color: #fff;
     font-family: monospace;
     font-size: 0.75em;
@@ -19,4 +18,12 @@
     margin-right: 6px;
     border-radius: 3px;
     vertical-align: middle;
+}
+
+.gateway-badge {
+    background-color: #8b5cf6;
+}
+
+.deprecated-badge {
+    background-color: #d97706;
 }

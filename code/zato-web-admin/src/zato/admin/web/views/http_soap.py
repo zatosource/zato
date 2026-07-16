@@ -153,6 +153,11 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
         if params['transport'] == 'plain_http':
             message['should_include_in_openapi'] = bool(params.get(prefix + 'should_include_in_openapi'))
 
+            # The deprecation fields exist only in the forms of REST channels too
+            message['is_deprecated'] = bool(params.get(prefix + 'is_deprecated'))
+            message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset') or ''
+            message['deprecation_successor'] = params.get(prefix + 'deprecation_successor') or ''
+
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
         message[name] = params.get(prefix + name)
@@ -341,6 +346,16 @@ def index(req): # type: ignore
                     should_include_in_openapi = True
 
                 http_soap.should_include_in_openapi = should_include_in_openapi
+
+                # The deprecation attributes are opaque ones too, so channels that predate them
+                # carry no values, which means they are not deprecated.
+                is_deprecated = item.get('is_deprecated')
+                if is_deprecated is None:
+                    is_deprecated = False
+
+                http_soap.is_deprecated = is_deprecated
+                http_soap.deprecation_sunset = item.get('deprecation_sunset') or ''
+                http_soap.deprecation_successor = item.get('deprecation_successor') or ''
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size

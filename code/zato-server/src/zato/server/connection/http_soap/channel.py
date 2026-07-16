@@ -115,6 +115,46 @@ _sec_def_key_prefix_map = {
 
 # ################################################################################################################################
 
+def _get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
+    """ Returns the response headers a deprecated channel adds to every response.
+    The headers are built once per channel configuration and memoized on the channel item,
+    so the date conversions below run at config time, not per request.
+    """
+
+    # Reuse the headers if they were already built for this channel configuration ..
+    if 'deprecation_headers' in channel_item:
+        return channel_item['deprecation_headers']
+
+    # .. otherwise, this is what we are building here ..
+    out:'stranydict' = {}
+
+    # .. the Deprecation header carries the moment the channel became deprecated (RFC 9745) ..
+    if deprecation_since := channel_item.get('deprecation_since'):
+        since = _datetime_class.fromisoformat(deprecation_since)
+        since_timestamp = int(since.timestamp())
+        out['Deprecation'] = f'@{since_timestamp}'
+
+    # .. the Sunset header announces when the channel will be retired (RFC 8594) ..
+    if deprecation_sunset := channel_item.get('deprecation_sunset'):
+        sunset = _datetime_class.fromisoformat(deprecation_sunset)
+
+        # A date without a timezone is taken to mean midnight UTC
+        if sunset.tzinfo is None:
+            sunset = sunset.replace(tzinfo=_utc)
+
+        out['Sunset'] = _format_datetime(sunset, usegmt=True)
+
+    # .. the Link header points callers to the replacement endpoint ..
+    if deprecation_successor := channel_item.get('deprecation_successor'):
+        out['Link'] = f'<{deprecation_successor}>; rel="successor-version"'
+
+    # .. memoize the result so the next request reuses it as is.
+    channel_item['deprecation_headers'] = out
+
+    return out
+
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
@@ -841,6 +881,12 @@ class RequestDispatcher:
         if url_match not in ModuleCtx.No_URL_Match: # type: ignore
 
             now_us = current_time_us()
+
+            # .. deprecated channels announce their status on every response,
+            # including error and rate-limited ones ..
+            if channel_item.get('is_deprecated'):
+                deprecation_headers = _get_deprecation_headers(channel_item)
+                wsgi_environ['zato.http.response.headers'].update(deprecation_headers)
 
             # .. record the incoming request in the audit log ..
             if needs_audit:

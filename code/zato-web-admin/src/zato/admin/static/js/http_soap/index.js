@@ -412,6 +412,9 @@ $.fn.zato.http_soap.field_descriptions = {
     'id_is_active': 'Whether this endpoint accepts messages.<br>Requests to inactive endpoints are rejected.',
     'id_is_audit_log_active': 'Whether this endpoint\'s traffic is recorded<br>in the audit log. On by default.',
     'id_should_include_in_openapi': 'Whether this endpoint appears<br>in OpenAPI documents. On by default.',
+    'id_is_deprecated': 'Whether this endpoint is deprecated.<br>Deprecated endpoints announce their status<br>in response headers and OpenAPI documents.',
+    'id_deprecation_sunset': 'The date this deprecated endpoint<br>will be retired, e.g. 2026-12-31.<br>Sent to callers in the Sunset header.',
+    'id_deprecation_successor': 'URL path of the endpoint that replaces<br>this deprecated one, e.g. /api/v2/example.<br>Sent to callers in the Link header.',
     'id_url_path': 'URL path this endpoint listens on,<br>e.g. /services/endpoint.',
     'id_service': 'The service invoked for each message<br>this endpoint receives.',
     'id_security': 'Security definition each incoming message<br>must satisfy, e.g. WS-Security<br>or Basic Auth.',
@@ -608,12 +611,19 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
             is_gateway_channel = item.service === $.fn.zato.http_soap.gateway_trigger_service;
         }
     }
+    // Badges precede the name - one for gateway channels, one for deprecated ones ..
+    var name_badges = '';
+
     if(is_gateway_channel) {
-        row += String.format('<td><span class="gateway-badge">GW</span><span class="name-value">{0}</span></td>', item.name);
+        name_badges += '<span class="gateway-badge">GW</span>';
     }
-    else {
-        row += String.format('<td><span class="name-value">{0}</span></td>', item.name);
+
+    if(is_channel && !is_soap && item.is_deprecated == true) {
+        name_badges += '<span class="deprecated-badge">Deprecated</span>';
     }
+
+    // .. and the name cell combines them with the name itself.
+    row += String.format('<td>{0}<span class="name-value">{1}</span></td>', name_badges, item.name);
 
     /* 4 */
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
@@ -673,6 +683,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
     if(is_channel && !is_soap) {
         row += String.format("<td class='ignore'>{0}</td>", item.should_include_in_openapi == true);
+        row += String.format("<td class='ignore'>{0}</td>", item.is_deprecated == true);
+        row += String.format("<td class='ignore'>{0}</td>", item.deprecation_sunset || '');
+        row += String.format("<td class='ignore'>{0}</td>", item.deprecation_successor || '');
     }
 
     /* 24, 25, 26, 27 */

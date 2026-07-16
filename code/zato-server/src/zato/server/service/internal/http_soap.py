@@ -867,6 +867,7 @@ class Create(_CreateEdit):
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
+        Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_as4_input, \
@@ -891,6 +892,17 @@ class Create(_CreateEdit):
 
         # Channels are included in OpenAPI documents unless the flag turns it off
         input.should_include_in_openapi = input.get('should_include_in_openapi', True)
+
+        # Channels are not deprecated unless the flag turns it on
+        input.is_deprecated = input.get('is_deprecated', False)
+        input.deprecation_sunset = input.get('deprecation_sunset') or ''
+        input.deprecation_successor = input.get('deprecation_successor') or ''
+
+        # The moment the channel becomes deprecated is recorded for the Deprecation response header
+        if input.is_deprecated:
+            input.deprecation_since = utcnow().isoformat()
+        else:
+            input.deprecation_since = ''
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
@@ -1069,6 +1081,7 @@ class Edit(_CreateEdit):
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
         '-gateway_service_list', Boolean('-is_audit_log_active'), Boolean('-should_include_in_openapi'), \
+        Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
         *_as4_input, \
@@ -1093,6 +1106,11 @@ class Edit(_CreateEdit):
 
         # Channels are included in OpenAPI documents unless the flag turns it off
         input.should_include_in_openapi = input.get('should_include_in_openapi', True)
+
+        # Channels are not deprecated unless the flag turns it on
+        input.is_deprecated = input.get('is_deprecated', False)
+        input.deprecation_sunset = input.get('deprecation_sunset') or ''
+        input.deprecation_successor = input.get('deprecation_successor') or ''
 
         input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
         input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
@@ -1179,6 +1197,13 @@ class Edit(_CreateEdit):
                 item = session.query(HTTPSOAP).filter_by(id=local_id).one()
 
                 opaque = parse_instance_opaque_attr(item)
+
+                # A channel that was already deprecated keeps its original deprecation time,
+                # one that becomes deprecated now gets the current time, and clearing the flag clears the time.
+                if input.is_deprecated:
+                    input.deprecation_since = opaque.get('deprecation_since') or utcnow().isoformat()
+                else:
+                    input.deprecation_since = ''
 
                 old_name = item.name
                 old_url_path = item.url_path
