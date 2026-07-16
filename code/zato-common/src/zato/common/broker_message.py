@@ -128,6 +128,7 @@ class CHANNEL(Constants):
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
     HTTP_SOAP_RATE_LIMITING_EDIT = ValueConstant('')
+    HTTP_SOAP_RESPONSE_CACHE_EDIT = ValueConstant('')
 
     FTP_CREATE = ValueConstant('')
     FTP_EDIT = ValueConstant('')

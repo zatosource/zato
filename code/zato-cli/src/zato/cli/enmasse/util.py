@@ -309,6 +309,35 @@ def sync_invocation_jobs(
 
 # ################################################################################################################################
 
+def get_non_default_response_cache(stored:'anydict') -> 'anydict':
+    """ Returns the response_cache fields whose values differ from the defaults, in the canonical
+    field order - only these travel through enmasse files.
+    """
+
+    # Our response to produce
+    out = {}
+
+    defaults = HTTP_SOAP.ResponseCache.get_default_config()
+
+    for field_name, default_value in defaults.items():
+        if field_name in stored:
+            value = stored[field_name]
+
+            # The TTL unit always travels along with a non-default TTL - one is ambiguous without the other
+            if field_name == 'ttl_unit':
+                is_ttl_unit_needed = 'ttl' in out
+            else:
+                is_ttl_unit_needed = False
+
+            if value != default_value:
+                out[field_name] = value
+            elif is_ttl_unit_needed:
+                out[field_name] = value
+
+    return out
+
+# ################################################################################################################################
+
 def get_engine_from_type(raw_type:'str') -> 'str':
     """Converts a user-friendly database type to the internal type name.
     """
@@ -508,9 +537,9 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['quota_tier'] = 'name', 'description', 'rules:list',
     order['groups'] = 'name', 'is_active', 'quota_tier', 'members:list',
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', \
-        'rate_limiting:list', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
+        'rate_limiting:list', 'response_cache:dict', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
     order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \
-        'groups:list', 'rate_limiting:list',
+        'groups:list', 'rate_limiting:list', 'response_cache:dict',
     order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', \
         'tls_verify') + Invocation_Order_Fields_REST
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
@@ -701,6 +730,27 @@ def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) ->
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _write_dict_field(file_handle:'any_', field_name:'str', value:'anydict', indent:'int'=4) -> 'None':
+    """ Writes a dict-valued field as a nested YAML mapping, with list values inside it
+    rendered as YAML lists (e.g. the response_cache block of a channel).
+    """
+    prefix = ' ' * indent
+    _ = file_handle.write(f'{prefix}{field_name}:\n')
+
+    for key, sub_value in value.items():
+
+        if isinstance(sub_value, list):
+            _ = file_handle.write(f'{prefix}  {key}:\n')
+            for list_item in sub_value:
+                quoted_item = _yaml_quote(list_item)
+                _ = file_handle.write(f'{prefix}    - {quoted_item}\n')
+        else:
+            quoted_value = _yaml_quote(sub_value)
+            _ = file_handle.write(f'{prefix}  {key}: {quoted_value}\n')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FileWriter:
 
     def __init__(self, path:'str') -> 'None':
@@ -743,8 +793,20 @@ class FileWriter:
                         # .. write remaining fields with indentation but no dash ..
                         for field in fields[1:]:
 
+                            # Check if this is a dict field notation
+                            if ':dict' in field:
+                                actual_field = field.split(':')[0]
+
+                                if actual_field in item:
+                                    field_value = item[actual_field]
+
+                                    if isinstance(field_value, dict):
+                                        _write_dict_field(f, actual_field, field_value)
+                                    else:
+                                        _write_scalar_field(f, '    ', actual_field, field_value, 6)
+
                             # Check if this is a list field notation
-                            if ':list' in field:
+                            elif ':list' in field:
                                 # Extract the actual field name without the suffix
                                 actual_field = field.split(':')[0]
 

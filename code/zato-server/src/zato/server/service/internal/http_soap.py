@@ -33,6 +33,8 @@ from zato.common.util.rest_invocation import parse_param_rows, update_linked_job
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.connection.http_soap import BadRequest
+from zato.server.connection.http_soap.response_cache import get_default_config as get_default_response_cache_config, \
+    parse_config as parse_response_cache_config, purge_channel as purge_response_cache
 from zato.server.service import AsIs, Boolean
 from zato.server.service.internal import AdminService
 
@@ -1211,6 +1213,11 @@ class Edit(_CreateEdit):
                 else:
                     input.deprecation_since = ''
 
+                # The response caching config is edited on its own subpage, so the main form carries it over -
+                # otherwise the config event broadcast below would erase it from the runtime channel data.
+                if response_cache := opaque.get('response_cache'):
+                    input.response_cache = response_cache
+
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
@@ -1772,6 +1779,106 @@ class RateLimitingClearCounters(AdminService):
         key_prefix = f'rest{channel_id}:'
 
         self.server.rate_limiting_manager.clear_rule_counters(channel_id, rule_index, key_prefix)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseCacheGet(AdminService):
+    """ Returns the response caching configuration of a REST or SOAP channel, merged with defaults.
+    """
+    name = 'zato.http-soap.response-cache.get'
+    input = 'id'
+
+    def handle(self) -> 'None':
+
+        channel_id = int(self.request.input['id'])
+
+        with closing(self.odb.session()) as session:
+
+            # Read the current row ..
+            item = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+
+            # .. parse the existing opaque1 or start with an empty dict ..
+            if item.opaque1:
+                opaque = loads(item.opaque1)
+            else:
+                opaque = {}
+
+            # .. and overlay whatever is stored on top of the defaults.
+            config = get_default_response_cache_config()
+
+            if stored := opaque.get('response_cache'):
+                config.update(stored)
+
+        self.response.payload = {'response_cache': config}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseCacheSave(AdminService):
+    """ Saves the response caching configuration of a REST or SOAP channel and broadcasts the change.
+    """
+    name = 'zato.http-soap.response-cache.save'
+    input = 'id', 'config_json'
+
+    def handle(self) -> 'None':
+
+        input = self.request.input
+        channel_id = int(input['id'])
+        config_json = input['config_json']
+
+        self.logger.info('ResponseCacheSave; channel_id:%s, config_json:%s', channel_id, config_json)
+
+        # Parse the JSON string into a config dict ..
+        config:'strdict' = loads(config_json)
+
+        with closing(self.odb.session()) as session:
+
+            # Read the current row ..
+            row = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+
+            # .. validate the config by running it through the parser, with the channel's own transport ..
+            _ = parse_response_cache_config(config, row.transport)
+
+            # .. parse the existing opaque1 or start with an empty dict ..
+            if row.opaque1:
+                opaque = loads(row.opaque1)
+            else:
+                opaque = {}
+
+            # .. set the response_cache key ..
+            opaque['response_cache'] = config
+
+            # .. write it back ..
+            row.opaque1 = dumps(opaque)
+            session.add(row)
+            session.commit()
+
+        self.logger.info('ResponseCacheSave; channel_id:%s, ODB committed', channel_id)
+
+        # After ODB commit, notify the config dispatcher so the in-process channel data picks up the change
+        params = {
+            'action': CHANNEL.HTTP_SOAP_RESPONSE_CACHE_EDIT.value,
+            'id': channel_id,
+            'response_cache': config,
+        }
+        self.config_dispatcher.publish(params)
+
+        self.logger.info('ResponseCacheSave; channel_id:%s, config event published', channel_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseCacheClear(AdminService):
+    """ Deletes all the cached responses of a REST or SOAP channel.
+    """
+    name = 'zato.http-soap.response-cache.clear'
+    input = 'id'
+
+    def handle(self) -> 'None':
+
+        channel_id = int(self.request.input['id'])
+        purge_response_cache(self.cache, channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,5 +1,5 @@
 
-.PHONY: build test fuzzy ruff
+.PHONY: build test test-response-cache fuzzy ruff
 
 MAKEFLAGS += --silent
 
@@ -35,6 +35,10 @@ test:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/test_io_*.py -s
 	$(Zato_Python_Dir)/py     $(CURDIR)/test/zato/commands_/test_*.py
+
+test-response-cache:
+	echo "Running response cache tests in $(Zato_Package_Name)"
+	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/connection/http_soap/test_response_cache*.py -v
 
 fuzzy:
 	echo "=== Running proptest in $(Zato_Package_Name) ==="

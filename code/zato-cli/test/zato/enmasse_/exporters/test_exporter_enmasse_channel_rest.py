@@ -159,6 +159,11 @@ class TestEnmasseChannelRESTExporter(TestCase):
                 if rate_limiting := channel_def.get('rate_limiting'):
                     channel_required['rate_limiting'] = rate_limiting
 
+                # Add response_cache if present - the template carries only non-default values,
+                # so the export returns the same block verbatim
+                if response_cache := channel_def.get('response_cache'):
+                    channel_required['response_cache'] = response_cache
+
                 # The audit log flag is exported only when it is off
                 if channel_def.get('is_audit_log_active') is False:
                     channel_required['is_audit_log_active'] = False

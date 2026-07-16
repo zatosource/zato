@@ -909,6 +909,12 @@ urlpatterns += [
         login_required(http_soap.rate_limiting_clear_counters), name='http-soap-rate-limiting-clear-counters'),
     url(r'^zato/http-soap/rate-limiting/(?P<id>.*)/$',
         login_required(http_soap.rate_limiting), name='http-soap-rate-limiting'),
+    url(r'^zato/http-soap/response-caching/save/(?P<id>.*)/$',
+        login_required(http_soap.response_caching_save), name='http-soap-response-caching-save'),
+    url(r'^zato/http-soap/response-caching/clear/(?P<id>.*)/$',
+        login_required(http_soap.response_caching_clear), name='http-soap-response-caching-clear'),
+    url(r'^zato/http-soap/response-caching/(?P<id>.*)/$',
+        login_required(http_soap.response_caching), name='http-soap-response-caching'),
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
 

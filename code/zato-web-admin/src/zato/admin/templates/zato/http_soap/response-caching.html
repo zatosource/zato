@@ -1,0 +1,105 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Response caching - {{ channel_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/response-caching.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/response-caching.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.response_caching.init('{{ channel_id }}', '/zato/http-soap/response-caching',
+            {{ config_json|safe }}, '{{ transport }}');
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<!-- screenshot: response-caching-subpage.webp - The response caching subpage of a REST channel with the config form -->
+<!-- screenshot: response-caching-clear.webp - The clear cache action on the response caching subpage -->
+
+<div id="markup">
+<h2 class="zato">Response caching | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport={{ transport }}">{% if transport == 'soap' %}SOAP channels{% else %}REST channels{% endif %}</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport={{ transport }}">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
+
+<div class="response-caching-container">
+    <div class="response-caching-card">
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Enabled</span>
+            <input type="checkbox" id="response-caching-is-enabled" />
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Cache responses for</span>
+            <input type="number" id="response-caching-ttl" min="1" />
+            <select id="response-caching-ttl-unit">
+                <option value="seconds">seconds</option>
+                <option value="minutes">minutes</option>
+                <option value="hours">hours</option>
+            </select>
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Cache on second request</span>
+            <input type="checkbox" id="response-caching-cache-on-second-request" />
+            <span class="response-caching-hint">Store a response only once its request repeats</span>
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Shared across callers</span>
+            <input type="checkbox" id="response-caching-is-shared-across-callers" />
+            <span class="response-caching-hint">All callers share one cached response per request</span>
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Include body in key</span>
+            <input type="checkbox" id="response-caching-include-body-in-key" />
+            <span class="response-caching-hint">Lets POST requests be cached, always on for SOAP</span>
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Vary by headers</span>
+            <input type="text" id="response-caching-vary-by-headers" placeholder="e.g. Accept-Language, X-Tenant" />
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Ignored query parameters</span>
+            <input type="text" id="response-caching-ignored-query-parameters" placeholder="e.g. utm_source, utm_medium" />
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Max body size (bytes)</span>
+            <input type="number" id="response-caching-max-body-size" min="1" />
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">ETag support</span>
+            <input type="checkbox" id="response-caching-needs-etag" />
+            <span class="response-caching-hint">Return 304 Not Modified when If-None-Match matches</span>
+        </div>
+
+        <div class="response-caching-row">
+            <span class="response-caching-label">Coalesce timeout (seconds)</span>
+            <input type="number" id="response-caching-coalesce-timeout" min="1" />
+        </div>
+
+    </div>
+</div>
+
+<div class="response-caching-actions">
+    <span class="response-caching-clear-link" onclick="$.fn.zato.response_caching.clear_cache(this)">Clear cache</span>
+    <span class="response-caching-save-group">
+        <span class="status-message" id="response-caching-status"></span>
+        <input type="submit" value="Save" onclick="$.fn.zato.response_caching.save()" />
+    </span>
+</div>
+
+</div>
+
+{% endblock %}

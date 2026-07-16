@@ -170,6 +170,16 @@ channel_rest:
             limit_unit: day
             disabled: false
             disallowed: false
+    response_cache:
+      is_enabled: true
+      ttl: 10
+      ttl_unit: seconds
+      is_shared_across_callers: true
+      vary_by_headers:
+        - Accept-Language
+      ignored_query_parameters:
+        - utm_source
+        - utm_medium
 
   - name: enmasse.channel.rest.3
     service: demo.ping
@@ -241,6 +251,11 @@ channel_soap:
             limit_unit: day
             disabled: false
             disallowed: false
+    response_cache:
+      is_enabled: true
+      ttl: 2
+      ttl_unit: minutes
+      cache_on_second_request: false
 
 channel_as4:
 

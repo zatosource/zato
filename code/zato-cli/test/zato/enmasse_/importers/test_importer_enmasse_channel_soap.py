@@ -157,6 +157,13 @@ class TestEnmasseChannelSOAPFromYAML(TestCase):
         # The template turns the audit log off for this channel
         self.assertIs(opaque['is_audit_log_active'], False)
 
+        # The template configures response caching on this channel too
+        response_cache = opaque['response_cache']
+        self.assertIs(response_cache['is_enabled'], True)
+        self.assertEqual(response_cache['ttl'], 2)
+        self.assertEqual(response_cache['ttl_unit'], 'minutes')
+        self.assertIs(response_cache['cache_on_second_request'], False)
+
         # A channel without the flag in YAML has it on
         channel_1 = self.session.query(HTTPSOAP).filter_by(
             name='enmasse.channel.soap.1',

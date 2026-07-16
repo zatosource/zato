@@ -1,0 +1,100 @@
+/* ------------------------------------------------------------ */
+/* Response caching - page heading                              */
+/* ------------------------------------------------------------ */
+
+#markup > h2.zato {
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Response caching - container                                 */
+/* ------------------------------------------------------------ */
+
+.response-caching-container {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* Response caching - form card                                 */
+/* ------------------------------------------------------------ */
+
+.response-caching-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    font-size: 12px;
+    transition: border-color 0.15s;
+}
+
+.response-caching-card:hover {
+    border-color: #b0b0b0;
+}
+
+/* ------------------------------------------------------------ */
+/* Response caching - form rows                                 */
+/* ------------------------------------------------------------ */
+
+.response-caching-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.response-caching-label {
+    display: inline-block;
+    width: 200px;
+    flex-shrink: 0;
+    color: #333333;
+}
+
+.response-caching-hint {
+    color: #888888;
+    font-size: 11px;
+}
+
+.response-caching-row input[type="number"] {
+    width: 90px;
+}
+
+.response-caching-row input[type="text"] {
+    width: 320px;
+}
+
+/* ------------------------------------------------------------ */
+/* Response caching - actions                                   */
+/* ------------------------------------------------------------ */
+
+.response-caching-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8px;
+}
+
+.response-caching-clear-link {
+    cursor: pointer;
+    color: #5794d0;
+    text-decoration: underline;
+    font-size: 11px;
+}
+
+.response-caching-save-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}

@@ -53,6 +53,7 @@ from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPCo
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+from zato.server.connection.http_soap.response_cache import purge_channel as purge_response_cache
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
@@ -780,7 +781,7 @@ class ConfigManager(_ConfigManagerBase):
             decode_responses=True,
         )
 
-        out = CacheAPI(redis_client)
+        out = CacheAPI(redis_client, config_manager=self)
         return out
 
 # ################################################################################################################################
@@ -2102,6 +2103,9 @@ class ConfigManager(_ConfigManagerBase):
 
         self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
+        # A config change must not leave stale cached responses behind
+        purge_response_cache(self.cache_api, channel_id)
+
         # The channel change may alter the OpenAPI document, so it is rebuilt now
         from zato.server.openapi_console.cache import rebuild_spec_cache
         rebuild_spec_cache(self.server)
@@ -2114,6 +2118,25 @@ class ConfigManager(_ConfigManagerBase):
         logger.info('on_config_event_CHANNEL_HTTP_SOAP_RATE_LIMITING_EDIT; channel_id:%s, rule_dicts:%s', channel_id, rule_dicts)
         self.server.rate_limiting_manager.set_channel_config(channel_id, rule_dicts)
 
+    def on_config_event_CHANNEL_HTTP_SOAP_RESPONSE_CACHE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates response caching configuration for an HTTP/SOAP channel.
+        """
+        channel_id = msg['id']
+        config = msg['response_cache']
+        logger.info('on_config_event_CHANNEL_HTTP_SOAP_RESPONSE_CACHE_EDIT; channel_id:%s, config:%s', channel_id, config)
+
+        # Update the in-memory channel item so the change applies without a restart ..
+        item = self._get_channel_rest(CONNECTION.CHANNEL, channel_id, by_name=False)
+
+        if item:
+            item['response_cache'] = config
+
+            # .. dropping the memoized parsed form along the way ..
+            _ = item.pop('response_cache_parsed', None)
+
+        # .. and purge the channel's entries so stale responses cannot outlive the config change.
+        purge_response_cache(self.cache_api, channel_id)
+
     def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """
@@ -2124,6 +2147,9 @@ class ConfigManager(_ConfigManagerBase):
 
         # Delete the channel object now
         self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+
+        # A deleted channel leaves no cached responses behind
+        purge_response_cache(self.cache_api, channel_id)
 
         # The channel is gone, so the OpenAPI document is rebuilt without it now
         from zato.server.openapi_console.cache import rebuild_spec_cache

@@ -13,6 +13,7 @@ from contextlib import closing
 from sqlalchemy import and_, select
 
 # Zato
+from zato.cli.enmasse.util import get_non_default_response_cache
 from zato.common.api import CONNECTION, Groups, MISC, URL_TYPE
 from zato.common.odb.model import GenericObject, to_json
 from zato.common.odb.query import http_soap_list
@@ -144,6 +145,12 @@ class ChannelExporter:
 
             if rate_limiting := channel_row.get('rate_limiting'):
                 exported_channel['rate_limiting'] = rate_limiting
+
+            # Only the response caching fields that differ from the defaults are exported
+            if response_cache := channel_row.get('response_cache'):
+                response_cache = get_non_default_response_cache(response_cache)
+                if response_cache:
+                    exported_channel['response_cache'] = response_cache
 
             # The audit log is on by default so only the off state is exported
             if channel_row.get('is_audit_log_active') is False:
