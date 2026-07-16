@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import OK
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.test import rand_string
 
@@ -91,6 +94,8 @@ class TestRESTChannelAuditToggle:
 
 # ################################################################################################################################
 
+    # Moving a documented endpoint to a new URL path is a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_toggle_gates_events(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page

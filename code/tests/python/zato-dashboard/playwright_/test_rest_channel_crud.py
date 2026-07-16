@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from http.client import NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.test import rand_string
 
@@ -45,7 +48,7 @@ _Cell_Url_Path = 4
 _Cell_Service = 5
 _Cell_Security = 6
 _Cell_Security_Groups = 7
-_Cell_Rate_Limiting = 21
+_Cell_Rate_Limiting = 25
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,6 +139,8 @@ class TestRESTChannelCRUD:
 
 # ################################################################################################################################
 
+    # Moving a documented endpoint to a new URL path is a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_edit_rename_and_url_path(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a channel, renames it and changes its URL path, then verifies
         the old path returns 404 while the new one works.
@@ -272,6 +277,8 @@ class TestRESTChannelCRUD:
 
 # ################################################################################################################################
 
+    # Removing a documented endpoint is a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_delete(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a channel, deletes it via the UI, then verifies the row is gone
         and the URL path returns 404.
