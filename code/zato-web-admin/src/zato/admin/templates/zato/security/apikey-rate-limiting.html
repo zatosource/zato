@@ -20,14 +20,33 @@
         {% if rules_json and rules_json != '[]' %}
         $.fn.zato.rate_limiting.load_rules('rate-limiting-container', {{ rules_json|safe }});
         {% endif %}
+        $.fn.zato.rate_limiting.init_tier_select('rate-limiting-container');
     });
     </script>
 {% endblock %}
 
 {% block "content" %}
 
+<!-- screenshot: quota-tier-select-definition.webp - The quota tier select on a security definition's rate limiting page -->
+
 <div id="markup">
 <h2 class="zato">Rate limiting | <a href="{% url 'security-apikey' %}?cluster={{ cluster_id }}">API keys</a> | {{ entity_name }}</h2>
+
+<table class="form-data">
+    <tr>
+        <td style="vertical-align:middle">
+            <label for="quota-tier-select">Quota tier</label>
+        </td>
+        <td>
+            <select id="quota-tier-select" class="noChosen">
+                <option value="">Custom rules</option>
+                {% for tier in tier_list %}
+                <option value="{{ tier.id }}"{% if tier.id == quota_tier %} selected{% endif %}>{{ tier.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+    </tr>
+</table>
 
 <div class="rate-limiting-container" id="rate-limiting-container">
 </div>

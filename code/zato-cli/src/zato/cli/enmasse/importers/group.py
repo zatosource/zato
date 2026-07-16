@@ -15,6 +15,7 @@ from sqlalchemy import and_, select, delete
 
 # Zato
 from zato.common.api import Groups
+from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 
@@ -163,6 +164,19 @@ class GroupImporter:
         members = group.get('members', [])
         cluster_id = self.importer.cluster_id
 
+        # A group may reference a quota tier by name - resolve it to the tier's id
+        # because that is what the group's opaque data stores.
+        opaque = ''
+
+        if tier_name := group.get('quota_tier'):
+
+            tier_def = self.importer.quota_tier_defs.get(tier_name)
+
+            if not tier_def:
+                raise ValueError(f'Quota tier `{tier_name}` not found for group `{group_name}`')
+
+            opaque = dumps({'quota_tier': tier_def['id']})
+
         # Create the group
         with closing(session) as session:
             wrapper = GroupsWrapper(session, cluster_id)
@@ -170,7 +184,7 @@ class GroupImporter:
             # Prepare the group data
             group_data = {
                 'name': group_name,
-                'opaque1': '',  # Equivalent to _generic_attr_name
+                'opaque1': opaque,
             }
 
             # Create the group using create_many

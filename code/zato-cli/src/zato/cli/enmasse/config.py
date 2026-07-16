@@ -29,6 +29,7 @@ class _object_type:
     Email_SMTP = 'email_smtp'                     #
 
     Groups = 'groups'                             #
+    Quota_Tier = 'quota_tier'                     #
 
     LDAP = 'ldap'                                 #
     MongoDB = 'mongodb'                           #

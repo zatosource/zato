@@ -181,8 +181,15 @@ scheduler:
 
 Zato_Server_Dir ?= $(HOME)/env/qs-1/server1
 
+# Which file-watching method the listener uses - Kubernetes needs polling
+# because ConfigMap updates arrive as symlink swaps that inotify does not report
+Zato_File_Listener_Observer ?= inotify
+
 listener:
-	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py $(Zato_Server_Dir)/pickup/incoming/services/
+	py $(CURDIR)/code/zato-common/src/zato/common/file_transfer/listener.py $(Zato_Server_Dir)/pickup/incoming/services/ --observer $(Zato_File_Listener_Observer)
+
+# The name the Docker image's entrypoint invokes
+file-pickup-listener: listener
 
 haproxy:
 	@mkdir -p $(HAPROXY_DEV_DIR)

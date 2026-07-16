@@ -11,6 +11,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 template_complex_01 = """
 
+quota_tier:
+
+  - name: enmasse.quota.tier.1
+    description: Enmasse quota tier one
+    rules:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 1000
+            limit_unit: month
+            disabled: false
+            disallowed: false
+
+  - name: enmasse.quota.tier.2
+    description: Enmasse quota tier two
+    rules:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            limit: 50
+            limit_unit: day
+            disabled: false
+            disallowed: false
+
 security:
 
   - name: enmasse.basic_auth.1

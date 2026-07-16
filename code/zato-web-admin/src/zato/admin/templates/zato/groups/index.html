@@ -40,6 +40,7 @@
             // ------ 3 ------ //
             'group_type',
             'is_active',
+            'quota_tier',
         ]
     }
     </script>
@@ -81,6 +82,7 @@
                         {% comment %} 3 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -108,6 +110,7 @@
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.type }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.quota_tier }}</td>
 
                     </tr>
                 {% endfor %}
@@ -133,6 +136,19 @@
                                 </label>
                             </td>
                             <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_quota_tier">Quota tier</label>
+                            </td>
+                            <td>
+                                <select id="id_quota_tier" name="quota_tier" class="noChosen">
+                                    <option value="">----------</option>
+                                    {% for tier in tier_list %}
+                                    <option value="{{ tier.id }}">{{ tier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">
@@ -189,6 +205,19 @@
                                 </label>
                             </td>
                             <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-quota_tier">Quota tier</label>
+                            </td>
+                            <td>
+                                <select id="id_edit-quota_tier" name="edit-quota_tier" class="noChosen">
+                                    <option value="">----------</option>
+                                    {% for tier in tier_list %}
+                                    <option value="{{ tier.id }}">{{ tier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">

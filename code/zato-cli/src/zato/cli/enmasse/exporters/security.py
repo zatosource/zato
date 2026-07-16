@@ -9,9 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
+from zato.common.api import Quota_Tiers
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
 from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
+from zato.common.odb.query.generic import GenericObjectWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,6 +36,30 @@ class SecurityExporter:
 
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
+
+        # Maps quota tier ids to their names - populated at the start of each export
+        self.tier_name_by_id = {}
+
+# ################################################################################################################################
+
+    def _load_tier_names(self, session:'SASession', cluster_id:'int') -> 'None':
+        """ Builds a map of quota tier ids to their names for reference resolution during export.
+        """
+        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper.type_ = Quota_Tiers.Type.Quota_Tier
+
+        rows = wrapper.get_list()
+
+        for row in rows:
+            self.tier_name_by_id[row['id']] = row['name']
+
+# ################################################################################################################################
+
+    def _resolve_quota_tier(self, security_entry:'anydict') -> 'None':
+        """ Replaces a quota tier id with its name - YAML documents reference tiers by name.
+        """
+        if tier_id := security_entry.get('quota_tier'):
+            security_entry['quota_tier'] = self.tier_name_by_id[tier_id]
 
 # ################################################################################################################################
 
@@ -77,6 +103,9 @@ class SecurityExporter:
             if opaque1 := item.get('opaque1'):
                 opaque = loads(opaque1)
                 security_entry.update(opaque)
+
+            # Quota tiers are stored by id but exported by name
+            self._resolve_quota_tier(security_entry)
 
             result.append(security_entry)
 
@@ -152,6 +181,9 @@ class SecurityExporter:
                 if 'auth_endpoint' not in oauth:
                     logger.warning('Dynamic bearer token %s is missing auth_endpoint', name)
 
+            # Quota tiers are stored by id but exported by name
+            self._resolve_quota_tier(oauth)
+
             result.append(oauth)
 
         return result
@@ -168,6 +200,9 @@ class SecurityExporter:
 
         # Prefixes to exclude
         excluded_prefixes = ['zato', 'pub.zato', 'demo']
+
+        # Load tier names so quota tier references can be exported by name
+        self._load_tier_names(session, cluster_id)
 
         exported_security = []
 

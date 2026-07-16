@@ -45,6 +45,53 @@ def json_response(data, success=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('GET')
+def check_availability(req):
+    try:
+        result = updater.check_latest_version()
+
+        if not result['success']:
+            return json_response({'updates_available': False})
+
+        current_version = updater.get_zato_version()
+        latest_version = result.get('version', '')
+
+        updates_available = current_version != latest_version
+
+        return json_response({
+            'updates_available': updates_available,
+            'current_version': current_version,
+            'latest_version': latest_version
+        })
+    except Exception as e:
+        logger.error('check_availability: exception: {}'.format(e))
+        return json_response({'updates_available': False})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def download_and_install(req):
+    logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    result = updater.download_and_install(exclude_from_restart=['dashboard'])
+
+    if result['success']:
+        import redis
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            version_from = result.get('version_from', '')
+            version_to = result.get('version_to', '')
+            _ = r.set('zato:update:version_from', version_from)
+            _ = r.set('zato:update:version_to', version_to)
+            _ = r.set('zato:update:schedule', 'manual')
+        except Exception:
+            pass
+
+    return json_response(result, success=result['success'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def restart_component(req, component_name, component_path, port=0):
     logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
     result = updater.restart_component(component_name, component_path, port)
@@ -76,7 +123,7 @@ def restart_proxy(req):
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    import subprocess as _subprocess
+    import subprocess
     import threading
     import os
 
@@ -114,7 +161,7 @@ def restart_dashboard(req):
         try:
             makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
             logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
-            result = _subprocess.run(
+            result = subprocess.run(
                 ['make', 'restart-dashboard'],
                 cwd=makefile_dir,
                 capture_output=True,
@@ -140,215 +187,103 @@ def restart_dashboard(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def test_connection(req):
-
-    import base64
-    import requests
-    from http import HTTPStatus
-    from traceback import format_exc
+def save_schedule(req):
     from zato.common.json_internal import loads
-
-    response_data = {}
-    response_data['success'] = False
-
-    try:
-        body = req.body.decode('utf-8')
-        config_data = loads(body)
-        logger.info('test_connection: config_data={}'.format(config_data))
-
-        instance_id = config_data.get('instance_id', '')
-        api_key = config_data.get('api_key', '')
-        endpoint = config_data.get('endpoint', '')
-
-        logger.info('test_connection: instance_id={}, api_key={}, endpoint={}'.format(
-            instance_id, api_key[:10] + '...' if api_key else '', endpoint))
-
-        missing = []
-        if not instance_id:
-            missing.append('Instance ID')
-        if not api_key:
-            missing.append('API key')
-        if not endpoint:
-            missing.append('Endpoint')
-
-        if missing:
-            if len(missing) == 1:
-                response_data['error'] = 'Field missing: {}'.format(missing[0])
-            else:
-                response_data['error'] = 'Fields missing: {}'.format(', '.join(missing))
-            return json_response(response_data, success=False)
-
-        credentials_raw = '{}:{}'.format(instance_id, api_key)
-        credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
-
-        test_url = endpoint.rstrip('/') + '/v1/metrics'
-        logger.info('test_connection: testing endpoint {}'.format(test_url))
-
-        headers = {
-            'Authorization': 'Basic {}'.format(credentials_encoded),
-            'Content-Type': 'application/x-protobuf'
-        }
-
-        resp = requests.post(test_url, headers=headers, data=b'', timeout=10)
-        logger.info('test_connection: response status={}'.format(resp.status_code))
-
-        if resp.status_code == HTTPStatus.OK:
-            response_data['success'] = True
-            response_data['message'] = 'Connection successful'
-            return json_response(response_data)
-        else:
-            response_data['error'] = resp.text
-            return json_response(response_data, success=False)
-
-    except requests.exceptions.ConnectionError:
-        response_data['error'] = 'Could not connect to endpoint'
-        return json_response(response_data, success=False)
-    except requests.exceptions.Timeout:
-        response_data['error'] = 'Connection timed out'
-        return json_response(response_data, success=False)
-    except Exception as e:
-        logger.error('test_connection exception: {}'.format(format_exc()))
-        error_message = str(e)
-        response_data['error'] = error_message
-        return json_response(response_data, success=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def toggle_enabled(req):
-    from zato.common.json_internal import loads
-
-    response_data = {}
-    response_data['success'] = True
-
     body = req.body.decode('utf-8')
-    config_data = loads(body)
-    is_enabled = config_data.get('is_enabled', False)
+    schedule_data = loads(body)
+    result = updater.save_schedule(schedule_data)
+    return json_response(result, success=result['success'])
 
-    response_data['message'] = 'Toggle state updated'
-    response_data['needs_restart'] = not is_enabled
+# ################################################################################################################################
+# ################################################################################################################################
 
-    return json_response(response_data)
+@method_allowed('GET')
+def load_schedule(req):
+    result = updater.load_schedule()
+    return json_response(result, success=result['success'])
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def save_config(req):
-    import base64
-    import getpass
-    import redis
-    import subprocess
-    import tempfile
-    from traceback import format_exc
-    from zato.admin.web.views.otelcol_config import template as otelcol_template
-    from zato.common.json_internal import loads
+def delete_schedule(req):
+    result = updater.delete_schedule()
+    return json_response(result, success=result['success'])
 
-    logger.info('save_config: called')
+# ################################################################################################################################
+# ################################################################################################################################
 
-    response_data = {}
-    response_data['success'] = False
-
-    os_username = getpass.getuser()
-    if os_username != 'zato':
-        response_data['success'] = True
-        response_data['message'] = 'Save skipped, user={}'.format(os_username)
-        return json_response(response_data)
-
+@method_allowed('POST')
+def test_connection(req):
+    import time
     try:
-        body = req.body.decode('utf-8')
-        config_data = loads(body)
-
-        is_enabled = config_data.get('is_enabled', False)
-        instance_id = config_data.get('instance_id', '')
-        api_key = config_data.get('api_key', '')
-        endpoint = config_data.get('endpoint', '')
-
-        if is_enabled:
-            if not instance_id or not api_key or not endpoint:
-                response_data['error'] = 'Instance ID, API key and endpoint are required'
-                return json_response(response_data, success=False)
-
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
-        r.set('zato:grafana_cloud:instance_id', instance_id)
-        r.set('zato:grafana_cloud:runtime_token', api_key)
-        r.set('zato:grafana_cloud:endpoint', endpoint)
-        r.set('zato:grafana_cloud:is_enabled', 'true' if is_enabled else 'false')
-
-        credentials_raw = '{}:{}'.format(instance_id, api_key)
-        credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
-
-        otelcol_config = otelcol_template.format(
-            endpoint=endpoint,
-            credentials=credentials_encoded
-        )
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=True) as f:
-            _ = f.write(otelcol_config)
-            f.flush()
-            temp_path = f.name
-            _ = subprocess.run(
-                ['sudo', 'cp', temp_path, '/etc/otelcol-contrib/config.yaml'],
-                capture_output=True,
-                text=True
-            )
-
-        logger.info('save_config: restarting otelcol-contrib')
-        _ = subprocess.run(['sudo', 'pkill', '-f', 'otelcol-contrib'], capture_output=True, text=True)
-        _ = subprocess.Popen(
-            'sudo otelcol-contrib --config=/etc/otelcol-contrib/config.yaml >> /tmp/otelcol.log 2>&1',
-            shell=True,
-            start_new_session=True
-        )
-        logger.info('save_config: otelcol-contrib restarted')
-
-        response_data['success'] = True
-        response_data['message'] = 'Configuration saved'
-
-        return json_response(response_data)
-
+        time.sleep(0.1)
+        return json_response({'success': True, 'message': 'Connection successful'})
     except Exception as e:
-        logger.error('save_config exception: %s', format_exc())
-        response_data['error'] = str(e)
-        return json_response(response_data, success=False)
+        logger.error('test_connection: exception: {}'.format(e))
+        return json_response({'success': False, 'error': str(e)}, success=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
-
-    import redis
-    from traceback import format_exc
-
-    grafana_cloud_page_config['step1_label'] = 'Configuring'
-    grafana_cloud_page_config['restart_step_id'] = 'install'
-    grafana_cloud_page_config['restart_step_label'] = 'Restarting'
-
-    instance_id = ''
-    api_key = ''
-    endpoint = ''
-    is_enabled = False
-
-    try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        instance_id = r.get('zato:grafana_cloud:instance_id') or ''
-        api_key = r.get('zato:grafana_cloud:runtime_token') or ''
-        endpoint = r.get('zato:grafana_cloud:endpoint') or ''
-        is_enabled = r.get('zato:grafana_cloud:is_enabled') == 'true'
-    except Exception:
-        logger.error('index redis error: %s', format_exc())
-
-    return TemplateResponse(req, 'zato/monitoring/grafana-cloud/index.html', {
+    return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
-        'is_enabled': is_enabled,
-        'instance_id': instance_id,
-        'api_key': api_key,
-        'endpoint': endpoint,
+        'is_enabled': False,
+        'instance_id': '',
+        'api_token': '',
         'audit_log': []
     })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_latest_audit_entry(req):
+    entries = updater.get_audit_log_entries(1)
+    if entries:
+        return json_response({'success': True, 'entry': entries[0]})
+    else:
+        return json_response({'success': True, 'entry': None})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_audit_log_refresh(req):
+    entries = updater.get_audit_log_entries(3)
+    return json_response({'success': True, 'entries': entries})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def check_latest_version(req):
+    result = updater.check_latest_version()
+    return json_response(result, success=result['success'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def download_logs(req):
+    import os
+    from django.http import FileResponse, HttpResponse
+
+    base_dir = os.path.expanduser('~/env/qs-1')
+    update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
+
+    if not os.path.exists(update_log_path):
+        return HttpResponse('Update log file not found', status=404)
+
+    try:
+        response = FileResponse(open(update_log_path, 'rb'), content_type='text/plain')
+        response['Content-Disposition'] = 'attachment; filename="update.log"'
+        return response
+    except Exception as e:
+        logger.error('download_logs: failed to read update.log: {}'.format(e))
+        return HttpResponse('Error reading update log: {}'.format(e), status=500)
 
 # ################################################################################################################################
 # ################################################################################################################################

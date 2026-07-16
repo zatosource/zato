@@ -356,6 +356,11 @@ class SecurityImporter:
         model = self.get_class_by_type(sec_type)
         logger.debug('Using model class: %s', model)
 
+        # Remember which of the two mutually exclusive keys came from YAML
+        # before database values are merged in below.
+        has_yaml_quota_tier = 'quota_tier' in sec_def
+        has_yaml_rate_limiting = 'rate_limiting' in sec_def
+
         db_def = db_defs[def_name]
         logger.debug('DB definition for %s: %s', def_name, db_def)
 
@@ -373,6 +378,14 @@ class SecurityImporter:
                 logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
                 sec_def[item] = db_def[item]
         logger.debug('sec_def after merging DB values: %s', sec_def)
+
+        # A definition either references a quota tier or carries its own rules, never both,
+        # so the stale counterpart merged in from the previous opaque data is dropped.
+        if has_yaml_quota_tier and 'rate_limiting' in sec_def:
+            del sec_def['rate_limiting']
+
+        if has_yaml_rate_limiting and 'quota_tier' in sec_def:
+            del sec_def['quota_tier']
 
         definition = session.query(model).filter_by(id=def_id).one()
         logger.debug('Retrieved definition instance from DB')
@@ -397,6 +410,24 @@ class SecurityImporter:
         for item in security_list:
             if item['type'] not in valid_types:
                 raise ValueError(f'Invalid security definition type: {item["type"]}. Must be one of {valid_types} -> {item}')
+
+        # Resolve quota tier references - YAML carries tier names but opaque data stores tier ids.
+        for item in security_list:
+
+            if 'quota_tier' not in item:
+                continue
+
+            # A definition either references a tier or carries its own rules, never both
+            if 'rate_limiting' in item:
+                raise ValueError(f'Security definition `{item["name"]}` cannot have both quota_tier and rate_limiting')
+
+            tier_name = item['quota_tier']
+            tier_def = self.importer.quota_tier_defs.get(tier_name)
+
+            if not tier_def:
+                raise ValueError(f'Quota tier `{tier_name}` not found for security definition `{item["name"]}`')
+
+            item['quota_tier'] = tier_def['id']
 
         db_defs = self.get_security_defs_from_db(session, self.importer.cluster_id)
         to_create, to_update = self.compare_security_defs(security_list, db_defs)

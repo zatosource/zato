@@ -55,6 +55,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, ntlm, wss
 from zato.admin.web.views.security import posture as security_posture
+from zato.admin.web.views.security import tier as security_tier
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.monitoring import config as monitoring_config
@@ -205,6 +206,24 @@ urlpatterns += [
         login_required(basic_auth.rate_limiting_clear_counters), name='security-basic-auth-rate-limiting-clear-counters'),
     url(r'^zato/security/basic-auth/rate-limiting/(?P<id>.*)/$',
         login_required(basic_auth.rate_limiting), name='security-basic-auth-rate-limiting'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Security - quota tiers
+
+    url(r'^zato/security/tier/$',
+        login_required(security_tier.index), name='security-tier'),
+    url(r'^zato/security/tier/create/$',
+        login_required(security_tier.create), name='security-tier-create'),
+    url(r'^zato/security/tier/save/$',
+        login_required(security_tier.save), name='security-tier-save'),
+    url(r'^zato/security/tier/delete/(?P<id>.*)/$',
+        login_required(security_tier.delete), name='security-tier-delete'),
+    url(r'^zato/security/tier/(?P<id>.*)/$',
+        login_required(security_tier.edit), name='security-tier-edit'),
     ]
 
 # ################################################################################################################################
@@ -1348,10 +1367,6 @@ urlpatterns += [
         login_required(grafana_cloud.index), name='monitoring-grafana-cloud'),
     url(r'^zato/monitoring/grafana-cloud/test-connection$',
         login_required(grafana_cloud.test_connection), name='monitoring-grafana-cloud-test-connection'),
-    url(r'^zato/monitoring/grafana-cloud/toggle-enabled$',
-        login_required(grafana_cloud.toggle_enabled), name='monitoring-grafana-cloud-toggle-enabled'),
-    url(r'^zato/monitoring/grafana-cloud/save-config$',
-        login_required(grafana_cloud.save_config), name='monitoring-grafana-cloud-save-config'),
 
     # Monitoring - Datadog
 

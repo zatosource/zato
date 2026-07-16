@@ -149,13 +149,16 @@ def _update_by_symlink_swap(volume_directory:'str', file_name:'str', content:'st
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _start_polling_observer(volume_directory:'str', recording_session:'any_') -> 'BaseObserver':
+def _start_polling_observer(volume_directory:'str', recording_session:'any_', matching_items:'any_'=None) -> 'BaseObserver':
     """ Starts the listener's polling observer over the given directory and waits until its baseline snapshot exists,
     so that only later changes produce events.
     """
+    if matching_items is None:
+        matching_items = [volume_directory]
+
     observer = watch_directory(
         volume_directory,
-        [volume_directory],
+        matching_items,
         session=recording_session,
         invoke_url=_invoke_url,
         event_types=None,
@@ -271,6 +274,52 @@ class GetOrderStatus(Service):
 
         # .. and confirm the listener deployed the visible path with the new content.
         visible_path = os.path.join(volume_directory, file_name)
+        was_deployed = _wait_for_deployment(recording_session, visible_path, updated_content)
+
+        assert was_deployed, f'Expected {visible_path} to be deployed with updated content, got: {recording_session.deployments}'
+
+    finally:
+        observer.stop()
+        observer.join()
+        shutil.rmtree(volume_directory, ignore_errors=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def test_single_enmasse_file_as_matching_item() -> 'None':
+    """ When a directory holds one enmasse file only, the matching item the listener finds is that file itself
+    rather than a directory - the observer must still detect a symlink-swap update of it.
+    """
+    initial_content = '''channel_rest:
+  - name: "billing.channel"
+    service: "billing.get-summary"
+    url_path: "/billing"
+    security: "anonymous"
+'''
+
+    updated_content = '''channel_rest:
+  - name: "billing.channel"
+    service: "billing.get-summary"
+    url_path: "/billing/v2"
+    security: "anonymous"
+'''
+
+    volume_directory = tempfile.mkdtemp(prefix='zato_test_configmap_')
+    file_name = 'enmasse.yaml'
+
+    _create_configmap_volume(volume_directory, file_name, initial_content)
+
+    # The matching item is the file itself, the way find_matching_items reports a lone enmasse file
+    visible_path = os.path.join(volume_directory, file_name)
+
+    recording_session = _RecordingSession()
+    observer = _start_polling_observer(volume_directory, recording_session, matching_items=[visible_path])
+
+    try:
+        # Update the file the way kubelet does it ..
+        _update_by_symlink_swap(volume_directory, file_name, updated_content)
+
+        # .. and confirm the listener deployed the visible path with the new content.
         was_deployed = _wait_for_deployment(recording_session, visible_path, updated_content)
 
         assert was_deployed, f'Expected {visible_path} to be deployed with updated content, got: {recording_session.deployments}'
