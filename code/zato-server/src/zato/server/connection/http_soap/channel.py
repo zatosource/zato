@@ -39,6 +39,7 @@ from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
+from zato.server.connection.http_soap import response_cache
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -442,6 +443,34 @@ class RequestDispatcher:
         else:
             out = response.payload
 
+        # A channel with response caching stores what is going out, subject to the storage rules
+        if cache_ctx := wsgi_environ.get('zato.response_cache.ctx'):
+            response_cache.store(cache_ctx, out, response.status_code)
+
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_and_format(
+        self,
+        cid:'str',
+        meta:'_RequestMeta',
+        url_match:'str',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+        payload:'bytes',
+        post_data:'anydict',
+        config_manager:'ConfigManager',
+        zato_response_headers_container:'anydict',
+    ) -> 'any_':
+        """ Invokes the service and formats its response - the one unit of work that response
+        caching coalesces across concurrent requests for the same cache key.
+        """
+        response = self._invoke_service(
+            cid, meta, url_match, channel_item, wsgi_environ,
+            payload, post_data, config_manager, zato_response_headers_container)
+
+        out = self._format_response(channel_item, wsgi_environ, response)
         return out
 
 # ################################################################################################################################
@@ -526,12 +555,30 @@ class RequestDispatcher:
             out = self._handle_as2_channel(cid, channel_item, wsgi_environ, payload)
             return out
 
-        # .. invoke the service ..
-        response = self._invoke_service(
-            cid, meta, url_match, channel_item, wsgi_environ,
+        # .. a channel with response caching may have the response ready ..
+        cache_ctx = response_cache.get_context(config_manager.cache_api, channel_item, wsgi_environ, payload)
+
+        invoke_args = (cid, meta, url_match, channel_item, wsgi_environ,
             payload, post_data, config_manager, zato_response_headers_container)
 
-        out = self._format_response(channel_item, wsgi_environ, response)
+        if cache_ctx:
+
+            # .. a hit short-circuits the request with the stored body - note that the body
+            # may be an empty string when the caller's ETag still matches ..
+            cached = response_cache.lookup(cache_ctx)
+
+            if cached is not None:
+                return cached
+
+            # .. it is a miss, so the fresh response will be stored in _format_response
+            # and concurrent requests for the same key are coalesced into one invocation ..
+            wsgi_environ['zato.response_cache.ctx'] = cache_ctx
+
+            out = response_cache.invoke_coalesced(cache_ctx, self._invoke_and_format, invoke_args)
+            return out
+
+        # .. invoke the service ..
+        out = self._invoke_and_format(*invoke_args)
 
         return out
 

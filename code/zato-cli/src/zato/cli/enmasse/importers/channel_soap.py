@@ -30,7 +30,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
-_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'use_mtom', 'is_audit_log_active')
+_non_column_keys = ('id', 'service', 'security', 'groups', 'rate_limiting', 'response_cache', 'use_mtom', 'is_audit_log_active')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,11 +94,11 @@ class ChannelSOAPImporter:
 
                 needs_update = False
 
-                # Compare standard attributes - security, groups and rate limiting are checked separately
-                # and the service name is not a column in the database row (only service_id is).
+                # Compare standard attributes - security, groups, rate limiting and response caching are checked
+                # separately and the service name is not a column in the database row (only service_id is).
                 for key, value in item.items():
 
-                    if key in ('security', 'security_name', 'groups', 'rate_limiting', 'service'):
+                    if key in ('security', 'security_name', 'groups', 'rate_limiting', 'response_cache', 'service'):
                         continue
 
                     # A field the database row does not have yet means an update too.
@@ -122,6 +122,10 @@ class ChannelSOAPImporter:
 
                 # Check rate_limiting
                 if self._rate_limiting_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check response_cache
+                if self._response_cache_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -179,6 +183,20 @@ class ChannelSOAPImporter:
 
 # ################################################################################################################################
 
+    def _response_cache_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if response_cache needs update.
+        """
+        yaml_response_cache = item.get('response_cache', {})
+        db_response_cache = db_def.get('response_cache', {})
+
+        if yaml_response_cache != db_response_cache:
+            logger.info('response_cache changed for SOAP channel %s', item['name'])
+            return True
+
+        return False
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
         """ Convert security group names to IDs.
         """
@@ -221,6 +239,10 @@ class ChannelSOAPImporter:
         # Rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # Response caching
+        if response_cache := channel_def.get('response_cache'):
+            opaque_attrs['response_cache'] = response_cache
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)

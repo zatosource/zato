@@ -151,6 +151,12 @@ zato_rest_channel_response_size_bytes = _get_or_create_histogram(
     zato_size_histogram_buckets,
 )
 
+zato_rest_channel_cache_operations_total = _get_or_create_counter(
+    'zato_rest_channel_cache_operations_total',
+    'Total response cache operations on REST and SOAP channels, by channel name and outcome',
+    ('channel_name', 'outcome'),
+)
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -706,6 +706,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
+        row += String.format('<td><a href="/zato/http-soap/response-caching/{0}/?cluster={1}">Response caching</a></td>', item.id, cluster_id);
     }
 
     /* Audit log (REST and SOAP channels, REST outgoing connections) */

@@ -23,8 +23,9 @@ from zato.common.defaults import http_plain_server_port
 
 if 0:
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_, strnone
+    from zato.common.typing_ import any_, stranydict, strnone
     Imbox = Imbox
+    stranydict = stranydict
     strnone = strnone
 
 # ################################################################################################################################
@@ -725,6 +726,53 @@ class HTTP_SOAP:
         CallbackFieldList = (Field_Callback_Type, Field_Callback_Name)
 
         FieldList = RequestFieldListREST + RequestFieldListSOAP + ResponseFieldList + CallbackFieldList + SchedulerFieldList
+
+    class ResponseCache:
+        """ Declarative response caching config of REST and SOAP channels - the whole block is stored
+        in the channel's opaque attributes under the Opaque_Key name.
+        """
+
+        # The name of the key in the channel's opaque attributes
+        Opaque_Key = 'response_cache'
+
+        # Cached entries live under this per-channel prefix, which makes purging a channel a prefix delete
+        Key_Prefix = 'cache:channel:{}:'
+
+        class TTLUnit:
+            Seconds = 'seconds'
+            Minutes = 'minutes'
+            Hours = 'hours'
+
+        TTLUnitList = (TTLUnit.Seconds, TTLUnit.Minutes, TTLUnit.Hours)
+
+        Default_Is_Enabled = False
+        Default_TTL = 5
+        Default_TTL_Unit = TTLUnit.Minutes
+        Default_Is_Shared_Across_Callers = False
+        Default_Include_Body_In_Key = False
+        Default_Max_Body_Size = 1_000_000
+        Default_Cache_On_Second_Request = True
+        Default_Needs_ETag = False
+        Default_Coalesce_Timeout = 15
+
+        @staticmethod
+        def get_default_config() -> 'stranydict':
+            """ Returns a new dict with every response caching field set to its default value.
+            """
+            out = {
+                'is_enabled': HTTP_SOAP.ResponseCache.Default_Is_Enabled,
+                'ttl': HTTP_SOAP.ResponseCache.Default_TTL,
+                'ttl_unit': HTTP_SOAP.ResponseCache.Default_TTL_Unit,
+                'is_shared_across_callers': HTTP_SOAP.ResponseCache.Default_Is_Shared_Across_Callers,
+                'vary_by_headers': [],
+                'ignored_query_parameters': [],
+                'include_body_in_key': HTTP_SOAP.ResponseCache.Default_Include_Body_In_Key,
+                'max_body_size': HTTP_SOAP.ResponseCache.Default_Max_Body_Size,
+                'cache_on_second_request': HTTP_SOAP.ResponseCache.Default_Cache_On_Second_Request,
+                'needs_etag': HTTP_SOAP.ResponseCache.Default_Needs_ETag,
+                'coalesce_timeout': HTTP_SOAP.ResponseCache.Default_Coalesce_Timeout,
+            }
+            return out
 
     class HealthCheck:
         """ Scheduled health checks of connections - a generic component attachable to any connection type

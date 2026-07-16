@@ -249,6 +249,51 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_channel_rest_response_cache(self) -> 'None':
+        """ Test that response_cache is correctly stored in opaque1 during REST channel import.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Process channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # Find the channel with response caching and one without it
+        channel_rest_1 = cast_('any_', None)
+        channel_rest_2 = cast_('any_', None)
+
+        for channel in channels_created:
+            if channel.name == 'enmasse.channel.rest.1':
+                channel_rest_1 = channel
+            elif channel.name == 'enmasse.channel.rest.2':
+                channel_rest_2 = channel
+
+        # The template configures response caching on channel rest.2
+        self.assertIsNotNone(channel_rest_2, 'Channel enmasse.channel.rest.2 not found')
+        opaque_2 = json.loads(channel_rest_2.opaque1)
+        self.assertIn('response_cache', opaque_2)
+
+        response_cache = opaque_2['response_cache']
+        self.assertIs(response_cache['is_enabled'], True)
+        self.assertEqual(response_cache['ttl'], 10)
+        self.assertEqual(response_cache['ttl_unit'], 'seconds')
+        self.assertIs(response_cache['is_shared_across_callers'], True)
+        self.assertEqual(response_cache['vary_by_headers'], ['Accept-Language'])
+        self.assertEqual(response_cache['ignored_query_parameters'], ['utm_source', 'utm_medium'])
+
+        # A channel without the block in YAML has none in opaque1 either
+        self.assertIsNotNone(channel_rest_1, 'Channel enmasse.channel.rest.1 not found')
+        opaque_1 = json.loads(channel_rest_1.opaque1)
+        self.assertNotIn('response_cache', opaque_1)
+
+# ################################################################################################################################
+
     def test_channel_rest_audit_log_flag(self) -> 'None':
         """ Test that the audit log flag is stored in opaque1, off when the YAML says so and on by default.
         """

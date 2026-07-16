@@ -86,7 +86,8 @@ class ChannelImporter:
 
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
+                    if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
+                        'is_audit_log_active',
                         'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor'] \
                         and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
@@ -107,6 +108,10 @@ class ChannelImporter:
 
                 # Check rate_limiting
                 if self._rate_limiting_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check response_cache
+                if self._response_cache_needs_update(item, db_def):
                     needs_update = True
 
                 # Check the audit log flag
@@ -205,6 +210,28 @@ class ChannelImporter:
 
         if yaml_rate_limiting != db_rate_limiting:
             logger.info('rate_limiting changed for channel %s', item['name'])
+            return True
+
+        return False
+
+# ################################################################################################################################
+
+    def _response_cache_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if response_cache needs update.
+        """
+        yaml_response_cache = item.get('response_cache', {})
+
+        db_response_cache = {}
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_response_cache = opaque.get('response_cache', {})
+        except Exception as exception:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], exception)
+
+        if yaml_response_cache != db_response_cache:
+            logger.info('response_cache changed for channel %s', item['name'])
             return True
 
         return False
@@ -342,7 +369,8 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
+            if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
+                'is_audit_log_active',
                 'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
@@ -367,6 +395,10 @@ class ChannelImporter:
         # Handle rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # Handle response caching
+        if response_cache := channel_def.get('response_cache'):
+            opaque_attrs['response_cache'] = response_cache
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)
@@ -414,7 +446,8 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
+            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
+                'is_audit_log_active',
                 'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
@@ -451,6 +484,10 @@ class ChannelImporter:
         # Handle rate limiting
         if rate_limiting := channel_def.get('rate_limiting'):
             opaque_attrs['rate_limiting'] = rate_limiting
+
+        # Handle response caching
+        if response_cache := channel_def.get('response_cache'):
+            opaque_attrs['response_cache'] = response_cache
 
         # The audit log is on unless the YAML definition turns it off
         opaque_attrs['is_audit_log_active'] = channel_def.get('is_audit_log_active', True)

@@ -582,7 +582,7 @@ class URLData(PyURLData):
             'match_slash',
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
             'security_groups', 'security_groups_ctx', 'gateway_service_list', 'use_mtom', 'is_audit_log_active',
-            'should_include_in_openapi',
+            'should_include_in_openapi', 'response_cache',
             'is_deprecated', 'deprecation_sunset', 'deprecation_successor', 'deprecation_since'):
 
             channel_item[name] = msg.get(name)

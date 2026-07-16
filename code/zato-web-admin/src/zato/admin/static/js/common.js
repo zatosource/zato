@@ -149,6 +149,7 @@ $.namespace('zato.pubsub.subscription');
 $.namespace('zato.pubsub.subscription.data_table');
 $.namespace('zato.query');
 $.namespace('zato.rate_limiting');
+$.namespace('zato.response_caching');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.apikey');

@@ -29,6 +29,7 @@ from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
+from zato.common.typing_ import any_
 # Bunch
 from zato.common.ext.bunch import Bunch
 from zato.common.util import openapi_ as openapi_module
@@ -613,6 +614,74 @@ def rate_limiting_clear_counters(req, id): # type: ignore
         msg = 'Rate limiting counters could not be cleared, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def response_caching(req:'any_', id:'str') -> 'TemplateResponse':
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+
+    config_response = req.zato.client.invoke('zato.http-soap.response-cache.get', {
+        'id': id,
+    })
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'channel_id': id,
+        'channel_name': response.data.name,
+        'channel_url_path': response.data.url_path,
+        'transport': response.data.transport,
+        'config_json': dumps(config_response.data.response_cache),
+        'zato_template_name': 'zato/http_soap/response-caching.html',
+    }
+
+    return TemplateResponse(req, 'zato/http_soap/response-caching.html', return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def response_caching_save(req:'any_', id:'str') -> 'any_':
+    try:
+        config_json = req.POST['config_json']
+        logger.info('response_caching_save; channel_id:%s, config_json:%s', id, config_json)
+        response = req.zato.client.invoke('zato.http-soap.response-cache.save', {
+            'id': id,
+            'config_json': config_json,
+        })
+        logger.info('response_caching_save; channel_id:%s, response.ok:%s', id, response.ok)
+        if response.ok:
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
+    except Exception:
+        exception_details = format_exc()
+        msg = f'Response caching config could not be saved, e:`{exception_details}`'
+        logger.error(msg)
+        return HttpResponseServerError(msg.encode('utf-8'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def response_caching_clear(req:'any_', id:'str') -> 'any_':
+    try:
+        response = req.zato.client.invoke('zato.http-soap.response-cache.clear', {
+            'id': id,
+        })
+        if response.ok:
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'error', 'message': response.details}, status=HTTPStatus.BAD_REQUEST)
+    except Exception:
+        exception_details = format_exc()
+        msg = f'Response cache could not be cleared, e:`{exception_details}`'
+        logger.error(msg)
+        return HttpResponseServerError(msg.encode('utf-8'))
 
 # ################################################################################################################################
 # ################################################################################################################################
