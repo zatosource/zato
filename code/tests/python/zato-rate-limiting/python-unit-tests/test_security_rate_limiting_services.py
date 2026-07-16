@@ -69,16 +69,25 @@ def _make_get_service(class_, sec_def_id, existing_opaque=None):
 
 # ################################################################################################################################
 
+class _MockInput(dict):
+    """ A dict that also supports attribute access, like a real service input object.
+    """
+    def __getattr__(self, name):
+        return self[name]
+
+# ################################################################################################################################
+
 def _make_save_service(class_, sec_def_id, rules, existing_opaque=None):
     """ Builds a bare object with just enough state for handle() to work.
     """
     service = object.__new__(class_)
 
     service.request = MagicMock()
-    service.request.input = {
+    service.request.input = _MockInput({
         'id': str(sec_def_id),
         'rules_json': dumps(rules),
-    }
+        'quota_tier': '',
+    })
 
     mock_item = type('MockItem', (), {
         'opaque1': dumps(existing_opaque) if existing_opaque is not None else None,

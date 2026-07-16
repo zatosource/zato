@@ -178,5 +178,23 @@ class ConfigManagerAPIKeyRateLimitingTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ConfigManagerQuotaTierTestCase(unittest.TestCase):
+
+    def test_handler_reinstalls_tier_assignments(self):
+        """ The quota tier handler re-resolves and reinstalls all tier assignments.
+        """
+        config_manager = _make_config_manager()
+
+        msg = Bunch({
+            'id': 100,
+        })
+
+        config_manager.on_config_event_SECURITY_QUOTA_TIER_EDIT(msg)
+
+        config_manager.server.quota_tiers_manager.install_tier_assignments.assert_called_once()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     unittest.main()

@@ -336,7 +336,7 @@ class OpenAPIGenerator:
             # to the sunset date and the successor path when they are known.
             description = f'Invoke the {service.get('class_name', '')} service'
 
-            is_deprecated = service.get('is_deprecated', False)
+            is_deprecated = service.get('is_deprecated')
 
             if is_deprecated:
                 description_parts = [description, 'This endpoint is deprecated.']

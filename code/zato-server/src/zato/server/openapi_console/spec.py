@@ -286,9 +286,9 @@ def _service_entries(server:'ParallelServer', channel_item:'anydict', models:'st
         http_methods = [_default_http_method]
 
     # .. deprecation attributes are opaque ones, so channels that predate them carry no value ..
-    is_deprecated = channel_item.get('is_deprecated') is True
-    deprecation_sunset = channel_item.get('deprecation_sunset') or ''
-    deprecation_successor = channel_item.get('deprecation_successor') or ''
+    is_deprecated         = channel_item.get('is_deprecated') is True
+    deprecation_sunset    = channel_item.get('deprecation_sunset', '')
+    deprecation_successor = channel_item.get('deprecation_successor', '')
 
     # .. and build one entry per method.
     out = []

@@ -255,7 +255,7 @@ def _get_document_type(details:'anydict') -> 'str':
 
 # ################################################################################################################################
 
-def _get_range_cutoff(now:'datetime', time_range:'str') -> 'str':
+def get_range_cutoff(now:'datetime', time_range:'str') -> 'str':
     """ Returns the ISO timestamp the given range reaches back to.
     """
     range_hours = Range_Hours[time_range]
@@ -331,7 +331,7 @@ def get_volume(now:'datetime', time_range:'str'=Default_Range, partner:'str'='')
     """ Traffic counts per period, partner and document type over the range -
     the messages of AS2 and the interchanges of X12, sent and received.
     """
-    cutoff_iso = _get_range_cutoff(now, time_range)
+    cutoff_iso = get_range_cutoff(now, time_range)
 
     # The day range buckets by hour, the wider ones by day.
     if time_range == Range_Day:
@@ -410,7 +410,7 @@ def get_outcomes(now:'datetime', time_range:'str'=Default_Range, partner:'str'='
     for outbound AS2 exchanges, the messages that arrived from partners and the X12
     acknowledgments, with failures broken down by their disposition modifier.
     """
-    cutoff_iso = _get_range_cutoff(now, time_range)
+    cutoff_iso = get_range_cutoff(now, time_range)
 
     events = _load_events(_outcome_event_types, cutoff_iso, partner)
 
@@ -503,7 +503,7 @@ def get_ack_discipline(now:'datetime', time_range:'str'=Default_Range, partner:'
     from interchange-sent to ack-received, the interchanges still waiting for their
     acknowledgment and the acknowledgments that rejected what they answered.
     """
-    cutoff_iso = _get_range_cutoff(now, time_range)
+    cutoff_iso = get_range_cutoff(now, time_range)
 
     sent_types = (AuditEvent.Interchange_Sent,)
     ack_types = (AuditEvent.Ack_Received,)

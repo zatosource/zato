@@ -25,15 +25,16 @@ if 0:
 # The moment the test channel became deprecated - noon UTC on 2026-01-15
 _deprecation_since = '2026-01-15T12:00:00+00:00'
 
-# The same moment as a Unix timestamp, which is what the Deprecation header carries
-_deprecation_since_epoch = 1768478400
+# The same moment as the Deprecation header announces it - a Unix timestamp
+_deprecation_header_value = '@1768478400'
 
 # The day the test channel will be retired and its HTTP-date form - midnight UTC
-_deprecation_sunset = '2030-06-30'
+_deprecation_sunset           = '2030-06-30'
 _deprecation_sunset_http_date = 'Sun, 30 Jun 2030 00:00:00 GMT'
 
-# The URL path of the replacement channel
+# The URL path of the replacement channel and the Link header that points to it
 _deprecation_successor = '/api/v2/orders'
+_link_header_value     = f'<{_deprecation_successor}>; rel="successor-version"'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,9 +68,9 @@ class DeprecationHeadersTestCase(unittest.TestCase):
 
         headers = _get_deprecation_headers(channel_item)
 
-        self.assertEqual(headers['Deprecation'], f'@{_deprecation_since_epoch}')
+        self.assertEqual(headers['Deprecation'], _deprecation_header_value)
         self.assertEqual(headers['Sunset'], _deprecation_sunset_http_date)
-        self.assertEqual(headers['Link'], f'<{_deprecation_successor}>; rel="successor-version"')
+        self.assertEqual(headers['Link'], _link_header_value)
 
 # ################################################################################################################################
 
@@ -80,7 +81,7 @@ class DeprecationHeadersTestCase(unittest.TestCase):
 
         headers = _get_deprecation_headers(channel_item)
 
-        self.assertEqual(headers['Deprecation'], f'@{_deprecation_since_epoch}')
+        self.assertEqual(headers['Deprecation'], _deprecation_header_value)
         self.assertNotIn('Sunset', headers)
         self.assertNotIn('Link', headers)
 

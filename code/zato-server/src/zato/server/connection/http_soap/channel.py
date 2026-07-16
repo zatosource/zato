@@ -126,9 +126,11 @@ def _get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
     so the date conversions below run at config time, not per request.
     """
 
-    # Reuse the headers if they were already built for this channel configuration ..
+    # Reuse the headers if they were already built for this channel configuration -
+    # the memoized value can be an empty dict, so this is an "in" check, not a truthiness one ..
     if 'deprecation_headers' in channel_item:
-        return channel_item['deprecation_headers']
+        out = channel_item['deprecation_headers']
+        return out
 
     # .. otherwise, this is what we are building here ..
     out:'stranydict' = {}

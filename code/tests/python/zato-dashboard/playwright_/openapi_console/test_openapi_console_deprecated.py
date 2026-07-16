@@ -33,8 +33,11 @@ logger = logging.getLogger(__name__)
 _Test_Name_Prefix = 'test.openapi.deprecated.' + CryptoManager.generate_hex_string(32) + '.'
 
 # The deprecation attributes the test channel is given
-_Deprecation_Sunset = '2030-06-30'
+_Deprecation_Sunset    = '2030-06-30'
 _Deprecation_Successor = '/api/v2/get-user'
+
+# The HTTP-date form of the sunset day that the Sunset header carries - midnight UTC
+_Deprecation_Sunset_HTTP_Date = 'Sun, 30 Jun 2030 00:00:00 GMT'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +71,10 @@ class TestOpenAPIConsoleDeprecated:
         console_login(page, console_url, Admin_Username, password)
 
         def has_regular_operation(spec:'anydict') -> 'bool':
-            operation = spec['paths'][Path_Typed]['post']
+            paths = spec['paths']
+            path_item = paths[Path_Typed]
+            operation = path_item['post']
+
             out = 'deprecated' not in operation
             return out
 
@@ -83,14 +89,20 @@ class TestOpenAPIConsoleDeprecated:
 
         # .. the operation is marked as deprecated in the document itself ..
         def has_deprecated_operation(spec:'anydict') -> 'bool':
-            operation = spec['paths'][Path_Typed]['post']
+            paths = spec['paths']
+            path_item = paths[Path_Typed]
+            operation = path_item['post']
+
             out = operation.get('deprecated') is True
             return out
 
         spec = wait_for_spec(page, console_url, has_deprecated_operation)
 
         # .. and its description points callers to the sunset date and the successor.
-        description = spec['paths'][Path_Typed]['post']['description']
+        paths = spec['paths']
+        path_item = paths[Path_Typed]
+        operation = path_item['post']
+        description = operation['description']
         assert _Deprecation_Sunset in description, f'Expected the sunset date in the description: {description}'
         assert _Deprecation_Successor in description, f'Expected the successor in the description: {description}'
 
@@ -107,10 +119,15 @@ class TestOpenAPIConsoleDeprecated:
         assert data == Typed_Expected_Response, f'Unexpected channel response: {data}'
 
         # .. and every response announces the deprecation headers.
-        assert response.headers['Deprecation'].startswith('@'), f'Unexpected Deprecation header: {response.headers}'
-        assert '2030' in response.headers['Sunset'], f'Unexpected Sunset header: {response.headers}'
-        assert _Deprecation_Successor in response.headers['Link'], f'Unexpected Link header: {response.headers}'
-        assert 'successor-version' in response.headers['Link'], f'Unexpected Link header: {response.headers}'
+        headers = response.headers
+        deprecation_header = headers['Deprecation']
+        sunset_header = headers['Sunset']
+        link_header = headers['Link']
+
+        assert deprecation_header.startswith('@'), f'Unexpected Deprecation header: {headers}'
+        assert sunset_header == _Deprecation_Sunset_HTTP_Date, f'Unexpected Sunset header: {headers}'
+        assert _Deprecation_Successor in link_header, f'Unexpected Link header: {headers}'
+        assert 'successor-version' in link_header, f'Unexpected Link header: {headers}'
 
         # Revert the deprecation so the channel is a regular one again for any later test.
         _ = edit_channel_by_name(page, base_url, Service_Typed, {

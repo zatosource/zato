@@ -1,0 +1,28 @@
+/* ------------------------------------------------------------ */
+/* Reports - filters, export links and sortable tables           */
+/* ------------------------------------------------------------ */
+
+.b2b-report-section {
+    margin-bottom:2rem;
+}
+
+.b2b-report-filters {
+    margin-bottom:1.5rem;
+}
+
+.b2b-report-filters input[type="text"] {
+    width:14rem;
+}
+
+.b2b-report-export {
+    margin-left:0.75rem;
+    font-size:smaller;
+}
+
+.b2b-report-table th.b2b-report-sortable {
+    cursor:pointer;
+}
+
+.b2b-report-count {
+    text-align:right;
+}
