@@ -332,9 +332,26 @@ class OpenAPIGenerator:
             else:
                 tag = _default_tag
 
+            # The description names the service and, for deprecated endpoints, points
+            # to the sunset date and the successor path when they are known.
+            description = f'Invoke the {service.get('class_name', '')} service'
+
+            is_deprecated = service.get('is_deprecated', False)
+
+            if is_deprecated:
+                description_parts = [description, 'This endpoint is deprecated.']
+
+                if deprecation_sunset := service.get('deprecation_sunset'):
+                    description_parts.append(f'It will be retired on {deprecation_sunset}.')
+
+                if deprecation_successor := service.get('deprecation_successor'):
+                    description_parts.append(f'Use `{deprecation_successor}` instead.')
+
+                description = ' '.join(description_parts)
+
             operation = {
                 'summary': f'Invoke {service_name}',
-                'description': f'Invoke the {service.get('class_name', '')} service',
+                'description': description,
                 'operationId': service_name.replace('.', '_').replace('-', '_'),
                 'tags': [tag],
                 'responses': {
@@ -349,6 +366,10 @@ class OpenAPIGenerator:
                     }
                 }
             }
+
+            # Deprecated endpoints carry the flag in the document itself
+            if is_deprecated:
+                operation['deprecated'] = True
 
             # Add request body if input is defined
             if service.get('input'):

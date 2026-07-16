@@ -437,6 +437,11 @@ class SlottedCheckResult:
     retry_after_us: 'int'
     matched_key:    'str'
 
+    # The most constrained matched limit and how much of it is left - callers surface these
+    # to clients, e.g. through X-RateLimit response headers.
+    limit:     'int'
+    remaining: 'int'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -564,6 +569,8 @@ class SlottedCIDRMatcher:
             out.is_disallowed  = True
             out.is_allowed     = False
             out.retry_after_us = 0
+            out.limit          = 0
+            out.remaining      = 0
             logger.info('check; client_ip:%s, composite_key:%s, disallowed', client_ip, composite_key)
             return out
 
@@ -578,8 +585,16 @@ class SlottedCIDRMatcher:
 
         out.is_allowed = token_bucket_result.is_allowed and fixed_window_result.is_allowed
 
-        # .. pick the longer retry-after of the two.
+        # .. pick the longer retry-after of the two ..
         out.retry_after_us = max(token_bucket_result.retry_after_us, fixed_window_result.retry_after_us)
+
+        # .. and surface the more constrained of the two limits so callers can report it.
+        if fixed_window_result.remaining <= token_bucket_result.tokens_remaining:
+            out.limit     = time_range.limit
+            out.remaining = fixed_window_result.remaining
+        else:
+            out.limit     = time_range.burst
+            out.remaining = token_bucket_result.tokens_remaining
 
         logger.info('check; client_ip:%s, composite_key:%s, is_allowed:%s, tb_allowed:%s, fw_allowed:%s, retry_after_us:%s',
             client_ip, composite_key, out.is_allowed, token_bucket_result.is_allowed,

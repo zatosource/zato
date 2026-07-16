@@ -323,6 +323,51 @@ class TestEnmasseChannelRESTImporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_channel_rest_deprecation_attributes(self) -> 'None':
+        """ Test that the deprecation attributes are stored in opaque1, set when the YAML says so and off by default.
+        """
+        self._setup_test_environment()
+
+        # First process security definitions which channels depend on
+        _ = self.security_importer.sync_security_definitions(self.yaml_config['security'], self.session)
+
+        # Process security groups
+        _ = self.importer.sync_groups(self.yaml_config['groups'], self.session)
+
+        # Process channel definitions
+        channel_defs = self.yaml_config['channel_rest']
+        channels_created, _ = self.channel_importer.sync_channel_rest(channel_defs, self.session)
+
+        # Find the deprecated channel and one that relies on the default
+        channel_rest_1 = cast_('any_', None)
+        channel_rest_5 = cast_('any_', None)
+
+        for channel in channels_created:
+            if channel.name == 'enmasse.channel.rest.1':
+                channel_rest_1 = channel
+            elif channel.name == 'enmasse.channel.rest.5':
+                channel_rest_5 = channel
+
+        # The template deprecates channel rest.5 with a sunset date and a successor
+        self.assertIsNotNone(channel_rest_5, 'Channel enmasse.channel.rest.5 not found')
+        opaque_5 = json.loads(channel_rest_5.opaque1)
+        self.assertIs(opaque_5['is_deprecated'], True)
+        self.assertEqual(opaque_5['deprecation_sunset'], '2030-06-30')
+        self.assertEqual(opaque_5['deprecation_successor'], '/enmasse.rest.4')
+
+        # The moment the channel became deprecated was recorded too
+        self.assertTrue(opaque_5['deprecation_since'])
+
+        # A channel without the attributes in YAML is not deprecated
+        self.assertIsNotNone(channel_rest_1, 'Channel enmasse.channel.rest.1 not found')
+        opaque_1 = json.loads(channel_rest_1.opaque1)
+        self.assertIs(opaque_1['is_deprecated'], False)
+        self.assertEqual(opaque_1['deprecation_sunset'], '')
+        self.assertEqual(opaque_1['deprecation_successor'], '')
+        self.assertEqual(opaque_1['deprecation_since'], '')
+
+# ################################################################################################################################
+
     def test_channel_rest_rate_limiting_update(self) -> 'None':
         """ Test that rate_limiting is correctly updated on an existing channel.
         """

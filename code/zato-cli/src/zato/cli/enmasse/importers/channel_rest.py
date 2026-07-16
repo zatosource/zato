@@ -414,7 +414,7 @@ class ChannelImporter:
         # Process standard attributes
         for key, value in channel_def.items():
             if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
-                'should_include_in_openapi']:
+                'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
         # Handle security definition
@@ -456,6 +456,20 @@ class ChannelImporter:
 
         # The channel is included in OpenAPI documents unless the YAML definition turns it off
         opaque_attrs['should_include_in_openapi'] = channel_def.get('should_include_in_openapi', True)
+
+        # The channel is not deprecated unless the YAML definition turns it on
+        is_deprecated = channel_def.get('is_deprecated', False)
+        opaque_attrs['is_deprecated'] = is_deprecated
+        opaque_attrs['deprecation_sunset'] = channel_def.get('deprecation_sunset', '')
+        opaque_attrs['deprecation_successor'] = channel_def.get('deprecation_successor', '')
+
+        # A channel that was already deprecated keeps its original deprecation time,
+        # one that becomes deprecated now gets the current time, and clearing the flag clears the time.
+        opaque = parse_instance_opaque_attr(channel)
+        if is_deprecated:
+            opaque_attrs['deprecation_since'] = opaque.get('deprecation_since') or utcnow().isoformat()
+        else:
+            opaque_attrs['deprecation_since'] = ''
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)

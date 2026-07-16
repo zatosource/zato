@@ -174,6 +174,11 @@
                 '_audit_log',
             {% endif %}
 
+            // Usage report link (REST channels only)
+            {% if connection == 'channel' and transport == 'plain_http' %}
+                '_usage',
+            {% endif %}
+
             // 31, 32
             '_edit',
             '_delete',
@@ -349,6 +354,10 @@
                         <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         {% endif %}
 
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        <th>&nbsp;</th> {% comment %} _usage {% endcomment %}
+                        {% endif %}
+
                         <!-- 31, 32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
@@ -510,6 +519,7 @@
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
                         <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td>{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?channel={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'soap' %}

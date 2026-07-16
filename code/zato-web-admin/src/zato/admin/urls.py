@@ -69,6 +69,7 @@ from zato.admin.web.views.pubsub import subscription
 from zato.admin.web.views import as2_keystore
 from zato.admin.web.views import audit_log
 from zato.admin.web.views import b2b
+from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import mapping
 from zato.admin.web.views import scheduler_dashboard
@@ -347,6 +348,13 @@ urlpatterns += [
         login_required(b2b.reports), name='b2b-reports'),
     url(r'^zato/b2b-reports/csv/$',
         login_required(b2b.reports_csv), name='b2b-reports-csv'),
+
+    # Channel usage
+
+    url(r'^zato/channel-usage/$',
+        login_required(channel_usage.index), name='channel-usage'),
+    url(r'^zato/channel-usage/csv/$',
+        login_required(channel_usage.index_csv), name='channel-usage-csv'),
 
     # Scheduler import demo config
 

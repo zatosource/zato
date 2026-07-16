@@ -16,6 +16,7 @@ from sqlalchemy import and_, func, select
 # Zato
 from zato.common.api import GENERIC, Groups, SEC_DEF_TYPE
 from zato.common.groups import Member
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 
@@ -94,6 +95,36 @@ class GroupsManager:
             session.commit()
 
             logger_groups.info('GroupsManager.edit_group: committed for group_id=%s', group_id)
+
+# ################################################################################################################################
+
+    def set_group_quota_tier(self, group_id:'int', tier_id:'intnone') -> 'None':
+        """ Sets or removes the quota tier reference of a group, preserving other opaque attributes.
+        """
+
+        logger_groups.info('GroupsManager.set_group_quota_tier: group_id=%s, tier_id=%s', group_id, tier_id)
+
+        # Work in a new SQL transaction ..
+        with closing(self.session()) as session:
+
+            # .. read the group row to preserve its other opaque attributes ..
+            row = session.query(ModelGenericObject).filter_by(id=group_id).one()
+
+            if row.opaque1:
+                opaque = loads(row.opaque1)
+            else:
+                opaque = {}
+
+            # .. set or remove the reference ..
+            if tier_id:
+                opaque['quota_tier'] = tier_id
+            else:
+                _ = opaque.pop('quota_tier', None)
+
+            # .. and commit the changes now.
+            row.opaque1 = dumps(opaque)
+            session.add(row)
+            session.commit()
 
 # ################################################################################################################################
 

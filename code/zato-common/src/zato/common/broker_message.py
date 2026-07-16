@@ -91,6 +91,8 @@ class SECURITY(Constants):
     BASIC_AUTH_RATE_LIMITING_EDIT = ValueConstant('')
     APIKEY_RATE_LIMITING_EDIT = ValueConstant('')
 
+    QUOTA_TIER_EDIT = ValueConstant('')
+
 class OUTGOING(Constants):
 
     AMQP_CREATE = ValueConstant('')

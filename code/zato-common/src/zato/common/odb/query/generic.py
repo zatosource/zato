@@ -279,6 +279,10 @@ class GroupsWrapper(GenericObjectWrapper):
         out['id'] = row['id']
         out['group_id'] = row['parent_object_id']
 
+        # A group may reference a quota tier through its opaque attributes
+        if quota_tier := row.get('quota_tier'):
+            out['quota_tier'] = quota_tier
+
         return out
 
 # ################################################################################################################################

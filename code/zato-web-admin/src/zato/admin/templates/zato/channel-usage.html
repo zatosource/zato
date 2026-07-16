@@ -1,0 +1,100 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Channel usage{% endblock %}
+
+{% block "extra_css" %}
+<style nonce="{{ CSP_NONCE }}">
+
+.b2b-report-section {
+    margin-bottom:2rem;
+}
+
+.b2b-report-filters {
+    margin-bottom:1.5rem;
+}
+
+.b2b-report-filters input[type="text"] {
+    width:14rem;
+}
+
+.b2b-report-export {
+    margin-left:0.75rem;
+    font-size:smaller;
+}
+
+.b2b-report-table th.b2b-report-sortable {
+    cursor:pointer;
+}
+
+.b2b-report-count {
+    text-align:right;
+}
+
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/b2b_reports.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.b2b.reports.init();
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+    <h2 class="zato">Channel usage</h2>
+
+    <form method="get" action="{% url "channel-usage" %}" class="b2b-report-filters">
+        <input type="hidden" name="cluster" value="{{ cluster_id }}">
+        <label>Range:
+            <select name="range">
+                {% for item in ranges %}
+                <option value="{{ item.value }}" {% if item.value == time_range %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Channel:
+            <input type="text" name="channel" value="{{ channel }}" placeholder="Any channel">
+        </label>
+        <input type="submit" value="Show">
+    </form>
+
+    <div class="b2b-report-section">
+        <h3 class="zato">Calls per channel and caller
+            <a class="b2b-report-export" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">Export CSV</a>
+        </h3>
+
+        {% if rows %}
+        <table class="zato-table b2b-report-table" id="channel-usage-table">
+            <thead>
+                <tr>
+                    <th class="b2b-report-sortable" data-sort-type="text">Channel</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Caller</th>
+                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Calls</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">First call</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Last call</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td><a href="{{ row.link }}">{{ row.channel }}</a></td>
+                    <td>{{ row.caller }}</td>
+                    <td class="b2b-report-count">{{ row.calls }}</td>
+                    <td>{{ row.first_call }}</td>
+                    <td>{{ row.last_call }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="form_hint">No calls in the selected range.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

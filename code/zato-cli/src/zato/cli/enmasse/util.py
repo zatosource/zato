@@ -505,7 +505,8 @@ def get_object_order(object_type:'str') -> 'strlist':
         'static_header', 'static_token', 'static_prefix', 'rate_limiting:list',
 
     order['groups'] = 'name', 'is_active', 'members:list',
-    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', 'rate_limiting:list',
+    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', \
+        'rate_limiting:list', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
     order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \
         'groups:list', 'rate_limiting:list',
     order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', \
