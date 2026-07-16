@@ -1744,6 +1744,14 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def on_config_event_SECURITY_QUOTA_TIER_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Re-resolves all quota tier references after a tier, a tier assignment or a group membership changed.
+        """
+        logger.info('on_config_event_SECURITY_QUOTA_TIER_EDIT; id:%s', msg['id'])
+        self.server.quota_tiers_manager.install_tier_assignments()
+
+# ################################################################################################################################
+
     def wait_for_ntlm(self, name:'str', timeout:'int'=999999) -> 'bool':
         return wait_for_dict_key_by_get_func(self.ntlm_get, name, timeout, interval=0.5)
 

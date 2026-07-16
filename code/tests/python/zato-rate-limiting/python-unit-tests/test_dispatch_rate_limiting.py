@@ -92,6 +92,8 @@ def _make_check_result(is_allowed, is_disallowed=False, retry_after_us=0):
     out.is_disallowed = is_disallowed
     out.retry_after_us = retry_after_us
     out.matched_key = '0.0.0.0/0:0'
+    out.limit = 100
+    out.remaining = 99
 
     return out
 

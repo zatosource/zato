@@ -113,6 +113,11 @@ _sec_def_key_prefix_map = {
     SEC_DEF_TYPE.APIKEY:     'apikey{}:',
 }
 
+# Quota introspection headers - set only for limits coming from security definitions,
+# channel-level limits are infrastructure protection and stay silent.
+_header_rate_limit_limit     = 'X-RateLimit-Limit'
+_header_rate_limit_remaining = 'X-RateLimit-Remaining'
+
 # ################################################################################################################################
 
 def _get_deprecation_headers(channel_item:'anydict') -> 'stranydict':
@@ -488,8 +493,13 @@ class RequestDispatcher:
         if sec_def_rate_limit_result:
             if not sec_def_rate_limit_result.is_allowed:
                 out = self._handle_rate_limit_result(
-                    cid, sec_def_rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                    cid, sec_def_rate_limit_result, wsgi_environ, remote_addr, channel_item, needs_quota_headers=True)
                 return out
+
+            # .. the request is allowed, so tell the caller how much of its quota remains ..
+            response_headers = wsgi_environ['zato.http.response.headers']
+            response_headers[_header_rate_limit_limit] = str(sec_def_rate_limit_result.limit)
+            response_headers[_header_rate_limit_remaining] = str(sec_def_rate_limit_result.remaining)
 
         # .. then check channel rate limiting ..
         channel_id = channel_item['id']
@@ -890,7 +900,7 @@ class RequestDispatcher:
 
             # .. record the incoming request in the audit log ..
             if needs_audit:
-                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload)
+                self._insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, wsgi_environ)
 
             try:
 
@@ -903,7 +913,7 @@ class RequestDispatcher:
 
                 # .. record the successful response in the audit log ..
                 if needs_audit:
-                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out)
+                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, wsgi_environ)
 
                 return out
 
@@ -912,7 +922,7 @@ class RequestDispatcher:
 
                 # .. record the error response in the audit log ..
                 if needs_audit:
-                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out)
+                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, wsgi_environ)
 
                 return out
 
@@ -944,6 +954,7 @@ class RequestDispatcher:
         event_type:'str',
         outcome:'str',
         data:'any_',
+        wsgi_environ:'stranydict',
     ) -> 'None':
         """ Writes one audit event describing a request to or a response from a REST or SOAP channel.
         """
@@ -963,6 +974,13 @@ class RequestDispatcher:
         else:
             source = AuditSource.SOAP_Channel
 
+        # .. the caller is the security definition that authenticated the request - requests audited
+        # before authentication have no caller yet, so only response events carry one ..
+        if sec_def_info := wsgi_environ.get('zato.sec_def'):
+            ext_client_id = sec_def_info['name']
+        else:
+            ext_client_id = ''
+
         # .. now, write out the event.
         self.audit_log.insert(
             source,
@@ -973,6 +991,7 @@ class RequestDispatcher:
             size=len(data),
             outcome=outcome,
             data=data,
+            ext_client_id=ext_client_id,
         )
 
 # ################################################################################################################################
@@ -1020,6 +1039,8 @@ class RequestDispatcher:
         wsgi_environ:'stranydict',
         remote_addr:'str',
         channel_item:'stranydict',
+        *,
+        needs_quota_headers:'bool' = False,
     ) -> 'any_':
         """ Handles rate limiting outcomes - either a silent TCP drop for disallowed traffic
         or an HTTP 429 for rate-limited traffic. Called from dispatch when the check result
@@ -1061,6 +1082,11 @@ class RequestDispatcher:
 
         wsgi_environ['zato.http.response.status'] = _status_too_many_requests
         wsgi_environ['zato.http.response.headers']['Retry-After'] = retry_after_date
+
+        # Quota headers accompany 429s from security definition checks only.
+        if needs_quota_headers:
+            wsgi_environ['zato.http.response.headers'][_header_rate_limit_limit] = str(rate_limit_result.limit)
+            wsgi_environ['zato.http.response.headers'][_header_rate_limit_remaining] = str(rate_limit_result.remaining)
 
         out = client_json_error(cid, 'Too many requests')
 

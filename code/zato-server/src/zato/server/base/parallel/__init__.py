@@ -66,6 +66,7 @@ from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_Config
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+from zato.server.quota_tiers import QuotaTiersManager
 from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx
 
 # ################################################################################################################################
@@ -146,6 +147,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
     rate_limiting_manager: 'RateLimitingManager'
+    quota_tiers_manager: 'QuotaTiersManager'
 
     pubsub_redis: 'RedisPubSubBackend'
     pubsub_push_delivery: 'RedisPushDelivery'
@@ -855,6 +857,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # As above, as a regular expression to be used in pattern matching
         http_methods_allowed_re = '|'.join(self.http_methods_allowed)
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
+
+        # Build the object responsible for quota tiers - it must exist before the config is set up
+        # because tier references are resolved to concrete rules at config-build time.
+        self.quota_tiers_manager = QuotaTiersManager(self)
 
         # Reads in all configuration from ODB
         self.config_manager = ConfigManager(self.config, self)

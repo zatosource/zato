@@ -13,7 +13,7 @@ from operator import itemgetter
 
 # Zato
 from zato.common.api import CONNECTION, Groups
-from zato.common.broker_message import Groups as Broker_Message_Groups
+from zato.common.broker_message import Groups as Broker_Message_Groups, SECURITY
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.server.service import AsIs, Service
 
@@ -313,6 +313,13 @@ class EditMemberList(Service):
             'group_action': input.group_action,
             'group_id': int(input.group_id),
             'member_id_list': member_id_list,
+        }
+        self.config_dispatcher.publish(msg)
+
+        # Quota tier resolution depends on group membership, so workers re-resolve tier assignments too.
+        msg = {
+            'action': SECURITY.QUOTA_TIER_EDIT.value,
+            'id': int(input.group_id),
         }
         self.config_dispatcher.publish(msg)
 

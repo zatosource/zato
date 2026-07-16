@@ -194,6 +194,18 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'should_include_in_openapi' in options:
         page.set_checked(f'#id_{prefix}should_include_in_openapi', options['should_include_in_openapi'])
 
+    # .. the deprecation checkbox, shown for REST channels only ..
+    if 'is_deprecated' in options:
+        page.set_checked(f'#id_{prefix}is_deprecated', options['is_deprecated'])
+
+    # .. the day the deprecated channel will be retired ..
+    if 'deprecation_sunset' in options:
+        page.fill(f'#id_{prefix}deprecation_sunset', options['deprecation_sunset'])
+
+    # .. and the URL path of its replacement.
+    if 'deprecation_successor' in options:
+        page.fill(f'#id_{prefix}deprecation_successor', options['deprecation_successor'])
+
     # .. the audit log checkbox ..
     if 'is_audit_log_active' in options:
         page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])

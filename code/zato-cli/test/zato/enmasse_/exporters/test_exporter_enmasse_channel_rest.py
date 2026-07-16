@@ -167,6 +167,16 @@ class TestEnmasseChannelRESTExporter(TestCase):
                 if channel_def.get('should_include_in_openapi') is False:
                     channel_required['should_include_in_openapi'] = False
 
+                # The deprecation attributes are exported only when the channel is deprecated
+                if channel_def.get('is_deprecated') is True:
+                    channel_required['is_deprecated'] = True
+
+                    if deprecation_sunset := channel_def.get('deprecation_sunset'):
+                        channel_required['deprecation_sunset'] = deprecation_sunset
+
+                    if deprecation_successor := channel_def.get('deprecation_successor'):
+                        channel_required['deprecation_successor'] = deprecation_successor
+
                 # Add this channel's requirements to our dictionary
                 required_channel_fields[channel_name] = channel_required
 

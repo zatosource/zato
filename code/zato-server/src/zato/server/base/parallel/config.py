@@ -79,6 +79,10 @@ class ConfigLoader:
         self._load_sec_def_rate_limiting(self.config.basic_auth)
         self._load_sec_def_rate_limiting(self.config.apikey)
 
+        # Resolve quota tier references - definitions and groups pointing to tiers
+        # receive the tier's rules under their own ids.
+        self.quota_tiers_manager.install_tier_assignments()
+
         # Encrypt all secrets
         self._encrypt_secrets()
 

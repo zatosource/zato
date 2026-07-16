@@ -179,6 +179,14 @@ channel_rest:
       - enmasse.group.1
       - enmasse.group.2
 
+  - name: enmasse.channel.rest.5
+    service: demo.ping
+    url_path: /enmasse.rest.5
+    data_format: json
+    is_deprecated: true
+    deprecation_sunset: '2030-06-30'
+    deprecation_successor: /enmasse.rest.4
+
 channel_soap:
 
   - name: enmasse.channel.soap.1

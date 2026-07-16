@@ -153,6 +153,16 @@ class ChannelExporter:
             if channel_row.get('should_include_in_openapi') is False:
                 exported_channel['should_include_in_openapi'] = False
 
+            # Channels are not deprecated by default so only the deprecated state is exported
+            if channel_row.get('is_deprecated') is True:
+                exported_channel['is_deprecated'] = True
+
+                if deprecation_sunset := channel_row.get('deprecation_sunset'):
+                    exported_channel['deprecation_sunset'] = deprecation_sunset
+
+                if deprecation_successor := channel_row.get('deprecation_successor'):
+                    exported_channel['deprecation_successor'] = deprecation_successor
+
             exported_channels.append(exported_channel)
 
         logger.info('Successfully prepared %d REST Channel definitions for export', len(exported_channels))

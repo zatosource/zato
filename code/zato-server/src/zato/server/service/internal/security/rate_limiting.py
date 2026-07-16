@@ -20,7 +20,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,35 +52,26 @@ class _RateLimitingGetBase(AdminService):
             else:
                 rate_limiting = []
 
+            # .. the same goes for a quota tier reference ..
+            if 'quota_tier' in opaque:
+                quota_tier = opaque['quota_tier']
+            else:
+                quota_tier = None
+
         # .. and return them.
-        self.response.payload = {'rate_limiting': rate_limiting}
+        self.response.payload = {'rate_limiting': rate_limiting, 'quota_tier': quota_tier}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _RateLimitingSaveBase(AdminService):
 
-    input = 'id', 'rules_json'
-    _broker_message_type = None
+    input = 'id', '-rules_json', '-quota_tier'
+    _broker_message_type:'any_' = None
 
-    def handle(self) -> 'None':
-
-        # Extract input parameters ..
-        input = self.request.input
-        sec_def_id = int(input['id'])
-        rules_json = input['rules_json']
-
-        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, rules_json:%s', sec_def_id, rules_json)
-
-        # .. parse and validate each rule ..
-        rule_dicts:'anylist' = loads(rules_json)
-
-        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, parsed %s rule_dicts:%s', sec_def_id, len(rule_dicts), rule_dicts)
-
-        for item in rule_dicts:
-            SlottedCIDRRule.from_dict(item)
-
-        # .. persist to the ODB ..
+    def _save_opaque(self, sec_def_id:'int', to_set:'str', value:'any_', to_remove:'str') -> 'None':
+        """ Sets one opaque key and removes the other - a definition either references a tier or carries its own rules.
+        """
         with closing(self.odb.session()) as session:
 
             row = session.query(SecurityBase).filter_by(id=sec_def_id).one()
@@ -91,11 +82,64 @@ class _RateLimitingSaveBase(AdminService):
             else:
                 opaque = {}
 
-            # .. set the rate limiting rules ..
-            opaque['rate_limiting'] = rule_dicts
+            # .. set the new value and drop the mutually exclusive key ..
+            opaque[to_set] = value
+            _ = opaque.pop(to_remove, None)
+
             row.opaque1 = dumps(opaque)
             session.add(row)
             session.commit()
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        # Extract input parameters ..
+        input = self.request.input
+        sec_def_id = int(input['id'])
+        rules_json = input.rules_json
+        quota_tier = input.quota_tier
+
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, rules_json:%s, quota_tier:%s',
+            sec_def_id, rules_json, quota_tier)
+
+        # .. a definition either references a tier or carries its own rules, never both ..
+        if quota_tier:
+            if rules_json:
+                rule_dicts:'anylist' = loads(rules_json)
+                if rule_dicts:
+                    raise Exception('A security definition cannot have both a quota tier and its own rate limiting rules')
+
+            # .. the tier must exist ..
+            tier_id = int(quota_tier)
+            if not self.server.quota_tiers_manager.get_tier(tier_id):
+                raise Exception(f'Quota tier with id `{tier_id}` not found')
+
+            # .. persist the reference ..
+            self._save_opaque(sec_def_id, 'quota_tier', tier_id, 'rate_limiting')
+
+            # .. and let all workers re-resolve tier assignments.
+            params = {
+                'action': SECURITY.QUOTA_TIER_EDIT.value,
+                'id': tier_id,
+            }
+            self.config_dispatcher.publish(params)
+
+            return
+
+        # .. no tier on input, so this is the own-rules path ..
+        if rules_json:
+            rule_dicts = loads(rules_json)
+        else:
+            rule_dicts = []
+
+        self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, parsed %s rule_dicts:%s', sec_def_id, len(rule_dicts), rule_dicts)
+
+        for item in rule_dicts:
+            _ = SlottedCIDRRule.from_dict(item)
+
+        # .. persist to the ODB ..
+        self._save_opaque(sec_def_id, 'rate_limiting', rule_dicts, 'quota_tier')
 
         self.logger.info('SecDefRateLimitingSave; sec_def_id:%s, ODB committed', sec_def_id)
 
