@@ -8,31 +8,27 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import ssl
 from datetime import timedelta
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import Column, create_engine, Index, Integer, MetaData, String, Table, Text
-from sqlalchemy import event as sa_event
+from sqlalchemy import Column, Index, Integer, MetaData, String, Table, Text
 
 # Zato
-from zato.common.defaults import default_env_base_dir
-from zato.common.util.api import as_bool, utcnow
+from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
+    Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from datetime import datetime
-    from ssl import SSLContext
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anydict, stranydict, strtuple
 
     # Dummy assignments to satisfy type checkers
     datetime = datetime
     Engine = Engine
-    SSLContext = SSLContext
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,40 +61,29 @@ class ModuleCtx:
     Env_SSL_Key_File  = 'Zato_Audit_Log_DB_SSL_Key_File'
     Env_SSL_Verify    = 'Zato_Audit_Log_DB_SSL_Verify'
 
+    # The environment variable overriding how many days of events are kept
+    Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
+
     # Recognized database types
-    Type_SQLite     = 'sqlite'
-    Type_MySQL      = 'mysql'
-    Type_PostgreSQL = 'postgresql'
-    Type_Oracle     = 'oracle'
+    Type_SQLite     = Type_SQLite
+    Type_MySQL      = Type_MySQL
+    Type_PostgreSQL = Type_PostgreSQL
+    Type_Oracle     = Type_Oracle
 
     # What is used when Zato_Audit_Log_DB_Type is not set
-    Default_Type = Type_SQLite
+    Default_Type = Default_Type
 
     # SSL is off unless requested explicitly
-    Default_SSL = False
+    Default_SSL = Default_SSL
 
     # When SSL is on, the server certificate is verified unless turned off explicitly
-    Default_SSL_Verify = True
+    Default_SSL_Verify = Default_SSL_Verify
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# SQLAlchemy dialects for each database type
-_dialects = {
-    ModuleCtx.Type_MySQL:      'mysql+pymysql',
-    ModuleCtx.Type_PostgreSQL: 'postgresql+pg8000',
-    ModuleCtx.Type_Oracle:     'oracle+oracledb',
-}
-
-# Default ports for each database type
-_default_ports = {
-    ModuleCtx.Type_MySQL:      3306,
-    ModuleCtx.Type_PostgreSQL: 5432,
-    ModuleCtx.Type_Oracle:     1521,
-}
-
-# How many days of events are kept - also the widest window the reports run over
-Retention_Days = 30
+# How many days of events are kept when the environment does not say otherwise
+_default_retention_days = 30
 
 # Retention runs after every that many inserts
 _retention_check_interval = 1000
@@ -108,6 +93,22 @@ _short_column_len = 255
 
 # Maximum length of the endpoint column - it may hold full addresses
 _endpoint_column_len = 500
+
+# ################################################################################################################################
+
+def get_retention_days() -> 'int':
+    """ Returns how many days of audit events are kept - also the widest window
+    the reports run over. Configurable through an environment variable.
+    """
+    if value := os.environ.get(ModuleCtx.Env_Retention_Days, ''):
+        out = int(value)
+    else:
+        out = _default_retention_days
+
+    return out
+
+# What the process was configured with at startup - display code uses this constant
+Retention_Days = get_retention_days()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,6 +184,8 @@ event_table = Table('event', metadata,
     Column('size', Integer),
     Column('priority', Integer),
     Column('outcome', String(_short_column_len)),
+    Column('status', String(_short_column_len)),
+    Column('duration_ms', Integer),
     Column('data', Text),
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
     Index('idx_event_cid', 'cid', 'id'),
@@ -191,154 +194,19 @@ event_table = Table('event', metadata,
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How the audit log database is selected and configured through the environment
+_env_config = EnvDBConfig(
+    env_prefix='Zato_Audit_Log_DB_',
+    sqlite_file_name=audit_db_file_name,
+    metadata=metadata,
+)
+
+# ################################################################################################################################
+
 def get_audit_db_path() -> 'str':
     """ Returns the full path to the default SQLite audit database file.
     """
-    out = os.path.join(default_env_base_dir, audit_db_file_name)
-    return out
-
-# ################################################################################################################################
-
-def _set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ WAL mode lets multiple server processes and the web-admin reader share the file safely,
-    and synchronous=NORMAL keeps each insert fast while remaining durable enough for audit data.
-    """
-    cursor = dbapi_connection.cursor()
-    _ = cursor.execute('pragma journal_mode=wal')
-    _ = cursor.execute('pragma synchronous=normal')
-    cursor.close()
-
-# ################################################################################################################################
-
-def _build_ssl_context() -> 'SSLContext':
-    """ Builds an SSL context out of the Zato_Audit_Log_DB_SSL_* environment variables.
-    """
-    ca_file   = os.environ.get(ModuleCtx.Env_SSL_CA_File, '')
-    cert_file = os.environ.get(ModuleCtx.Env_SSL_Cert_File, '')
-    key_file  = os.environ.get(ModuleCtx.Env_SSL_Key_File, '')
-
-    # The server certificate is verified by default when SSL is on ..
-    if verify := os.environ.get(ModuleCtx.Env_SSL_Verify, ''):
-        needs_verify = as_bool(verify)
-    else:
-        needs_verify = ModuleCtx.Default_SSL_Verify
-
-    # .. verify against the given CA or, if none was given, against the system store ..
-    if ca_file:
-        out = ssl.create_default_context(cafile=ca_file)
-    else:
-        out = ssl.create_default_context()
-
-    # .. a client certificate is only needed for mutual TLS ..
-    if cert_file:
-        out.load_cert_chain(cert_file, key_file)
-
-    # .. and verification can be turned off explicitly.
-    if not needs_verify:
-        out.check_hostname = False
-        out.verify_mode = ssl.CERT_NONE
-
-    return out
-
-# ################################################################################################################################
-
-def _get_connect_args(db_type:'str') -> 'stranydict':
-    """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled.
-    """
-
-    # Our response to produce
-    out:'stranydict' = {}
-
-    # SSL never applies to SQLite files ..
-    if db_type == ModuleCtx.Type_SQLite:
-        return out
-
-    # .. it is off unless requested explicitly ..
-    if ssl_enabled := os.environ.get(ModuleCtx.Env_SSL, ''):
-        needs_ssl = as_bool(ssl_enabled)
-    else:
-        needs_ssl = ModuleCtx.Default_SSL
-
-    if not needs_ssl:
-        return out
-
-    # .. each driver receives the same SSL context under its own keyword ..
-    ssl_context = _build_ssl_context()
-
-    # .. PyMySQL accepts an SSL context directly ..
-    if db_type == ModuleCtx.Type_MySQL:
-        out['ssl'] = ssl_context
-
-    # .. so does pg8000 ..
-    elif db_type == ModuleCtx.Type_PostgreSQL:
-        out['ssl'] = ssl_context
-
-    # .. and Oracle DB additionally needs the TCPS protocol.
-    else:
-        out['protocol'] = 'tcps'
-        out['ssl_context'] = ssl_context
-
-    return out
-
-# ################################################################################################################################
-
-def _get_engine_url(db_type:'str') -> 'str':
-    """ Builds the SQLAlchemy URL for the audit log database out of environment variables.
-    """
-
-    # SQLite needs a file path only, defaulting to the shared audit database file ..
-    if db_type == ModuleCtx.Type_SQLite:
-
-        if db_path := os.environ.get(ModuleCtx.Env_Name, ''):
-            pass
-        else:
-            db_path = get_audit_db_path()
-
-        out = f'sqlite:///{db_path}'
-        return out
-
-    # .. everything else is a network database with full credentials.
-    dialect  = _dialects[db_type]
-    host     = os.environ[ModuleCtx.Env_Host]
-    username = os.environ[ModuleCtx.Env_Username]
-    password = os.environ[ModuleCtx.Env_Password]
-    db_name  = os.environ[ModuleCtx.Env_Name]
-
-    if port := os.environ.get(ModuleCtx.Env_Port, ''):
-        port = int(port)
-    else:
-        port = _default_ports[db_type]
-
-    out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
-    return out
-
-# ################################################################################################################################
-
-# Engines are cached per configuration so all AuditLog instances in a process share one pool
-_engine_cache:'anydict' = {}
-
-def _get_cache_key() -> 'strtuple':
-    """ Returns a cache key covering all the environment variables that influence the engine.
-    """
-    values = []
-
-    for name in (
-        ModuleCtx.Env_Type,
-        ModuleCtx.Env_Host,
-        ModuleCtx.Env_Port,
-        ModuleCtx.Env_Username,
-        ModuleCtx.Env_Password,
-        ModuleCtx.Env_Name,
-        ModuleCtx.Env_SSL,
-        ModuleCtx.Env_SSL_CA_File,
-        ModuleCtx.Env_SSL_Cert_File,
-        ModuleCtx.Env_SSL_Key_File,
-        ModuleCtx.Env_SSL_Verify,
-    ):
-        value = os.environ.get(name, '')
-        values.append(value)
-
-    out = tuple(values)
+    out = _env_config.get_sqlite_path()
     return out
 
 # ################################################################################################################################
@@ -348,39 +216,7 @@ def get_audit_engine() -> 'Engine':
     Which database is used comes from the Zato_Audit_Log_DB_* environment variables,
     defaulting to a shared SQLite file.
     """
-
-    # Reuse a previously built engine if the configuration has not changed ..
-    cache_key = _get_cache_key()
-
-    if engine := _engine_cache.get(cache_key):
-        out = engine
-        return out
-
-    # .. find out which database type we are to use ..
-    if db_type := os.environ.get(ModuleCtx.Env_Type, ''):
-        pass
-    else:
-        db_type = ModuleCtx.Default_Type
-
-    # .. the environment directory may not exist yet, e.g. in freshly created environments ..
-    if db_type == ModuleCtx.Type_SQLite:
-        os.makedirs(default_env_base_dir, exist_ok=True)
-
-    # .. build the engine itself ..
-    engine_url   = _get_engine_url(db_type)
-    connect_args = _get_connect_args(db_type)
-    out          = create_engine(engine_url, connect_args=connect_args)
-
-    # .. SQLite needs its pragmas applied to every new connection in the pool ..
-    if db_type == ModuleCtx.Type_SQLite:
-        sa_event.listen(out, 'connect', _set_sqlite_pragmas)
-
-    # .. make sure the schema exists - this is idempotent ..
-    metadata.create_all(out)
-
-    # .. and cache the engine for all future callers.
-    _engine_cache[cache_key] = out
-
+    out = get_env_engine(_env_config)
     return out
 
 # ################################################################################################################################
@@ -420,6 +256,8 @@ class AuditLog:
         size:'int' = 0,
         priority:'int' = 0,
         outcome:'str' = '',
+        status:'str' = '',
+        duration_ms:'int' = 0,
         data:'str' = '',
         ) -> 'None':
         """ Writes one audit event, at the moment it happens, in the same process.
@@ -447,6 +285,8 @@ class AuditLog:
             size=size,
             priority=priority,
             outcome=outcome,
+            status=status,
+            duration_ms=duration_ms,
             data=data,
         )
 
@@ -464,7 +304,9 @@ class AuditLog:
     def _run_retention(self, now:'datetime') -> 'None':
         """ Deletes events older than the retention window.
         """
-        cutoff = now - timedelta(days=Retention_Days)
+        retention_days = get_retention_days()
+
+        cutoff = now - timedelta(days=retention_days)
         cutoff_iso = cutoff.isoformat()
 
         delete = event_table.delete()

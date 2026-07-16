@@ -72,6 +72,9 @@ $(document).ready(function() {
         source: '{{ source }}',
         object_name: '{{ object_name }}',
         status: '{{ status }}',
+        time_from: '{{ time_from }}',
+        time_to: '{{ time_to }}',
+        query: '{{ query }}',
         columns: {{ columns_json|safe }},
         resubmitLabels: {{ resubmit_labels_json|safe }}
     });
@@ -89,7 +92,7 @@ $(document).ready(function() {
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
 
     <form class="audit-log-search-form" id="audit-log-search-form">
-        <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search ..">
+        <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
         <button type="submit" class="action-button">Search</button>
         {% if has_outstanding_filter %}
         <a href="#" id="audit-log-outstanding-pill"

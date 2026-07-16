@@ -4,12 +4,12 @@
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
 	ruff pyright qa-reqs-install unify \
-	update cron-update stop-server restart-server restart-server-with-scheduler \
+	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
-	test-audit-log test-audit-log-ui test-logging test-ibm-mq test-mongodb test-es \
+	test-audit-log test-audit-log-ui test-analytics test-analytics-ui test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -327,6 +327,9 @@ update:
 
 cron-update:
 	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
+
+analytics: ## Aggregate new audit log events into the analytics store.
+	$(CURDIR)/code/bin/zato analytics rollup --verbose
 
 stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
@@ -656,6 +659,7 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 test-ui: ## Dashboard backend and Playwright tests.
 	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
 	$(MAKE) test-ui-openapi 2>&1 | tee /tmp/logs-test-ui-openapi.txt
+	$(MAKE) test-analytics-ui 2>&1 | tee /tmp/logs-test-analytics-ui.txt
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
 
@@ -751,6 +755,19 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
 
+test-analytics: ## Analytics rollup, view and baseline tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/analytics/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/analytics/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_analytics \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-analytics-ui: ## Traffic analytics live tests - a real server and dashboard driven with Playwright.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_traffic_analytics_ui.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_analytics -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-logging: ## Logging live tests - log files, env-variable log levels, PII audit log.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/logging_/ \
@@ -797,7 +814,7 @@ test-safeguards: ## Response safeguard tests with 100% branch coverage.
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_safeguards --show-missing --fail-under=100
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-analytics test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
 
 test: test-all ## Alias for test-all.
 

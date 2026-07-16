@@ -1,0 +1,55 @@
+{% extends "zato/analytics/base.html" %}
+{% load extras %}
+
+{% block html_title %}Traffic analytics{% endblock %}
+
+{% block analytics_screen %}overview{% endblock %}
+{% block analytics_related_label %}Consumers{% endblock %}
+
+{% block dashboard_chart_title %}Traffic{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h3>Top channels <span class="dashboard-pill" id="analytics-channels-count"></span></h3>
+            </div>
+            <div class="dashboard-card-scroll">
+                <table class="zato-table" id="analytics-channels-table">
+                    <thead>
+                        <tr>
+                            <th>Channel</th>
+                            <th>Trend</th>
+                            <th>Requests</th>
+                            <th>Error rate</th>
+                            <th>p95</th>
+                            <th>Consumers</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-channels-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h3>Top consumers <span class="dashboard-pill" id="analytics-consumers-count"></span></h3>
+            </div>
+            <div class="dashboard-card-scroll">
+                <table class="zato-table" id="analytics-consumers-table">
+                    <thead>
+                        <tr>
+                            <th>Consumer</th>
+                            <th>Trend</th>
+                            <th>Requests</th>
+                            <th>Error rate</th>
+                            <th>p95</th>
+                            <th>Last seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-consumers-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+{% endblock %}

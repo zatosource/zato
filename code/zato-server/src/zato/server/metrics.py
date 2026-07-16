@@ -13,6 +13,7 @@ import time
 from prometheus_client import Counter, Gauge, Histogram, Info, REGISTRY
 
 # Zato
+from zato.common.analytics.api import Latency_Buckets_Ms
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -27,7 +28,14 @@ Error_Source_Rate_Limit  = 'rate_limit'
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_histogram_buckets = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0)
+# Prometheus expects seconds while the shared boundaries are milliseconds,
+# and deriving one from the other keeps both views of latency in agreement.
+_histogram_buckets_seconds = []
+
+for _boundary_ms in Latency_Buckets_Ms:
+    _histogram_buckets_seconds.append(_boundary_ms / 1000)
+
+zato_histogram_buckets = tuple(_histogram_buckets_seconds)
 
 zato_size_histogram_buckets = (64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216)
 

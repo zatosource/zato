@@ -105,6 +105,7 @@ class CommandStore:
 
         # Zato
         from zato.cli import \
+             analytics           as analytics_mod,           \
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
@@ -135,6 +136,17 @@ class CommandStore:
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
+
+        #
+        # analytics
+        #
+        analytics = subs.add_parser('analytics', description='API traffic analytics operations')
+        analytics_subs = analytics.add_subparsers()
+
+        analytics_rollup = analytics_subs.add_parser(
+            'rollup', description=analytics_mod.Rollup.__doc__, parents=[base_parser])
+        analytics_rollup.set_defaults(command='analytics_rollup')
+        self.add_opts(analytics_rollup, analytics_mod.Rollup.opts)
 
         #
         # change-password

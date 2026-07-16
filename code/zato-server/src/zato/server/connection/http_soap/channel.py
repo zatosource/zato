@@ -13,7 +13,7 @@ import socket
 import struct
 from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
 from email.utils import format_datetime as _format_datetime
-from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS
+from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, OK, TOO_MANY_REQUESTS
 from traceback import format_exc
 from typing import NamedTuple
 
@@ -77,6 +77,7 @@ accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
+_status_ok = '{} {}'.format(OK, HTTP_RESPONSES[OK])
 _status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
 _status_not_found = '{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
 _status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
@@ -962,7 +963,10 @@ class RequestDispatcher:
 
                 # .. record the successful response in the audit log ..
                 if needs_audit:
-                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, wsgi_environ)
+                    duration_ms = self._get_duration_ms(now_us)
+                    self._insert_audit_event(
+                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, wsgi_environ,
+                        duration_ms=duration_ms)
 
                 return out
 
@@ -971,7 +975,10 @@ class RequestDispatcher:
 
                 # .. record the error response in the audit log ..
                 if needs_audit:
-                    self._insert_audit_event(cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, wsgi_environ)
+                    duration_ms = self._get_duration_ms(now_us)
+                    self._insert_audit_event(
+                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, wsgi_environ,
+                        duration_ms=duration_ms)
 
                 return out
 
@@ -996,6 +1003,16 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _get_duration_ms(self, start_us:'int') -> 'int':
+        """ Returns how many milliseconds passed since the given microsecond timestamp.
+        """
+        elapsed_us = current_time_us() - start_us
+
+        out = elapsed_us // 1000
+        return out
+
+# ################################################################################################################################
+
     def _insert_audit_event(
         self,
         cid:'str',
@@ -1004,6 +1021,8 @@ class RequestDispatcher:
         outcome:'str',
         data:'any_',
         wsgi_environ:'stranydict',
+        *,
+        duration_ms:'int' = 0,
     ) -> 'None':
         """ Writes one audit event describing a request to or a response from a REST or SOAP channel.
         """
@@ -1030,6 +1049,16 @@ class RequestDispatcher:
         else:
             ext_client_id = ''
 
+        # .. a request event carries no HTTP status - a response event carries the one
+        # the response is leaving with, which is 200 OK unless something set it explicitly ..
+        if event_type == AuditEvent.Response_Sent:
+            if status := wsgi_environ.get('zato.http.response.status'):
+                pass
+            else:
+                status = _status_ok
+        else:
+            status = ''
+
         # .. now, write out the event.
         self.audit_log.insert(
             source,
@@ -1039,6 +1068,8 @@ class RequestDispatcher:
             endpoint=channel_item['service_name'],
             size=len(data),
             outcome=outcome,
+            status=status,
+            duration_ms=duration_ms,
             data=data,
             ext_client_id=ext_client_id,
         )

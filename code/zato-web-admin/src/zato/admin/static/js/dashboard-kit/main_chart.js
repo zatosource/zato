@@ -66,7 +66,13 @@
          series_style:         optional { <key>: 'stepped_area' } - series not
                                listed default to spline rendering
          zoom_bucket_state:    optional { get_buckets(), set_buckets(n) }
-                               to share zoom with another component */
+                               to share zoom with another component
+         record_marker(record): optional - a record for which this returns true
+                               puts a marker on top of its bucket
+         marker_color:         the color of bucket markers
+         marker_label:         what a marked bucket is called in the tooltip
+         on_bucket_click(bucket): optional - called with the clicked bucket,
+                               whose start and end are timestamps in ms */
     ns.main_chart.init = function(config) {
         var series_style = config.series_style || {};
         var state = {
@@ -211,6 +217,9 @@
                 if (buckets[target_bucket][skey] !== undefined) {
                     var record_count = record.count !== undefined ? record.count : 1;
                     buckets[target_bucket][skey] += record_count;
+                }
+                if (config.record_marker && config.record_marker(record)) {
+                    buckets[target_bucket].marked = true;
                 }
             }
 
@@ -416,6 +425,17 @@
                 }
             }
 
+            // Marked buckets get a small marker dot above the chart area
+            if (config.record_marker) {
+                for (var mb = 0; mb < bucket_count; mb++) {
+                    if (!buckets[mb].marked) continue;
+                    var marker_x = PADDING_LEFT + (mb + 0.5) * bucket_slot_width;
+                    var marker_y = PADDING_TOP + 4;
+                    svg += '<circle cx="' + marker_x.toFixed(1) + '" cy="' + marker_y + '" r="3.5" ';
+                    svg += 'fill="' + config.marker_color + '" />';
+                }
+            }
+
             var show_seconds = bucket_size < 120000;
             var label_count = Math.min(6, bucket_count);
             var label_step = Math.max(1, Math.floor(bucket_count / label_count));
@@ -479,7 +499,27 @@
             var palette = config.palette || {};
             var labels = config.labels || {};
 
-            $svg.off('mousemove.chart mouseleave.chart');
+            $svg.off('mousemove.chart mouseleave.chart click.chart');
+
+            // A click on a bucket hands it to the caller, e.g. for a drill-down link
+            if (config.on_bucket_click) {
+                $svg.css('cursor', 'pointer');
+                $svg.on('click.chart', function(event) {
+                    var rect = this.getBoundingClientRect();
+                    var mouse_x = event.clientX - rect.left;
+                    var relative_x = mouse_x - PADDING_LEFT;
+
+                    if (relative_x < 0 || relative_x > draw_width) {
+                        return;
+                    }
+
+                    var clicked_index = Math.floor((relative_x / draw_width) * bucket_count);
+                    if (clicked_index >= bucket_count) clicked_index = bucket_count - 1;
+                    if (clicked_index < 0) clicked_index = 0;
+
+                    config.on_bucket_click(buckets[clicked_index]);
+                });
+            }
 
             $svg.on('mousemove.chart', function(event) {
                 var rect = this.getBoundingClientRect();
@@ -541,6 +581,11 @@
                     body_lines.push('<div class="dashboard-tooltip-row">' +
                         '<span class="dashboard-tooltip-dot" style="background:' + (palette[k] || '#888') + '"></span>' +
                         (labels[k] || k) + ': <b>' + ns.format_number_full(count) + '</b></div>');
+                }
+                if (bucket.marked && config.marker_label) {
+                    body_lines.push('<div class="dashboard-tooltip-row">' +
+                        '<span class="dashboard-tooltip-dot" style="background:' + config.marker_color + '"></span>' +
+                        config.marker_label + '</div>');
                 }
                 tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
