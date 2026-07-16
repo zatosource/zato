@@ -213,20 +213,19 @@
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_is_active">Active</label></td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label for="id_is_active">Active</label> {{ create_form.is_active }}
+                                |
+                                <label for="id_validate_input">Validate input</label> {{ create_form.validate_input }}
+                                |
+                                <label for="id_is_audit_log_active">Audit log</label> {{ create_form.is_audit_log_active }}
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle"><label for="id_url_path">URL path</label></td>
                             <td>{{ create_form.url_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_validate_input">Validate input</label></td>
-                            <td>{{ create_form.validate_input }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_is_audit_log_active">Audit log</label></td>
-                            <td>{{ create_form.is_audit_log_active }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">
@@ -428,20 +427,19 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-is_active">Active</label></td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label for="id_is_active">Active</label> {{ create_form.is_active }}
+                                |
+                                <label for="id_validate_input">Validate input</label> {{ create_form.validate_input }}
+                                |
+                                <label for="id_is_audit_log_active">Audit log</label> {{ create_form.is_audit_log_active }}
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle"><label for="id_edit-url_path">URL path</label></td>
                             <td>{{ edit_form.url_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-validate_input">Validate input</label></td>
-                            <td>{{ edit_form.validate_input }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-is_audit_log_active">Audit log</label></td>
-                            <td>{{ edit_form.is_audit_log_active }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:top;padding-top:8px">
