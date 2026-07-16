@@ -1262,10 +1262,22 @@
 
         status.removeClass('show fade status-message-success status-message-error');
 
+        var data = {rules_json: rules_json};
+
+        // Security definition pages carry a quota tier select - a definition governed
+        // by a tier does not send its own rules. Channel pages have no such select.
+        var tier_select = document.getElementById('quota-tier-select');
+        if(tier_select) {
+            data.quota_tier = tier_select.value;
+            if(tier_select.value) {
+                data.rules_json = '[]';
+            }
+        }
+
         $.ajax({
             url: stored_url_base + '/save/' + stored_entity_id + '/',
             type: 'POST',
-            data: {rules_json: rules_json},
+            data: data,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
                 status.text('OK, saved').addClass('show status-message-success');
@@ -1290,6 +1302,34 @@
                 status.text(msg).addClass('show status-message-error');
             }
         });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Quota tier select - shown on security definition pages only
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.init_tier_select = function(container_id) {
+        var select = document.getElementById('quota-tier-select');
+
+        // Picking a tier hides the rule builder - the tier's rules govern the definition,
+        // picking custom rules shows it again.
+        var toggle = function() {
+            var has_tier = Boolean(select.value);
+            var container = $('#' + container_id);
+            var add_button = $('.rate-limiting-button-add');
+
+            if(has_tier) {
+                container.hide();
+                add_button.hide();
+            }
+            else {
+                container.show();
+                add_button.show();
+            }
+        };
+
+        select.addEventListener('change', toggle);
+        toggle();
     };
 
     // ////////////////////////////////////////////////////////////////////////

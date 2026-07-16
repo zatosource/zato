@@ -192,6 +192,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     // 3
     row += String.format("<td class='ignore'>{0}</td>", item.group_type);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.quota_tier);
 
     if(include_tr) {
         row += '</tr>';

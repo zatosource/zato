@@ -64,6 +64,7 @@ class TestOpenAPIConsoleDeprecated:
         definition = create_basic_auth(page, base_url, _Test_Name_Prefix, 'deprecated')
 
         _ = edit_channel_by_name(page, base_url, Service_Typed, {
+            'is_active': True,
             'security': f'Basic Auth/{definition["name"]}',
         })
 

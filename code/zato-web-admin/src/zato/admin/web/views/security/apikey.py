@@ -20,6 +20,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.apikey import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.json_internal import dumps
 
 # Bunch
@@ -97,11 +98,16 @@ def rate_limiting(req, id): # type: ignore
         'id': id,
     })
 
+    # Tiers are offered in a select so a definition can reference one instead of carrying its own rules
+    tier_list = get_tier_list(req)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'entity_id': id,
         'entity_name': req.GET.get('name', ''),
         'rules_json': dumps(rules_response.data.rate_limiting),
+        'quota_tier': rules_response.data.quota_tier,
+        'tier_list': tier_list,
     }
 
     return TemplateResponse(req, 'zato/security/apikey-rate-limiting.html', return_data)
@@ -113,10 +119,12 @@ def rate_limiting(req, id): # type: ignore
 def rate_limiting_save(req, id): # type: ignore
     try:
         rules_json = req.POST['rules_json']
-        logger.info('apikey.rate_limiting_save; sec_def_id:%s, rules_json:%s', id, rules_json)
+        quota_tier = req.POST['quota_tier']
+        logger.info('apikey.rate_limiting_save; sec_def_id:%s, rules_json:%s, quota_tier:%s', id, rules_json, quota_tier)
         response = req.zato.client.invoke('zato.security.apikey.rate-limiting.save', {
             'id': id,
             'rules_json': rules_json,
+            'quota_tier': quota_tier,
         })
         logger.info('apikey.rate_limiting_save; sec_def_id:%s, response.ok:%s', id, response.ok)
         if response.ok:

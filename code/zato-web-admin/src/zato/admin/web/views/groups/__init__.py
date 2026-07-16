@@ -47,6 +47,7 @@ class Index(_Index):
 
     input_required = 'group_type',
     output_required = 'type', 'id', 'name'
+    output_optional = 'quota_tier',
     output_repeated = True
 
     def get_initial_input(self) -> 'strdict':
@@ -77,6 +78,10 @@ class Index(_Index):
 
         security_list = security_list_response.data if security_list_response.ok else []
 
+        # Get all quota tiers for the tier selects in the create and edit dialogs
+        tier_list_response = self.req.zato.client.invoke('zato.security.tier.get-list')
+        tier_list = tier_list_response.data
+
         logger.info('Groups.Index.handle: member_count=%s', member_count)
         logger.info('Groups.Index.handle: security_list count=%s, items=%s',
             len(security_list) if security_list else 0,
@@ -85,6 +90,7 @@ class Index(_Index):
         return {
             'member_count': member_count,
             'security_list': security_list,
+            'tier_list': tier_list,
             'create_form': CreateForm(self.req.POST),
             'edit_form': EditForm(self.req.POST, prefix='edit'),
         }
@@ -126,6 +132,14 @@ class _CreateEdit(CreateEdit):
         member_prefix = 'security_group_member_'
         member_keys = [k for k in self.req.POST if k.startswith(member_prefix)]
         return_data['member_count'] = len(member_keys)
+
+        # Persist the group's quota tier reference - an empty value removes it
+        quota_tier = self.req.POST[self.form_prefix + 'quota_tier']
+        _ = self.req.zato.client.invoke('zato.security.tier.set-for-group', {
+            'group_id': return_data['id'],
+            'quota_tier': quota_tier,
+        })
+        return_data['quota_tier'] = quota_tier
 
         logger.info('Groups._CreateEdit.post_process_return_data: member_count=%s, return_data=%s',
             len(member_keys), return_data)

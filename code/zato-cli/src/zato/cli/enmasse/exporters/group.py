@@ -13,8 +13,10 @@ import logging
 from sqlalchemy import and_, select
 
 # Zato
-from zato.common.api import Groups
+from zato.common.api import Groups, Quota_Tiers
+from zato.common.json_internal import loads
 from zato.common.odb.model import GenericObject, SecurityBase
+from zato.common.odb.query.generic import GenericObjectWrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +42,22 @@ class GroupExporter:
         self.exporter = exporter
         self.excluded_groups = {'Rule engine API users'}
 
+        # Maps quota tier ids to their names - populated at the start of each export
+        self.tier_name_by_id = {}
+
+# ################################################################################################################################
+
+    def _load_tier_names(self, session:'SASession', cluster_id:'int') -> 'None':
+        """ Builds a map of quota tier ids to their names for reference resolution during export.
+        """
+        wrapper = GenericObjectWrapper(session, cluster_id)
+        wrapper.type_ = Quota_Tiers.Type.Quota_Tier
+
+        rows = wrapper.get_list()
+
+        for row in rows:
+            self.tier_name_by_id[row['id']] = row['name']
+
 # ################################################################################################################################
 
     def export(self, session:'SASession', cluster_id:'int') -> 'group_def_list':
@@ -48,10 +66,14 @@ class GroupExporter:
 
         logger.info('Exporting security group definitions')
 
+        # Load tier names so quota tier references can be exported by name
+        self._load_tier_names(session, cluster_id)
+
         # Get all groups for this cluster
         query = select([
             GenericObject.id,
-            GenericObject.name
+            GenericObject.name,
+            GenericObject.opaque1
             ]).where(and_(
                 GenericObject.type_ == Groups.Type.Group_Parent,
                 GenericObject.subtype == Groups.Type.API_Clients,
@@ -126,6 +148,12 @@ class GroupExporter:
                 'name': group_name,
                 'members': member_names
             }
+
+            # A group may reference a quota tier - it is stored by id but exported by name
+            if opaque1 := group['opaque1']:
+                opaque = loads(opaque1)
+                if tier_id := opaque.get('quota_tier'):
+                    group_def['quota_tier'] = self.tier_name_by_id[tier_id]
 
             exported_groups.append(group_def)
 

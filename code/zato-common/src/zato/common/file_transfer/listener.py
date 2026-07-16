@@ -548,6 +548,11 @@ def watch_directory(
     # Find the deepest common directory to watch ..
     watch_dir = find_deepest_common_directory(matching_items)
 
+    # .. when everything that matched is a single file, the deepest common path is that file,
+    # so watch the directory that contains it ..
+    if not os.path.isdir(watch_dir):
+        watch_dir = os.path.dirname(watch_dir)
+
     # .. create the event handler ..
     event_handler = ZatoFileSystemEventHandler(matching_items, session, invoke_url, event_types, file_patterns, observer_type)
 

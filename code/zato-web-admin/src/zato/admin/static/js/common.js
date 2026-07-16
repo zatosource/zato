@@ -157,6 +157,7 @@ $.namespace('zato.security.jwt');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.posture');
+$.namespace('zato.security.tier');
 $.namespace('zato.security.wss');
 $.namespace('zato.security.wss.data_table');
 $.namespace('zato.service');

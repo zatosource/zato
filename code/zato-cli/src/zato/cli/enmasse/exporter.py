@@ -14,6 +14,7 @@ from zato.cli.enmasse.exporters.email_imap import IMAPExporter
 from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
+from zato.cli.enmasse.exporters.quota_tier import QuotaTierExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
@@ -76,6 +77,7 @@ class EnmasseYAMLExporter:
         self.email_smtp_exporter = SMTPExporter(self)
         self.group_exporter = GroupExporter(self)
         self.odoo_exporter = OdooExporter(self)
+        self.quota_tier_exporter = QuotaTierExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
@@ -147,6 +149,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
         sql_list = self.sql_exporter.export(session, self.cluster_id)
         return sql_list
+
+# ################################################################################################################################
+
+    def export_quota_tier(self, session:'SASession') -> 'list':
+        """ Exports quota tier definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        quota_tier_list = self.quota_tier_exporter.export(session, self.cluster_id)
+        return quota_tier_list
 
 # ################################################################################################################################
 
@@ -487,6 +498,11 @@ class EnmasseYAMLExporter:
         scheduler_defs = self.export_scheduler(session)
         if scheduler_defs:
             output_dict['scheduler'] = scheduler_defs
+
+        # Export quota tier definitions
+        quota_tier_defs = self.export_quota_tier(session)
+        if quota_tier_defs:
+            output_dict['quota_tier'] = quota_tier_defs
 
         # Export security definitions
         security_defs = self.export_security(session)

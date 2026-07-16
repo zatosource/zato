@@ -1,0 +1,58 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Quota tiers{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/tier.js"></script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+<h2 class="zato">Security : Quota tiers</h2>
+
+<div class='page_prompt' style="clear:left">
+    <a href="/zato/security/tier/create/?cluster={{ cluster_id }}">Create a quota tier</a>
+</div>
+
+<table class="zato-table" id="data-table">
+    <thead>
+        <tr class='ignore'>
+            <th><a href="#">Name</a></th>
+            <th><a href="#">Description</a></th>
+            <th><a href="#">Limits</a></th>
+            <th><a href="#">Referenced by</a></th>
+            <th>&nbsp;</th>
+            <th>&nbsp;</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% if tier_list %}
+    {% for tier in tier_list %}
+        <tr id='tr_{{ tier.id }}'>
+            <td>{{ tier.name }}</td>
+            <td>{{ tier.description }}</td>
+            <td>{{ tier.limits_summary }}</td>
+            <td class="text-center">{{ tier.referent_count }}</td>
+            <td><a href="/zato/security/tier/{{ tier.id }}/?cluster={{ cluster_id }}">Edit</a></td>
+            <td><a href="javascript:$.fn.zato.security.tier.delete_('{{ tier.id }}', '{{ tier.name }}')">Delete</a></td>
+        </tr>
+    {% endfor %}
+    {% else %}
+        <tr class='ignore'>
+            <td colspan='6'>No results</td>
+        </tr>
+    {% endif %}
+    </tbody>
+</table>
+
+<span class="status-message" id="tier-status"></span>
+
+</div>
+
+{% endblock %}

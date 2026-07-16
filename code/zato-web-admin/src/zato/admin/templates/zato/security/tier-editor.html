@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Rate limiting - {{ entity_name }}{% endblock %}
+{% block html_title %}Quota tier - {{ tier_name }}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
@@ -13,38 +13,45 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/lucide/lucide.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/rate-limiting.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/tier.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
-        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ entity_id }}', '/zato/security/basic-auth/rate-limiting');
+        $.fn.zato.rate_limiting.init('rate-limiting-container', 'edit', '{{ tier_id }}', '/zato/security/tier');
         {% if rules_json and rules_json != '[]' %}
         $.fn.zato.rate_limiting.load_rules('rate-limiting-container', {{ rules_json|safe }});
         {% endif %}
-        $.fn.zato.rate_limiting.init_tier_select('rate-limiting-container');
     });
     </script>
 {% endblock %}
 
 {% block "content" %}
 
+<!-- screenshot: quota-tier-editor.webp - The quota tier editor with name, description and the rate-limiting rule builder -->
+
 <div id="markup">
-<h2 class="zato" style="padding-top: 1.3rem; margin-bottom: 0.6rem;">Rate limiting | <a href="{% url 'security-basic-auth' %}?cluster={{ cluster_id }}">Basic Auth</a> | {{ entity_name }}</h2>
+<h2 class="zato">Quota tier | <a href="/zato/security/tier/?cluster={{ cluster_id }}">Quota tiers</a> | {{ tier_name }}</h2>
 
 <table class="form-data">
     <tr>
-        <td style="vertical-align:middle">
-            <label for="quota-tier-select">Quota tier</label>
+        <td style="vertical-align:middle;width:10%">
+            <label for="tier-name">Name</label>
         </td>
         <td>
-            <select id="quota-tier-select" class="noChosen">
-                <option value="">Custom rules</option>
-                {% for tier in tier_list %}
-                <option value="{{ tier.id }}"{% if tier.id == quota_tier %} selected{% endif %}>{{ tier.name }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" id="tier-name" class="required" style="width:40%" value="{{ tier_name }}" />
+        </td>
+    </tr>
+    <tr>
+        <td style="vertical-align:middle;width:10%">
+            <label for="tier-description">Description</label>
+        </td>
+        <td>
+            <input type="text" id="tier-description" style="width:70%" value="{{ tier_description }}" />
         </td>
     </tr>
 </table>
+
+<input type="hidden" id="tier-id" value="{{ tier_id }}" />
 
 <div class="rate-limiting-container" id="rate-limiting-container">
 </div>
@@ -53,7 +60,7 @@
     <span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add row</span>
     <span class="rate-limiting-save-group">
         <span class="status-message" id="rate-limiting-status"></span>
-        <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container')" />
+        <input type="submit" value="Save" onclick="$.fn.zato.security.tier.save('rate-limiting-container')" />
     </span>
 </div>
 

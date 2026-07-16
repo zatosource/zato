@@ -454,6 +454,7 @@ def reorder_fields(fields:'anydict') -> 'anydict':
 def get_top_level_order() -> 'strlist':
 
     return [
+        'quota_tier',
         'security',
         'groups',
         'channel_rest',
@@ -502,9 +503,10 @@ def get_object_order(object_type:'str') -> 'strlist':
         'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'signing_key', 'signing_certificate_chain', \
         'decryption_key', 'peer_certificate', 'trust_anchors', 'auth_endpoint', 'client_id_field', \
         'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
-        'static_header', 'static_token', 'static_prefix', 'rate_limiting:list',
+        'static_header', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
 
-    order['groups'] = 'name', 'is_active', 'members:list',
+    order['quota_tier'] = 'name', 'description', 'rules:list',
+    order['groups'] = 'name', 'is_active', 'quota_tier', 'members:list',
     order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list', \
         'rate_limiting:list', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
     order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \

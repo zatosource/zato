@@ -22,6 +22,7 @@ from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
+from zato.cli.enmasse.importers.quota_tier import QuotaTierImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
@@ -115,6 +116,7 @@ class EnmasseYAMLImporter:
 
         self.sec_defs = {}
         self.group_defs = {}
+        self.quota_tier_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
         self.imap_defs = {}
@@ -161,6 +163,7 @@ class EnmasseYAMLImporter:
         self.channel_soap_importer = ChannelSOAPImporter(self)
         self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
+        self.quota_tier_importer = QuotaTierImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
@@ -336,6 +339,29 @@ class EnmasseYAMLImporter:
             result[key].extend(items)
 
         return result
+
+# ################################################################################################################################
+
+    def sync_quota_tiers(self, tier_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes quota tiers from a YAML configuration with the database.
+        """
+        if not tier_list:
+            return [], []
+
+        count = len(tier_list)
+        noun = 'tier' if count == 1 else 'tiers'
+        logger.info(f'Processing {count} quota {noun}')
+
+        tiers_created, tiers_updated = self.quota_tier_importer.sync_quota_tiers(tier_list, session)
+
+        # Get tier definitions from the tier importer and store them in our instance
+        self.quota_tier_defs = self.quota_tier_importer.tier_defs
+
+        created_count = len(tiers_created)
+        updated_count = len(tiers_updated)
+        logger.info(f'Processed quota tiers: created={created_count} updated={updated_count}')
+
+        return tiers_created, tiers_updated
 
 # ################################################################################################################################
 
@@ -1181,7 +1207,14 @@ class EnmasseYAMLImporter:
                 noun = 'service' if count == 1 else 'services'
                 raise Exception(f'{count} {noun} not found after {timeout}s: {sorted(missing_services)}')
 
-        # Process security definitions first
+        # Process quota tiers first - security definitions and groups reference them by name
+        tiers_created, tiers_updated = self.sync_quota_tiers(yaml_config.get('quota_tier', []), session)
+        if tiers_created:
+            self.created_objects['quota_tier'] = tiers_created
+        if tiers_updated:
+            self.updated_objects['quota_tier'] = tiers_updated
+
+        # Process security definitions next
         sec_created, sec_updated = self.sync_security(yaml_config.get('security', []), session)
         if sec_created:
             self.created_objects['security'] = sec_created
