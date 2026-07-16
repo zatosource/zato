@@ -347,8 +347,10 @@ $.fn.zato.audit_log.init = function(initConfig) {
         filters: {
             source: initConfig.source,
             object_name: initConfig.object_name,
-            query: '',
-            status: initConfig.status
+            query: initConfig.query,
+            status: initConfig.status,
+            time_from: initConfig.time_from,
+            time_to: initConfig.time_to
         },
         table_body: '#audit-log-table-body',
         container_top: '#audit-log-pagination-top',

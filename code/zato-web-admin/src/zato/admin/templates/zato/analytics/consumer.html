@@ -1,0 +1,35 @@
+{% extends "zato/analytics/base.html" %}
+{% load extras %}
+
+{% block html_title %}Traffic analytics - {{ name }}{% endblock %}
+
+{% block analytics_screen %}consumer{% endblock %}
+{% block analytics_related_label %}Channels{% endblock %}
+
+{% block dashboard_chart_title %}Traffic <span class="dashboard-pill">{{ name }}</span>{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h3>Channels <span class="dashboard-pill" id="analytics-channels-count"></span></h3>
+            </div>
+            <div class="dashboard-card-scroll">
+                <table class="zato-table" id="analytics-channels-table">
+                    <thead>
+                        <tr>
+                            <th>Channel</th>
+                            <th>Trend</th>
+                            <th>Requests</th>
+                            <th>Error rate</th>
+                            <th>p95</th>
+                            <th>Last seen</th>
+                            <th>Audit log</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-channels-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+{% endblock %}

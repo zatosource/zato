@@ -69,6 +69,7 @@ from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
 from zato.admin.web.views import as2_keystore
 from zato.admin.web.views import audit_log
+from zato.admin.web.views.analytics import screens as analytics_screens
 from zato.admin.web.views import b2b
 from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
@@ -335,6 +336,27 @@ urlpatterns += [
 
     url(r'^zato/mapping/$',
         login_required(mapping.index), name='mapping'),
+
+    # Traffic analytics
+
+    url(r'^zato/analytics/$',
+        login_required(analytics_screens.index), name='analytics'),
+    url(r'^zato/analytics/poll/$',
+        login_required(analytics_screens.index_poll), name='analytics-poll'),
+    url(r'^zato/analytics/csv/$',
+        login_required(analytics_screens.index_csv), name='analytics-csv'),
+    url(r'^zato/analytics/channel/$',
+        login_required(analytics_screens.channel), name='analytics-channel'),
+    url(r'^zato/analytics/channel/poll/$',
+        login_required(analytics_screens.channel_poll), name='analytics-channel-poll'),
+    url(r'^zato/analytics/channel/csv/$',
+        login_required(analytics_screens.channel_csv_export), name='analytics-channel-csv'),
+    url(r'^zato/analytics/consumer/$',
+        login_required(analytics_screens.consumer), name='analytics-consumer'),
+    url(r'^zato/analytics/consumer/poll/$',
+        login_required(analytics_screens.consumer_poll), name='analytics-consumer-poll'),
+    url(r'^zato/analytics/consumer/csv/$',
+        login_required(analytics_screens.consumer_csv_export), name='analytics-consumer-csv'),
 
     # Audit log
 

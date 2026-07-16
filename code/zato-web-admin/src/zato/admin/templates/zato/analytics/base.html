@@ -1,0 +1,67 @@
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/analytics/common.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/analytics/tables.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    var dash = $.fn.zato.analytics.dashboard;
+    dash.config.screen = '{% block analytics_screen %}{% endblock %}';
+    dash.config.poll_url = '{{ poll_url }}';
+    dash.config.csv_url = '{{ csv_url }}';
+    dash.config.time_range = '{{ time_range }}';
+    dash.config.name = '{{ name|escapejs }}';
+    dash.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Requests</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-requests">-</div>
+                        <div class="dashboard-tile-spark" id="spark-requests"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Error rate</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-error-rate">-</div>
+                        <div class="dashboard-tile-spark" id="spark-error-rate"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">p95 latency</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-p95">-</div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-p95-sublabel"></div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">{% block analytics_related_label %}{% endblock %}</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-related">-</div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-related-sublabel"></div>
+                </div>
+
+{% endblock %}
+
+{% block dashboard_chart_extra_controls %}
+                <a class="dashboard-pill dashboard-pill-clickable" id="analytics-csv-pill" href="#" title="Download this screen's table as CSV">CSV</a>
+{% endblock %}
+
+{% block dashboard_time_range_options %}
+                        {% for item in ranges %}
+                        <div class="dashboard-time-range-option{% if item.value == time_range %} dashboard-time-range-active{% endif %}" data-range="{{ item.value }}">{{ item.label }}</div>
+                        {% endfor %}
+{% endblock %}
+
+{% block dashboard_refresh_options %}
+{% endblock %}

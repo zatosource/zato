@@ -54,7 +54,7 @@ _row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_
     'outcome', 'size', 'data')
 
 # The free-text search covers these columns
-_search_columns = ('data', 'msg_id', 'correl_id', 'endpoint')
+_search_columns = ('data', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id')
 
 # The status query parameter value narrowing the page down to open exchanges
 _status_outstanding = 'outstanding'
@@ -275,7 +275,8 @@ def _escape_like(query:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _build_where(source:'str', object_name:'str', query:'str', status:'str') -> 'anylist':
+def _build_where(source:'str', object_name:'str', query:'str', status:'str',
+    time_from:'str'='', time_to:'str'='') -> 'anylist':
     """ Builds the WHERE conditions for the poll query.
     """
 
@@ -284,6 +285,14 @@ def _build_where(source:'str', object_name:'str', query:'str', status:'str') -> 
 
     out.append(event_table.c.source == source)
     out.append(event_table.c.object_name == object_name)
+
+    # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
+    # event times are ISO timestamps, so string prefixes compare correctly.
+    if time_from:
+        out.append(event_table.c.event_time_iso >= time_from)
+
+    if time_to:
+        out.append(event_table.c.event_time_iso < time_to)
 
     # The free-text search covers several columns, matching wildcards literally
     if query:
@@ -373,6 +382,12 @@ def object_index(req:'any_') -> 'TemplateResponse':
     # The page can open pre-filtered to the open exchanges of this source
     status = req.GET.get('status', '')
 
+    # It can also open pre-filtered to a time window and a search query,
+    # which is how the analytics screens drill down into the raw events.
+    time_from = req.GET.get('time_from', '')
+    time_to = req.GET.get('time_to', '')
+    query = req.GET.get('query', '')
+
     # The frontend renders the table headers and cells based on this source's columns
     columns = _source_columns[source]
     columns_json = json.dumps(columns)
@@ -391,6 +406,9 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'columns': columns,
         'columns_json': columns_json,
         'status': status,
+        'time_from': time_from,
+        'time_to': time_to,
+        'query': query,
         'has_outstanding_filter': source in _source_outstanding,
         'resubmit_labels_json': resubmit_labels_json,
         'zato_clusters': True,
@@ -413,6 +431,8 @@ def poll(req:'any_') -> 'HttpResponse':
     object_name = body['object_name']
     query = body['query']
     status = body['status']
+    time_from = body['time_from']
+    time_to = body['time_to']
 
     page = body['page']
     page_size = body['page_size']
@@ -420,7 +440,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(source, object_name, query, status)
+    where_conditions = _build_where(source, object_name, query, status, time_from, time_to)
 
     rows:'anylist' = []
 

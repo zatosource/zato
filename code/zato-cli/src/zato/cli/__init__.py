@@ -146,6 +146,7 @@ ping_query=SELECT 1
 # ################################################################################################################################
 
 command_imports = (
+    ('analytics_rollup', 'zato.cli.analytics.Rollup'),
     ('change_password', 'zato.cli.security.basic_auth.ChangePassword'),
     ('check_config', 'zato.cli.check_config.CheckConfig'),
     ('create_api_key', 'zato.cli.security.api_key.CreateDefinition'),
