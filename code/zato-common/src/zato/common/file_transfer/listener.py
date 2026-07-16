@@ -235,12 +235,17 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         invoke_url:'str',
         event_types:'strlistnone',
         file_patterns:'strlistnone',
+        observer_type:'str'='inotify',
     ) -> 'None':
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
         self.session = session
         self.invoke_url = invoke_url
+
+        # The polling observer reports each change once instead of streaming events while a file is written,
+        # so file-stability checks have to be performed inline rather than across events.
+        self.is_polling = observer_type == 'polling'
 
         # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
@@ -254,6 +259,9 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
         # Number of checks with stable size required to consider a file complete
         self.stability_threshold = 3
+
+        # How long to wait between the inline stability checks used with the polling observer
+        self.stability_check_interval = 0.25
 
         # Track files that have been modified or created - these are candidates for 'file ready'
         # when a subsequent 'closed' event is received
@@ -340,6 +348,39 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 
 # ################################################################################################################################
 
+    def _check_file_stability_polling(self, event_path:'str') -> 'None':
+        """ Waits inline until a file's size stops changing, then deploys it. The polling observer reports a change
+        once per snapshot diff, with no follow-up or close events, so the repeated checks that inotify gets
+        through its event stream have to be performed here instead.
+        """
+        previous_size = -1
+        stable_checks = 0
+
+        # Keep measuring until the size has been stable for the required number of checks ..
+        while stable_checks < self.stability_threshold:
+
+            # .. the file may have been deleted or replaced with a directory while we were waiting ..
+            if not os.path.exists(event_path) or os.path.isdir(event_path):
+                return
+
+            current_size = os.path.getsize(event_path)
+
+            # .. count another stable check if the size did not change ..
+            if current_size == previous_size:
+                stable_checks += 1
+
+            # .. otherwise start counting anew from this size ..
+            else:
+                previous_size = current_size
+                stable_checks = 1
+
+            time.sleep(self.stability_check_interval)
+
+        # .. the file is complete now, deploy it.
+        self.publish_file_ready_event(event_path)
+
+# ################################################################################################################################
+
     def on_created(self, event:'FileSystemEvent') -> 'None':
         """ Handle created events and start stability checking.
         """
@@ -349,8 +390,15 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         if self._is_event_relevant(event_path, 'created'):
             # Mark this file as modified/created for later reference
             self.modified_files.add(event_path)
+
+            # With polling, this event will not repeat and there is no close event to come,
+            # so the stability checks run inline and end with the deployment
+            if self.is_polling:
+                self._check_file_stability_polling(event_path)
+
             # Silent - start stability checking for this file
-            _ = self._check_file_stability(event_path)
+            else:
+                _ = self._check_file_stability(event_path)
 
 # ################################################################################################################################
 
@@ -365,7 +413,13 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
             if not os.path.isdir(event_path):
                 # Mark this file as modified for later reference
                 self.modified_files.add(event_path)
-                _ = self._check_file_stability(event_path)
+
+                # With polling, this event will not repeat and there is no close event to come,
+                # so the stability checks run inline and end with the deployment
+                if self.is_polling:
+                    self._check_file_stability_polling(event_path)
+                else:
+                    _ = self._check_file_stability(event_path)
 
 # ################################################################################################################################
 
@@ -495,7 +549,7 @@ def watch_directory(
     watch_dir = find_deepest_common_directory(matching_items)
 
     # .. create the event handler ..
-    event_handler = ZatoFileSystemEventHandler(matching_items, session, invoke_url, event_types, file_patterns)
+    event_handler = ZatoFileSystemEventHandler(matching_items, session, invoke_url, event_types, file_patterns, observer_type)
 
     # .. and schedule the observer.
     _ = observer.schedule(event_handler, watch_dir, recursive=True)

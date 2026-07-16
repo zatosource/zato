@@ -24,7 +24,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
-from zato.common.audit_log.reports import _get_range_cutoff, Default_Range
+from zato.common.audit_log.reports import get_range_cutoff, Default_Range
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -100,16 +100,19 @@ def _load_usage_events(cutoff_iso:'str', channel:'str') -> 'anylist':
     responses are audited after authentication, so each one knows its caller.
     """
     source_matches = event_table.c.source.in_((AuditSource.REST_Channel, AuditSource.SOAP_Channel))
+    event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent
+    cutoff_matches = event_table.c.event_time_iso >= cutoff_iso
 
     conditions = and_(
         source_matches,
-        event_table.c.event_type == AuditEvent.Response_Sent,
-        event_table.c.event_time_iso >= cutoff_iso,
+        event_type_matches,
+        cutoff_matches,
     )
 
     # An empty channel filter means all the channels are reported on
     if channel:
-        conditions = and_(conditions, event_table.c.object_name == channel)
+        channel_matches = event_table.c.object_name == channel
+        conditions = and_(conditions, channel_matches)
 
     statement = select(
         event_table.c.source,
@@ -135,7 +138,7 @@ def get_usage(now:'datetime', time_range:'str'=Default_Range, channel:'str'='') 
     """ Call counts per channel and caller over the range - one row per channel
     and security definition, with the first and last call times of each pair.
     """
-    cutoff_iso = _get_range_cutoff(now, time_range)
+    cutoff_iso = get_range_cutoff(now, time_range)
 
     events = _load_usage_events(cutoff_iso, channel)
 
@@ -176,6 +179,7 @@ def get_usage(now:'datetime', time_range:'str'=Default_Range, channel:'str'='') 
 
         channel_name, caller = key
         group = groups[key]
+        source = channel_sources[channel_name]
 
         row = UsageRow()
         row.channel = channel_name
@@ -183,7 +187,7 @@ def get_usage(now:'datetime', time_range:'str'=Default_Range, channel:'str'='') 
         row.calls = group.calls
         row.first_call = group.first_call
         row.last_call = group.last_call
-        row.link = _audit_log_link(channel_sources[channel_name], channel_name)
+        row.link = _audit_log_link(source, channel_name)
 
         out.append(row)
 

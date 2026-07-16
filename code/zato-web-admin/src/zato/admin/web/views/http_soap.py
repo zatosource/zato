@@ -155,8 +155,8 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
 
             # The deprecation fields exist only in the forms of REST channels too
             message['is_deprecated'] = bool(params.get(prefix + 'is_deprecated'))
-            message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset') or ''
-            message['deprecation_successor'] = params.get(prefix + 'deprecation_successor') or ''
+            message['deprecation_sunset'] = params.get(prefix + 'deprecation_sunset', '')
+            message['deprecation_successor'] = params.get(prefix + 'deprecation_successor', '')
 
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
@@ -354,8 +354,8 @@ def index(req): # type: ignore
                     is_deprecated = False
 
                 http_soap.is_deprecated = is_deprecated
-                http_soap.deprecation_sunset = item.get('deprecation_sunset') or ''
-                http_soap.deprecation_successor = item.get('deprecation_successor') or ''
+                http_soap.deprecation_sunset = item.get('deprecation_sunset', '')
+                http_soap.deprecation_successor = item.get('deprecation_successor', '')
             else:
                 http_soap.ping_method = item.ping_method
                 http_soap.pool_size = item.pool_size

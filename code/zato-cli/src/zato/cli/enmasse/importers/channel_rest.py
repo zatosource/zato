@@ -382,7 +382,8 @@ class ChannelImporter:
 
         # The moment the channel becomes deprecated is recorded for the Deprecation response header
         if is_deprecated:
-            opaque_attrs['deprecation_since'] = utcnow().isoformat()
+            now = utcnow()
+            opaque_attrs['deprecation_since'] = now.isoformat()
         else:
             opaque_attrs['deprecation_since'] = ''
 
@@ -465,9 +466,14 @@ class ChannelImporter:
 
         # A channel that was already deprecated keeps its original deprecation time,
         # one that becomes deprecated now gets the current time, and clearing the flag clears the time.
-        opaque = parse_instance_opaque_attr(channel)
         if is_deprecated:
-            opaque_attrs['deprecation_since'] = opaque.get('deprecation_since') or utcnow().isoformat()
+            opaque = parse_instance_opaque_attr(channel)
+            if deprecation_since := opaque.get('deprecation_since'):
+                pass
+            else:
+                now = utcnow()
+                deprecation_since = now.isoformat()
+            opaque_attrs['deprecation_since'] = deprecation_since
         else:
             opaque_attrs['deprecation_since'] = ''
 
