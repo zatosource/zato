@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.api import ZATO_NONE
 from zato.common.crypto.api import CryptoManager
@@ -113,6 +116,8 @@ class TestUniqueValidationHTTPSOAP:
 
 # ################################################################################################################################
 
+    # The cleanup deletes a documented REST endpoint, a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_02_soap_channel_url_path_taken_by_rest_channel(
         self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ The reverse direction - a url_path used by an existing REST channel must show
@@ -193,6 +198,8 @@ class TestUniqueValidationHTTPSOAP:
 
 # ################################################################################################################################
 
+    # The cleanup deletes documented REST endpoints, a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_04_same_url_path_different_method_is_ok(
         self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ The same url_path with a different HTTP method must show the ok indicator
@@ -246,6 +253,8 @@ class TestUniqueValidationHTTPSOAP:
 
 # ################################################################################################################################
 
+    # The cleanup deletes a documented REST endpoint, a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_05_rest_channel_duplicate_name_shows_taken(
         self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ A REST channel name that already exists in the same transport must show the taken indicator.
@@ -279,6 +288,8 @@ class TestUniqueValidationHTTPSOAP:
 
 # ################################################################################################################################
 
+    # The cleanup deletes a documented REST endpoint, a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_06_rest_channel_name_matching_soap_channel_is_ok(
         self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ A REST channel name equal to an existing SOAP channel's name must show the ok indicator
@@ -399,6 +410,8 @@ class TestUniqueValidationHTTPSOAP:
 
 # ################################################################################################################################
 
+    # The cleanup deletes documented REST endpoints, a breaking change the servers report on rebuild
+    @pytest.mark.expect_log_errors('OpenAPI breaking change:')
     def test_09_edit_url_path_conflict(
         self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ In the edit form, an unchanged url_path must not be flagged while changing it
