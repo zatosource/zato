@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zato.fullname" . }}
+  labels:
+    {{- include "zato.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "zato.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zato.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: zato
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: server
+              containerPort: 17010
+            - name: dashboard
+              containerPort: 8183
+            - name: dashboard-ssl
+              containerPort: 8184
+            - name: openapi
+              containerPort: 8185
+            - name: openapi-ssl
+              containerPort: 8186
+            - name: lb
+              containerPort: 11223
+            - name: lb-ssl
+              containerPort: 11224
+            {{- if .Values.service.ssh.enabled }}
+            - name: ssh
+              containerPort: 22
+            {{- end }}
+          env:
+            - name: Zato_Password
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zato.passwordSecretName" . }}
+                  key: {{ .Values.password.key }}
+            # Kubernetes updates ConfigMap files through atomic symlink swaps
+            # that inotify does not report, so the file listeners must poll
+            - name: Zato_File_Listener_Observer
+              value: polling
+            {{- if .Values.enmasse.configMap }}
+            # Registers the enmasse directory with the server and starts a file listener for it
+            - name: Zato_Project_Root_K8S_Enmasse
+              value: /opt/hot-deploy/enmasse
+            {{- end }}
+            {{- if .Values.services.configMap }}
+            # Registers the services directory with the server and starts a file listener for it
+            - name: Zato_Project_Root_K8S_Services
+              value: /opt/hot-deploy/incoming/services
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            # The pod rebuilds its quickstart environment on start - nothing here needs to survive a restart
+            - name: env-dir
+              mountPath: /opt/zato/env
+            {{- if .Values.enmasse.configMap }}
+            - name: enmasse-config
+              mountPath: /opt/hot-deploy/enmasse
+            {{- end }}
+            {{- if .Values.services.configMap }}
+            - name: services-config
+              mountPath: /opt/hot-deploy/incoming/services
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /zato/ping
+              port: server
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /zato/ping
+              port: server
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /zato/ping
+              port: server
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: env-dir
+          emptyDir: {}
+        {{- if .Values.enmasse.configMap }}
+        - name: enmasse-config
+          configMap:
+            name: {{ .Values.enmasse.configMap }}
+        {{- end }}
+        {{- if .Values.services.configMap }}
+        - name: services-config
+          configMap:
+            name: {{ .Values.services.configMap }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

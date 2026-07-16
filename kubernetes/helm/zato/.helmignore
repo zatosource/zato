@@ -1,0 +1,4 @@
+.git/
+*.swp
+*.tmp
+examples/

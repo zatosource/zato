@@ -1,0 +1,70 @@
+# Default values for the Zato chart.
+
+replicaCount: 1
+
+image:
+  repository: zatosource/zato-4.1
+  tag: latest
+  # The quickstart image moves under the same tag, so pull it on every start
+  pullPolicy: Always
+
+password:
+  # Name of an existing Secret holding the environment's password
+  existingSecret: ""
+  # Key under which the password is stored in that Secret
+  key: Zato_Password
+  # Used to create a Secret when existingSecret is empty
+  value: ""
+
+service:
+  type: ClusterIP
+  ports:
+    # Server API - this is also where /zato/ping answers
+    server: 17010
+    # Dashboard, plain and SSL
+    dashboard: 8183
+    dashboardSSL: 8184
+    # OpenAPI console, plain and SSL - HAProxy fronts it inside the container
+    openapiConsole: 8185
+    openapiConsoleSSL: 8186
+    # Load balancer for external REST and HL7 MLLP clients, plain and SSL
+    loadBalancer: 11223
+    loadBalancerSSL: 11224
+  ssh:
+    # kubectl exec covers this role on Kubernetes, hence off by default
+    enabled: false
+    port: 22
+
+enmasse:
+  # Name of a ConfigMap with an enmasse.yaml key, mounted at /opt/hot-deploy/enmasse.
+  # The file is imported when the pod starts and re-imported whenever the ConfigMap changes.
+  configMap: ""
+
+services:
+  # Name of a ConfigMap with .py service files, mounted at /opt/hot-deploy/incoming/services.
+  # The files are deployed when the pod starts and redeployed whenever the ConfigMap changes.
+  configMap: ""
+
+# Extra environment variables for the container, e.g. Zato_Log_Env_Details
+env: []
+
+resources: {}
+
+probes:
+  startup:
+    # First boot creates the entire quickstart environment, so allow up to 10 minutes
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    failureThreshold: 60
+  readiness:
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
