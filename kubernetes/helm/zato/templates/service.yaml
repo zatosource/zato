@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zato.fullname" . }}
+  labels:
+    {{- include "zato.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "zato.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: server
+      port: {{ .Values.service.ports.server }}
+      targetPort: server
+    - name: dashboard
+      port: {{ .Values.service.ports.dashboard }}
+      targetPort: dashboard
+    - name: dashboard-ssl
+      port: {{ .Values.service.ports.dashboardSSL }}
+      targetPort: dashboard-ssl
+    - name: openapi
+      port: {{ .Values.service.ports.openapiConsole }}
+      targetPort: openapi
+    - name: openapi-ssl
+      port: {{ .Values.service.ports.openapiConsoleSSL }}
+      targetPort: openapi-ssl
+    - name: lb
+      port: {{ .Values.service.ports.loadBalancer }}
+      targetPort: lb
+    - name: lb-ssl
+      port: {{ .Values.service.ports.loadBalancerSSL }}
+      targetPort: lb-ssl
+    {{- if .Values.service.ssh.enabled }}
+    - name: ssh
+      port: {{ .Values.service.ssh.port }}
+      targetPort: ssh
+    {{- end }}

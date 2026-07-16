@@ -1,0 +1,14 @@
+apiVersion: v2
+name: zato
+description: Zato integration platform - the quickstart image running on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "4.1"
+home: https://zato.io
+sources:
+  - https://github.com/zatosource/zato
+keywords:
+  - integration
+  - api
+  - esb
+  - automation

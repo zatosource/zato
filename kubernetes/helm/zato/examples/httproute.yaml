@@ -1,0 +1,46 @@
+# A Gateway API HTTPRoute routing external traffic to the Zato Service.
+#
+# Requires a Gateway API implementation in the cluster and an existing
+# Gateway resource - the parentRefs below assume one named "gateway"
+# in the "gateway-infra" namespace, adjust both to your setup.
+#
+# The Service name matches a release installed as "zato".
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zato
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: gateway-infra
+  hostnames:
+    - api.example.com
+  rules:
+    # External API clients - the load balancer port
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: zato
+          port: 11223
+---
+# The Dashboard on its own host name.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zato-dashboard
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: gateway-infra
+  hostnames:
+    - zato-dashboard.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: zato
+          port: 8183

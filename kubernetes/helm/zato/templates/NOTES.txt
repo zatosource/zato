@@ -1,0 +1,17 @@
+Zato is starting - the first boot creates a complete quickstart environment,
+which takes a few minutes. Watch the progress with:
+
+    kubectl logs -f deployment/{{ include "zato.fullname" . }}
+
+Once the pod is ready, check the server:
+
+    kubectl port-forward svc/{{ include "zato.fullname" . }} {{ .Values.service.ports.server }}
+    curl http://localhost:{{ .Values.service.ports.server }}/zato/ping
+
+Dashboard:
+
+    kubectl port-forward svc/{{ include "zato.fullname" . }} {{ .Values.service.ports.dashboard }}
+
+    http://localhost:{{ .Values.service.ports.dashboard }}
+    Username: admin
+    Password: the one from your {{ include "zato.passwordSecretName" . }} Secret

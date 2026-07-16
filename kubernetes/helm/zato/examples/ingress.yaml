@@ -1,0 +1,57 @@
+# A standard Ingress routing external HTTP traffic to the Zato Service.
+#
+# The Service name below matches a release installed as "zato" - adjust it
+# if your release is named differently (helm list shows the names).
+#
+# TLS is terminated at the ingress controller here. To pass TLS through
+# to Zato's own SSL port instead, route to port 11224 and enable
+# passthrough in your controller (e.g. the ssl-passthrough annotation
+# of ingress-nginx).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zato
+  annotations:
+    # Uncomment for cert-manager-issued certificates:
+    # cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.example.com
+      secretName: zato-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          # External API clients - the load balancer port
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: zato
+                port:
+                  number: 11223
+---
+# The Dashboard on its own host name.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zato-dashboard
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - zato-dashboard.example.com
+      secretName: zato-dashboard-tls
+  rules:
+    - host: zato-dashboard.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: zato
+                port:
+                  number: 8183
