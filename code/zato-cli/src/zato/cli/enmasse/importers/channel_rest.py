@@ -14,7 +14,8 @@ import logging
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
-from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
+from zato.common.util.api import utcnow
+from zato.common.util.sql import get_security_by_id, parse_instance_opaque_attr, set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +87,7 @@ class ChannelImporter:
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
                     if key not in ['security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
-                        'should_include_in_openapi'] \
+                        'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor'] \
                         and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
@@ -114,6 +115,10 @@ class ChannelImporter:
 
                 # Check the OpenAPI flag
                 if self._openapi_flag_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check the deprecation attributes
+                if self._deprecation_needs_update(item, db_def):
                     needs_update = True
 
                 if needs_update:
@@ -250,6 +255,36 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
+    def _deprecation_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if the deprecation attributes need update - absent attributes mean the channel is not deprecated.
+        """
+        yaml_is_deprecated = item.get('is_deprecated', False)
+        yaml_sunset = item.get('deprecation_sunset', '')
+        yaml_successor = item.get('deprecation_successor', '')
+
+        db_is_deprecated = False
+        db_sunset = ''
+        db_successor = ''
+
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_is_deprecated = opaque.get('is_deprecated', False)
+                db_sunset = opaque.get('deprecation_sunset', '')
+                db_successor = opaque.get('deprecation_successor', '')
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+
+        if (yaml_is_deprecated, yaml_sunset, yaml_successor) != (db_is_deprecated, db_sunset, db_successor):
+            logger.info('Deprecation attributes changed for channel %s: yaml=%s db=%s', item['name'],
+                (yaml_is_deprecated, yaml_sunset, yaml_successor), (db_is_deprecated, db_sunset, db_successor))
+            return True
+
+        return False
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
         """ Convert security group names to IDs.
         """
@@ -308,7 +343,7 @@ class ChannelImporter:
         # Process standard attributes
         for key, value in channel_def.items():
             if key not in ['service', 'security', 'groups', 'gateway_service_list', 'rate_limiting', 'is_audit_log_active',
-                'should_include_in_openapi']:
+                'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor']:
                 setattr(channel, key, value)
 
         if security_item:
@@ -338,6 +373,18 @@ class ChannelImporter:
 
         # The channel is included in OpenAPI documents unless the YAML definition turns it off
         opaque_attrs['should_include_in_openapi'] = channel_def.get('should_include_in_openapi', True)
+
+        # The channel is not deprecated unless the YAML definition turns it on
+        is_deprecated = channel_def.get('is_deprecated', False)
+        opaque_attrs['is_deprecated'] = is_deprecated
+        opaque_attrs['deprecation_sunset'] = channel_def.get('deprecation_sunset', '')
+        opaque_attrs['deprecation_successor'] = channel_def.get('deprecation_successor', '')
+
+        # The moment the channel becomes deprecated is recorded for the Deprecation response header
+        if is_deprecated:
+            opaque_attrs['deprecation_since'] = utcnow().isoformat()
+        else:
+            opaque_attrs['deprecation_since'] = ''
 
         if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)

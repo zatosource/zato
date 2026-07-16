@@ -143,6 +143,9 @@
             {% endif %}
             {% if connection == 'channel' and transport == 'plain_http' %}
                 'should_include_in_openapi',
+                'is_deprecated',
+                'deprecation_sunset',
+                'deprecation_successor',
             {% endif %}
 
             // 24, 25, 26, 27
@@ -317,6 +320,9 @@
                         {% endif %}
                         {% if connection == 'channel' and transport == 'plain_http' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} should_include_in_openapi {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} is_deprecated {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} deprecation_sunset {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} deprecation_successor {% endcomment %}
                         {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
@@ -403,7 +409,7 @@
 
                         <!-- 3 -->
                         <td>
-                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}<span class="name-value">{{ item.name }}</span>
+                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}{% if connection == 'channel' and transport == 'plain_http' and item.is_deprecated %}<span class="deprecated-badge">Deprecated</span>{% endif %}<span class="name-value">{{ item.name }}</span>
                         </td>
 
                         <!-- 4 -->
@@ -477,6 +483,9 @@
                         {% endif %}
                         {% if connection == 'channel' and transport == 'plain_http' %}
                             <td class='ignore'>{{ item.should_include_in_openapi }}</td>
+                            <td class='ignore'>{{ item.is_deprecated }}</td>
+                            <td class='ignore'>{{ item.deprecation_sunset }}</td>
+                            <td class='ignore'>{{ item.deprecation_successor }}</td>
                         {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
@@ -612,6 +621,11 @@
                                         OpenAPI
                                         {{ create_form.should_include_in_openapi }}
                                     </label>
+                                    |
+                                    <label for="id_is_deprecated">
+                                        Deprecated
+                                        {{ create_form.is_deprecated }}
+                                    </label>
                                 {% endif %}
                                 {% if transport == 'plain_http' %}
                                     |
@@ -622,6 +636,18 @@
                                 {% endif %}
                             </td>
                         </tr>
+
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_deprecation_sunset">Sunset date</label></td>
+                            <td>{{ create_form.deprecation_sunset }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_deprecation_successor">Successor path</label></td>
+                            <td>{{ create_form.deprecation_successor }}</td>
+                        </tr>
+                        {% endif %}
 
                         {% if connection == 'outgoing' %}
                         <tr>
@@ -904,6 +930,11 @@
                                         OpenAPI
                                         {{ edit_form.should_include_in_openapi }}
                                     </label>
+                                    |
+                                    <label for="id_edit-is_deprecated">
+                                        Deprecated
+                                        {{ edit_form.is_deprecated }}
+                                    </label>
                                 {% endif %}
                                 |
                                 <label for="{{ edit_form.data_format.id_for_label }}">
@@ -912,6 +943,18 @@
                                 </label>
                             </td>
                         </tr>
+
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-deprecation_sunset">Sunset date</label></td>
+                            <td>{{ edit_form.deprecation_sunset }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="id_edit-deprecation_successor">Successor path</label></td>
+                            <td>{{ edit_form.deprecation_successor }}</td>
+                        </tr>
+                        {% endif %}
 
                         {% if connection == 'outgoing' %}
                         <tr>
