@@ -183,6 +183,10 @@
         editorElement.className = 'zato-highlight-pane-editor';
         $container.append(editorElement);
 
+        // .. the observer resizing the editor along with its container, if one is requested below -
+        // .. it is kept here so destroy can disconnect it before the editor goes away ..
+        var resizeObserver = null;
+
         // .. set up the Ace editor ..
         var editor = ace.edit(editorElement);
         editor.setTheme('ace/theme/monokai');
@@ -224,9 +228,10 @@
             if (config.ace_options.resizable) {
                 editorElement.style.resize = 'vertical';
                 editorElement.style.overflow = 'hidden';
-                new ResizeObserver(function() {
+                resizeObserver = new ResizeObserver(function() {
                     editor.resize();
-                }).observe(editorElement);
+                });
+                resizeObserver.observe(editorElement);
             }
         }
 
@@ -262,6 +267,14 @@
             },
 
             destroy: function() {
+
+                // Stop observing first - a resize callback pending at this point
+                // must never run against an editor that no longer exists.
+                if (resizeObserver) {
+                    resizeObserver.disconnect();
+                    resizeObserver = null;
+                }
+
                 editor.destroy();
                 $container.empty();
             }

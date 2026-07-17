@@ -184,6 +184,12 @@ class PGIdentifierPreparer_pg8000(PGIdentifierPreparer):
 class PGDialect_pg8000(PGDialect):
     driver = "pg8000"
 
+    # This dialect embeds nothing execution-specific in compiled SQL - its compiler only
+    # escapes percent signs and handles the modulo operator, both deterministic per statement -
+    # so compiled statements are safe to cache, same as in the dialect SQLAlchemy 1.4 ships
+    # for the newer pg8000 releases.
+    supports_statement_cache = True
+
     supports_unicode_statements = True
 
     supports_unicode_binds = True
