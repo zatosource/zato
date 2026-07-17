@@ -179,8 +179,15 @@ def test_analytics_views(tmp_path:'os.PathLike') -> 'None':
         assert top_consumers[2]['name'] == Caller_Anonymous
         assert top_consumers[2]['request_count'] == 5
 
-        # .. each ranked row carries a sparkline ..
-        assert top_channels[0]['spark'] == [110, 25]
+        # .. each ranked row carries a sparkline spanning every hour of the window,
+        # with zeros for the hours the channel saw no traffic - the day window
+        # of _now covers 25 hourly points, 2026-07-15T12 through 2026-07-16T12 ..
+        expected_spark_a = [0] * 22 + [110, 25, 0]
+        assert top_channels[0]['spark'] == expected_spark_a
+
+        # .. including channels active in a single hour only ..
+        expected_spark_b = [0] * 23 + [50, 0]
+        assert top_channels[1]['spark'] == expected_spark_b
 
         # .. and the timeline splits each period into its ok and error series.
         timeline = overview['timeline']

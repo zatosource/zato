@@ -13,9 +13,11 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponseServerError, JsonResponse
+from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import SearchForm
 from zato.admin.web.views import method_allowed
 from zato.common.json_internal import dumps
 
@@ -63,14 +65,25 @@ def get_tier_list(req): # type: ignore
 @method_allowed('GET')
 def index(req): # type: ignore
 
+    # Links from other pages use this parameter to land directly in the tier editor
+    if req.GET.get('create'):
+        return redirect('/zato/security/tier/create/?cluster={}'.format(req.zato.cluster_id))
+
     tier_list = get_tier_list(req)
 
     for tier in tier_list:
         tier['limits_summary'] = _get_limits_summary(tier['rules'])
 
+    query = req.GET.get('query', '').strip().lower()
+    if query:
+        tier_list = [tier for tier in tier_list
+            if query in tier['name'].lower() or query in (tier['description'] or '').lower()]
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'tier_list': tier_list,
+        'search_form': SearchForm(req.zato.clusters, req.GET),
+        'show_search_form': True,
     }
 
     return TemplateResponse(req, 'zato/security/tier.html', return_data)

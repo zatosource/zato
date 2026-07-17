@@ -12,6 +12,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
+from logging import getLogger
+from time import perf_counter
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -42,6 +44,11 @@ if 0:
 #  Type aliases
 entity_state_dict = dict[str, '_EntityState']
 period_count_dict = dict[str, int]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -247,11 +254,18 @@ def _load_rows(cutoff_period:'str', channel:'str'='', caller:'strnone'=None) -> 
     statement = statement.where(*conditions)
     statement = statement.order_by(usage_table.c.period)
 
+    diag_start = perf_counter()
     engine = get_analytics_engine()
+    diag_engine = perf_counter()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
         out = result.fetchall()
+
+    diag_done = perf_counter()
+
+    logger.warning('Analytics-Diag: _load_rows cutoff=%s channel=%r caller=%r -> rows=%d engine=%.1fms query=%.1fms',
+        cutoff_period, channel, caller, len(out), (diag_engine - diag_start) * 1000, (diag_done - diag_engine) * 1000)
 
     return out
 
@@ -301,20 +315,37 @@ def _build_timeline(period_counts:'period_count_dict', period_errors:'period_cou
 
 # ################################################################################################################################
 
-def _build_spark(period_counts:'period_count_dict', cutoff_period:'str') -> 'intlist':
-    """ Turns per-period counts into a short list of sparkline points, at most
-    _spark_max_points long, by summing hourly chunks of the window.
+def get_window_periods(now:'datetime', cutoff_period:'str') -> 'strlist':
+    """ Returns every hourly period of the window, from the cutoff up to now, inclusive.
     """
-    periods:'strlist' = []
+    now_period = now.isoformat()[:Period_Len]
+    when = datetime.fromisoformat(cutoff_period)
 
-    for period in sorted(period_counts):
-        if period >= cutoff_period:
-            periods.append(period)
+    # Our response to produce
+    out:'strlist' = []
 
-    period_len = len(periods)
+    while True:
 
-    if not period_len:
-        return []
+        period = when.isoformat()[:Period_Len]
+
+        if period > now_period:
+            break
+
+        out.append(period)
+        when = when + timedelta(hours=1)
+
+    return out
+
+# ################################################################################################################################
+
+def _build_spark(period_counts:'period_count_dict', window_periods:'strlist') -> 'intlist':
+    """ Turns per-period counts into a short list of sparkline points, at most
+    _spark_max_points long, by summing hourly chunks of the window. Every hour
+    of the window contributes a point - hours without traffic count as zero -
+    so each entity's trend spans the whole window rather than only the hours
+    it happened to be seen in.
+    """
+    period_len = len(window_periods)
 
     # How many hourly points one sparkline point covers
     chunk_size = 1
@@ -329,8 +360,8 @@ def _build_spark(period_counts:'period_count_dict', cutoff_period:'str') -> 'int
 
         chunk_sum = 0
 
-        for period in periods[start:start + chunk_size]:
-            chunk_sum += period_counts[period]
+        for period in window_periods[start:start + chunk_size]:
+            chunk_sum += period_counts.get(period, 0)
 
         out.append(chunk_sum)
 
@@ -349,6 +380,11 @@ def _fold_rows(rows:'anylist', cutoff_period:'str', group_by_channel:'bool') -> 
 
     entities:'entity_state_dict' = {}
 
+    diag_start = perf_counter()
+    diag_loads_time = 0.0
+    diag_loads_count = 0
+    diag_skipped_count = 0
+
     for period, source, channel, caller, request_count, error_count_auth, error_count_rate_limit, \
         error_count_upstream, error_count_gateway, size_sum, duration_sum_ms, latency_buckets_json in rows:
 
@@ -361,9 +397,13 @@ def _fold_rows(rows:'anylist', cutoff_period:'str', group_by_channel:'bool') -> 
 
         # Rows before the cutoff only feed the baseline
         if period < cutoff_period:
+            diag_skipped_count += 1
             continue
 
+        diag_loads_start = perf_counter()
         latency_buckets = loads(latency_buckets_json)
+        diag_loads_time += perf_counter() - diag_loads_start
+        diag_loads_count += 1
 
         totals.add_row(period, request_count, error_count, size_sum, duration_sum_ms, latency_buckets)
 
@@ -385,6 +425,11 @@ def _fold_rows(rows:'anylist', cutoff_period:'str', group_by_channel:'bool') -> 
         entity.related.add(related_name)
 
         totals.related.add(related_name)
+
+    logger.warning('Analytics-Diag: _fold_rows rows=%d skipped_before_cutoff=%d entities=%d ' \
+        'json_loads_calls=%d json_loads=%.1fms total=%.1fms',
+        len(rows), diag_skipped_count, len(entities), diag_loads_count, diag_loads_time * 1000,
+        (perf_counter() - diag_start) * 1000)
 
     out = totals, extended_counts, entities
     return out
@@ -443,7 +488,7 @@ def _get_anomalies(extended_counts:'period_count_dict', cutoff_period:'str') -> 
 
 # ################################################################################################################################
 
-def _build_entity_rows(entities:'entity_state_dict', cutoff_period:'str', top_count:'int'=0) -> 'anylist':
+def _build_entity_rows(entities:'entity_state_dict', window_periods:'strlist', top_count:'int'=0) -> 'anylist':
     """ Turns per-entity states into the table rows of a screen, ranked by traffic,
     optionally cut down to the busiest few.
     """
@@ -467,7 +512,7 @@ def _build_entity_rows(entities:'entity_state_dict', cutoff_period:'str', top_co
         error_rate = _error_rate(entity.request_count, entity.error_count)
         p95_ms = get_percentile(entity.latency_buckets, _p95_quantile)
         related_count = len(entity.related)
-        spark = _build_spark(entity.period_counts, cutoff_period)
+        spark = _build_spark(entity.period_counts, window_periods)
 
         row = {
             'name': name,
@@ -494,6 +539,7 @@ def _get_screen_data(now:'datetime', time_range:'str', channel:'str', caller:'st
     folds the rows and shapes the result the way the screens and their CSVs expect.
     """
     cutoff_period = get_range_cutoff(now, time_range)
+    window_periods = get_window_periods(now, cutoff_period)
 
     # The baseline of the anomaly marker needs earlier weeks too
     baseline_weeks_hours = Baseline_Weeks * Hours_Per_Week
@@ -501,19 +547,42 @@ def _get_screen_data(now:'datetime', time_range:'str', channel:'str', caller:'st
     baseline_cutoff = now - timedelta(hours=baseline_hours)
     baseline_cutoff_period = baseline_cutoff.isoformat()[:Period_Len]
 
+    diag_start = perf_counter()
+
     rows = _load_rows(baseline_cutoff_period, channel, caller)
+    diag_loaded = perf_counter()
 
     totals, extended_counts, entities = _fold_rows(rows, cutoff_period, group_by_channel)
+    diag_folded = perf_counter()
 
     anomalies = _get_anomalies(extended_counts, cutoff_period)
+    diag_anomalies = perf_counter()
+
     timeline = _build_timeline(totals.period_counts, totals.period_errors, anomalies, cutoff_period)
+    diag_timeline = perf_counter()
+
+    entity_rows = _build_entity_rows(entities, window_periods, top_count)
+    diag_entity_rows = perf_counter()
+
+    logger.warning(
+        'Analytics-Diag: _get_screen_data range=%s channel=%r caller=%r group_by_channel=%s top_count=%d | ' \
+        'rows=%d entities=%d timeline=%d window_periods=%d entity_rows=%d | ' \
+        'load=%.1fms fold=%.1fms anomalies=%.1fms timeline=%.1fms entity_rows=%.1fms total=%.1fms',
+        time_range, channel, caller, group_by_channel, top_count,
+        len(rows), len(entities), len(timeline), len(window_periods), len(entity_rows),
+        (diag_loaded - diag_start) * 1000,
+        (diag_folded - diag_loaded) * 1000,
+        (diag_anomalies - diag_folded) * 1000,
+        (diag_timeline - diag_anomalies) * 1000,
+        (diag_entity_rows - diag_timeline) * 1000,
+        (diag_entity_rows - diag_start) * 1000)
 
     out = {
         'time_range': time_range,
         'cutoff_period': cutoff_period,
         'totals': _build_totals(totals),
         'timeline': timeline,
-        'rows': _build_entity_rows(entities, cutoff_period, top_count),
+        'rows': entity_rows,
     }
 
     return out

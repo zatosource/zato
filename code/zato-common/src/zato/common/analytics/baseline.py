@@ -14,7 +14,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
+from logging import getLogger
 from statistics import median
+from time import perf_counter
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +83,8 @@ def get_anomaly_periods(series:'period_value_dict', periods_to_check:'strlist') 
     # Our response to produce
     out:'period_set' = set()
 
+    diag_start = perf_counter()
+
     # Group the whole series by hour of the week, keeping each group sorted by period,
     # so the history of any point is a slice of its own group.
     groups:'dict[int, list]' = {}
@@ -91,6 +100,8 @@ def get_anomaly_periods(series:'period_value_dict', periods_to_check:'strlist') 
 
         value = series[period]
         group.append((period, value))
+
+    diag_grouped = perf_counter()
 
     for period in periods_to_check:
 
@@ -136,6 +147,13 @@ def get_anomaly_periods(series:'period_value_dict', periods_to_check:'strlist') 
 
         if deviation > band:
             out.add(period)
+
+    diag_done = perf_counter()
+
+    logger.warning('Analytics-Diag: get_anomaly_periods series=%d checked=%d groups=%d anomalies=%d ' \
+        'group_build=%.1fms check=%.1fms total=%.1fms',
+        len(series), len(periods_to_check), len(groups), len(out),
+        (diag_grouped - diag_start) * 1000, (diag_done - diag_grouped) * 1000, (diag_done - diag_start) * 1000)
 
     return out
 

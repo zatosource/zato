@@ -141,9 +141,22 @@ $.fn.zato.analytics.dashboard.range_names = {
     dash.render = function(data) {
         dash.last_data = data;
 
+        var diag_start = performance.now();
+
         dash.render_tiles(data);
+        var diag_tiles = performance.now();
+
         dash.chart.render(data.timeline);
+        var diag_chart = performance.now();
+
         dash.render_tables(data);
+        var diag_tables = performance.now();
+
+        console.log('[Analytics-Diag] render: timeline=' + data.timeline.length +
+            ' tiles=' + (diag_tiles - diag_start).toFixed(1) + 'ms' +
+            ' chart=' + (diag_chart - diag_tiles).toFixed(1) + 'ms' +
+            ' tables=' + (diag_tables - diag_chart).toFixed(1) + 'ms' +
+            ' total=' + (diag_tables - diag_start).toFixed(1) + 'ms');
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -161,10 +174,15 @@ $.fn.zato.analytics.dashboard.range_names = {
             contentType: 'application/json',
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function(data) {
+                var diag_start = performance.now();
                 if (typeof data === 'string') {
                     data = JSON.parse(data);
                 }
+                var diag_parsed = performance.now();
                 dash.render(data);
+
+                console.log('[Analytics-Diag] poll: parse=' + (diag_parsed - diag_start).toFixed(1) + 'ms' +
+                    ' render=' + (performance.now() - diag_parsed).toFixed(1) + 'ms');
             }
         });
     };
@@ -294,13 +312,20 @@ $.fn.zato.analytics.dashboard.range_names = {
     dash.init = function(initial_data) {
         kit = $.fn.zato.dashboard_kit;
 
+        var diag_start = performance.now();
+
         dash.setup_chart();
         dash.setup_time_range();
         dash.setup_copy();
 
         $('#analytics-csv-pill').attr('href', dash.csv_href());
 
+        var diag_setup = performance.now();
+
         dash.render(initial_data);
+
+        console.log('[Analytics-Diag] init: setup=' + (diag_setup - diag_start).toFixed(1) + 'ms' +
+            ' initial_render=' + (performance.now() - diag_setup).toFixed(1) + 'ms');
 
         dash.auto_refresh = kit.auto_refresh.init({
             pill: '#dashboard-refresh-pill',

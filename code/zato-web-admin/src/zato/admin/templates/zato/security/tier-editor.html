@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Quota tier - {{ tier_name }}{% endblock %}
+{% block html_title %}Quota tier - {% if tier_name %}{{ tier_name }}{% else %}Create a new tier{% endif %}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
@@ -30,11 +30,11 @@
 <!-- screenshot: quota-tier-editor.webp - The quota tier editor with name, description and the rate-limiting rule builder -->
 
 <div id="markup">
-<h2 class="zato">Quota tier | <a href="/zato/security/tier/?cluster={{ cluster_id }}">Quota tiers</a> | {{ tier_name }}</h2>
+<h2 class="zato">Quota tier | <a href="/zato/security/tier/?cluster={{ cluster_id }}">Quota tiers</a> | {% if tier_name %}{{ tier_name }}{% else %}Create a new tier{% endif %}</h2>
 
-<table class="form-data">
+<table class="rate-limiting-form">
     <tr>
-        <td style="vertical-align:middle;width:10%">
+        <td class="rate-limiting-form-label">
             <label for="tier-name">Name</label>
         </td>
         <td>
@@ -42,7 +42,7 @@
         </td>
     </tr>
     <tr>
-        <td style="vertical-align:middle;width:10%">
+        <td class="rate-limiting-form-label">
             <label for="tier-description">Description</label>
         </td>
         <td>
