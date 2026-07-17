@@ -14,6 +14,7 @@ from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import method_allowed
 from zato.common.audit_log.api import Retention_Days
 from zato.common.audit_log.reports import Default_Range, Range_Day, Range_Hours, Range_Month, Range_Week
@@ -68,6 +69,15 @@ def _get_report_filters(req:'any_') -> 'any_':
 
 # ################################################################################################################################
 
+def _convert_row_times(rows:'any_', user_profile:'any_') -> 'None':
+    """ Converts the UTC call times of each usage row to the user's timezone.
+    """
+    for row in rows:
+        row.first_call = from_utc_to_user(row.first_call, user_profile)
+        row.last_call = from_utc_to_user(row.last_call, user_profile)
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
     """ The channel usage page - who calls which channel and how often, over the data
@@ -80,6 +90,9 @@ def index(req:'any_') -> 'TemplateResponse':
     now = utcnow()
 
     rows = get_usage(now, time_range, channel)
+
+    # The audit log stores UTC times - the page shows them in the user's timezone
+    _convert_row_times(rows, req.zato.user_profile)
 
     # What the channel filter's dropdown lists
     channels = get_channel_list()
@@ -116,6 +129,9 @@ def index_csv(req:'any_') -> 'HttpResponse':
     now = utcnow()
 
     rows = get_usage(now, time_range, channel)
+
+    # The audit log stores UTC times - the CSV shows them in the user's timezone too
+    _convert_row_times(rows, req.zato.user_profile)
 
     content = usage_csv(rows)
     content_bytes = content.encode('utf-8')

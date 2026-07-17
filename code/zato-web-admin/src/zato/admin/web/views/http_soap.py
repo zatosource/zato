@@ -643,6 +643,7 @@ def response_caching(req:'any_', id:'str') -> 'TemplateResponse':
         'channel_name': response.data.name,
         'channel_url_path': response.data.url_path,
         'transport': response.data.transport,
+        'config': config_response.data.response_cache,
         'config_json': dumps(config_response.data.response_cache),
         'zato_template_name': 'zato/http_soap/response-caching.html',
     }

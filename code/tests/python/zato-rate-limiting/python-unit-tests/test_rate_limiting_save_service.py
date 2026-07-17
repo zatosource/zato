@@ -13,6 +13,7 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.broker_message import CHANNEL
+from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
 from zato.common.rate_limiting.common import RateLimitError, Window_Unit_Second
 from zato.server.service.internal.http_soap import RateLimitingSave
@@ -49,10 +50,11 @@ def _make_service(channel_id, rules, existing_opaque=None):
     service = object.__new__(RateLimitingSave)
 
     service.request = MagicMock()
-    service.request.input = {
+    service.request.input = Bunch({
         'id': str(channel_id),
         'rules_json': dumps(rules),
-    }
+        'quota_tier': '',
+    })
 
     # A simple namespace to hold opaque1 as a plain attribute
     mock_item = type('MockItem', (), {'opaque1': dumps(existing_opaque) if existing_opaque is not None else None})()

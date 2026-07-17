@@ -32,7 +32,7 @@
 
         <div class="response-caching-row">
             <span class="response-caching-label">Enabled</span>
-            <input type="checkbox" id="response-caching-is-enabled" />
+            <input type="checkbox" id="response-caching-is-enabled" {% if config.is_enabled %}checked{% endif %} />
         </div>
 
         <div class="response-caching-row">
@@ -47,19 +47,19 @@
 
         <div class="response-caching-row">
             <span class="response-caching-label">Cache on second request</span>
-            <input type="checkbox" id="response-caching-cache-on-second-request" />
+            <input type="checkbox" id="response-caching-cache-on-second-request" {% if config.cache_on_second_request %}checked{% endif %} />
             <span class="response-caching-hint">Store a response only once its request repeats</span>
         </div>
 
         <div class="response-caching-row">
             <span class="response-caching-label">Shared across callers</span>
-            <input type="checkbox" id="response-caching-is-shared-across-callers" />
+            <input type="checkbox" id="response-caching-is-shared-across-callers" {% if config.is_shared_across_callers %}checked{% endif %} />
             <span class="response-caching-hint">All callers share one cached response per request</span>
         </div>
 
         <div class="response-caching-row">
             <span class="response-caching-label">Include body in key</span>
-            <input type="checkbox" id="response-caching-include-body-in-key" />
+            <input type="checkbox" id="response-caching-include-body-in-key" {% if transport == 'soap' or config.include_body_in_key %}checked{% endif %}{% if transport == 'soap' %} disabled{% endif %} />
             <span class="response-caching-hint">Lets POST requests be cached, always on for SOAP</span>
         </div>
 
@@ -80,7 +80,7 @@
 
         <div class="response-caching-row">
             <span class="response-caching-label">ETag support</span>
-            <input type="checkbox" id="response-caching-needs-etag" />
+            <input type="checkbox" id="response-caching-needs-etag" {% if config.needs_etag %}checked{% endif %} />
             <span class="response-caching-hint">Return 304 Not Modified when If-None-Match matches</span>
         </div>
 
