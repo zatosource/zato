@@ -24,6 +24,10 @@ $(document).ready(function() {
         'ping_method',
     ]);
 
+    // .. the default 40em dialog is too narrow for all the tabs, widen both popups ..
+    $('#create-div').dialog('option', 'width', $.fn.zato.outgoing.soap.config.dialog_width);
+    $('#edit-div').dialog('option', 'width', $.fn.zato.outgoing.soap.config.dialog_width);
+
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.outgoing.soap.before_submit_hook;
 
     // .. removing a body-credential mapping row ..
@@ -73,6 +77,10 @@ $(document).ready(function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.soap.config = {
+    dialog_width: '55em'
+};
+
 $.fn.zato.outgoing.soap.tab_labels = {
     main:         'Main',
     soap:         'SOAP',
@@ -82,8 +90,7 @@ $.fn.zato.outgoing.soap.tab_labels = {
     request:      'Request',
     response:     'Response',
     callback:     'Callback',
-    health_check: 'Health check',
-    more:         'More'
+    health_check: 'Health check'
 };
 
 $.fn.zato.outgoing.soap._reset_tabs = function(action) {
@@ -358,7 +365,7 @@ $.fn.zato.outgoing.soap.field_descriptions = {
     // Body credentials tab
     'id_body_credentials': 'Credentials from the security definition injected<br>into the message body, for endpoints that expect<br>them there rather than in a header.<br>Each mapping is an element name with an optional<br>position among the body\'s child elements.',
 
-    // More tab
+    // More options in the main tab
     'id_ping_method': 'HTTP method used when pinging<br>the connection, e.g. HEAD or GET.',
     'id_content_type': 'Overrides the default Content-Type header.<br>Leave empty to use the default matching<br>the SOAP version selected.',
 
