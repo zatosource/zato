@@ -8,11 +8,13 @@ log_cli = true
 log_cli_level = "DEBUG"
 log_cli_format = "%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+# Only third-party warnings may be listed here - anything our own code emits is fixed at the source instead
 filterwarnings = [
     "ignore:'urllib3\\[secure\\]' extra is deprecated:DeprecationWarning",
     "ignore:pkg_resources is deprecated as an API:UserWarning",
+    "ignore:Deprecated call to `pkg_resources.declare_namespace\\('(fs|fs.opener|ndg|paste)'\\):DeprecationWarning",
     "ignore:'crypt' is deprecated:DeprecationWarning",
+    "ignore:'urllib3.contrib.pyopenssl' module is deprecated:DeprecationWarning",
     "ignore:distutils Version classes are deprecated:DeprecationWarning",
-    "ignore:Dialect postgresql.pg8000 will not make use of SQL compilation caching:sqlalchemy.exc.SAWarning",
     "ignore:Unverified HTTPS request is being made:urllib3.exceptions.InsecureRequestWarning",
 ]

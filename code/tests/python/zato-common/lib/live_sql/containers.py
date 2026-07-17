@@ -49,6 +49,9 @@ class ModuleCtx:
     # How long to sleep between connection attempts
     Ready_Sleep = 1
 
+    # After how many connection attempts the wait reports its progress
+    Ready_Report_Every = 10
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -78,6 +81,7 @@ def _wait_until_ready(engine_url:'str', connect_args:'stranydict') -> 'None':
     """
     deadline = time() + ModuleCtx.Ready_Timeout
     last_error = ''
+    attempt_count = 0
 
     while time() < deadline:
         engine = create_engine(engine_url, connect_args=connect_args, poolclass=NullPool)
@@ -89,6 +93,14 @@ def _wait_until_ready(engine_url:'str', connect_args:'stranydict') -> 'None':
         except Exception as e:
             last_error = str(e)
             engine.dispose()
+
+            # Databases take a while to initialize on their first start,
+            # so a long wait reports that it is still alive and what it last saw.
+            attempt_count += 1
+
+            if attempt_count % ModuleCtx.Ready_Report_Every == 0:
+                print(f'Still waiting for the database, attempt {attempt_count}, last error: {last_error}', flush=True)
+
             sleep(ModuleCtx.Ready_Sleep)
 
     raise Exception(f'Database at {engine_url} did not become ready, last error: {last_error}')
@@ -150,6 +162,10 @@ def start_mysql(
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
 
+    # Starting a container is silent and can take a while, e.g. when the image needs to be pulled first,
+    # which is why each phase reports itself.
+    print(f'Starting MySQL container {container_name} on port {port}', flush=True)
+
     _remove_stale_container(container_name)
 
     command:'strlist' = [
@@ -185,7 +201,9 @@ def start_mysql(
     else:
         connect_args = {}
 
+    print(f'Waiting for MySQL container {container_name} to accept connections', flush=True)
     _wait_until_ready(engine_url, connect_args)
+    print(f'MySQL container {container_name} is ready', flush=True)
 
     details = _base_details(ModuleCtx.Type_MySQL, port, username, password, db_name)
 
@@ -211,6 +229,10 @@ def start_postgresql(
     Certificates are always given when needs_ssl is True and they are dereferenced only then.
     """
     ssl_certificates:'CertificatePaths' = cast_('CertificatePaths', certificates)
+
+    # Starting a container is silent and can take a while, e.g. when the image needs to be pulled first,
+    # which is why each phase reports itself.
+    print(f'Starting PostgreSQL container {container_name} on port {port}', flush=True)
 
     _remove_stale_container(container_name)
 
@@ -244,7 +266,9 @@ def start_postgresql(
     else:
         connect_args = {}
 
+    print(f'Waiting for PostgreSQL container {container_name} to accept connections', flush=True)
     _wait_until_ready(engine_url, connect_args)
+    print(f'PostgreSQL container {container_name} is ready', flush=True)
 
     details = _base_details(ModuleCtx.Type_PostgreSQL, port, username, password, db_name)
 

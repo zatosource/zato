@@ -170,7 +170,7 @@ def main() -> 'None':
 
         for backend_name in _backend_names:
 
-            print(f'Audit log matrix: running against {backend_name}')
+            print(f'Audit log matrix: running against {backend_name}', flush=True)
 
             env = dict(os.environ)
             env['ZATO_TEST_BASE_DIR'] = _base_dir
@@ -181,14 +181,14 @@ def main() -> 'None':
 
             if unit_return_code:
                 failed.append(f'{backend_name} (unit)')
-                print(f'Audit log matrix: {backend_name} unit tests failed with code {unit_return_code}')
+                print(f'Audit log matrix: {backend_name} unit tests failed with code {unit_return_code}', flush=True)
 
             # .. while the UI tests spawn their own server and dashboard which inherit the variables.
             ui_return_code = _run_ui_tests(env)
 
             if ui_return_code:
                 failed.append(f'{backend_name} (ui)')
-                print(f'Audit log matrix: {backend_name} UI tests failed with code {ui_return_code}')
+                print(f'Audit log matrix: {backend_name} UI tests failed with code {ui_return_code}', flush=True)
 
     finally:
 
@@ -201,10 +201,10 @@ def main() -> 'None':
 
     if failed:
         failed_names = ', '.join(failed)
-        print(f'Audit log matrix: failed backends: {failed_names}')
+        print(f'Audit log matrix: failed backends: {failed_names}', flush=True)
         sys.exit(1)
 
-    print('Audit log matrix: all backends passed')
+    print('Audit log matrix: all backends passed', flush=True)
 
 # ################################################################################################################################
 
