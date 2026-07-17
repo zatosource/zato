@@ -198,9 +198,11 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'is_deprecated' in options:
         page.set_checked(f'#id_{prefix}is_deprecated', options['is_deprecated'])
 
-    # .. the day the deprecated channel will be retired ..
+    # .. the day the deprecated channel will be retired - set via JS because focusing
+    # the field would pop up its date-time picker over the rest of the form ..
     if 'deprecation_sunset' in options:
-        page.fill(f'#id_{prefix}deprecation_sunset', options['deprecation_sunset'])
+        sunset_date = options['deprecation_sunset']
+        _ = page.evaluate(f'$("#id_{prefix}deprecation_sunset").val("{sunset_date}")')
 
     # .. and the URL path of its replacement.
     if 'deprecation_successor' in options:
