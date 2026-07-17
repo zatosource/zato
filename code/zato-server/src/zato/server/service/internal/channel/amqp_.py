@@ -14,6 +14,7 @@ from traceback import format_exc
 from zato.common.api import query_parameters
 from zato.common.broker_message import CHANNEL
 from zato.common.exception import ServiceMissingException
+from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelAMQP, Cluster, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService
@@ -26,12 +27,16 @@ class GetList(AdminService):
     name = 'zato.channel.amqp.get-list'
     _filter_by = ChannelAMQP.name,
 
-    input = 'cluster_id', *query_parameters
+    input = 'cluster_id', '-subtype', *query_parameters
     output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix', \
         'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
 
     def get_data(self, session):
-        return self._search(channel_amqp_list, session, self.request.input.cluster_id, False)
+
+        # Without a subtype on input, channels of all the subtypes are returned
+        subtype = self.request.input.subtype or None
+
+        return self._search(channel_amqp_list, session, self.request.input.cluster_id, subtype, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -45,7 +50,7 @@ class Create(AdminService):
     name = 'zato.channel.amqp.create'
 
     input = 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', \
-        'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
+        'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format', '-subtype'
     output = 'id', 'name'
 
     def handle(self):
@@ -96,6 +101,10 @@ class Create(AdminService):
                 item.frame_max = input.frame_max # type: ignore
                 item.heartbeat = input.heartbeat # type: ignore
 
+                # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
+                if input.subtype:
+                    item.opaque1 = dumps({'subtype': input.subtype})
+
                 session.add(item)
                 session.commit()
 
@@ -121,7 +130,7 @@ class Edit(AdminService):
     name = 'zato.channel.amqp.edit'
 
     input = 'id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', \
-        'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format'
+        'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format', '-subtype'
     output = 'id', 'name'
 
     def handle(self):
@@ -168,6 +177,10 @@ class Edit(AdminService):
                 item.ack_mode = input.ack_mode
                 item.prefetch_count = input.prefetch_count
                 item.data_format = input.data_format
+
+                # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
+                if input.subtype:
+                    item.opaque1 = dumps({'subtype': input.subtype})
 
                 session.add(item)
                 session.commit()

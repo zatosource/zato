@@ -49,6 +49,9 @@ _More_Options_Select_Fields = ('url_params_pri', 'params_pri')
 # Checkbox fields inside the "More options" block
 _More_Options_Checkbox_Fields = ('merge_url_params_req', 'match_slash')
 
+# Fields inside the "API versioning" block
+_Api_Versioning_Fields = ('is_deprecated', 'deprecation_sunset', 'deprecation_successor')
+
 # ################################################################################################################################
 # ################################################################################################################################
 #
@@ -194,20 +197,6 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
     if 'should_include_in_openapi' in options:
         page.set_checked(f'#id_{prefix}should_include_in_openapi', options['should_include_in_openapi'])
 
-    # .. the deprecation checkbox, shown for REST channels only ..
-    if 'is_deprecated' in options:
-        page.set_checked(f'#id_{prefix}is_deprecated', options['is_deprecated'])
-
-    # .. the day the deprecated channel will be retired - set via JS because focusing
-    # the field would pop up its date-time picker over the rest of the form ..
-    if 'deprecation_sunset' in options:
-        sunset_date = options['deprecation_sunset']
-        _ = page.evaluate(f'$("#id_{prefix}deprecation_sunset").val("{sunset_date}")')
-
-    # .. and the URL path of its replacement.
-    if 'deprecation_successor' in options:
-        page.fill(f'#id_{prefix}deprecation_successor', options['deprecation_successor'])
-
     # .. the audit log checkbox ..
     if 'is_audit_log_active' in options:
         page.set_checked(f'#id_{prefix}is_audit_log_active', options['is_audit_log_active'])
@@ -226,8 +215,45 @@ def fill_channel_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None'
         for group_name in options['security_groups_uncheck']:
             check_security_group(page, dialog_id, group_name, should_check=False)
 
+    # .. everything under "API versioning" ..
+    _fill_api_versioning(page, options, prefix, dialog_id)
+
     # .. and everything under "More options".
     _fill_more_options(page, options, prefix, dialog_id)
+
+# ################################################################################################################################
+
+def _fill_api_versioning(page:'Page', options:'anydict', prefix:'str', dialog_id:'str') -> 'None':
+    """ Fills the fields hidden in the "API versioning" block if any of them is present in options.
+    """
+
+    # Check whether any of the block's fields was requested at all ..
+    needs_block = False
+
+    for field_name in _Api_Versioning_Fields:
+        if field_name in options:
+            needs_block = True
+            break
+
+    if not needs_block:
+        return
+
+    # .. reveal the block so Playwright can interact with the fields ..
+    _ensure_block_visible(page, dialog_id, 'api-versioning-block', f'#id_{prefix}deprecation_successor')
+
+    # .. the deprecation checkbox ..
+    if 'is_deprecated' in options:
+        page.set_checked(f'#id_{prefix}is_deprecated', options['is_deprecated'])
+
+    # .. the day the deprecated channel will be retired - set via JS because focusing
+    # the field would pop up its date-time picker over the rest of the form ..
+    if 'deprecation_sunset' in options:
+        sunset_date = options['deprecation_sunset']
+        _ = page.evaluate(f'$("#id_{prefix}deprecation_sunset").val("{sunset_date}")')
+
+    # .. and the URL path of its replacement.
+    if 'deprecation_successor' in options:
+        page.fill(f'#id_{prefix}deprecation_successor', options['deprecation_successor'])
 
 # ################################################################################################################################
 

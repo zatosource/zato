@@ -44,9 +44,12 @@ class _object_type:
     Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
     Search_ElasticSearch = 'elastic_search'       #
 
-    # Channel_AMQP = 'channel_amqp'               #
+    Channel_AMQP = 'channel_amqp'                 #
+    Outgoing_AMQP = 'outgoing_amqp'               #
+    Channel_Azure_Service_Bus = 'channel_azure_service_bus'   #
+    Outgoing_Azure_Service_Bus = 'outgoing_azure_service_bus' #
+
     # Channel_WebSockets = 'channel_websockets'   #
-    # Outgoing_AMQP = 'outgoing_amqp'             #
     # Outgoing_WebSockets = 'outgoing_websockets' #
     # PubSub_Topic = 'pubsub_topic'               #
 

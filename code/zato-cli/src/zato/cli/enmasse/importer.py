@@ -34,6 +34,7 @@ from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
 from zato.cli.enmasse.importers.outgoing_hl7_mllp import OutgoingHL7MLLPImporter
 from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
+from zato.cli.enmasse.importers.amqp import ChannelAMQPImporter, OutgoingAMQPImporter
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
@@ -84,6 +85,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.channel_hl7_mllp',
                         'zato.cli.enmasse.importers.outgoing_hl7_mllp',
                         'zato.cli.enmasse.importers.graphql',
+                        'zato.cli.enmasse.importers.amqp',
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.as2',
@@ -175,6 +177,10 @@ class EnmasseYAMLImporter:
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
         self.outgoing_hl7_mllp_importer = OutgoingHL7MLLPImporter(self)
         self.channel_ibm_mq_importer = ChannelIBMMQImporter(self)
+        self.channel_amqp_importer = ChannelAMQPImporter(self, 'amqp')
+        self.outgoing_amqp_importer = OutgoingAMQPImporter(self, 'amqp')
+        self.channel_azure_service_bus_importer = ChannelAMQPImporter(self, 'azure-service-bus')
+        self.outgoing_azure_service_bus_importer = OutgoingAMQPImporter(self, 'azure-service-bus')
         self.channel_kafka_importer = ChannelKafkaImporter(self)
         self.gateway_mcp_importer = GatewayMCPImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
@@ -725,6 +731,63 @@ class EnmasseYAMLImporter:
         self.sap_defs = self.sap_importer.connection_defs
 
         return sap_created, sap_updated
+
+# ################################################################################################################################
+
+    def _sync_channel_amqp_impl(self, item_list:'list', session:'SASession', importer:'ChannelAMQPImporter') -> 'tuple':
+        """ Synchronizes channel definitions of one AMQP subtype from a YAML configuration with the database.
+        """
+        if not item_list:
+            return [], []
+
+        items_created, items_updated = importer.sync_channel_definitions(item_list, session)
+
+        return items_created, items_updated
+
+# ################################################################################################################################
+
+    def _sync_outgoing_amqp_impl(self, item_list:'list', session:'SASession', importer:'OutgoingAMQPImporter') -> 'tuple':
+        """ Synchronizes outgoing connection definitions of one AMQP subtype from a YAML configuration with the database.
+        """
+        if not item_list:
+            return [], []
+
+        items_created, items_updated = importer.sync_connection_definitions(item_list, session)
+
+        return items_created, items_updated
+
+# ################################################################################################################################
+
+    def sync_channel_amqp(self, item_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes AMQP channel definitions from a YAML configuration with the database.
+        """
+        items_created, items_updated = self._sync_channel_amqp_impl(item_list, session, self.channel_amqp_importer)
+        return items_created, items_updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_amqp(self, item_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes outgoing AMQP connection definitions from a YAML configuration with the database.
+        """
+        items_created, items_updated = self._sync_outgoing_amqp_impl(item_list, session, self.outgoing_amqp_importer)
+        return items_created, items_updated
+
+# ################################################################################################################################
+
+    def sync_channel_azure_service_bus(self, item_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Azure Service Bus channel definitions from a YAML configuration with the database.
+        """
+        items_created, items_updated = self._sync_channel_amqp_impl(item_list, session, self.channel_azure_service_bus_importer)
+        return items_created, items_updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_azure_service_bus(self, item_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes outgoing Azure Service Bus connection definitions from a YAML configuration with the database.
+        """
+        items_created, items_updated = self._sync_outgoing_amqp_impl(
+            item_list, session, self.outgoing_azure_service_bus_importer)
+        return items_created, items_updated
 
 # ################################################################################################################################
 
@@ -1369,6 +1432,38 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_ibm_mq'] = outgoing_ibm_mq_created
         if outgoing_ibm_mq_updated:
             self.updated_objects['outgoing_ibm_mq'] = outgoing_ibm_mq_updated
+
+        # Process AMQP channel definitions
+        channel_amqp_list = yaml_config.get('channel_amqp', [])
+        channel_amqp_created, channel_amqp_updated = self.sync_channel_amqp(channel_amqp_list, session)
+        if channel_amqp_created:
+            self.created_objects['channel_amqp'] = channel_amqp_created
+        if channel_amqp_updated:
+            self.updated_objects['channel_amqp'] = channel_amqp_updated
+
+        # Process AMQP outgoing definitions
+        outgoing_amqp_list = yaml_config.get('outgoing_amqp', [])
+        outgoing_amqp_created, outgoing_amqp_updated = self.sync_outgoing_amqp(outgoing_amqp_list, session)
+        if outgoing_amqp_created:
+            self.created_objects['outgoing_amqp'] = outgoing_amqp_created
+        if outgoing_amqp_updated:
+            self.updated_objects['outgoing_amqp'] = outgoing_amqp_updated
+
+        # Process Azure Service Bus channel definitions
+        channel_azure_list = yaml_config.get('channel_azure_service_bus', [])
+        channel_azure_created, channel_azure_updated = self.sync_channel_azure_service_bus(channel_azure_list, session)
+        if channel_azure_created:
+            self.created_objects['channel_azure_service_bus'] = channel_azure_created
+        if channel_azure_updated:
+            self.updated_objects['channel_azure_service_bus'] = channel_azure_updated
+
+        # Process Azure Service Bus outgoing definitions
+        outgoing_azure_list = yaml_config.get('outgoing_azure_service_bus', [])
+        outgoing_azure_created, outgoing_azure_updated = self.sync_outgoing_azure_service_bus(outgoing_azure_list, session)
+        if outgoing_azure_created:
+            self.created_objects['outgoing_azure_service_bus'] = outgoing_azure_created
+        if outgoing_azure_updated:
+            self.updated_objects['outgoing_azure_service_bus'] = outgoing_azure_updated
 
         # Process Kafka channel definitions
         channel_kafka_list = yaml_config.get('channel_kafka', [])

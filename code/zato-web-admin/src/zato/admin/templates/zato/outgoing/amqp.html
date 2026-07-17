@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}AMQP outgoing connections{% endblock %}
+{% block html_title %}{{ subtype.label }} outgoing connections{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -30,6 +30,14 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/amqp.js"></script>
 
+    {% comment %} AMQP - one implementation serves every subtype, the page config below says which one this is {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.outgoing.amqp.config = {
+        label: '{{ subtype.label }}',
+        address_example: '{{ subtype.address_example }}',
+        path_segment: '{{ path_segment }}'
+    };
+    </script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
@@ -69,12 +77,12 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing AMQP connections</h2>
+            <h2 class="zato">Outgoing {{ subtype.label }} connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.outgoing.amqp.create()">Create a new outgoing AMQP connection</a>
+            <a href="javascript:$.fn.zato.outgoing.amqp.create()">Create a new outgoing {{ subtype.label }} connection</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -114,7 +122,7 @@
                         <td style="text-align:center">{{ item.username }}</td>
                         <td style="text-align:center">{{ item.app_id|no_value_indicator }}</td>
                         <td>
-                            <a href="{% url "out-amqp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
+                            <a href="{% url invoke_url item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
                         </td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
@@ -144,7 +152,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "out-amqp-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url create_url %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
@@ -217,7 +225,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "out-amqp-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url edit_url %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>

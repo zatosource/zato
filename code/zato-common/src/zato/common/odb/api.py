@@ -1124,10 +1124,10 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_channel_amqp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of AMQP channels.
+        """ Returns a list of AMQP channels of all subtypes.
         """
         with closing(self.session()) as session:
-            return query.channel_amqp_list(session, cluster_id, needs_columns)
+            return query.channel_amqp_list(session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 
@@ -1140,10 +1140,10 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_out_amqp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing AMQP connections.
+        """ Returns a list of outgoing AMQP connections of all subtypes.
         """
         with closing(self.session()) as session:
-            return query.out_amqp_list(session, cluster_id, needs_columns)
+            return query.out_amqp_list(session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 

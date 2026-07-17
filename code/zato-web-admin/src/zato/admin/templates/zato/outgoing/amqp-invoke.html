@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}AMQP publish{% endblock %}
+{% block html_title %}{{ subtype.label }} publish{% endblock %}
 
 {% block "extra_js" %}
 
@@ -19,13 +19,13 @@
     <table class="zato-table" id="data-table">
         <tr>
             <td class='inline_header'>
-            Publish messages to AMQP outgoing connection
-            <a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}&amp;query={{ conn_name }}">{{ conn_name }}</a>
+            Publish messages to {{ subtype.label }} outgoing connection
+            <a href="{% url index_url %}?cluster={{ cluster_id|default:'' }}&amp;query={{ conn_name }}">{{ conn_name }}</a>
             </td>
         </tr>
         <tr>
             <td>
-                <form novalidate id="send_message_form" action="{% url "out-amqp-invoke-action" conn_name %}?cluster={{ cluster_id }}" method="post">
+                <form novalidate id="send_message_form" action="{% url invoke_action_url conn_name %}?cluster={{ cluster_id }}" method="post">
                 {% csrf_token %}
                     Data:
                     <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>
