@@ -388,6 +388,13 @@
                                                 </ul>
                                             </li>
                                             <li class="child">
+                                                <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                </ul>
+                                            </li>
+                                            <li class="child">
                                                 <a class="menu-link" href="#">IBM MQ &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">Channels</a></li>
@@ -443,6 +450,13 @@
                                     <li class="child">
                                         <a class="menu-link" href="#">Microsoft &rarr;</a>
                                         <ul>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
+                                                </ul>
+                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud 365</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a></li>
@@ -488,6 +502,13 @@
                                                     <li class="child">
                                                         <a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a>
                                                     </li>
+                                                </ul>
+                                            </li>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
                                                 </ul>
                                             </li>
                                             <li class="child">

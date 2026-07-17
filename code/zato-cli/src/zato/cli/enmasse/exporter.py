@@ -36,6 +36,7 @@ from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
+from zato.cli.enmasse.exporters.amqp import ChannelAMQPExporter, OutgoingAMQPExporter
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
@@ -89,6 +90,10 @@ class EnmasseYAMLExporter:
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
         self.channel_ibm_mq_exporter = ChannelIBMMQExporter(self)
         self.outgoing_ibm_mq_exporter = OutgoingIBMMQExporter(self)
+        self.channel_amqp_exporter = ChannelAMQPExporter(self, 'amqp')
+        self.outgoing_amqp_exporter = OutgoingAMQPExporter(self, 'amqp')
+        self.channel_azure_service_bus_exporter = ChannelAMQPExporter(self, 'azure-service-bus')
+        self.outgoing_azure_service_bus_exporter = OutgoingAMQPExporter(self, 'azure-service-bus')
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
         self.gateway_mcp_exporter = GatewayMCPExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
@@ -257,6 +262,42 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         outgoing_ibm_mq_list = self.outgoing_ibm_mq_exporter.export(session, self.cluster_id)
         return outgoing_ibm_mq_list
+
+# ################################################################################################################################
+
+    def export_channel_amqp(self, session:'SASession') -> 'list':
+        """ Exports AMQP channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_amqp_defs = self.channel_amqp_exporter.export(session, self.cluster_id)
+        return channel_amqp_defs
+
+# ################################################################################################################################
+
+    def export_outgoing_amqp(self, session:'SASession') -> 'list':
+        """ Exports AMQP outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_amqp_defs = self.outgoing_amqp_exporter.export(session, self.cluster_id)
+        return outgoing_amqp_defs
+
+# ################################################################################################################################
+
+    def export_channel_azure_service_bus(self, session:'SASession') -> 'list':
+        """ Exports Azure Service Bus channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_azure_defs = self.channel_azure_service_bus_exporter.export(session, self.cluster_id)
+        return channel_azure_defs
+
+# ################################################################################################################################
+
+    def export_outgoing_azure_service_bus(self, session:'SASession') -> 'list':
+        """ Exports Azure Service Bus outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_azure_defs = self.outgoing_azure_service_bus_exporter.export(session, self.cluster_id)
+        return outgoing_azure_defs
 
 # ################################################################################################################################
 
@@ -558,6 +599,26 @@ class EnmasseYAMLExporter:
         outgoing_ibm_mq_defs = self.export_outgoing_ibm_mq(session)
         if outgoing_ibm_mq_defs:
             output_dict['outgoing_ibm_mq'] = outgoing_ibm_mq_defs
+
+        # Export AMQP channel definitions
+        channel_amqp_defs = self.export_channel_amqp(session)
+        if channel_amqp_defs:
+            output_dict['channel_amqp'] = channel_amqp_defs
+
+        # Export AMQP outgoing definitions
+        outgoing_amqp_defs = self.export_outgoing_amqp(session)
+        if outgoing_amqp_defs:
+            output_dict['outgoing_amqp'] = outgoing_amqp_defs
+
+        # Export Azure Service Bus channel definitions
+        channel_azure_defs = self.export_channel_azure_service_bus(session)
+        if channel_azure_defs:
+            output_dict['channel_azure_service_bus'] = channel_azure_defs
+
+        # Export Azure Service Bus outgoing definitions
+        outgoing_azure_defs = self.export_outgoing_azure_service_bus(session)
+        if outgoing_azure_defs:
+            output_dict['outgoing_azure_service_bus'] = outgoing_azure_defs
 
         # Export Kafka channel definitions
         channel_kafka_defs = self.export_channel_kafka(session)

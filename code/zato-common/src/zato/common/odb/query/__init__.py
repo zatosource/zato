@@ -14,13 +14,13 @@ from functools import wraps
 from zato.common.ext.bunch import bunchify
 
 # SQLAlchemy
-from sqlalchemy import and_, func, not_, or_
+from sqlalchemy import and_, cast as sa_cast, func, not_, or_, Text
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
-     PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
-from zato.common.json_internal import loads
+from zato.common.api import AMQP_Subtype_Plain, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, \
+     HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
@@ -32,7 +32,7 @@ from zato.common.util.search import SearchResults as _SearchResults
 
 if 0:
     from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import list_, strlist
+    from zato.common.typing_ import any_, list_, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -362,6 +362,54 @@ def oauth_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def _amqp_stored_fragment(value:'any_') -> 'str':
+    """ Returns the text under which a value appears inside a stored opaque JSON document.
+    The application assigns an already-serialized document to the column and the JSON column type
+    serializes it once more on the way to the database, hence the double dumps.
+    """
+    document = dumps(value)
+    stored = dumps(document)
+
+    # Strip the outer string quotes added by the second serialization
+    out = stored[1:-1]
+    return out
+
+# ################################################################################################################################
+
+def _amqp_subtype_filter(query:'any_', column:'any_', subtype:'str') -> 'any_':
+    """ Narrows an AMQP query down to connections of the given subtype, e.g. plain AMQP or Azure Service Bus.
+    The subtype is kept in the connection's opaque attributes, serialized to JSON.
+    """
+
+    # The subtype key/value pair as it appears in the stored document, without the object braces,
+    # so the marker can match inside a larger opaque document.
+    marker = _amqp_stored_fragment({'subtype': subtype})
+    marker = marker[1:-1]
+
+    # The key alone, for telling apart rows that carry no subtype at all
+    key_marker = _amqp_stored_fragment('subtype')
+
+    # The column is compared as text - the cast keeps the JSON column type
+    # from serializing the comparison values themselves. Autoescape gives the LIKE pattern
+    # an explicit escape character, which keeps MySQL from treating the backslashes
+    # of the stored document as its default escape character.
+    column_as_text = sa_cast(column, Text)
+
+    # Plain AMQP also covers connections that predate subtypes - their opaque attributes
+    # are either NULL or do not carry any subtype marker at all ..
+    if subtype == AMQP_Subtype_Plain:
+        no_opaque_attrs = column.is_(None)
+        no_subtype_marker = not_(column_as_text.contains(key_marker, autoescape=True))
+        out = query.filter(or_(no_opaque_attrs, no_subtype_marker, column_as_text.contains(marker, autoescape=True)))
+
+    # .. any other subtype must be marked explicitly.
+    else:
+        out = query.filter(column_as_text.contains(marker, autoescape=True))
+
+    return out
+
+# ################################################################################################################################
+
 def _out_amqp(session, cluster_id):
     return session.query(
         OutgoingAMQP.id,
@@ -390,10 +438,16 @@ def out_amqp(session, cluster_id, id):
         one()
 
 @query_wrapper
-def out_amqp_list(session, cluster_id, needs_columns=False):
-    """ Outgoing AMQP connections.
+def out_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=False):
+    """ Outgoing AMQP connections, optionally of a single subtype only.
     """
-    return _out_amqp(session, cluster_id)
+    query = _out_amqp(session, cluster_id)
+
+    # Without a subtype on input, all the connections are returned, e.g. for the server to start all the connectors
+    if subtype:
+        query = _amqp_subtype_filter(query, OutgoingAMQP.opaque1, subtype)
+
+    return query
 
 # ################################################################################################################################
 
@@ -425,10 +479,16 @@ def channel_amqp(session, cluster_id, id):
         one()
 
 @query_wrapper
-def channel_amqp_list(session, cluster_id, needs_columns=False):
-    """ AMQP channels.
+def channel_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=False):
+    """ AMQP channels, optionally of a single subtype only.
     """
-    return _channel_amqp(session, cluster_id)
+    query = _channel_amqp(session, cluster_id)
+
+    # Without a subtype on input, all the channels are returned, e.g. for the server to start all the connectors
+    if subtype:
+        query = _amqp_subtype_filter(query, ChannelAMQP.opaque1, subtype)
+
+    return query
 
 # ################################################################################################################################
 

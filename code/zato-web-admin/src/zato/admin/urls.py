@@ -415,17 +415,40 @@ urlpatterns += [
 
     # .. AMQP
 
-    url(r'^zato/outgoing/amqp/$', login_required(out_amqp.Index()), name=out_amqp.Index.url_name),
-    url(r'^zato/outgoing/amqp/create/$', login_required(out_amqp.create), name='out-amqp-create'),
-    url(r'^zato/outgoing/amqp/edit/$', login_required(out_amqp.edit), name='out-amqp-edit'),
+    url(r'^zato/outgoing/amqp/$', login_required(out_amqp.Index('amqp')), name='out-amqp'),
+    url(r'^zato/outgoing/amqp/create/$', login_required(out_amqp.create), {'subtype': 'amqp'}, name='out-amqp-create'),
+    url(r'^zato/outgoing/amqp/edit/$', login_required(out_amqp.edit), {'subtype': 'amqp'}, name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_amqp.Delete()), name=out_amqp.Delete.url_name),
+        login_required(out_amqp.Delete('amqp')), name='out-amqp-delete'),
 
     url(r'^zato/outgoing/amqp/invoke/action/(?P<conn_name>.*)/$',
         login_required(out_amqp.invoke_action), name='out-amqp-invoke-action'),
 
     url(r'^zato/outgoing/amqp/invoke/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
-        login_required(out_amqp.invoke), name='out-amqp-invoke'),
+        login_required(out_amqp.invoke), {'subtype': 'amqp'}, name='out-amqp-invoke'),
+
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Azure Service Bus - runs on the AMQP implementation, mounted as its own page
+
+    url(r'^zato/outgoing/azure-service-bus/$',
+        login_required(out_amqp.Index('azure-service-bus')), name='out-azure-service-bus'),
+    url(r'^zato/outgoing/azure-service-bus/create/$',
+        login_required(out_amqp.create), {'subtype': 'azure-service-bus'}, name='out-azure-service-bus-create'),
+    url(r'^zato/outgoing/azure-service-bus/edit/$',
+        login_required(out_amqp.edit), {'subtype': 'azure-service-bus'}, name='out-azure-service-bus-edit'),
+    url(r'^zato/outgoing/azure-service-bus/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_amqp.Delete('azure-service-bus')), name='out-azure-service-bus-delete'),
+
+    url(r'^zato/outgoing/azure-service-bus/invoke/action/(?P<conn_name>.*)/$',
+        login_required(out_amqp.invoke_action), name='out-azure-service-bus-invoke-action'),
+
+    url(r'^zato/outgoing/azure-service-bus/invoke/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(out_amqp.invoke), {'subtype': 'azure-service-bus'}, name='out-azure-service-bus-invoke'),
 
     ]
 
@@ -834,13 +857,28 @@ urlpatterns += [
 
     # .. AMQP
     url(r'^zato/channel/amqp/$',
-        login_required(channel_amqp.Index()), name=channel_amqp.Index.url_name),
+        login_required(channel_amqp.Index('amqp')), name='channel-amqp'),
     url(r'^zato/channel/amqp/create/$',
-        login_required(channel_amqp.create), name='channel-amqp-create'),
+        login_required(channel_amqp.create), {'subtype': 'amqp'}, name='channel-amqp-create'),
     url(r'^zato/channel/amqp/edit/$',
-        login_required(channel_amqp.edit), name='channel-amqp-edit'),
+        login_required(channel_amqp.edit), {'subtype': 'amqp'}, name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
+        login_required(channel_amqp.Delete('amqp')), name='channel-amqp-delete'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Azure Service Bus - runs on the AMQP implementation, mounted as its own page
+    url(r'^zato/channel/azure-service-bus/$',
+        login_required(channel_amqp.Index('azure-service-bus')), name='channel-azure-service-bus'),
+    url(r'^zato/channel/azure-service-bus/create/$',
+        login_required(channel_amqp.create), {'subtype': 'azure-service-bus'}, name='channel-azure-service-bus-create'),
+    url(r'^zato/channel/azure-service-bus/edit/$',
+        login_required(channel_amqp.edit), {'subtype': 'azure-service-bus'}, name='channel-azure-service-bus-edit'),
+    url(r'^zato/channel/azure-service-bus/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_amqp.Delete('azure-service-bus')), name='channel-azure-service-bus-delete'),
     ]
 
 # ################################################################################################################################

@@ -32,36 +32,43 @@ $(document).ready(function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.outgoing.amqp.field_descriptions = {
-    'id_name': 'A unique name for this connection.<br>Services publish messages through it,<br>referring to it by this exact name.',
-    'id_address': 'Address of the AMQP broker as host:port,<br>e.g. localhost:5672 for RabbitMQ.',
-    'id_username': 'Username the connection authenticates with,<br>e.g. guest on a default RabbitMQ broker.',
-    'id_password': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
-    'id_content_type': 'MIME type stamped on published messages,<br>e.g. application/json or text/xml.<br>Consumers use it to decide how to parse the body.',
-    'id_content_encoding': 'Content encoding property of published messages,<br>e.g. utf-8. Tells consumers how the body bytes<br>are encoded.',
-    'id_app_id': 'Application ID stamped on published messages.<br>Lets consumers tell which producer<br>a message came from.',
-    'id_pool_size': 'How many connections to the broker<br>the pool keeps open. Each service publishing<br>concurrently needs one connection.<br>The default is 10.',
-    'id_priority': 'Priority stamped on published messages, 0 to 9,<br>with 9 the most urgent. Brokers deliver<br>higher priorities first on queues that<br>support priorities. The default is 5.',
-    'id_delivery_mode': 'Whether messages survive a broker restart.<br>Persistent ones are written to disk,<br>non-persistent ones stay in memory only<br>and are faster to publish.',
-};
+// One implementation serves every subtype of the AMQP connections, e.g. plain AMQP or Azure Service Bus,
+// and the page config says which one this page is, hence the descriptions are built at call time.
+$.fn.zato.outgoing.amqp.get_field_descriptions = function() {
+    var config = $.fn.zato.outgoing.amqp.config;
+    return {
+        'id_name': 'A unique name for this connection.<br>Services publish messages through it,<br>referring to it by this exact name.',
+        'id_address': 'Address of the broker as host:port,<br>e.g. ' + config.address_example + '.',
+        'id_username': 'Username the connection authenticates with.',
+        'id_password': 'Password matching the username above.<br>Stored encrypted in the Zato database.',
+        'id_content_type': 'MIME type stamped on published messages,<br>e.g. application/json or text/xml.<br>Consumers use it to decide how to parse the body.',
+        'id_content_encoding': 'Content encoding property of published messages,<br>e.g. utf-8. Tells consumers how the body bytes<br>are encoded.',
+        'id_app_id': 'Application ID stamped on published messages.<br>Lets consumers tell which producer<br>a message came from.',
+        'id_pool_size': 'How many connections to the broker<br>the pool keeps open. Each service publishing<br>concurrently needs one connection.<br>The default is 10.',
+        'id_priority': 'Priority stamped on published messages, 0 to 9,<br>with 9 the most urgent. Brokers deliver<br>higher priorities first on queues that<br>support priorities. The default is 5.',
+        'id_delivery_mode': 'Whether messages survive a broker restart.<br>Persistent ones are written to disk,<br>non-persistent ones stay in memory only<br>and are faster to publish.',
+    };
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.outgoing.amqp.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing AMQP connection', null);
+    var config = $.fn.zato.outgoing.amqp.config;
+    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing ' + config.label + ' connection', null);
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
-        descriptions: $.fn.zato.outgoing.amqp.field_descriptions
+        descriptions: $.fn.zato.outgoing.amqp.get_field_descriptions()
     });
 }
 
 $.fn.zato.outgoing.amqp.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update outgoing AMQP connection', id);
+    var config = $.fn.zato.outgoing.amqp.config;
+    $.fn.zato.data_table._create_edit('edit', 'Update outgoing ' + config.label + ' connection', id);
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
-        descriptions: $.fn.zato.outgoing.amqp.field_descriptions
+        descriptions: $.fn.zato.outgoing.amqp.get_field_descriptions()
     });
 }
 
@@ -87,7 +94,8 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', item.app_id || $.fn.zato.empty_value);
 
     // Action buttons
-    row += String.format('<td><a href="/zato/outgoing/amqp/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
+    var config = $.fn.zato.outgoing.amqp.config;
+    row += String.format('<td><a href="/zato/outgoing/' + config.path_segment + '/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
         item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.delete_('{0}');\">Delete</a>", item.id));
@@ -112,8 +120,9 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 }
 
 $.fn.zato.outgoing.amqp.delete_ = function(id) {
+    var config = $.fn.zato.outgoing.amqp.config;
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing AMQP connection `{0}` deleted',
-        'Are you sure you want to delete outgoing AMQP connection `{0}`?',
+        'Outgoing ' + config.label + ' connection `{0}` deleted',
+        'Are you sure you want to delete outgoing ' + config.label + ' connection `{0}`?',
         true);
 }

@@ -13,6 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
+from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
@@ -37,12 +38,16 @@ class GetList(AdminService):
     name = 'zato.outgoing.amqp.get-list'
     _filter_by = OutgoingAMQP.name,
 
-    input = 'cluster_id', *query_parameters
+    input = 'cluster_id', '-subtype', *query_parameters
     output = 'id', 'name', 'address', 'username', 'password', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-content_type', '-content_encoding', '-expiration', AsIs('-user_id'), AsIs('-app_id')
 
     def get_data(self, session):
-        return self._search(out_amqp_list, session, self.request.input.cluster_id, False)
+
+        # Without a subtype on input, connections of all the subtypes are returned
+        subtype = self.request.input.subtype or None
+
+        return self._search(out_amqp_list, session, self.request.input.cluster_id, subtype, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -58,7 +63,7 @@ class Create(AdminService):
 
     input = 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
-        '-expiration', AsIs('-user_id'), AsIs('-app_id')
+        '-expiration', '-subtype', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'
 
     def handle(self):
@@ -105,6 +110,10 @@ class Create(AdminService):
                 item.frame_max = input.frame_max # type: ignore
                 item.heartbeat = input.heartbeat # type: ignore
 
+                # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
+                if input.subtype:
+                    item.opaque1 = dumps({'subtype': input.subtype})
+
                 session.add(item)
                 session.commit()
 
@@ -133,7 +142,7 @@ class Edit(AdminService):
 
     input = 'id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
-        '-expiration', AsIs('-user_id'), AsIs('-app_id')
+        '-expiration', '-subtype', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'
 
     def handle(self):
@@ -176,6 +185,10 @@ class Edit(AdminService):
                 item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
+
+                # The subtype, e.g. Azure Service Bus, is kept in the opaque attributes
+                if input.subtype:
+                    item.opaque1 = dumps({'subtype': input.subtype})
 
                 session.add(item)
                 session.commit()

@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}AMQP channels{% endblock %}
+{% block html_title %}{{ subtype.label }} channels{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -28,9 +28,15 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 
-    {% comment %} Basic Auth {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/amqp.js"></script>
 
+    {% comment %} AMQP - one implementation serves every subtype, the page config below says which one this is {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.channel.amqp.config = {
+        label: '{{ subtype.label }}',
+        address_example: '{{ subtype.address_example }}'
+    };
+    </script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
@@ -65,13 +71,13 @@
     {% if cluster_id %}
 
         <div id="markup">
-            <h2 class="zato">AMQP channels</h2>
+            <h2 class="zato">{{ subtype.label }} channels</h2>
 
 {% include "zato/search-form.html" with page_prompt="Search"%}
 
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.amqp.create()">Create a new AMQP channel</a>
+            <a href="javascript:$.fn.zato.channel.amqp.create()">Create a new {{ subtype.label }} channel</a>
         </div>
 
 
@@ -126,7 +132,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "channel-amqp-create" %}" method="post" id="create-form">
+                <form novalidate action="{% url create_url %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
@@ -199,7 +205,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate action="{% url "channel-amqp-edit" %}" method="post" id="edit-form">
+                <form novalidate action="{% url edit_url %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>

@@ -1237,6 +1237,30 @@ ODATA_Subtype = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Each subtype is one full deployment of the AMQP implementation - the same connector, screens and enmasse code
+# serve every subtype, differing only in what this configuration describes. The subtype of a connection
+# is stored in its opaque attributes, and a connection without one is a plain AMQP connection.
+AMQP_Subtype_Plain = 'amqp'
+AMQP_Subtype_Azure_Service_Bus = 'azure-service-bus'
+
+AMQP_Subtype = {
+    AMQP_Subtype_Plain: {
+        'label': 'AMQP',
+        'url_prefix_outgoing': 'out-amqp',
+        'url_prefix_channel': 'channel-amqp',
+        'address_example': 'localhost:5672',
+    },
+    AMQP_Subtype_Azure_Service_Bus: {
+        'label': 'Azure Service Bus',
+        'url_prefix_outgoing': 'out-azure-service-bus',
+        'url_prefix_channel': 'channel-azure-service-bus',
+        'address_example': 'my-namespace.servicebus.windows.net:5671',
+    },
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MongoDB:
 
     class Default:
