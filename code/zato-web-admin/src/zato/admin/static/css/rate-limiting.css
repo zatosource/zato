@@ -18,6 +18,7 @@
 table.rate-limiting-form {
     box-sizing: border-box;
     width: 75%;
+    margin-top: 14px;
     margin-left: auto;
     margin-right: auto;
     border: 1px solid #d8dce0;
@@ -78,6 +79,7 @@ table.rate-limiting-form select:focus,
     width: 75%;
     margin-left: auto;
     margin-right: auto;
+    padding-top: 14px;
 }
 
 /* The tier panel sits under the strip, styled like a rule card. */
@@ -95,6 +97,14 @@ table.rate-limiting-form select:focus,
 
 .rate-limiting-tier-panel button {
     font-size: 11px;
+}
+
+/* Empty state shown when there are no quota tiers to pick from. */
+.rate-limiting-tier-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #2c3e50;
 }
 
 /* ------------------------------------------------------------ */

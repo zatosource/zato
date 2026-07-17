@@ -60,7 +60,7 @@
         <div class="response-caching-row">
             <span class="response-caching-label">Include body in key</span>
             <input type="checkbox" id="response-caching-include-body-in-key" {% if transport == 'soap' or config.include_body_in_key %}checked{% endif %}{% if transport == 'soap' %} disabled{% endif %} />
-            <span class="response-caching-hint">Lets POST requests be cached, always on for SOAP</span>
+            <span class="response-caching-hint">Lets POST requests be cached</span>
         </div>
 
         <div class="response-caching-row">
@@ -93,9 +93,9 @@
 </div>
 
 <div class="response-caching-actions">
-    <span class="response-caching-clear-link" onclick="$.fn.zato.response_caching.clear_cache(this)">Clear cache</span>
     <span class="response-caching-save-group">
         <span class="status-message" id="response-caching-status"></span>
+        <a href="javascript:void(0)" class="response-caching-clear-link" onclick="$.fn.zato.response_caching.confirm_clear_cache(this)">Clear cache</a>
         <input type="submit" value="Save" onclick="$.fn.zato.response_caching.save()" />
     </span>
 </div>

@@ -1,0 +1,12 @@
+/* Outgoing SOAP connections - popup form layout. */
+
+/* The popups are wider than the 40em default so percentage-based label columns
+   leave a big gap before the inputs - shrink the label column to its content instead.
+   The !important is needed to override inline width:NN% styles in shared tab templates.
+   The direct-child chain keeps nested tables, e.g. request-param-table, unaffected. */
+#create-div table.form-data > tbody > tr > td:first-child,
+#edit-div table.form-data > tbody > tr > td:first-child {
+    width: 1% !important;
+    white-space: nowrap;
+    padding-right: 14px;
+}

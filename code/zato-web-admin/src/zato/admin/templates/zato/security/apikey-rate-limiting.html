@@ -60,7 +60,10 @@
         {% endfor %}
     </select>
     {% else %}
-    <button type="button" onclick="window.location.href='/zato/security/tier/?cluster={{ cluster_id }}&amp;create=1'">Create a quota tier</button>
+    <div class="rate-limiting-tier-empty">
+        <span>No quota tiers have been defined yet</span>
+        <button type="button" onclick="window.location.href='/zato/security/tier/?cluster={{ cluster_id }}&amp;create=1'">Create one</button>
+    </div>
     {% endif %}
 </div>
 

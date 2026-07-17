@@ -11,6 +11,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/outgoing/soap.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -288,13 +289,12 @@
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
-                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-main" role="tabpanel">
                         <table class="form-data">
                             <tr>
-                                <td style="width:14%"><label for="id_name">Name</label></td>
+                                <td><label for="id_name">Name</label></td>
                                 <td>{{ create_form.name }}</td>
                             </tr>
                             <tr>
@@ -321,13 +321,25 @@
                                 <td><label for="id_timeout">Timeout</label></td>
                                 <td>{{ create_form.timeout }} <span class="form_hint">seconds</span></td>
                             </tr>
+                            <tr>
+                                <td>More options</td>
+                                <td><a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_ping_method">Ping method</label></td>
+                                <td>{{ create_form.ping_method }}</td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_content_type">Content type</label></td>
+                                <td>{{ create_form.content_type }}</td>
+                            </tr>
                         </table>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-soap" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_soap_version">SOAP version</label></td>
+                                <td><label for="id_soap_version">SOAP version</label></td>
                                 <td>{{ create_form.soap_version }}</td>
                             </tr>
                             <tr>
@@ -344,7 +356,7 @@
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-security" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_security_id">Security definition</label></td>
+                                <td><label for="id_security_id">Security definition</label></td>
                                 <td>{{ create_form.security_id }}</td>
                             </tr>
                             <tr>
@@ -365,7 +377,7 @@
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-credentials" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%;vertical-align:top"><label for="id_body_credentials">Mappings</label></td>
+                                <td style="vertical-align:top"><label for="id_body_credentials">Mappings</label></td>
                                 <td>
                                     <div class="body-credentials-rows" id="body-credentials-create"></div>
                                     <a href="javascript:$.fn.zato.outgoing.soap.add_body_credential_row('create')">Add a mapping</a>
@@ -393,19 +405,6 @@
 
                     <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-health_check" role="tabpanel" hidden>
                         {% include "zato/http_soap/health-check-tab.html" with form=create_form action="create" field_prefix="" %}
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="out-soap-create-tab-panel-more" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td style="width:16%"><label for="id_ping_method">Ping method</label></td>
-                                <td>{{ create_form.ping_method }}</td>
-                            </tr>
-                            <tr>
-                                <td><label for="id_content_type">Content type</label></td>
-                                <td>{{ create_form.content_type }}</td>
-                            </tr>
-                        </table>
                     </div>
 
                     <table class="form-data">
@@ -440,13 +439,12 @@
                         <button type="button" class="dashboard-tab" data-tab="response" role="tab" aria-selected="false">Response</button>
                         <button type="button" class="dashboard-tab" data-tab="callback" role="tab" aria-selected="false">Callback</button>
                         <button type="button" class="dashboard-tab" data-tab="health_check" role="tab" aria-selected="false">Health check</button>
-                        <button type="button" class="dashboard-tab" data-tab="more" role="tab" aria-selected="false">More</button>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-main" role="tabpanel">
                         <table class="form-data">
                             <tr>
-                                <td style="width:14%"><label for="id_edit-name">Name</label></td>
+                                <td><label for="id_edit-name">Name</label></td>
                                 <td>{{ edit_form.name }}</td>
                             </tr>
                             <tr>
@@ -473,13 +471,25 @@
                                 <td><label for="id_edit-timeout">Timeout</label></td>
                                 <td>{{ edit_form.timeout }} <span class="form_hint">seconds</span></td>
                             </tr>
+                            <tr>
+                                <td>More options</td>
+                                <td><a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-ping_method">Ping method</label></td>
+                                <td>{{ edit_form.ping_method }}</td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-content_type">Content type</label></td>
+                                <td>{{ edit_form.content_type }}</td>
+                            </tr>
                         </table>
                     </div>
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-soap" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_edit-soap_version">SOAP version</label></td>
+                                <td><label for="id_edit-soap_version">SOAP version</label></td>
                                 <td>{{ edit_form.soap_version }}</td>
                             </tr>
                             <tr>
@@ -496,7 +506,7 @@
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-security" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%"><label for="id_edit-security_id">Security definition</label></td>
+                                <td><label for="id_edit-security_id">Security definition</label></td>
                                 <td>{{ edit_form.security_id }}</td>
                             </tr>
                             <tr>
@@ -517,7 +527,7 @@
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-credentials" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%;vertical-align:top"><label for="id_edit-body_credentials">Mappings</label></td>
+                                <td style="vertical-align:top"><label for="id_edit-body_credentials">Mappings</label></td>
                                 <td>
                                     <div class="body-credentials-rows" id="body-credentials-edit"></div>
                                     <a href="javascript:$.fn.zato.outgoing.soap.add_body_credential_row('edit')">Add a mapping</a>
@@ -545,19 +555,6 @@
 
                     <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-health_check" role="tabpanel" hidden>
                         {% include "zato/http_soap/health-check-tab.html" with form=edit_form action="edit" field_prefix="edit-" %}
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="out-soap-edit-tab-panel-more" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td style="width:16%"><label for="id_edit-ping_method">Ping method</label></td>
-                                <td>{{ edit_form.ping_method }}</td>
-                            </tr>
-                            <tr>
-                                <td><label for="id_edit-content_type">Content type</label></td>
-                                <td>{{ edit_form.content_type }}</td>
-                            </tr>
-                        </table>
                     </div>
 
                     <table class="form-data">

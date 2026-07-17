@@ -52,7 +52,7 @@ class CreateForm(forms.Form):
 
     # More
     ping_method = forms.CharField(initial=DEFAULT_HTTP_PING_METHOD, widget=forms.TextInput(attrs={'style':'width:20%'}))
-    content_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    content_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
 
     serialization_type = forms.CharField(initial='string', widget=forms.HiddenInput())
 
