@@ -9,6 +9,91 @@
 }
 
 /* ------------------------------------------------------------ */
+/* Rate limiting - header form                                  */
+/* ------------------------------------------------------------ */
+
+/* Replaces the legacy full-width gray .form-data table on pages
+   that use the rate-limiting rule builder - same width and
+   alignment as the builder itself. */
+table.rate-limiting-form {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #f8fafc;
+    padding: 8px 14px;
+    font-size: 12px;
+}
+
+table.rate-limiting-form td {
+    border: none;
+    padding: 4px 0;
+    vertical-align: middle;
+}
+
+/* A label cell as wide as its longest label and no wider. */
+table.rate-limiting-form td.rate-limiting-form-label {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 14px;
+}
+
+table.rate-limiting-form label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+table.rate-limiting-form input[type="text"],
+table.rate-limiting-form select,
+.rate-limiting-tier-panel select {
+    box-sizing: border-box;
+    padding: 4px 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 12px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.15s;
+}
+
+table.rate-limiting-form input[type="text"]:focus,
+table.rate-limiting-form select:focus,
+.rate-limiting-tier-panel select:focus {
+    border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
+}
+
+/* ------------------------------------------------------------ */
+/* Rate limiting - tier vs. custom rules tab strip              */
+/* ------------------------------------------------------------ */
+
+/* Positions the shared dashboard-tabs strip (shared/tabs.css)
+   at the same width and alignment as the rule builder below. */
+.rate-limiting-tabs-wrapper {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* The tier panel sits under the strip, styled like a rule card. */
+.rate-limiting-tier-panel {
+    box-sizing: border-box;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid #d8dce0;
+    border-radius: 5px;
+    background: #fdfefe;
+    padding: 10px 14px;
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
 /* Rate limiting - container                                    */
 /* ------------------------------------------------------------ */
 

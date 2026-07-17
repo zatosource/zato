@@ -1264,10 +1264,21 @@
 
         var data = {rules_json: rules_json};
 
-        // Security definition pages carry a quota tier select - a definition governed
-        // by a tier does not send its own rules. Channel pages have no such select.
+        // Security definition pages carry a quota tier choice - a definition governed
+        // by a tier does not send its own rules. Channel pages have neither element.
+        // Tab-based pages express the tier vs. custom choice explicitly, older pages
+        // fold it into the select itself via an empty option.
+        var tier_tab = document.querySelector('.dashboard-tab[data-mode="tier"]');
         var tier_select = document.getElementById('quota-tier-select');
-        if(tier_select) {
+
+        if(tier_tab) {
+            var use_tier = tier_tab.classList.contains('dashboard-tab-active');
+            data.quota_tier = use_tier && tier_select ? tier_select.value : '';
+            if(use_tier) {
+                data.rules_json = '[]';
+            }
+        }
+        else if(tier_select) {
             data.quota_tier = tier_select.value;
             if(tier_select.value) {
                 data.rules_json = '[]';
@@ -1330,6 +1341,41 @@
 
         select.addEventListener('change', toggle);
         toggle();
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Quota tier vs. custom rules - tab-based mode toggle
+    // ////////////////////////////////////////////////////////////////////////
+
+    $.fn.zato.rate_limiting.init_mode_toggle = function(container_id) {
+        var tabs = document.querySelectorAll('.dashboard-tab[data-mode]');
+        var tier_panel = document.getElementById('rate-limiting-tier-panel');
+        var has_tiers = Boolean(document.getElementById('quota-tier-select'));
+
+        var activate = function(mode) {
+            tabs.forEach(function(tab) {
+                var is_active = tab.dataset.mode === mode;
+                tab.classList.toggle('dashboard-tab-active', is_active);
+                tab.setAttribute('aria-selected', is_active ? 'true' : 'false');
+            });
+
+            var use_tier = mode === 'tier';
+            tier_panel.hidden = !use_tier;
+            $('#' + container_id).toggle(!use_tier);
+            $('.rate-limiting-button-add').toggle(!use_tier);
+
+            // With no tiers to pick from there is nothing to save on the tier tab
+            $('.rate-limiting-save-group').toggle(!use_tier || has_tiers);
+        };
+
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                activate(tab.dataset.mode);
+            });
+        });
+
+        var initial = document.querySelector('.dashboard-tab[data-mode].dashboard-tab-active');
+        activate(initial ? initial.dataset.mode : 'custom');
     };
 
     // ////////////////////////////////////////////////////////////////////////

@@ -16,6 +16,8 @@
 <div id="markup">
 <h2 class="zato">Security : Quota tiers</h2>
 
+{% include "zato/search-form.html" with page_prompt="Search" %}
+
 <div class='page_prompt' style="clear:left">
     <a href="/zato/security/tier/create/?cluster={{ cluster_id }}">Create a quota tier</a>
 </div>

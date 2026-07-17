@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 from datetime import datetime, timezone
+from time import perf_counter
 
 # Django
 from django.http import HttpResponse
@@ -40,6 +41,21 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+def _diag_log_screen(screen:'str', name:'str', time_range:'str', data:'any_', diag_start:'float',
+    diag_query:'float', diag_dumps:'float', payload:'str') -> 'None':
+    """ One log line per screen request - how long the query and the JSON dump took
+    and how big what we hand to the browser is.
+    """
+    timeline_len = len(data.get('timeline') or [])
+    rows_len = len(data.get('rows') or data.get('top_channels') or [])
+
+    logger.warning('Analytics-Diag: screen=%s name=%r range=%s query=%.1fms json_dumps=%.1fms ' \
+        'payload=%d bytes timeline=%d rows=%d',
+        screen, name, time_range, (diag_query - diag_start) * 1000, (diag_dumps - diag_query) * 1000,
+        len(payload), timeline_len, rows_len)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,10 +133,16 @@ def index(req:'any_') -> 'TemplateResponse':
     time_range = _get_time_range(time_range)
 
     now = datetime.now(timezone.utc)
+
+    diag_start = perf_counter()
     data = get_overview(now, time_range)
+    diag_query = perf_counter()
 
     ranges = _get_ranges()
     dashboard_data = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('overview', '', time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
         'cluster_id': default_cluster_id,
@@ -147,9 +169,17 @@ def index_poll(req:'any_') -> 'HttpResponse':
     time_range = _get_time_range(body['range'])
 
     now = datetime.now(timezone.utc)
-    data = get_overview(now, time_range)
 
-    out = _json_response(data)
+    diag_start = perf_counter()
+    data = get_overview(now, time_range)
+    diag_query = perf_counter()
+
+    payload = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('overview-poll', '', time_range, data, diag_start, diag_query, diag_dumps, payload)
+
+    out = HttpResponse(payload.encode('utf-8'), content_type='application/json')
 
     return out
 
@@ -185,10 +215,16 @@ def channel(req:'any_') -> 'TemplateResponse':
     time_range = _get_time_range(time_range)
 
     now = datetime.now(timezone.utc)
+
+    diag_start = perf_counter()
     data = get_channel(now, time_range, name)
+    diag_query = perf_counter()
 
     ranges = _get_ranges()
     dashboard_data = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('channel', name, time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
         'cluster_id': default_cluster_id,
@@ -218,9 +254,17 @@ def channel_poll(req:'any_') -> 'HttpResponse':
     time_range = _get_time_range(body['range'])
 
     now = datetime.now(timezone.utc)
-    data = get_channel(now, time_range, name)
 
-    out = _json_response(data)
+    diag_start = perf_counter()
+    data = get_channel(now, time_range, name)
+    diag_query = perf_counter()
+
+    payload = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('channel-poll', name, time_range, data, diag_start, diag_query, diag_dumps, payload)
+
+    out = HttpResponse(payload.encode('utf-8'), content_type='application/json')
 
     return out
 
@@ -256,10 +300,16 @@ def consumer(req:'any_') -> 'TemplateResponse':
     time_range = _get_time_range(time_range)
 
     now = datetime.now(timezone.utc)
+
+    diag_start = perf_counter()
     data = get_consumer(now, time_range, name)
+    diag_query = perf_counter()
 
     ranges = _get_ranges()
     dashboard_data = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('consumer', name, time_range, data, diag_start, diag_query, diag_dumps, dashboard_data)
 
     return_data = {
         'cluster_id': default_cluster_id,
@@ -289,9 +339,17 @@ def consumer_poll(req:'any_') -> 'HttpResponse':
     time_range = _get_time_range(body['range'])
 
     now = datetime.now(timezone.utc)
-    data = get_consumer(now, time_range, name)
 
-    out = _json_response(data)
+    diag_start = perf_counter()
+    data = get_consumer(now, time_range, name)
+    diag_query = perf_counter()
+
+    payload = json.dumps(data)
+    diag_dumps = perf_counter()
+
+    _diag_log_screen('consumer-poll', name, time_range, data, diag_start, diag_query, diag_dumps, payload)
+
+    out = HttpResponse(payload.encode('utf-8'), content_type='application/json')
 
     return out
 

@@ -156,6 +156,13 @@
             return;
         }
 
+        var diag_start = performance.now();
+        var diag_spark_points = 0;
+
+        // Build every row into a fragment first, so the document is touched once ..
+        var fragment = document.createDocumentFragment();
+        var sparks = [];
+
         for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
             var rowData = rows[rowIdx];
             var row = document.createElement('tr');
@@ -165,6 +172,7 @@
             var name_cell = dash._link_cell(rowData.name, href);
 
             var spark = dash._spark_cell(rowData.spark);
+            sparks.push(spark);
 
             var request_count_display = kit.format_number_full(rowData.request_count);
             var request_count_cell = dash._text_cell(request_count_display);
@@ -186,11 +194,35 @@
                 row.appendChild(extra);
             }
 
-            body.appendChild(row);
-
-            // .. and draw the sparkline now that its holder is in the document.
-            kit.sparkline.render('#' + spark.spark_id, spark.points, {color: dash.theme.spark_color});
+            fragment.appendChild(row);
         }
+
+        body.appendChild(fragment);
+
+        var diag_rows_done = performance.now();
+
+        // .. measure the sparkline column once - every row shares it, and measuring
+        // per row would force the browser to re-layout the whole table each time ..
+        var spark_width = document.getElementById(sparks[0].spark_id).clientWidth;
+
+        if (spark_width < 20) {
+            spark_width = 240;
+        }
+
+        // .. and draw the sparklines with that explicit width, so drawing them
+        // never asks the document about layout again.
+        for (var sparkIdx = 0; sparkIdx < sparks.length; sparkIdx++) {
+            var entry = sparks[sparkIdx];
+
+            kit.sparkline.render('#' + entry.spark_id, entry.points, {color: dash.theme.spark_color, width: spark_width});
+            diag_spark_points += entry.points ? entry.points.length : 0;
+        }
+
+        console.log('[Analytics-Diag] table ' + body_selector + ': rows=' + rows.length +
+            ' spark_points=' + diag_spark_points +
+            ' rows_dom=' + (diag_rows_done - diag_start).toFixed(1) + 'ms' +
+            ' sparklines=' + (performance.now() - diag_rows_done).toFixed(1) + 'ms' +
+            ' total=' + (performance.now() - diag_start).toFixed(1) + 'ms');
     };
 
     // ////////////////////////////////////////////////////////////////////////
