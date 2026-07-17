@@ -13,6 +13,7 @@
 $(document).ready(function() {
     $.fn.zato.b2b.reports.init();
     $.fn.zato.b2b.reports.init_filter_tabs('report-filter-form', 'report-filter-range');
+    $.fn.zato.b2b.reports.init_filter_channel('report-filter-channel');
 });
 </script>
 {% endblock %}
@@ -21,20 +22,24 @@ $(document).ready(function() {
 
 <div id="markup">
 
-    <form method="get" action="{% url "channel-usage" %}" class="report-filter-bar" id="report-filter-form">
+    <form method="get" action="{% url "channel-usage" %}" class="report-filter-form" id="report-filter-form">
         <input type="hidden" name="cluster" value="{{ cluster_id }}">
         <input type="hidden" name="range" value="{{ time_range }}" id="report-filter-range">
 
-        <div class="report-filter-channel-group">
-            <label for="report-filter-channel">Channel</label>
-            <input list="report-channel-list" name="channel" value="{{ channel }}" placeholder="Any channel"
-                autocomplete="off" class="report-filter-channel" id="report-filter-channel">
-            <datalist id="report-channel-list">
-                {% for item in channels %}
-                <option value="{{ item }}"></option>
-                {% endfor %}
-            </datalist>
-            <input type="submit" value="Show" class="report-filter-submit">
+        <div class="report-filter-bar">
+            <div class="report-filter-channel-group">
+                <label for="report-filter-channel">Channel</label>
+                <input list="report-channel-list" name="channel" value="{{ channel }}" placeholder="Any channel"
+                    autocomplete="off" class="report-filter-channel" id="report-filter-channel">
+                <datalist id="report-channel-list">
+                    {% for item in channels %}
+                    <option value="{{ item }}"></option>
+                    {% endfor %}
+                </datalist>
+                <input type="submit" value="Show" class="report-filter-submit">
+            </div>
+
+            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">Export to CSV</a>
         </div>
 
         <div class="dashboard-tabs" role="tablist" aria-label="Time range">
@@ -48,18 +53,15 @@ $(document).ready(function() {
             </button>
             {% endfor %}
         </div>
-
-        <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">CSV</a>
     </form>
 
     <div class="b2b-report-section">
-        {% if rows %}
         <table class="zato-table b2b-report-table" id="channel-usage-table">
             <thead>
                 <tr>
                     <th class="b2b-report-sortable" data-sort-type="text">Channel</th>
                     <th class="b2b-report-sortable" data-sort-type="text">Caller</th>
-                    <th class="b2b-report-sortable b2b-report-count" data-sort-type="number">Calls</th>
+                    <th class="b2b-report-sortable report-count-centered" data-sort-type="number">Calls</th>
                     <th class="b2b-report-sortable" data-sort-type="text">First call</th>
                     <th class="b2b-report-sortable" data-sort-type="text">Last call</th>
                 </tr>
@@ -69,16 +71,17 @@ $(document).ready(function() {
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td><a href="{{ row.link }}">{{ row.channel }}</a></td>
                     <td>{{ row.caller }}</td>
-                    <td class="b2b-report-count">{{ row.calls }}</td>
+                    <td class="report-count-centered">{{ row.calls }}</td>
                     <td>{{ row.first_call }}</td>
                     <td>{{ row.last_call }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="report-empty-message">No calls in the selected range.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="form_hint">No calls in the selected range.</p>
-        {% endif %}
     </div>
 
 </div>

@@ -106,6 +106,18 @@ $.fn.zato.b2b.reports.init = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.b2b.reports.init_filter_channel = function(inputId) {
+    var input = document.getElementById(inputId);
+
+    // The native datalist arrow is hidden, so clicking the field is what
+    // expands the full channel list.
+    input.addEventListener('click', function() {
+        input.showPicker();
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.b2b.reports.init_filter_tabs = function(formId, rangeInputId) {
     var form = $('#' + formId);
     var rangeInput = $('#' + rangeInputId);

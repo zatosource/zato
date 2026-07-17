@@ -18,25 +18,28 @@
 /* Reports - filter bar with channel combobox and range tabs     */
 /* ------------------------------------------------------------ */
 
-/* The bar is the first element on the page, so its top margin
+/* The form is the first element on the page, so its top margin
    replaces the spacing the page heading used to provide. */
+.report-filter-form {
+    margin-top: 1.3rem;
+    margin-bottom: 1rem;
+}
+
 .report-filter-bar {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 14px;
     box-sizing: border-box;
-    margin-top: 1.3rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 10px;
     padding: 8px 14px;
     border: 1px solid #d8dce0;
     border-radius: 5px;
     background: #f8fafc;
 }
 
-/* The tab strip sits inside the card, so it needs no bottom
-   margin of its own and smaller pills than on dashboards. */
-.report-filter-bar .dashboard-tabs {
+/* The tab strip sits under the card with smaller pills than on dashboards. */
+.report-filter-form .dashboard-tabs {
     margin-bottom: 0;
     --tab-padding: 5px 14px;
     --tab-font-size: 11px;
@@ -100,4 +103,16 @@
 
 .b2b-report-count {
     text-align:right;
+}
+
+/* Strong enough to override the .zato-table th/td alignment rules. */
+.zato-table th.report-count-centered,
+.zato-table td.report-count-centered {
+    text-align: center;
+}
+
+/* The message a report table shows when there is no data in the range. */
+.zato-table td.report-empty-message {
+    padding: 14px 12px;
+    color: #71717a;
 }
