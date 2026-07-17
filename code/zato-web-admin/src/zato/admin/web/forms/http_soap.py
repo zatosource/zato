@@ -75,7 +75,7 @@ class CreateForm(DataFormatForm):
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_include_in_openapi = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_deprecated = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    deprecation_sunset = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:30%', 'placeholder':'YYYY-MM-DD'}))
+    deprecation_sunset = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:30%; height:19px'}))
     deprecation_successor = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%', 'placeholder':'/api/v2/example'}))
     host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
     url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))

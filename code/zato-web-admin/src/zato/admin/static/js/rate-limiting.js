@@ -60,6 +60,7 @@
     var rule_counter = 0;
     var stored_entity_id = '';
     var stored_url_base = '';
+    var stored_with_clear_counters = false;
 
     var row_accent_color = '#2e7d6a';
 
@@ -227,12 +228,13 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.init = function(container_id, mode, entity_id, url_base) {
+    $.fn.zato.rate_limiting.init = function(container_id, mode, entity_id, url_base, with_clear_counters) {
         var container = document.getElementById(container_id);
         container.innerHTML = '';
         rule_counter = 0;
         stored_entity_id = entity_id;
         stored_url_base = url_base;
+        stored_with_clear_counters = Boolean(with_clear_counters);
         $.fn.zato.rate_limiting.setup_drag(container_id);
         $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
@@ -352,18 +354,21 @@
 
         header.appendChild(pills);
 
-        var clear_link = document.createElement('a');
-        clear_link.href = 'javascript:void(0)';
-        clear_link.textContent = 'Clear counters';
-        clear_link.onclick = function() {
-            $.fn.zato.rate_limiting.clear_counters(container_id, rule_elem, clear_link);
-        };
-        header.appendChild(clear_link);
+        // Counters exist per entity on the server, tier editor pages have none
+        if(stored_with_clear_counters) {
+            var clear_link = document.createElement('a');
+            clear_link.href = 'javascript:void(0)';
+            clear_link.textContent = 'Clear counters';
+            clear_link.onclick = function() {
+                $.fn.zato.rate_limiting.clear_counters(container_id, rule_elem, clear_link);
+            };
+            header.appendChild(clear_link);
 
-        var separator = document.createElement('span');
-        separator.textContent = ' | ';
-        separator.style.color = '#888';
-        header.appendChild(separator);
+            var separator = document.createElement('span');
+            separator.textContent = ' | ';
+            separator.style.color = '#888';
+            header.appendChild(separator);
+        }
 
         var remove_button = document.createElement('a');
         remove_button.href = 'javascript:void(0)';
@@ -1264,10 +1269,8 @@
 
         var data = {rules_json: rules_json};
 
-        // Security definition pages carry a quota tier choice - a definition governed
-        // by a tier does not send its own rules. Channel pages have neither element.
-        // Tab-based pages express the tier vs. custom choice explicitly, older pages
-        // fold it into the select itself via an empty option.
+        // Rate limiting pages carry a quota tier vs. custom rules choice expressed
+        // with tabs - an entity governed by a tier does not send its own rules.
         var tier_tab = document.querySelector('.dashboard-tab[data-mode="tier"]');
         var tier_select = document.getElementById('quota-tier-select');
 
@@ -1275,12 +1278,6 @@
             var use_tier = tier_tab.classList.contains('dashboard-tab-active');
             data.quota_tier = use_tier && tier_select ? tier_select.value : '';
             if(use_tier) {
-                data.rules_json = '[]';
-            }
-        }
-        else if(tier_select) {
-            data.quota_tier = tier_select.value;
-            if(tier_select.value) {
                 data.rules_json = '[]';
             }
         }
@@ -1313,34 +1310,6 @@
                 status.text(msg).addClass('show status-message-error');
             }
         });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-    // Quota tier select - shown on security definition pages only
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.init_tier_select = function(container_id) {
-        var select = document.getElementById('quota-tier-select');
-
-        // Picking a tier hides the rule builder - the tier's rules govern the definition,
-        // picking custom rules shows it again.
-        var toggle = function() {
-            var has_tier = Boolean(select.value);
-            var container = $('#' + container_id);
-            var add_button = $('.rate-limiting-button-add');
-
-            if(has_tier) {
-                container.hide();
-                add_button.hide();
-            }
-            else {
-                container.show();
-                add_button.show();
-            }
-        };
-
-        select.addEventListener('change', toggle);
-        toggle();
     };
 
     // ////////////////////////////////////////////////////////////////////////

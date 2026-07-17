@@ -15,7 +15,7 @@ from traceback import format_exc
 from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      Groups, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SCHEDULER, SEC_DEF_TYPE, \
      SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
-from zato.common.broker_message import CHANNEL, OUTGOING
+from zato.common.broker_message import CHANNEL, OUTGOING, SECURITY
 from zato.common.const import SECRETS
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException
@@ -1689,28 +1689,13 @@ class InvokeOutconn(AdminService):
 class RateLimitingSave(AdminService):
 
     name = 'zato.http-soap.rate-limiting.save'
-    input = 'id', 'rules_json'
+    input = 'id', '-rules_json', '-quota_tier'
 
-    def handle(self) -> 'None':
-
-        input = self.request.input
-        channel_id = int(input['id'])
-        rules_json = input['rules_json']
-
-        self.logger.info('RateLimitingSave; channel_id:%s, rules_json:%s', channel_id, rules_json)
-
-        # Parse the JSON string into a list of rule dicts ..
-        rule_dicts:'anylist' = loads(rules_json)
-
-        self.logger.info('RateLimitingSave; channel_id:%s, parsed %s rule_dicts:%s', channel_id, len(rule_dicts), rule_dicts)
-
-        # .. validate each rule by running it through from_dict ..
-        for item in rule_dicts:
-            SlottedCIDRRule.from_dict(item)
-
+    def _save_opaque(self, channel_id:'int', to_set:'str', value:'any_', to_remove:'str') -> 'None':
+        """ Sets one opaque key and removes the other - a channel either references a tier or carries its own rules.
+        """
         with closing(self.odb.session()) as session:
 
-            # Read the current row ..
             row = session.query(HTTPSOAP).filter_by(id=channel_id).one()
 
             # .. parse the existing opaque1 or start with an empty dict ..
@@ -1719,13 +1704,61 @@ class RateLimitingSave(AdminService):
             else:
                 opaque = {}
 
-            # .. set the rate_limiting key ..
-            opaque['rate_limiting'] = rule_dicts
+            # .. set the new value and drop the mutually exclusive key ..
+            opaque[to_set] = value
+            _ = opaque.pop(to_remove, None)
 
-            # .. write it back ..
             row.opaque1 = dumps(opaque)
             session.add(row)
             session.commit()
+
+    def handle(self) -> 'None':
+
+        input = self.request.input
+        channel_id = int(input['id'])
+        rules_json = input.rules_json
+        quota_tier = input.quota_tier
+
+        self.logger.info('RateLimitingSave; channel_id:%s, rules_json:%s, quota_tier:%s', channel_id, rules_json, quota_tier)
+
+        # A channel either references a tier or carries its own rules, never both ..
+        if quota_tier:
+            if rules_json:
+                rule_dicts:'anylist' = loads(rules_json)
+                if rule_dicts:
+                    raise Exception('A channel cannot have both a quota tier and its own rate limiting rules')
+
+            # .. the tier must exist ..
+            tier_id = int(quota_tier)
+            if not self.server.quota_tiers_manager.get_tier(tier_id):
+                raise Exception(f'Quota tier with id `{tier_id}` not found')
+
+            # .. persist the reference ..
+            self._save_opaque(channel_id, 'quota_tier', tier_id, 'rate_limiting')
+
+            # .. and let all workers re-resolve tier assignments.
+            params = {
+                'action': SECURITY.QUOTA_TIER_EDIT.value,
+                'id': tier_id,
+            }
+            self.config_dispatcher.publish(params)
+
+            return
+
+        # .. no tier on input, so this is the own-rules path ..
+        if rules_json:
+            rule_dicts = loads(rules_json)
+        else:
+            rule_dicts = []
+
+        self.logger.info('RateLimitingSave; channel_id:%s, parsed %s rule_dicts:%s', channel_id, len(rule_dicts), rule_dicts)
+
+        # .. validate each rule by running it through from_dict ..
+        for item in rule_dicts:
+            SlottedCIDRRule.from_dict(item)
+
+        # .. persist to the ODB ..
+        self._save_opaque(channel_id, 'rate_limiting', rule_dicts, 'quota_tier')
 
         self.logger.info('RateLimitingSave; channel_id:%s, ODB committed', channel_id)
 
@@ -1762,7 +1795,10 @@ class RateLimitingGet(AdminService):
             # .. extract rate_limiting, defaulting to an empty list ..
             rate_limiting = opaque.get('rate_limiting', [])
 
-        self.response.payload = {'rate_limiting': rate_limiting}
+            # .. the same goes for a quota tier reference ..
+            quota_tier = opaque.get('quota_tier')
+
+        self.response.payload = {'rate_limiting': rate_limiting, 'quota_tier': quota_tier}
 
 # ################################################################################################################################
 # ################################################################################################################################

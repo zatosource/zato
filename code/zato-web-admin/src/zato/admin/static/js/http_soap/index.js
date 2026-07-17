@@ -82,19 +82,16 @@ $(document).ready(function() {
         return false;
     });
 
+    if($.fn.zato.http_soap.is_rest_channel()) {
+
+        // Attach date-time pickers to the deprecation sunset date fields in both popups
+        $.fn.zato.http_soap.attach_datetimepicker(['#id_deprecation_sunset', '#id_edit-deprecation_sunset']);
+    }
+
     if($.fn.zato.http_soap.is_rest_outgoing()) {
 
         // Attach date-time pickers to the scheduler start date fields in both popups ..
-        var picker_ids = ['#id_scheduler_start_date', '#id_edit-scheduler_start_date'];
-        $.each(picker_ids, function(ignored, picker_id) {
-            $(picker_id).datetimepicker(
-                {
-                    'dateFormat':$('#js_date_format').val(),
-                    'timeFormat':$('#js_time_format').val(),
-                    'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
-                }
-            );
-        });
+        $.fn.zato.http_soap.attach_datetimepicker(['#id_scheduler_start_date', '#id_edit-scheduler_start_date']);
 
         // .. and show the callback widget matching the callback type selected ..
         $.each(['create', 'edit'], function(ignored, action) {
@@ -150,6 +147,24 @@ $.fn.zato.http_soap.is_rest_outgoing = function() {
     var connection = $('input[name="connection"]').val();
     var transport = $('input[name="transport"]').val();
     return connection === 'outgoing' && transport === 'plain_http';
+}
+
+$.fn.zato.http_soap.is_rest_channel = function() {
+    var connection = $('input[name="connection"]').val();
+    var transport = $('input[name="transport"]').val();
+    return connection === 'channel' && transport === 'plain_http';
+}
+
+$.fn.zato.http_soap.attach_datetimepicker = function(picker_ids) {
+    $.each(picker_ids, function(ignored, picker_id) {
+        $(picker_id).datetimepicker(
+            {
+                'dateFormat':$('#js_date_format').val(),
+                'timeFormat':$('#js_time_format').val(),
+                'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
+            }
+        );
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -576,7 +591,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var data_encoding = '';
 
     var serialization_type = item.serialization_type ? item.serialization_type : 'string';
-    var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
+    var has_security = item.security && item.security != 'ZATO_NONE';
+    var security_name = has_security ? item.security_select : '<span class="form_hint">---</span>';
 
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
@@ -641,12 +657,18 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += service_tr;
     }
 
-    /* 9, 9b */
-    row += String.format('<td>{0}</td>', security_name);
+    /* 9 - the cell shows the security definition, the security groups info, or both */
+    var security_cell = security_name;
 
-    if(is_channel) {
-        row += String.format('<td>{0}</td>', data.security_groups_info);
+    if(is_channel && !data.security_groups_info.startsWith('0 ')) {
+        if(has_security) {
+            security_cell += '<br/>' + data.security_groups_info;
+        }
+        else {
+            security_cell = data.security_groups_info;
+        }
     }
+    row += String.format('<td>{0}</td>', security_cell);
 
     /* 10, 11, 11a */
     if(is_soap) {
@@ -706,7 +728,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         row += String.format('<td><a href="/zato/http-soap/rate-limiting/{0}/?cluster={1}">Rate limiting</a></td>', item.id, cluster_id);
-        row += String.format('<td><a href="/zato/http-soap/response-caching/{0}/?cluster={1}">Response caching</a></td>', item.id, cluster_id);
+        row += String.format('<td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{0}/?cluster={1}">Cache</a></td>', item.id, cluster_id);
     }
 
     /* Audit log (REST and SOAP channels, REST outgoing connections) */

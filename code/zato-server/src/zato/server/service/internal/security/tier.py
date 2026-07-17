@@ -114,7 +114,7 @@ class Delete(AdminService):
 
         # .. a referenced tier must not be deleted ..
         referents = self.server.quota_tiers_manager.get_tier_referents(tier_id)
-        referent_names = referents['security'] + referents['groups']
+        referent_names = referents['security'] + referents['groups'] + referents['channels']
 
         if referent_names:
             referent_names = sorted(referent_names)
@@ -202,7 +202,8 @@ class GetList(AdminService):
             referents = self.server.quota_tiers_manager.get_tier_referents(tier_id)
             security_count = len(referents['security'])
             group_count = len(referents['groups'])
-            tier['referent_count'] = security_count + group_count
+            channel_count = len(referents['channels'])
+            tier['referent_count'] = security_count + group_count + channel_count
 
         # .. and return the list to our caller.
         self.response.payload = tier_list

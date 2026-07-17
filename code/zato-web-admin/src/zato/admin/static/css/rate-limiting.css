@@ -93,6 +93,10 @@ table.rate-limiting-form select:focus,
     font-size: 12px;
 }
 
+.rate-limiting-tier-panel button {
+    font-size: 11px;
+}
+
 /* ------------------------------------------------------------ */
 /* Rate limiting - container                                    */
 /* ------------------------------------------------------------ */

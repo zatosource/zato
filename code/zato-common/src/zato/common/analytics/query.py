@@ -637,14 +637,17 @@ def get_consumer(now:'datetime', time_range:'str', caller:'str') -> 'stranydict'
 
     out = _get_screen_data(now, time_range, '', caller_filter, True, 0)
     out['name'] = caller
+    out['error_sources'] = get_error_sources(now, time_range, caller=caller_filter)
 
     return out
 
 # ################################################################################################################################
 
-def get_error_sources(now:'datetime', time_range:'str', channel:'str') -> 'stranydict':
-    """ The error-source split of one channel over the window - rate limit vs auth
-    vs upstream vs gateway, which is the why behind the error count.
+def get_error_sources(now:'datetime', time_range:'str', channel:'str'='', caller:'strnone'=None) -> 'stranydict':
+    """ The error-source split of one channel or one consumer over the window - rate limit
+    vs auth vs upstream vs gateway, which is the why behind the error count. The anonymous
+    consumer is stored as an empty caller, so the caller filter distinguishes "no filter"
+    from "anonymous only", the same way _load_rows does.
     """
     cutoff_period = get_range_cutoff(now, time_range)
 
@@ -655,7 +658,12 @@ def get_error_sources(now:'datetime', time_range:'str', channel:'str') -> 'stran
         usage_table.c.error_count_gateway,
     )
     statement = statement.where(usage_table.c.period >= cutoff_period)
-    statement = statement.where(usage_table.c.channel == channel)
+
+    if channel:
+        statement = statement.where(usage_table.c.channel == channel)
+
+    if caller is not None:
+        statement = statement.where(usage_table.c.caller == caller)
 
     engine = get_analytics_engine()
 

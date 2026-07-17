@@ -3,6 +3,7 @@
 {% block html_title %}Channel usage{% endblock %}
 
 {% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/reports.css">
 {% endblock %}
 
@@ -11,6 +12,7 @@
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.b2b.reports.init();
+    $.fn.zato.b2b.reports.init_filter_tabs('report-filter-form', 'report-filter-range');
 });
 </script>
 {% endblock %}
@@ -18,28 +20,39 @@ $(document).ready(function() {
 {% block "content" %}
 
 <div id="markup">
-    <h2 class="zato">Channel usage</h2>
 
-    <form method="get" action="{% url "channel-usage" %}" class="b2b-report-filters">
+    <form method="get" action="{% url "channel-usage" %}" class="report-filter-bar" id="report-filter-form">
         <input type="hidden" name="cluster" value="{{ cluster_id }}">
-        <label>Range:
-            <select name="range">
-                {% for item in ranges %}
-                <option value="{{ item.value }}" {% if item.value == time_range %}selected{% endif %}>{{ item.label }}</option>
+        <input type="hidden" name="range" value="{{ time_range }}" id="report-filter-range">
+
+        <div class="report-filter-channel-group">
+            <label for="report-filter-channel">Channel</label>
+            <input list="report-channel-list" name="channel" value="{{ channel }}" placeholder="Any channel"
+                autocomplete="off" class="report-filter-channel" id="report-filter-channel">
+            <datalist id="report-channel-list">
+                {% for item in channels %}
+                <option value="{{ item }}"></option>
                 {% endfor %}
-            </select>
-        </label>
-        <label>Channel:
-            <input type="text" name="channel" value="{{ channel }}" placeholder="Any channel">
-        </label>
-        <input type="submit" value="Show">
+            </datalist>
+            <input type="submit" value="Show" class="report-filter-submit">
+        </div>
+
+        <div class="dashboard-tabs" role="tablist" aria-label="Time range">
+            {% for item in ranges %}
+            <button type="button"
+                    class="dashboard-tab{% if item.value == time_range %} dashboard-tab-active{% endif %}"
+                    data-range="{{ item.value }}"
+                    role="tab"
+                    aria-selected="{% if item.value == time_range %}true{% else %}false{% endif %}">
+                <span class="dashboard-tab-label">{{ item.label }}</span>
+            </button>
+            {% endfor %}
+        </div>
+
+        <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">CSV</a>
     </form>
 
     <div class="b2b-report-section">
-        <h3 class="zato">Calls per channel and caller
-            <a class="b2b-report-export" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">Export CSV</a>
-        </h3>
-
         {% if rows %}
         <table class="zato-table b2b-report-table" id="channel-usage-table">
             <thead>
