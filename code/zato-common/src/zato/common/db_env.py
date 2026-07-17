@@ -301,6 +301,31 @@ def ensure_columns(engine:'Engine', table:'Table') -> 'None':
 
 # ################################################################################################################################
 
+def ensure_indexes(engine:'Engine', table:'Table') -> 'None':
+    """ Creates on an existing table any indexes its declaration has gained since the table
+    was first created - create_all only builds indexes together with new tables,
+    so databases created by older releases need to learn about new ones here.
+    """
+    inspector = inspect(engine)
+    existing = inspector.get_indexes(table.name)
+
+    # The names the database already knows about
+    existing_names = set()
+
+    for index_info in existing:
+        existing_names.add(index_info['name'])
+
+    for index in table.indexes:
+
+        if index.name in existing_names:
+            continue
+
+        index.create(engine)
+
+        logger.info('Added index `%s` to table `%s`', index.name, table.name)
+
+# ################################################################################################################################
+
 def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     """ Returns an SQLAlchemy engine for an environment-configured database,
     creating the schema if needed. Which database is used comes from the
@@ -337,9 +362,10 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     # .. make sure the schema exists - this is idempotent ..
     config.metadata.create_all(out)
 
-    # .. tables created by older releases may be missing newly declared columns ..
+    # .. tables created by older releases may be missing newly declared columns and indexes ..
     for table in config.metadata.tables.values():
         ensure_columns(out, table)
+        ensure_indexes(out, table)
 
     # .. and cache the engine for all future callers.
     _engine_cache[cache_key] = out
