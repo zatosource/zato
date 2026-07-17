@@ -16,7 +16,8 @@ from sqlalchemy import func, or_, select
 from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_engine_encrypted, \
     assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
 from live_sql.env import database_env
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table, get_audit_engine
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
+    get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -55,6 +56,19 @@ def audit_log_env(details:'stranydict') -> 'envgen':
     """
     with database_env(_env_prefix, details):
         yield
+
+# ################################################################################################################################
+
+def delete_all_events() -> 'None':
+    """ Starts a scenario from empty tables because containers can be reused between test runs.
+    """
+    engine = get_audit_engine()
+
+    with engine.begin() as connection:
+        _ = connection.execute(event_attr_table.delete())
+        _ = connection.execute(event_body_table.delete())
+        _ = connection.execute(event_link_table.delete())
+        _ = connection.execute(event_table.delete())
 
 # ################################################################################################################################
 
@@ -129,11 +143,9 @@ def run_audit_log_scenario() -> 'None':
     retention and attaching a second writer to an existing schema.
     """
 
-    # Start from an empty table because containers can be reused between test runs ..
+    # Start from empty tables because containers can be reused between test runs ..
     engine = get_audit_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(event_table.delete())
+    delete_all_events()
 
     # .. the schema was created and the writer connects ..
     audit_log = AuditLog(_server_name)

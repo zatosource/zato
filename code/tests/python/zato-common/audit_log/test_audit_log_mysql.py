@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from common import audit_log_env, run_audit_log_scenario
+from retention_tiers import run_retention_tiers_scenario
+from structured import run_structured_events_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,6 +26,8 @@ def test_audit_log_mysql(mysql_server:'DatabaseServer') -> 'None':
     """
     with audit_log_env(mysql_server.details):
         run_audit_log_scenario()
+        run_structured_events_scenario()
+        run_retention_tiers_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################
