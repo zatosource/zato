@@ -56,9 +56,12 @@ _Field_To_Tab = {
     'timeout': 'main',
     'tls_client_cert': 'security',
     'tls_client_key': 'security',
-    'ping_method': 'more',
-    'content_type': 'more',
+    'ping_method': 'main',
+    'content_type': 'main',
 }
+
+# Fields hidden in the main tab's collapsible "More options" block
+_More_Options_Fields = ('ping_method', 'content_type')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,6 +131,21 @@ def _activate_tab(page:'Page', prefix:'str', tab_name:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _ensure_more_options_visible(page:'Page', prefix:'str') -> 'None':
+    """ Reveals the main tab's "More options" block, clicking its toggler if the block is still collapsed.
+    """
+    container = '#edit-div' if prefix else '#create-div'
+    probe_selector = f'#id_{prefix}ping_method'
+
+    probe = page.query_selector(probe_selector)
+
+    # The block may have been toggled by a previous dialog interaction, only click when it is hidden.
+    if not probe.is_visible():
+        page.click(f'{container} a[href*="more-options-block"]')
+        _ = page.wait_for_selector(probe_selector, state='visible', timeout=5000)
+
+# ################################################################################################################################
+
 def fill_soap_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None':
     """ Fills the outgoing SOAP connection create or edit form. An empty prefix means
     the create form, the 'edit-' prefix means the edit form. Only the fields present
@@ -145,6 +163,10 @@ def fill_soap_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> '
             if field_tab != current_tab:
                 _activate_tab(page, prefix, field_tab)
                 current_tab = field_tab
+
+            # The main tab hides a few fields behind its "More options" toggler
+            if field_name in _More_Options_Fields:
+                _ensure_more_options_visible(page, prefix)
 
             page.fill(f'#id_{prefix}{field_name}', options[field_name])
 

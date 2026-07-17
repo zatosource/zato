@@ -47,8 +47,7 @@ _Cell_Is_Active = 3
 _Cell_Url_Path = 4
 _Cell_Service = 5
 _Cell_Security = 6
-_Cell_Security_Groups = 7
-_Cell_Rate_Limiting = 25
+_Cell_Rate_Limiting = 24
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +89,7 @@ class TestRESTChannelCRUD:
             text = raw_text.strip().lower()
             header_texts.append(text)
 
-        for expected in ('name', 'active', 'url path', 'service', 'security', 'security groups'):
+        for expected in ('name', 'active', 'url path', 'service', 'security'):
             assert expected in header_texts, f'Expected "{expected}" in headers, got: {header_texts}'
 
 # ################################################################################################################################
@@ -123,10 +122,8 @@ class TestRESTChannelCRUD:
         assert cells[_Cell_Is_Active] == 'Yes', f'Expected is_active "Yes", got: "{cells[_Cell_Is_Active]}"'
         assert cells[_Cell_Url_Path] == url_path, f'Expected url_path "{url_path}", got: "{cells[_Cell_Url_Path]}"'
         assert cells[_Cell_Service] == _Echo_Service, f'Expected service "{_Echo_Service}", got: "{cells[_Cell_Service]}"'
+        # The security cell shows the definition, the security groups info, or a placeholder for neither
         assert cells[_Cell_Security] == '---', f'Expected no security definition, got: "{cells[_Cell_Security]}"'
-        # A freshly added row renders the zero counts while a server-rendered row shows a placeholder
-        assert cells[_Cell_Security_Groups] in ('---', '0 groups, 0 clients'), \
-            f'Expected no security groups, got: "{cells[_Cell_Security_Groups]}"'
         assert cells[_Cell_Rate_Limiting] == 'Rate limiting', \
             f'Expected the rate limiting link, got: "{cells[_Cell_Rate_Limiting]}"'
 

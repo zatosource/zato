@@ -41,8 +41,8 @@ _Echo_Service = 'demo.echo'
 
 _API_Key_Header = 'X-API-Key'
 
-# Row cell index with the channel's security groups info
-_Cell_Security_Groups = 7
+# Row cell index with the channel's security definition and security groups info
+_Cell_Security = 6
 
 # Log patterns produced by the server when group credentials are rejected
 _Group_Log_Patterns = (
@@ -96,11 +96,11 @@ class TestRESTChannelGroups:
             'security_groups': [group_name],
         })
 
-        # .. the row summarizes the group and its members ..
+        # .. the security cell summarizes the group and its members ..
         row = find_channel_row(page, channel_name)
         cells = get_row_cell_texts(row)
-        assert cells[_Cell_Security_Groups] == '1 group, 2 clients', \
-            f'Expected "1 group, 2 clients", got: "{cells[_Cell_Security_Groups]}"'
+        assert cells[_Cell_Security] == '1 group, 2 clients', \
+            f'Expected "1 group, 2 clients", got: "{cells[_Cell_Security]}"'
 
         # .. the Basic Auth member passes ..
         auth = (member_basic_auth['username'], member_basic_auth['password'])
@@ -161,11 +161,11 @@ class TestRESTChannelGroups:
             'security_groups_uncheck': [group_name],
         })
 
-        # .. the groups column shows no groups ..
+        # .. with no groups and no security definition the security cell shows a placeholder ..
         row = find_channel_row(page, channel_name)
         cells = get_row_cell_texts(row)
-        assert cells[_Cell_Security_Groups] == '0 groups, 0 clients', \
-            f'Expected "0 groups, 0 clients", got: "{cells[_Cell_Security_Groups]}"'
+        assert cells[_Cell_Security] == '---', \
+            f'Expected "---", got: "{cells[_Cell_Security]}"'
 
         # .. and the channel is open now.
         response = invoke_until_status(server_port, url_path, OK, data='{"group": "off"}')

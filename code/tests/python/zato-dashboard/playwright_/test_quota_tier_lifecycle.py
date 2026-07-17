@@ -121,7 +121,7 @@ def _delete_apikey(page:'Page', base_url:'str', item_id:'str') -> 'None':
 # ################################################################################################################################
 
 class TestQuotaTierLifecycle:
-    """ Creates a tier, assigns it to an API key definition and verifies the tier select round-trips.
+    """ Creates a tier, assigns it to an API key definition and verifies the tier vs. custom rules tabs round-trip.
     """
 
     def test_tier_assignment_round_trip(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
@@ -151,12 +151,17 @@ class TestQuotaTierLifecycle:
             # .. open the definition's rate limiting page ..
             rate_limiting_url = f'{base_url}/zato/security/apikey/rate-limiting/{apikey_id}/?cluster=1&name={apikey_name}'
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('#quota-tier-select', state='visible')
+            page.wait_for_selector('.dashboard-tab[data-mode="tier"]', state='visible')
 
-            # .. with no tier selected, the rule builder is visible ..
+            # .. with no tier assigned, the custom rules tab is active and the rule builder is visible ..
+            assert page.is_visible('.dashboard-tab[data-mode="custom"].dashboard-tab-active'), \
+                'Custom rules tab should be active without a tier'
             assert page.is_visible('#rate-limiting-container'), 'Rule builder should be visible without a tier'
 
-            # .. pick the tier - the rule builder hides ..
+            # .. switch to the quota tier tab and pick the tier - the rule builder hides ..
+            page.click('.dashboard-tab[data-mode="tier"]')
+            page.wait_for_selector('#quota-tier-select', state='visible')
+
             _ = page.select_option('#quota-tier-select', label=tier_name)
             assert not page.is_visible('#rate-limiting-container'), 'Rule builder should hide when a tier is selected'
 
@@ -164,8 +169,9 @@ class TestQuotaTierLifecycle:
             page.click('.rate-limiting-actions input[type="submit"]')
             page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', timeout=10000)
 
-            # .. reload - the select round-trips to the tier and the builder stays hidden ..
+            # .. reload - the tier tab round-trips as the active one and the builder stays hidden ..
             _ = page.goto(rate_limiting_url)
+            page.wait_for_selector('.dashboard-tab[data-mode="tier"].dashboard-tab-active', state='visible')
             page.wait_for_selector('#quota-tier-select', state='visible')
 
             selected_label = page.eval_on_selector(
@@ -182,9 +188,9 @@ class TestQuotaTierLifecycle:
 
             # .. switch the definition back to custom rules ..
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('#quota-tier-select', state='visible')
+            page.wait_for_selector('.dashboard-tab[data-mode="custom"]', state='visible')
 
-            _ = page.select_option('#quota-tier-select', value='')
+            page.click('.dashboard-tab[data-mode="custom"]')
             assert page.is_visible('#rate-limiting-container'), 'Rule builder should show for custom rules'
 
             page.click('.rate-limiting-actions input[type="submit"]')
@@ -192,10 +198,9 @@ class TestQuotaTierLifecycle:
 
             # .. and the switch round-trips too.
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('#quota-tier-select', state='visible')
+            page.wait_for_selector('.dashboard-tab[data-mode="custom"].dashboard-tab-active', state='visible')
 
-            selected_value = page.eval_on_selector('#quota-tier-select', 'select => select.value')
-            assert selected_value == '', f'Expected custom rules selected after a reload, got: "{selected_value}"'
+            assert page.is_visible('#rate-limiting-container'), 'Rule builder should stay visible after a reload'
 
         finally:
 
