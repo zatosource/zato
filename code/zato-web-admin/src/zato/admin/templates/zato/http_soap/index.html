@@ -36,6 +36,8 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
+    {% endif %}
+    {% if transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     {% endif %}
 {% endblock %}
@@ -59,8 +61,10 @@
     {% if transport == 'soap' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     {% endif %}
-    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    {% if transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+    {% endif %}
+    {% if connection == 'outgoing' and transport == 'plain_http' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
@@ -101,11 +105,8 @@
                 '_service',
             {% endif %}
 
-            // 9, 9b
+            // 9
             '_security',
-            {% if connection == 'channel' %}
-                '_security_groups',
-            {% endif %}
 
             // 10, 11, 11a
             {% if transport == 'soap' %}
@@ -288,11 +289,8 @@
                             <th class='ignore'><a href="#">Cache</a></th>
                         {% endif %}
 
-                        <!-- 9, 9b -->
+                        <!-- 9 -->
                         <th><a href="#">Security</a></th>
-                        {% if connection == 'channel' %}
-                            <th><a href="#">Security groups</a></th>
-                        {% endif %}
 
                         <!-- 10, 11, 11a -->
                         {% if transport == 'soap' %}
@@ -446,24 +444,16 @@
                             <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>{% endif %}</td>
                         {% endif %}
 
-                        <!-- 9, 9b -->
+                        <!-- 9 -->
                         <td>
                             {% if item.security_name == "Delegated to RBAC" %}
                                 <span class="form_hint">Delegated to RBAC</span>
+                            {% elif connection == 'channel' and item.security_group_count %}
+                                {% if item.security_id != 'ZATO_NONE' %}{{ item.security_name|safe }}<br/>{% endif %}{{ item.security_group_count }} group{% if item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
                             {% else %}
                                 {{ item.security_name|safe }}
                             {% endif %}
                         </td>
-
-                        {% if connection == 'channel' %}
-                            <td>
-                                {% if item.security_group_count %}
-                                    {{ item.security_group_count }} group{% if item.security_group_count == 0 or item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
-                                {% else %}
-                                <span class="form_hint">---</span>
-                                {% endif %}
-                            </td>
-                        {% endif %}
 
                         <!-- 10, 11, 11a -->
                         {% if transport == 'soap' %}
@@ -527,25 +517,25 @@
                         {% endif %}
 
                         {% if connection == 'channel' %}
-                        <td><a href="/zato/http-soap/response-caching/{{ item.id }}/?cluster={{ cluster_id }}">Response caching</a></td>
+                        <td style="white-space:nowrap"><a href="/zato/http-soap/response-caching/{{ item.id }}/?cluster={{ cluster_id }}">Cache</a></td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
-                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td>{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?channel={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?channel={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'soap' %}
-                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         {% endif %}
 
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
-                        <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 31, 32 -->
-                        <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
+                        <td style="white-space:nowrap"><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
+                        <td style="white-space:nowrap"><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
 
                         <!-- 33 -->
                         {% if connection == 'outgoing' %}
@@ -554,7 +544,7 @@
 
                         <!-- Invoke -->
                         {% if transport == 'plain_http' %}
-                            <td>{% if connection == 'channel' and item.is_internal %}<span class="form_hint">Invoke</span>{% else %}<a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a>{% endif %}</td>
+                            <td style="white-space:nowrap">{% if connection == 'channel' and item.is_internal %}<span class="form_hint">Invoke</span>{% else %}<a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 38a -->
@@ -644,11 +634,6 @@
                                         OpenAPI
                                         {{ create_form.should_include_in_openapi }}
                                     </label>
-                                    |
-                                    <label for="id_is_deprecated">
-                                        Deprecated
-                                        {{ create_form.is_deprecated }}
-                                    </label>
                                 {% endif %}
                                 {% if transport == 'plain_http' %}
                                     |
@@ -662,8 +647,18 @@
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_deprecation_sunset">Sunset date</label></td>
-                            <td>{{ create_form.deprecation_sunset }}</td>
+                            <td></td>
+                            <td>
+                                <label for="id_is_deprecated">
+                                    Deprecated
+                                    {{ create_form.is_deprecated }}
+                                </label>
+                                |
+                                <label for="id_deprecation_sunset">
+                                    Sunset date
+                                    {{ create_form.deprecation_sunset }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
@@ -953,11 +948,6 @@
                                         OpenAPI
                                         {{ edit_form.should_include_in_openapi }}
                                     </label>
-                                    |
-                                    <label for="id_edit-is_deprecated">
-                                        Deprecated
-                                        {{ edit_form.is_deprecated }}
-                                    </label>
                                 {% endif %}
                                 |
                                 <label for="{{ edit_form.data_format.id_for_label }}">
@@ -969,8 +959,18 @@
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
                         <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-deprecation_sunset">Sunset date</label></td>
-                            <td>{{ edit_form.deprecation_sunset }}</td>
+                            <td></td>
+                            <td>
+                                <label for="id_edit-is_deprecated">
+                                    Deprecated
+                                    {{ edit_form.is_deprecated }}
+                                </label>
+                                |
+                                <label for="id_edit-deprecation_sunset">
+                                    Sunset date
+                                    {{ edit_form.deprecation_sunset }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
@@ -1219,7 +1219,7 @@
             </div>
         </div>
 
-        {% if connection == 'outgoing' and transport == 'plain_http' %}
+        {% if transport == 'plain_http' %}
         <form>
             <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
             <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />

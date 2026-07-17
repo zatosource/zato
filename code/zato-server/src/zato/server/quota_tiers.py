@@ -14,7 +14,7 @@ from dataclasses import dataclass
 # Zato
 from zato.common.api import Groups, Quota_Tiers
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import GenericObject as ModelGenericObject, SecurityBase
+from zato.common.odb.model import GenericObject as ModelGenericObject, HTTPSOAP, SecurityBase
 from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.sql import get_dict_with_opaque
@@ -44,7 +44,7 @@ intruledict = dict[int, 'strdictlist']
 
 @dataclass(init=False)
 class TierResolution:
-    """ The outcome of resolving quota tier assignments to concrete rules per security definition.
+    """ The outcome of resolving quota tier assignments to concrete rules per security definition and channel.
     """
 
     # Security definition id -> rule dicts coming from the tier that governs it
@@ -52,6 +52,12 @@ class TierResolution:
 
     # Security definitions that carry their own literal rules - tiers never override these
     own_rules_sec_def_ids: 'intset'
+
+    # Channel id -> rule dicts coming from the tier that governs it
+    rules_by_channel: 'intruledict'
+
+    # Channels that carry their own literal rules - tiers never override these
+    own_rules_channel_ids: 'intset'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,6 +80,9 @@ class QuotaTiersManager:
         # Security definitions whose rules were installed from a tier - used to clear
         # limits of definitions that are no longer governed by any tier.
         self._governed_sec_def_ids:'intset' = set()
+
+        # The same for channels.
+        self._governed_channel_ids:'intset' = set()
 
 # ################################################################################################################################
 
@@ -216,11 +225,11 @@ class QuotaTiersManager:
 # ################################################################################################################################
 
     def get_tier_referents(self, tier_id:'int') -> 'strlistdict':
-        """ Returns the names of security definitions and groups that reference the given tier.
+        """ Returns the names of security definitions, groups and channels that reference the given tier.
         """
 
         # Our response to produce
-        out:'strlistdict' = {'security': [], 'groups': []}
+        out:'strlistdict' = {'security': [], 'groups': [], 'channels': []}
 
         with closing(self.session()) as session:
 
@@ -240,6 +249,22 @@ class QuotaTiersManager:
                 # .. and collect the ones pointing to our tier.
                 if opaque.get('quota_tier') == tier_id:
                     out['security'].append(sec_row.name)
+
+            # .. now check channels ..
+            channel_rows = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.cluster_id==self.cluster_id).\
+                filter(HTTPSOAP.connection=='channel').\
+                all()
+
+            for channel_row in channel_rows:
+
+                if not channel_row.opaque1:
+                    continue
+
+                opaque = loads(channel_row.opaque1)
+
+                if opaque.get('quota_tier') == tier_id:
+                    out['channels'].append(channel_row.name)
 
             # .. now check security groups.
             wrapper = GenericObjectWrapper(session, self.cluster_id)
@@ -275,6 +300,8 @@ class QuotaTiersManager:
         out = TierResolution()
         out.rules_by_sec_def = {}
         out.own_rules_sec_def_ids = set()
+        out.rules_by_channel = {}
+        out.own_rules_channel_ids = set()
 
         # Map each tier id to its rules for quick lookups below ..
         rules_by_tier:'intruledict' = {}
@@ -307,6 +334,28 @@ class QuotaTiersManager:
                 if tier_id := opaque.get('quota_tier'):
                     if rules := rules_by_tier.get(tier_id):
                         out.rules_by_sec_def[sec_row.id] = rules
+
+            # .. walk all channels the same way - own rules win, then a directly referenced tier ..
+            channel_rows = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.cluster_id==self.cluster_id).\
+                filter(HTTPSOAP.connection=='channel').\
+                all()
+
+            for channel_row in channel_rows:
+
+                # .. channels without opaque data carry neither rules nor tiers ..
+                if not channel_row.opaque1:
+                    continue
+
+                opaque = loads(channel_row.opaque1)
+
+                if opaque.get('rate_limiting'):
+                    out.own_rules_channel_ids.add(channel_row.id)
+                    continue
+
+                if channel_tier_id := opaque.get('quota_tier'):
+                    if channel_rules := rules_by_tier.get(channel_tier_id):
+                        out.rules_by_channel[channel_row.id] = channel_rules
 
             # .. now resolve group tiers for members that have neither own rules nor own tiers ..
             wrapper = GenericObjectWrapper(session, self.cluster_id)
@@ -349,6 +398,7 @@ class QuotaTiersManager:
         """
         resolution = self.resolve_tier_assignments()
         resolved_ids = set(resolution.rules_by_sec_def)
+        resolved_channel_ids = set(resolution.rules_by_channel)
 
         # Definitions previously governed by a tier which no longer are, and which do not carry
         # their own rules either, must have their limits cleared.
@@ -357,20 +407,34 @@ class QuotaTiersManager:
         for sec_def_id in to_clear:
             self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, [])
 
+        # The same goes for channels.
+        channels_to_clear = self._governed_channel_ids - resolved_channel_ids - resolution.own_rules_channel_ids
+
+        for channel_id in channels_to_clear:
+            self.server.rate_limiting_manager.set_channel_config(channel_id, [])
+
         # Install the resolved rules - the rate-limiting manager receives plain rules
         # under each definition's id and cannot tell a tier was involved.
         for sec_def_id, rules in resolution.rules_by_sec_def.items():
             self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rules)
 
+        for channel_id, channel_rules in resolution.rules_by_channel.items():
+            self.server.rate_limiting_manager.set_channel_config(channel_id, channel_rules)
+
         # Remember what we installed for the next resolution pass.
         self._governed_sec_def_ids = resolved_ids
+        self._governed_channel_ids = resolved_channel_ids
 
         installed_count = len(resolved_ids)
         cleared_count = len(to_clear)
         suffix = '' if installed_count == 1 else 's'
 
-        logger.info('Quota tiers; installed rules for %d security definition%s, cleared %d',
-            installed_count, suffix, cleared_count)
+        channel_installed_count = len(resolved_channel_ids)
+        channel_cleared_count = len(channels_to_clear)
+        channel_suffix = '' if channel_installed_count == 1 else 's'
+
+        logger.info('Quota tiers; installed rules for %d security definition%s (cleared %d) and %d channel%s (cleared %d)',
+            installed_count, suffix, cleared_count, channel_installed_count, channel_suffix, channel_cleared_count)
 
 # ################################################################################################################################
 # ################################################################################################################################

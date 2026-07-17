@@ -272,18 +272,8 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    dash._render_channel_tables = function(data) {
-
-        // The consumers behind this channel's numbers
-        dash._render_entity_table(
-            '#analytics-consumers-table-body',
-            '#analytics-consumers-count',
-            data.rows,
-            dash.consumer_href,
-            [dash._last_seen_cell]
-        );
-
-        // The error-source split - the why behind the error count
+    // The error-source split - the why behind the error count
+    dash._render_error_sources = function(data) {
         var kit = $.fn.zato.dashboard_kit;
         var body = document.querySelector('#analytics-error-sources-table-body');
         body.textContent = '';
@@ -306,6 +296,22 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
+    dash._render_channel_tables = function(data) {
+
+        // The consumers behind this channel's numbers
+        dash._render_entity_table(
+            '#analytics-consumers-table-body',
+            '#analytics-consumers-count',
+            data.rows,
+            dash.consumer_href,
+            [dash._last_seen_cell]
+        );
+
+        dash._render_error_sources(data);
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+
     dash._render_consumer_tables = function(data) {
 
         // The channels this credential calls, each with a drill-down into the audit log
@@ -316,6 +322,8 @@
             dash.channel_href,
             [dash._last_seen_cell, dash._audit_link_cell]
         );
+
+        dash._render_error_sources(data);
     };
 
     // ////////////////////////////////////////////////////////////////////////

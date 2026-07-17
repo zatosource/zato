@@ -32,12 +32,13 @@ from zato.common.defaults import default_cluster_id
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import anylist, anytuple, strstrdict
+    from zato.common.typing_ import anylist, anytuple, strlist, strstrdict
 
     # Dummy assignments to satisfy type checkers
     datetime = datetime
     anylist = anylist
     anytuple = anytuple
+    strlist = strlist
     strstrdict = strstrdict
 
 # ################################################################################################################################
@@ -190,6 +191,39 @@ def get_usage(now:'datetime', time_range:'str'=Default_Range, channel:'str'='') 
         row.link = _audit_log_link(source, channel_name)
 
         out.append(row)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_channel_list() -> 'strlist':
+    """ All the channel names the audit log has responses for, sorted by name -
+    this is what the channel filter on the usage page lists.
+    """
+    source_matches = event_table.c.source.in_((AuditSource.REST_Channel, AuditSource.SOAP_Channel))
+    event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent
+
+    conditions = and_(
+        source_matches,
+        event_type_matches,
+    )
+
+    statement = select(event_table.c.object_name).distinct()
+    statement = statement.where(conditions)
+    statement = statement.order_by(event_table.c.object_name)
+
+    engine = get_audit_engine()
+
+    with engine.connect() as connection:
+        result = connection.execute(statement)
+        rows = result.fetchall()
+
+    # Our response to produce
+    out:'strlist' = []
+
+    for row in rows:
+        out.append(row.object_name)
 
     return out
 

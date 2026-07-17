@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import method_allowed
 from zato.common.audit_log.api import Retention_Days
 from zato.common.audit_log.reports import Default_Range, Range_Day, Range_Hours, Range_Month, Range_Week
-from zato.common.audit_log.usage import get_usage, usage_csv
+from zato.common.audit_log.usage import get_channel_list, get_usage, usage_csv
 from zato.common.defaults import default_cluster_id
 from zato.common.util.api import utcnow
 
@@ -81,6 +81,9 @@ def index(req:'any_') -> 'TemplateResponse':
 
     rows = get_usage(now, time_range, channel)
 
+    # What the channel filter's dropdown lists
+    channels = get_channel_list()
+
     # The range choices of the filter form, in their display order
     ranges:'dictlist' = []
 
@@ -91,6 +94,7 @@ def index(req:'any_') -> 'TemplateResponse':
         'cluster_id': default_cluster_id,
         'time_range': time_range,
         'channel': channel,
+        'channels': channels,
         'ranges': ranges,
         'rows': rows,
         'zato_clusters': True,

@@ -105,3 +105,18 @@ $.fn.zato.b2b.reports.init = function() {
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.b2b.reports.init_filter_tabs = function(formId, rangeInputId) {
+    var form = $('#' + formId);
+    var rangeInput = $('#' + rangeInputId);
+
+    // Each tab carries its range value - clicking one applies it immediately
+    // by writing it into the hidden input and submitting the GET form.
+    form.on('click', '.dashboard-tab', function() {
+        var tab = $(this);
+        rangeInput.val(tab.attr('data-range'));
+        form.trigger('submit');
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -236,10 +236,17 @@ def test_analytics_views(tmp_path:'os.PathLike') -> 'None':
         assert consumer_rows[1]['name'] == _channel_a
         assert consumer_rows[1]['request_count'] == 20
 
+        # .. each consumer carries its own error-source split ..
+        assert consumer_data['error_sources'] == {'auth': 0, 'rate_limit': 0, 'upstream': 0, 'gateway': 0}
+
+        alice_data = get_consumer(_now, Range_Day, _caller_alice)
+        assert alice_data['error_sources'] == {'auth': 10, 'rate_limit': 0, 'upstream': 0, 'gateway': 0}
+
         # .. and the anonymous page holds only the requests that never authenticated.
         anonymous_data = get_consumer(_now, Range_Day, Caller_Anonymous)
 
         assert anonymous_data['totals']['request_count'] == 5
+        assert anonymous_data['error_sources'] == {'auth': 0, 'rate_limit': 5, 'upstream': 0, 'gateway': 0}
 
         anonymous_rows = anonymous_data['rows']
         assert len(anonymous_rows) == 1
@@ -298,6 +305,7 @@ def test_analytics_views_empty_store(tmp_path:'os.PathLike') -> 'None':
 
         assert consumer_data['totals']['request_count'] == 0
         assert consumer_data['rows'] == []
+        assert consumer_data['error_sources'] == {'auth': 0, 'rate_limit': 0, 'upstream': 0, 'gateway': 0}
 
         # The CSVs of an empty store are their headers and nothing else
         overview_content = overview_csv(overview)

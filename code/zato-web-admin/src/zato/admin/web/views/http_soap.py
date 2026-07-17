@@ -23,6 +23,7 @@ from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, SecurityList
+from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
@@ -562,6 +563,9 @@ def rate_limiting(req, id): # type: ignore
         'id': id,
     })
 
+    # Tiers are offered in a select so a channel can reference one instead of carrying its own rules
+    tier_list = get_tier_list(req)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'channel_id': id,
@@ -569,6 +573,8 @@ def rate_limiting(req, id): # type: ignore
         'channel_url_path': response.data.url_path,
         'transport': response.data.transport,
         'rules_json': dumps(rules_response.data.rate_limiting),
+        'quota_tier': rules_response.data.quota_tier,
+        'tier_list': tier_list,
         'zato_template_name': 'zato/http_soap/rate-limiting.html',
     }
 
@@ -581,10 +587,12 @@ def rate_limiting(req, id): # type: ignore
 def rate_limiting_save(req, id): # type: ignore
     try:
         rules_json = req.POST['rules_json']
-        logger.info('rate_limiting_save; channel_id:%s, rules_json:%s', id, rules_json)
+        quota_tier = req.POST['quota_tier']
+        logger.info('rate_limiting_save; channel_id:%s, rules_json:%s, quota_tier:%s', id, rules_json, quota_tier)
         response = req.zato.client.invoke('zato.http-soap.rate-limiting.save', {
             'id': id,
             'rules_json': rules_json,
+            'quota_tier': quota_tier,
         })
         logger.info('rate_limiting_save; channel_id:%s, response.ok:%s', id, response.ok)
         if response.ok:

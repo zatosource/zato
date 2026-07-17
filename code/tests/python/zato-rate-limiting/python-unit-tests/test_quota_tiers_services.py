@@ -137,6 +137,7 @@ class TierDeleteTestCase(unittest.TestCase):
         service.server.quota_tiers_manager.get_tier_referents.return_value = {
             'security': ['api.client.internal'],
             'groups': ['Partners'],
+            'channels': ['my.channel'],
         }
 
         with self.assertRaises(Exception) as ctx:
@@ -144,13 +145,14 @@ class TierDeleteTestCase(unittest.TestCase):
 
         self.assertIn('api.client.internal', str(ctx.exception))
         self.assertIn('Partners', str(ctx.exception))
+        self.assertIn('my.channel', str(ctx.exception))
         service.server.quota_tiers_manager.delete_tier.assert_not_called()
 
     def test_delete_proceeds_without_referents(self):
         """ A tier with no referents is deleted.
         """
         service = _make_service(TierDelete, {'id': '100'})
-        service.server.quota_tiers_manager.get_tier_referents.return_value = {'security': [], 'groups': []}
+        service.server.quota_tiers_manager.get_tier_referents.return_value = {'security': [], 'groups': [], 'channels': []}
 
         service.handle()
 
