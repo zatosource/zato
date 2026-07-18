@@ -5,6 +5,10 @@ $.fn.zato.invoker.config = {
     // How long the "Invoking .." and "Deploying .." indicators stay on screen
     // at a minimum, otherwise a fast call makes them a barely visible blip
     "indicator_min_ms": 60,
+
+    // How long the "OK, deployed" confirmation remains on screen
+    // after its attention animation has finished
+    "flash_linger_ms": 200,
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

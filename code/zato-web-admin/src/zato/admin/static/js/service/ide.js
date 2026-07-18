@@ -2255,8 +2255,13 @@ $.fn.zato.ide.flash_deploy_success = function(options) {
         flash.addClass("invoker-draw-attention");
 
         flash.one("animationend", function() {
-            flash.addClass("hidden");
-            flash.removeClass("invoker-draw-attention");
+
+            // The text lingers for a moment after the animation,
+            // disappearing right at its end feels too abrupt
+            setTimeout(function() {
+                flash.addClass("hidden");
+                flash.removeClass("invoker-draw-attention");
+            }, $.fn.zato.invoker.config.flash_linger_ms);
         });
 
     }, $.fn.zato.invoker.config.indicator_min_ms);

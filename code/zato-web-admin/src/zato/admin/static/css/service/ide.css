@@ -334,8 +334,8 @@ td.data-input-field-name {
    downward nudge that puts the text at the buttons' optical middle,
    shared by the Deploy and the Invoke rows */
 :root {
-    --zato-status-gap: 10px;
-    --zato-status-nudge: 2px;
+    --zato-status-gap: 6px;
+    --zato-status-nudge: 1px;
 }
 
 /* The deploy progress indicator and the confirmation flash share the slot
@@ -466,6 +466,19 @@ input[type="button"]:focus:not(:active) {
 #getting-info-please-wait {
     position: relative;
     top: var(--zato-status-nudge);
+}
+
+/* Per-row fine-tuning - the deploy texts sit a touch higher and
+   the invoke texts a touch closer to their button */
+#deploying-please-wait,
+#deploy-result-flash {
+    top: 0;
+}
+
+#result-header,
+#invoking-please-wait,
+#getting-info-please-wait {
+    margin-left: 3px;
 }
 
 #result-header {
