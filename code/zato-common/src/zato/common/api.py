@@ -1152,6 +1152,33 @@ class Audit_Config:
         Retention_Policy = 'zato-audit-retention-policy'
         Extraction_Rules = 'zato-audit-extraction-rules'
 
+    # The object types config-change events are filed under.
+    class Object_Type:
+        Generic_Connection = 'generic-connection'
+        Quota_Tier         = 'quota-tier'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Alerting:
+    """ The generic alerting sweep - rule-driven collectors over the audit database
+    and live channel metrics, dispatched through each rule's action.
+    """
+
+    # The interval job every server ensures exists, the service it invokes
+    # and how often the job runs.
+    Job_Name             = 'zato.alerting'
+    Job_Interval_Minutes = 1
+    Service              = 'zato.alerting.run'
+
+    # The keys the scheduler job's extra data may carry - which SMTP connection
+    # sends the emails, its addressing, where the catch-all digest goes
+    # and the Dashboard address the links point to.
+    Extra_SMTP_Conn     = 'smtp_conn'
+    Extra_From          = 'from'
+    Extra_Default_To    = 'default_to'
+    Extra_Dashboard_URL = 'dashboard_url'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

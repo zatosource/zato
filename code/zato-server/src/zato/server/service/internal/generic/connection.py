@@ -15,9 +15,10 @@ from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, \
+from zato.common.api import AS2, Audit_Config, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, \
      SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
+from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
 from zato.common.const import SECRETS
 from zato.common.ext_db.api import get_ext_db_session, is_ext_db_configured, is_ext_object_id, needs_ext_db, \
@@ -30,6 +31,7 @@ from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.time_ import utcnow
+from zato.server.config_audit import get_model_snapshot, record_service_config_change
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -73,6 +75,22 @@ def instance_hook(service, input, instance, attrs):
     """
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
         on_mcp_gateway_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
+
+# ################################################################################################################################
+
+def delete_hook(service, input, instance, attrs):
+    """ Called after delete commit. The deletion lands in the audit trail
+    with what the connection looked like when it was removed.
+    """
+    before_snapshot = get_model_snapshot(instance)
+
+    record_service_config_change(
+        service,
+        action=AuditEvent.Config_Deleted,
+        object_type=Audit_Config.Object_Type.Generic_Connection,
+        object_name=instance.name,
+        before=before_snapshot,
+    )
 
 # ################################################################################################################################
 
@@ -312,6 +330,10 @@ class _CreateEdit(_BaseService):
                     local_id = data.id
                 model = self._get_instance_by_id(session, ModelGenericConn, local_id)
 
+                # What the connection looked like before this edit - the config-audit
+                # event compares it with the state the commit produces.
+                before_snapshot = get_model_snapshot(model)
+
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
                 # so we can reuse the same secret that the model already uses.
@@ -333,6 +355,9 @@ class _CreateEdit(_BaseService):
                     model = ModelGenericConn()
                 else:
                     model = self._new_zato_instance_with_cluster(ModelGenericConn)
+
+                # A creation has no earlier state to compare with
+                before_snapshot = {}
                 if has_input_secret:
                     secret = input_secret
                 else:
@@ -376,6 +401,10 @@ class _CreateEdit(_BaseService):
             self.logger.info('GenericConn _CreateEdit step 6: committed, instance.id=%s, instance.name=%s, instance.type_=%s',
                 instance.id, instance.name, instance.type_)
 
+            # What the connection looks like after the commit - the other side
+            # of the config-audit comparison.
+            after_snapshot = get_model_snapshot(instance)
+
             # Everyone else knows objects from the external database under their offset ids
             if is_ext:
                 public_id = to_public_id(instance.id)
@@ -393,6 +422,22 @@ class _CreateEdit(_BaseService):
             data['action'], data['id'], data.get('type_'))
 
         self.config_dispatcher.publish(data)
+
+        # The change lands in the audit trail - who changed what, with a before/after
+        # summary of only the fields that differ and secrets masked.
+        if self.is_edit:
+            audit_action = AuditEvent.Config_Edited
+        else:
+            audit_action = AuditEvent.Config_Created
+
+        record_service_config_change(
+            self,
+            action=audit_action,
+            object_type=Audit_Config.Object_Type.Generic_Connection,
+            object_name=data['name'],
+            before=before_snapshot,
+            after=after_snapshot,
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################

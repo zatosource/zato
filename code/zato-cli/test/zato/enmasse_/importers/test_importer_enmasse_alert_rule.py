@@ -71,6 +71,7 @@ class TestEnmasseAlertRules(TestCase):
             'object_name': 'channel.adt.inbound',
             'action': 'slack',
             'action_config': {'webhook_url': 'https://hooks.slack.example.com/services/abc'},
+            'config': {'silent_after_seconds': 600},
             'dedup_window_seconds': 1800,
         }]
 

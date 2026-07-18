@@ -459,6 +459,10 @@ class TestMLLPAudit:
         time.sleep(1)
 
         events = _get_events(audit_db_path, 'test-mllp-audit-quiet')
+
+        # The channel's own creation is in the config-audit stream - what must
+        # not exist is any trace of the message traffic itself
+        events = [item for item in events if item['source'] != AuditSource.Config]
         assert events == [], events
 
 # ################################################################################################################################

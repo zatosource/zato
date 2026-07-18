@@ -26,8 +26,9 @@ from zato.server.connection.wrapper import Wrapper
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, stranydict
     anylist = anylist
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,6 +159,33 @@ def get_current_state() -> 'anylist':
             channel_state = ChannelState(channel_name)
 
         out.append(channel_state.get_state())
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_current_metrics() -> 'stranydict':
+    """ Returns the live endpoint metrics of every HL7 MLLP channel in this process,
+    keyed by channel name - what the alerting sweep's feed-silent collector runs over.
+    """
+
+    with _shared_state.lock:
+        server = _shared_state.server
+        channel_names = _shared_state.router.get_channel_names()
+
+    out:'stranydict' = {}
+
+    for channel_name in channel_names:
+
+        # A running listener holds the live counters, without one there is nothing
+        # to count and a zeroed state says exactly that.
+        if server:
+            channel_state = server.get_channel_state(channel_name)
+        else:
+            channel_state = ChannelState(channel_name)
+
+        out[channel_name] = channel_state.get_metrics()
 
     return out
 
