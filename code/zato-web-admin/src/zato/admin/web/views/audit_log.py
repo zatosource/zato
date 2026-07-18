@@ -25,8 +25,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.query import outstanding_conditions
 from zato.common.defaults import default_cluster_id
-from zato.common.hl7.display import build_display_tree, render_display_text
-from zato.hl7v2 import parse_hl7
+from zato.common.hl7.display import parse_and_render
 from zato.x12.render import render_document
 
 # ################################################################################################################################

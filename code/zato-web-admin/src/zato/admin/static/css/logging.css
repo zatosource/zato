@@ -1,7 +1,233 @@
 /* ------------------------------------------------------------ */
-/* Logging - textarea                                            */
+/* Logging - layout overrides                                    */
 /* ------------------------------------------------------------ */
 
-.textarea-settings-container textarea#logging-config {
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: 720px;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - card                                                */
+/* ------------------------------------------------------------ */
+
+.logging-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.logging-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.logging-card .dashboard-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - levels editor                                       */
+/* ------------------------------------------------------------ */
+
+.logging-levels-editor {
+    padding: 16px 24px;
+}
+
+.logging-levels-editor textarea {
+    width: 100%;
     min-height: 250px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - test results                                        */
+/* ------------------------------------------------------------ */
+
+.logging-levels-results {
+    margin-top: 8px;
+}
+
+.logging-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    font-size: 12px;
+}
+
+.logging-result-row:last-child {
+    border-bottom: none;
+}
+
+.logging-result-label {
+    font-family: monospace;
+    color: #1a1a2e;
+}
+
+.logging-result-message {
+    color: #71717a;
+}
+
+.logging-result-error .logging-result-message {
+    color: #dc3545;
+}
+
+.logging-result-new .logging-result-message,
+.logging-result-changed .logging-result-message {
+    color: #28a745;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - destination list                                    */
+/* ------------------------------------------------------------ */
+
+.logging-destination-list {
+    padding: 8px 0;
+}
+
+.logging-destination-empty {
+    padding: 14px 24px;
+    font-size: 12px;
+    color: #71717a;
+}
+
+.logging-destination-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    transition: background 120ms ease;
+}
+
+.logging-destination-item:last-child {
+    border-bottom: none;
+}
+
+.logging-destination-item:hover {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.logging-destination-text {
+    flex: 1;
+    min-width: 0;
+    padding-right: 24px;
+}
+
+.logging-destination-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 3px;
+}
+
+.logging-destination-address {
+    font-size: 12px;
+    color: #71717a;
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+.logging-destination-inactive .logging-destination-name,
+.logging-destination-inactive .logging-destination-address {
+    opacity: 0.5;
+}
+
+.logging-destination-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logging-destination-action {
+    font-size: 12px;
+    text-decoration: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - destination form                                    */
+/* ------------------------------------------------------------ */
+
+.logging-destination-form {
+    padding: 8px 24px 16px 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.logging-form-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.logging-form-row label {
+    flex: 0 0 140px;
+    font-size: 12px;
+    color: #1a1a2e;
+}
+
+.logging-form-row input[type="text"],
+.logging-form-row input[type="password"] {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.logging-form-row-toggle input {
+    flex: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - action bar                                          */
+/* ------------------------------------------------------------ */
+
+.logging-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.logging-actions .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+/* ------------------------------------------------------------ */
+/* Logging - status message                                      */
+/* ------------------------------------------------------------ */
+
+.logging-status {
+    font-size: 12px;
+    color: #71717a;
+    transition: opacity 300ms ease;
+}
+
+.logging-status-saved {
+    color: #28a745;
+}
+
+.logging-status-error {
+    color: #dc3545;
 }
