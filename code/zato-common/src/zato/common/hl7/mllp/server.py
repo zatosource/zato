@@ -180,8 +180,12 @@ class HL7MLLPServer:
         self._keep_running    = True
         self._server_socket:'socket.socket | None' = None
 
-        # The live per-channel state the channel dashboard reads - counters and listener condition
+        # The live state of the whole listener - counters and listener condition
         self.state = ChannelState(address)
+
+        # The live state of each channel routed through this listener, keyed by channel name -
+        # what zato.channel.hl7.get-current-state reads per channel.
+        self.channel_states:'dict[str, ChannelState]' = {}
 
 # ################################################################################################################################
 
@@ -200,6 +204,10 @@ class HL7MLLPServer:
 
         self._server_socket = server_socket
         self.state.on_listener_up()
+
+        # Every channel shares the one listener, so its condition is theirs too
+        for channel_state in self.channel_states.values():
+            channel_state.on_listener_up()
 
         logger.info('HL7 MLLP server listening on %s', self.address)
 
@@ -235,6 +243,27 @@ class HL7MLLPServer:
         # The accept loop is over, so nothing is listening anymore
         self.state.on_listener_down()
 
+        for channel_state in self.channel_states.values():
+            channel_state.on_listener_down()
+
+# ################################################################################################################################
+
+    def get_channel_state(self, channel_name:'str') -> 'ChannelState':
+        """ Returns the live state of one channel, creating it on first use -
+        a new channel inherits the listener's current condition.
+        """
+        if channel_name not in self.channel_states:
+
+            channel_state = ChannelState(channel_name)
+
+            if self.state.is_listening:
+                channel_state.on_listener_up()
+
+            self.channel_states[channel_name] = channel_state
+
+        out = self.channel_states[channel_name]
+        return out
+
 # ################################################################################################################################
 
     def stop(self) -> 'None':
@@ -242,6 +271,9 @@ class HL7MLLPServer:
         """
         self._keep_running = False
         self.state.on_listener_down()
+
+        for channel_state in self.channel_states.values():
+            channel_state.on_listener_down()
 
         if self._server_socket:
             self._server_socket.close()
@@ -367,6 +399,13 @@ class HL7MLLPServer:
         # .. find the matching route using the first MSH ..
         matched_route = self.router.match(msh_line)
 
+        # .. a matched batch counts on its channel's own state too ..
+        if matched_route:
+            channel_state = self.get_channel_state(matched_route.channel_name)
+            channel_state.on_message_received()
+        else:
+            channel_state = None
+
         # .. a batch is audited when its channel says so - with no route there is no channel to ask ..
         needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
 
@@ -411,11 +450,15 @@ class HL7MLLPServer:
         if not self.should_return_errors:
             error_text = ''
 
-        # .. the batch's acknowledgment outcome feeds the channel's live state ..
+        # .. the batch's acknowledgment outcome feeds the live state, the channel's own included ..
         if ack_code == 'AA':
             self.state.on_ack_sent()
+            if channel_state:
+                channel_state.on_ack_sent()
         else:
             self.state.on_nack_sent()
+            if channel_state:
+                channel_state.on_nack_sent()
 
         # .. build the ACK using the first MSH from the batch ..
         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
@@ -529,6 +572,13 @@ class HL7MLLPServer:
 
             # .. find the matching route for this message ..
             matched_route = self.router.match(msh_line)
+
+            # .. a matched message counts on its channel's own state too ..
+            if matched_route:
+                channel_state = self.get_channel_state(matched_route.channel_name)
+                channel_state.on_message_received()
+            else:
+                channel_state = None
 
             # .. a message is audited when its channel says so - with no route there is no channel to ask ..
             needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
@@ -665,11 +715,15 @@ class HL7MLLPServer:
             if not self.should_return_errors:
                 error_text = ''
 
-            # .. the acknowledgment outcome feeds the channel's live state ..
+            # .. the acknowledgment outcome feeds the live state, the channel's own included ..
             if ack_code == 'AA':
                 self.state.on_ack_sent()
+                if channel_state:
+                    channel_state.on_ack_sent()
             else:
                 self.state.on_nack_sent()
+                if channel_state:
+                    channel_state.on_nack_sent()
 
             # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)

@@ -18,8 +18,16 @@ from zato.common.hl7.mllp.haproxy import find_haproxy_config, reload_haproxy, re
     update_mllp_backend_port
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
+from zato.common.hl7.mllp.state import ChannelState
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anylist
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,6 +131,35 @@ class _SharedMLLPState:
 # ################################################################################################################################
 
 _shared_state = _SharedMLLPState()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_current_state() -> 'anylist':
+    """ Returns the state contract of every HL7 MLLP channel in this process -
+    what zato.channel.hl7.get-current-state serves. A channel that has not seen
+    any traffic yet reports zero counters, and with no listener running at all
+    every channel reports itself as not listening.
+    """
+
+    with _shared_state.lock:
+        server = _shared_state.server
+        channel_names = _shared_state.router.get_channel_names()
+
+    out:'anylist' = []
+
+    for channel_name in channel_names:
+
+        # A running listener holds the live counters, without one there is nothing
+        # to count and a zeroed state says exactly that.
+        if server:
+            channel_state = server.get_channel_state(channel_name)
+        else:
+            channel_state = ChannelState(channel_name)
+
+        out.append(channel_state.get_state())
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -118,6 +118,7 @@ class HL7MLLPClient:
                 out = AckResult()
                 out.is_accepted = True
                 out.ack_code = 'AA'
+                out.ack_text = ack_string
 
             return out
 

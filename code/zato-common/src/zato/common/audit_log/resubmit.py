@@ -21,7 +21,8 @@ from traceback import format_exc
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, event_table, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, event_body_table, event_table, get_audit_engine
+from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, release_dedup_key
 from zato.common.json_internal import dumps, loads
 from zato.common.typing_ import dict_field, list_field
@@ -107,11 +108,29 @@ def load_event(event_id:'int') -> 'StoredEvent':
 
     event_id, cid, source, event_type, object_name, msg_id, data = row
 
-    # The data of a resubmittable event is always a JSON document with the payload inside.
-    try:
-        details = loads(data)
-    except ValueError:
-        raise ResubmitException(f'Audit event `{event_id}` does not carry JSON data')
+    # The data of a resubmittable event, when there is any, is always a JSON document.
+    if data:
+        try:
+            details = loads(data)
+        except ValueError:
+            raise ResubmitException(f'Audit event `{event_id}` does not carry JSON data')
+    else:
+        details = {}
+
+    # A producer that stores its payload by reference keeps it in the body table
+    # under the request kind - it becomes the payload the resubmit works with.
+    if 'payload' not in details:
+
+        body_statement = select(event_body_table.c.data).where(
+            event_body_table.c.event_id == event_id).where(
+            event_body_table.c.kind == AuditBody.Request)
+
+        with engine.connect() as connection:
+            body_result = connection.execute(body_statement)
+            body_row = body_result.first()
+
+        if body_row is not None:
+            details['payload'] = body_row[0]
 
     out = StoredEvent()
     out.id = event_id

@@ -40,6 +40,10 @@ class AckResult:
     should_retry:'bool' = False
     error_text:  'str'  = ''
 
+    # The acknowledgment exactly as it arrived - what the audit trail stores
+    # and what a resubmit records alongside the new attempt.
+    ack_text:    'str'  = ''
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -121,6 +125,7 @@ def validate_ack(ack_er7:'str', sent_control_id:'str') -> 'AckResult':
 
     # Our response to produce
     out = AckResult()
+    out.ack_text = ack_er7
 
     # Split the ACK into segments ..
     segments = ack_er7.split('\r')

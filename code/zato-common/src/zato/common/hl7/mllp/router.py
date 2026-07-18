@@ -211,6 +211,17 @@ class HL7MessageRouter:
 
 # ################################################################################################################################
 
+    def get_channel_names(self) -> 'list[str]':
+        """ Returns the name of every channel with a registered routing rule,
+        in registration order - what get-current-state enumerates.
+        """
+        with self._lock:
+
+            out = [route.channel_name for route in self._routes]
+            return out
+
+# ################################################################################################################################
+
     def match(self, msh_line:'str') -> 'ChannelRoute | None':
         """ Finds the first routing rule that matches the given MSH line.
         Non-default routes are evaluated first (first match wins),
