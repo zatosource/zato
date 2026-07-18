@@ -52,6 +52,7 @@ class TestEnmasseAlertRuleExporter(TestCase):
             'object_name': 'channel.oru.inbound',
             'action': 'teams',
             'action_config': {'webhook_url': 'https://example.webhook.office.com/webhookb2/abc'},
+            'config': {'deadline_seconds': 120},
             'dedup_window_seconds': 7200,
             'is_active': True,
         }
@@ -100,6 +101,7 @@ class TestEnmasseAlertRuleExporter(TestCase):
         self.assertEqual(exported_rule['object_name'], self.rule_def['object_name'])
         self.assertEqual(exported_rule['action'], self.rule_def['action'])
         self.assertEqual(exported_rule['action_config'], self.rule_def['action_config'])
+        self.assertEqual(exported_rule['config'], self.rule_def['config'])
         self.assertEqual(exported_rule['dedup_window_seconds'], self.rule_def['dedup_window_seconds'])
         self.assertEqual(exported_rule['is_active'], self.rule_def['is_active'])
 

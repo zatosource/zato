@@ -22,6 +22,7 @@ default_env_base_dir    = os.path.expanduser('~/env/qs-1')
 default_server_base_dir = os.path.join(default_env_base_dir, 'server1')
 
 # Fields whose values must be masked in logs and query strings
-secret_fields_exact = {'auth_data', 'auth_token', 'password', 'secret_key', 'tls_pem_passphrase', 'token', 'api_key', 'apiKey', 'xApiKey'}
+secret_fields_exact = {'auth_data', 'auth_token', 'password', 'secret', 'secret_key', 'tls_pem_passphrase', 'token', 'api_key',
+    'apiKey', 'xApiKey'}
 secret_fields_prefix:'set[str]' = set()
 secret_fields_suffix:'set[str]' = set()

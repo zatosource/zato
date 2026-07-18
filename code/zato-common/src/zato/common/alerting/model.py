@@ -163,6 +163,10 @@ class AlertRule:
     # a topic name, or a webhook URL for Slack and Teams.
     action_config: 'stranydict' = dict_field()
 
+    # The collector's own configuration - thresholds, windows and deadlines
+    # for whichever collector the rule's kind selects, all optional.
+    config: 'stranydict' = dict_field()
+
     # Repeated findings about the same object within this window increment
     # the existing alert's count instead of raising a new one.
     dedup_window_seconds: int = Default_Dedup_Window_Seconds
@@ -177,6 +181,7 @@ def new_rule(
     object_name:'str' = '',
     action:'str' = AlertAction.Email_Digest,
     action_config:'stranydict | None' = None,
+    config:'stranydict | None' = None,
     dedup_window_seconds:'int' = Default_Dedup_Window_Seconds,
     is_active:'bool' = True,
     ) -> 'AlertRule':
@@ -184,6 +189,9 @@ def new_rule(
     """
     if action_config is None:
         action_config = {}
+
+    if config is None:
+        config = {}
 
     # Our response to produce
     out = AlertRule()
@@ -195,6 +203,7 @@ def new_rule(
     out.object_name = object_name
     out.action = action
     out.action_config = action_config
+    out.config = config
     out.dedup_window_seconds = dedup_window_seconds
 
     return out

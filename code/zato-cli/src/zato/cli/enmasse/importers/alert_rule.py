@@ -91,6 +91,7 @@ class AlertRuleImporter:
                 'object_name': rule.get('object_name', ''),
                 'action': rule.get('action', AlertAction.Email_Digest),
                 'action_config': rule.get('action_config', {}),
+                'config': rule.get('config', {}),
                 'dedup_window_seconds': rule.get('dedup_window_seconds', Default_Dedup_Window_Seconds),
                 'is_active': rule.get('is_active', True),
             }

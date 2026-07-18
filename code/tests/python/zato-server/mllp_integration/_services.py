@@ -168,6 +168,94 @@ class TestHL7FHIRSave(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+alert_rule_service_source = '''\
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from contextlib import closing
+
+# Zato
+from zato.common.api import Audit_Config
+from zato.common.json_internal import dumps, loads
+from zato.common.odb.query.generic import GenericObjectWrapper
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAlertingRuleSave(Service):
+    """ Writes one alert rule as a generic object - the same row the enmasse importer
+    would create, so the alerting sweep test can configure rules without the CLI.
+    """
+    name = 'test.alerting.rule.save'
+
+    def handle(self):
+
+        request = self.request.raw_request
+        if isinstance(request, (str, bytes)):
+            request = loads(request)
+
+        name = request.pop('name')
+        opaque = dumps(request)
+
+        with closing(self.odb.session()) as session:
+
+            wrapper = GenericObjectWrapper(session, self.server.cluster_id)
+            wrapper.type_ = Audit_Config.Type.Alert_Rule
+
+            existing = wrapper.get(name)
+
+            if existing:
+                statement = wrapper.update(name, opaque, id=existing['id'])
+            else:
+                statement = wrapper.create(name, opaque)
+
+            _ = session.execute(statement)
+            session.commit()
+
+        self.response.payload = dumps({'is_ok': True, 'name': name})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAlertingRuleDelete(Service):
+    """ Removes one alert rule's generic-object row, so the alerting test
+    leaves no configuration behind for the other test modules.
+    """
+    name = 'test.alerting.rule.delete'
+
+    def handle(self):
+
+        request = self.request.raw_request
+        if isinstance(request, (str, bytes)):
+            request = loads(request)
+
+        name = request['name']
+
+        with closing(self.odb.session()) as session:
+
+            wrapper = GenericObjectWrapper(session, self.server.cluster_id)
+            wrapper.type_ = Audit_Config.Type.Alert_Rule
+
+            statement = wrapper.delete_by_name(name)
+            _ = session.execute(statement)
+            session.commit()
+
+        self.response.payload = dumps({'is_ok': True, 'name': name})
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 error_service_source = '''\
 # -*- coding: utf-8 -*-
 

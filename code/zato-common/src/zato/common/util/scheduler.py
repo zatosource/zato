@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import AS2, SCHEDULER
+from zato.common.api import Alerting, AS2, SCHEDULER
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
@@ -52,6 +52,9 @@ _as2_rotation_service_impl_name = 'zato.server.service.internal.generic.connecti
 
 # The Python path of the service the B2B alerting job invokes, created upfront the same way.
 _b2b_alerting_service_impl_name = 'zato.server.service.internal.b2b.B2BAlerting'
+
+# The Python path of the service the generic alerting job invokes, created upfront the same way.
+_alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,6 +140,51 @@ def ensure_b2b_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     job = Job(None, AS2.Alerting.Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
         cluster=cluster, service=service)
     interval = IntervalBasedJob(None, job, hours=AS2.Alerting.Job_Interval_Hours)
+
+    session.add(job)
+    session.add(interval)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_alerting_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that runs the generic alerting sweep exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+
+    existing = session.query(Job).\
+        filter(Job.name==Alerting.Job_Name).\
+        filter(Job.cluster_id==cluster_id).\
+        first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).\
+        filter(Cluster.id==cluster_id).\
+        one()
+
+    service = session.query(Service).\
+        filter(Service.name==Alerting.Service).\
+        filter(Service.cluster_id==cluster_id).\
+        first()
+
+    # On a first-ever start the service is not in ODB yet, so its row is created here
+    # and the deployment sync will find it already in place.
+    if not service:
+        service = Service(None, Alerting.Service, True, _alerting_service_impl_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # The start date is only the anchor the interval counts from.
+    start_date = datetime.now(timezone.utc)
+    start_date = start_date.replace(tzinfo=None)
+
+    job = Job(None, Alerting.Job_Name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date,
+        cluster=cluster, service=service)
+    interval = IntervalBasedJob(None, job, minutes=Alerting.Job_Interval_Minutes)
 
     session.add(job)
     session.add(interval)

@@ -7,9 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.api import Audit_Config
+from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import SECURITY
 from zato.common.json_internal import loads
 from zato.common.rate_limiting.cidr import SlottedCIDRRule
+from zato.server.config_audit import record_service_config_change
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -54,6 +57,18 @@ class Create(AdminService):
         # .. create the tier now ..
         tier_id = self.server.quota_tiers_manager.create_tier(input.name, input.description, rule_dicts)
 
+        # .. the creation lands in the audit trail - the generic-object path
+        # produces config-audit events like any other configuration write ..
+        after = self.server.quota_tiers_manager.get_tier(tier_id)
+
+        record_service_config_change(
+            self,
+            action=AuditEvent.Config_Created,
+            object_type=Audit_Config.Object_Type.Quota_Tier,
+            object_name=input.name,
+            after=after,
+        )
+
         # .. and return its details to our caller.
         self.response.payload.id = tier_id
         self.response.payload.name = input.name
@@ -76,7 +91,8 @@ class Edit(AdminService):
         rule_dicts = _parse_and_validate_rules(input.rules_json)
 
         # .. the tier must exist ..
-        if not self.server.quota_tiers_manager.get_tier(tier_id):
+        before = self.server.quota_tiers_manager.get_tier(tier_id)
+        if not before:
             raise Exception(f'Quota tier with id `{tier_id}` not found')
 
         # .. a rename must not clash with another tier ..
@@ -86,6 +102,18 @@ class Edit(AdminService):
 
         # .. save the changes ..
         self.server.quota_tiers_manager.edit_tier(tier_id, input.name, input.description, rule_dicts)
+
+        # .. the edit lands in the audit trail with a before/after summary ..
+        after = self.server.quota_tiers_manager.get_tier(tier_id)
+
+        record_service_config_change(
+            self,
+            action=AuditEvent.Config_Edited,
+            object_type=Audit_Config.Object_Type.Quota_Tier,
+            object_name=input.name,
+            before=before,
+            after=after,
+        )
 
         # .. notify all workers so every definition referencing this tier is re-resolved ..
         params = {
@@ -121,8 +149,19 @@ class Delete(AdminService):
             names = ', '.join(referent_names)
             raise Exception(f'Quota tier cannot be deleted, it is still referenced by: {names}')
 
-        # .. no references, delete it now.
+        # .. no references, delete it now ..
+        before = self.server.quota_tiers_manager.get_tier(tier_id)
         self.server.quota_tiers_manager.delete_tier(tier_id)
+
+        # .. and the deletion lands in the audit trail with what the tier looked like.
+        if before:
+            record_service_config_change(
+                self,
+                action=AuditEvent.Config_Deleted,
+                object_type=Audit_Config.Object_Type.Quota_Tier,
+                object_name=before['name'],
+                before=before,
+            )
 
 # ################################################################################################################################
 # ################################################################################################################################

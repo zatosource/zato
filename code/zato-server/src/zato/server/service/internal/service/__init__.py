@@ -548,6 +548,11 @@ class ServiceInvoker(Service):
                 if value := self.wsgi_environ.get(key):
                     target_wsgi_environ[key] = value
 
+            # .. the authenticated identity travels with the invocation too,
+            # so config-audit events record who actually made the call ..
+            if self.channel.security.username:
+                target_wsgi_environ['zato.channel_security_username'] = self.channel.security.username
+
             # Invoke the service now
             response = self.invoke(
                 service_name,

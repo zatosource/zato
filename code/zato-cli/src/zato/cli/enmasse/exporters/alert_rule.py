@@ -52,6 +52,12 @@ class AlertRuleExporter:
 
         for row in rows:
 
+            # Rows written before the collector config existed do not carry the key
+            if 'config' in row:
+                config = row['config']
+            else:
+                config = {}
+
             rule_def = {
                 'name': row['name'],
                 'kind': row['kind'],
@@ -59,6 +65,7 @@ class AlertRuleExporter:
                 'object_name': row['object_name'],
                 'action': row['action'],
                 'action_config': row['action_config'],
+                'config': config,
                 'dedup_window_seconds': row['dedup_window_seconds'],
                 'is_active': row['is_active'],
             }
