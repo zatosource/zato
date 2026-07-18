@@ -19,7 +19,7 @@ use serde::Deserialize;
 use crate::job::{ExecutionRecord, LogEntry, RunningJob};
 use crate::model::SchedulerJob;
 use crate::scheduler::SchedulerShared;
-use crate::types::FireBatch;
+use crate::types::{FireBatch, JobId};
 use crate::{humanize_ms, reload_jobs};
 
 /// Environment variable holding the per-environment stream key prefix.
@@ -389,8 +389,30 @@ fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
     if let Some(existing) = state.jobs.get_mut(&parsed.job_id) {
         existing.update_from_job(&parsed.job_data);
     } else {
-        let running_job = RunningJob::from_scheduler_job(&parsed.job_data);
-        state.jobs.insert(parsed.job_id, running_job);
+        // The incoming ID is unknown - the runtime may still hold this job under an old ID,
+        // e.g. after a redeployment recreated the ODB rows with new identifiers.
+        let name_match_key = state
+            .jobs
+            .iter()
+            .find_map(|(key, job)| (job.name == parsed.job_data.name).then_some(*key));
+
+        if let Some(old_key) = name_match_key {
+            // Move the job under the new ID instead of inserting a duplicate,
+            // so its execution history survives and only one entry keeps firing.
+            if let Some(mut existing) = state.jobs.remove(&old_key) {
+                existing.id = JobId(parsed.job_id);
+                existing.update_from_job(&parsed.job_data);
+                state.jobs.insert(parsed.job_id, existing);
+                tracing::info!(
+                    "Moved job under new id: old_id={old_key} new_id={} name={}",
+                    parsed.job_id,
+                    parsed.job_data.name
+                );
+            }
+        } else {
+            let running_job = RunningJob::from_scheduler_job(&parsed.job_data);
+            state.jobs.insert(parsed.job_id, running_job);
+        }
     }
     state.dirty = true;
     drop(state);

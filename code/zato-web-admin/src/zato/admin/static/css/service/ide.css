@@ -420,6 +420,271 @@ input[type="button"]:focus:not(:active) {
 }
 
 /* *********************************** */
+/*   Grid view for parsed payloads     */
+/* *********************************** */
+
+.grid-view {
+
+    /* The whole palette and metrics of the grid view in one place */
+    --grid-view-font: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
+    --grid-view-font-size: 12px;
+    --grid-view-line-color: #e2dfd6;
+    --grid-view-name-bg: #f1efe7;
+    --grid-view-name-color: #000;
+    --grid-view-value-color: #000;
+    --grid-view-attribute-color: #a52a2a;
+    --grid-view-attribute-marker-color: #c00000;
+    --grid-view-toggle-color: #6d6d6d;
+    --grid-view-indent: 16px;
+
+    font-family: var(--grid-view-font);
+    font-size: var(--grid-view-font-size);
+    color: var(--grid-view-value-color);
+    background: #fff;
+    white-space: normal;
+    line-height: 1.6;
+    padding: 4px;
+}
+
+/* Each nesting level is a two-column grid - names in the first column,
+   values in the second, so sibling values line up like in a table */
+.grid-view,
+.grid-children {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-content: start;
+    row-gap: 2px;
+}
+
+/* Nodes and leaf rows do not create boxes of their own,
+   their cells participate in the level's grid directly */
+.grid-node,
+.grid-row-leaf {
+    display: contents;
+}
+
+/* A container's header row spans both columns */
+.grid-row-branch {
+    grid-column: 1 / -1;
+}
+
+/* The children block also spans both columns and is indented,
+   with a left frame line marking the container it belongs to */
+.grid-children {
+    grid-column: 1 / -1;
+    margin-left: var(--grid-view-indent);
+    border-left: 1px dashed var(--grid-view-line-color);
+}
+
+/* Blocks holding nothing but leaf rows do not need the frame line */
+.grid-children-leaves {
+    border-left: none;
+}
+
+/* Name cells - bold on the classic silver-gray */
+.grid-name {
+    background: var(--grid-view-name-bg);
+    color: var(--grid-view-name-color);
+    font-weight: 600;
+    padding: 1px 10px 1px 5px;
+    border-right: 1px dashed var(--grid-view-line-color);
+    border-bottom: 1px dashed var(--grid-view-line-color);
+    user-select: none;
+}
+
+/* Value cells - normal face on white */
+.grid-value {
+    padding: 1px 8px;
+    border-bottom: 1px dashed var(--grid-view-line-color);
+    overflow-wrap: anywhere;
+}
+
+/* Attribute rows - the marker and the name in the classic dark red */
+.grid-kind-attribute .grid-name-text {
+    color: var(--grid-view-attribute-color);
+}
+
+.grid-attribute-marker {
+    color: var(--grid-view-attribute-marker-color);
+    font-weight: 400;
+    margin-right: 3px;
+}
+
+/* Container names collapse and expand on click */
+.grid-name-branch {
+    cursor: pointer;
+}
+
+/* The document menu shown on right-clicking a name */
+#grid-view-menu {
+    position: absolute;
+    z-index: 1000;
+    min-width: 150px;
+    background: #fff;
+    border: 1px solid #d5d2c8;
+    border-radius: 4px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    padding: 4px 0;
+    font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    color: #000;
+    user-select: none;
+}
+
+.grid-view-menu-item {
+    padding: 4px 14px;
+    cursor: pointer;
+}
+
+.grid-view-menu-item:hover {
+    background: #f1efe7;
+}
+
+.grid-view-menu-separator {
+    height: 1px;
+    margin: 4px 0;
+    background: #e2dfd6;
+}
+
+/* The detail panel - an action list on the left, a live information pane
+   on the right describing the action under the cursor */
+#grid-panel-menu {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    background: #fff;
+    border: 1px solid #d5d2c8;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    color: #000;
+    user-select: none;
+    overflow: hidden;
+}
+
+.grid-panel-list {
+    min-width: 155px;
+    padding: 5px 0;
+    background: #faf9f5;
+    border-right: 1px solid #e4e1d8;
+}
+
+.grid-panel-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 10px;
+    cursor: pointer;
+}
+
+/* The hotkey badge in front of every action - a dark key cap
+   with a fixed width so the labels line up in one column */
+.grid-panel-item-key {
+    width: 16px;
+    padding: 1px 3px;
+    text-align: center;
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: #e8ebf0;
+    background: #2e333c;
+    border: 1px solid #46516a;
+    border-radius: 3px;
+}
+
+/* The arrow marking an item that opens a submenu, pushed to the far right */
+.grid-panel-item-more {
+    margin-left: auto;
+    color: #999;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* A submenu - the same look as the main list, laid over the information
+   pane at its parent's height */
+.grid-panel-submenu {
+    position: absolute;
+    min-width: 140px;
+    padding: 5px 0;
+    background: #faf9f5;
+    border: 1px solid #d5d2c8;
+    border-radius: 0 6px 6px 0;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+}
+
+.grid-panel-item.current {
+    background: #fff;
+    font-weight: 600;
+}
+
+.grid-panel-item-destructive {
+    color: #a3261f;
+}
+
+.grid-panel-info {
+    width: 250px;
+    padding: 12px 14px;
+}
+
+.grid-panel-info-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.grid-panel-info-desc {
+    color: #555;
+    line-height: 1.45;
+    margin-bottom: 10px;
+}
+
+.grid-panel-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 3px 0;
+    border-top: 1px dashed #e2dfd6;
+}
+
+.grid-panel-detail-name {
+    color: #777;
+}
+
+.grid-panel-detail-value {
+    text-align: right;
+}
+
+/* The expand and collapse control in a container's header - a thin chevron
+   drawn from two borders, pointing down when expanded and right when collapsed */
+.grid-toggle {
+    display: inline-block;
+    margin-right: 7px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.grid-toggle::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-right: 1.5px solid var(--grid-view-toggle-color);
+    border-bottom: 1.5px solid var(--grid-view-toggle-color);
+    transform: rotate(45deg);
+    transition: transform 0.12s ease;
+    vertical-align: 3px;
+}
+
+.grid-collapsed > .grid-row-branch > .grid-name > .grid-toggle::before {
+    transform: rotate(-45deg);
+    vertical-align: 1px;
+}
+
+.grid-collapsed > .grid-children {
+    display: none;
+}
+
+/* *********************************** */
 /*   IDE-specific invoker overrides    */
 /* *********************************** */
 

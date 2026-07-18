@@ -399,8 +399,19 @@ class GetList(_Get):
         last_run_by_name = {}
 
         for summary in self.server._scheduler.get_job_summaries():
-            last_run_by_id[summary['id']] = summary['last_run_utc']
-            last_run_by_name[summary['name']] = summary['last_run_utc']
+            name = summary['name']
+            last_run_utc = summary['last_run_utc']
+            last_run_by_id[summary['id']] = last_run_utc
+
+            # Two summaries may share a name if runtime IDs diverged from ODB ones -
+            # keep the newest last run time so a stale leftover cannot shadow the live entry.
+            existing = last_run_by_name.get(name)
+
+            if not existing:
+                last_run_by_name[name] = last_run_utc
+            elif last_run_utc:
+                if last_run_utc > existing:
+                    last_run_by_name[name] = last_run_utc
 
         # .. and attach the last run time to each job - it is an empty string for jobs that never ran.
         for item in items:
@@ -695,8 +706,19 @@ class GetLastRunList(_SchedulerAdmin):
         last_run_by_name = {}
 
         for summary in self.server._scheduler.get_job_summaries():
-            last_run_by_id[summary['id']] = summary['last_run_utc']
-            last_run_by_name[summary['name']] = summary['last_run_utc']
+            name = summary['name']
+            last_run_utc = summary['last_run_utc']
+            last_run_by_id[summary['id']] = last_run_utc
+
+            # Two summaries may share a name if runtime IDs diverged from ODB ones -
+            # keep the newest last run time so a stale leftover cannot shadow the live entry.
+            existing = last_run_by_name.get(name)
+
+            if not existing:
+                last_run_by_name[name] = last_run_utc
+            elif last_run_utc:
+                if last_run_utc > existing:
+                    last_run_by_name[name] = last_run_utc
 
         # .. and each requested job is looked up by ID first and by name second,
         # .. with an empty string for jobs that never ran.

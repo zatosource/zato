@@ -1237,6 +1237,75 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 }
 
 /* ------------------------------------------------------------ */
+/* Inline edit - the small form inside a tippy                   */
+/* ------------------------------------------------------------ */
+
+.zato-inline-form {
+    margin: 2px;
+}
+
+.zato-inline-form-title {
+    margin-bottom: 4px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.zato-inline-form table {
+    border-collapse: collapse;
+}
+
+.zato-inline-form th,
+.zato-inline-form td {
+    padding: 3px 6px;
+    text-align: left;
+    white-space: nowrap;
+    font-weight: normal;
+}
+
+.zato-inline-form th {
+    padding-right: 12px;
+}
+
+.zato-inline-form input {
+    width: 5em;
+    padding: 2px 4px;
+    border: 1px solid #666;
+    border-radius: 2px;
+    background-color: #fff;
+    color: #333;
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-inline-form input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-inline-form-buttons {
+    margin-top: 6px;
+    padding: 3px 6px;
+    text-align: right;
+}
+
+.zato-inline-form-buttons button {
+    margin-left: 6px;
+    padding: 1px 8px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* The badge worn by the row's name cell while its inline form is open - the padding
+   and the border are compensated by equal negative margins so the layout never moves. */
+.zato-inline-form-badge {
+    background: linear-gradient(to bottom, #ffd84a, #ffc311);
+    border: 1px dashed #d4a00a;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin: -2px -6px;
+}
+
+/* ------------------------------------------------------------ */
 /* Time ago - refresh spinner                                    */
 /* ------------------------------------------------------------ */
 
@@ -1261,6 +1330,85 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 #data-table th.zato-time-ago-header a {
     display: inline-block;
     padding-right: 0;
+}
+
+/* One shared slot next to the column name - the countdown and the spinner both live
+   inside it and swap places through opacity, so the spinner appears exactly where
+   the countdown text was and the layout never moves. */
+.zato-time-ago-indicator {
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+    /* The slot must be exactly as tall as the countdown text inside it - otherwise
+       the header's taller strut leaves empty space above the text and pushes both
+       the text and the spinner below the middle of the header. */
+    font-size: 10px;
+    line-height: 10px;
+    /* vertical-align: middle centers on the parent's x-height midpoint, which sits
+       below the true middle of the 19px line box, so the slot is nudged back up. */
+    top: -1px;
+}
+
+.zato-time-ago-indicator .zato-time-ago-countdown {
+    /* Top-aligned inside the tight 10px slot, so no baseline gap can reappear below it. */
+    vertical-align: top;
+}
+
+.zato-time-ago-indicator .zato-time-ago-spinner {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    margin: -1.5px 0 0 0;
+}
+
+/* The countdown to the next refresh - a tiny muted "Refreshes in 5s" next to the column name.
+   It keeps a fixed minimum width and only its opacity toggles while the spinner is shown,
+   so it never shifts the layout around it. */
+.zato-time-ago-countdown {
+    --zato-time-ago-countdown-fade-ms: 350ms;
+    display: inline-block;
+    min-width: 2.2ch;
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #999;
+    opacity: 0;
+    vertical-align: middle;
+    transition: opacity var(--zato-time-ago-countdown-fade-ms) ease;
+}
+
+.zato-time-ago-countdown.is-visible {
+    opacity: 1;
+}
+
+/* The refresh progress bar - a thin line under the column name that drains
+   over the refresh interval and refills when the refresh fires. It is
+   absolutely positioned inside the header cell, so it never affects
+   the layout around it. Its animation is started from JavaScript so that
+   the duration always matches the configured refresh interval. */
+.zato-time-ago-progress {
+    --zato-time-ago-progress-fade-ms: 350ms;
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    width: 52px;
+    height: 2px;
+    border-radius: 1px;
+    background-color: #bbb;
+    transform-origin: left center;
+    opacity: 0;
+    transition: opacity var(--zato-time-ago-progress-fade-ms) ease;
+}
+
+.zato-time-ago-progress.is-visible {
+    opacity: 1;
+}
+
+@keyframes zato-time-ago-drain {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
 }
 
 /* The one shared spinner in the column header is a ring of eight dots drawn

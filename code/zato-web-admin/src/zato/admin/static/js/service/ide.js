@@ -61,6 +61,12 @@ $(document).ready(function() {
     if (window.zato && window.zato.initializeMessageViewer) {
         window.zato.initializeMessageViewer();
     }
+
+    // Temporary - the grid view sample is on screen from the start
+    // while its style is being worked out
+    if($.fn.zato.ide.config.grid_view_demo) {
+        $.fn.zato.ide.render_grid_view_demo();
+    }
 });
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -673,6 +679,10 @@ $.fn.zato.ide.config = {
     // What the parsed pane shows when the payload does not parse
     "parse_failed_text": "(payload does not parse)",
 
+    // Temporary - the response pane shows a hardcoded grid view sample
+    // while its style is being worked out
+    "grid_view_demo": true,
+
     // Sample payloads offered per format
     "samples": {
         "hl7-v2": [
@@ -776,7 +786,497 @@ $.fn.zato.ide.get_pane_view_key = function(pane_name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
+// A hardcoded sample tree for working out the grid view's style,
+// to be replaced with real parsed payloads later.
+$.fn.zato.ide.grid_view_demo_tree = [
+    {"name": "Patient", "value": "", "kind": "element", "children": [
+        {"name": "id", "value": "12345", "kind": "attribute", "children": []},
+        {"name": "active", "value": "true", "kind": "element", "children": []},
+        {"name": "name", "value": "", "kind": "element", "children": [
+            {"name": "use", "value": "official", "kind": "attribute", "children": []},
+            {"name": "family", "value": "Smith", "kind": "element", "children": []},
+            {"name": "given", "value": "John", "kind": "element", "children": []},
+            {"name": "given", "value": "Robert", "kind": "element", "children": []},
+        ]},
+        {"name": "birthDate", "value": "1980-01-15", "kind": "element", "children": []},
+        {"name": "address", "value": "", "kind": "element", "children": [
+            {"name": "use", "value": "home", "kind": "attribute", "children": []},
+            {"name": "line", "value": "10 Main Street", "kind": "element", "children": []},
+            {"name": "city", "value": "Paris", "kind": "element", "children": []},
+            {"name": "postalCode", "value": "00-001", "kind": "element", "children": []},
+        ]},
+        {"name": "maritalStatus", "value": "", "kind": "element", "children": [
+            {"name": "coding", "value": "", "kind": "element", "children": [
+                {"name": "system", "value": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "kind": "element", "children": []},
+                {"name": "code", "value": "M", "kind": "element", "children": []},
+            ]},
+        ]},
+    ]},
+];
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Builds one node of the grid view - a name/value row for leaves,
+// a header row plus an indented children block for containers.
+$.fn.zato.ide.build_grid_view_node = function(node) {
+
+    let node_elem = $("<div>").addClass("grid-node");
+    let has_children = node.children.length > 0;
+
+    // The name cell is shared by both kinds of node ..
+    let name = $("<span>").addClass("grid-name").addClass(`grid-kind-${node.kind}`);
+
+    // .. attributes carry their marker in front of the name ..
+    if(node.kind == "attribute") {
+        name.append($("<span>").addClass("grid-attribute-marker").text("="));
+    }
+
+    name.append($("<span>").addClass("grid-name-text").text(node.name));
+
+    // Every name opens a document menu on right click
+    name.on("contextmenu", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $.fn.zato.ide.show_grid_menu_for_node(node, e.pageX, e.pageY);
+    });
+
+    // A container has a toggle in its header row and its children
+    // in a nested block, expanded from the start ..
+    if(has_children) {
+
+        name.prepend($("<span>").addClass("grid-toggle"));
+
+        // The whole name collapses and expands the children block
+        name.addClass("grid-name-branch");
+        name.on("click", function() {
+            node_elem.toggleClass("grid-collapsed");
+        });
+
+        let row = $("<div>").addClass("grid-row-branch");
+        row.append(name);
+        node_elem.append(row);
+
+        let children_block = $("<div>").addClass("grid-children");
+
+        // Blocks of nothing but leaf rows do not carry the left frame line
+        let has_container_children = false;
+
+        for(const child of node.children) {
+            if(child.children.length > 0) {
+                has_container_children = true;
+            }
+            children_block.append($.fn.zato.ide.build_grid_view_node(child));
+        }
+
+        if(!has_container_children) {
+            children_block.addClass("grid-children-leaves");
+        }
+
+        node_elem.append(children_block);
+    }
+
+    // .. while a leaf is a plain name/value row.
+    else {
+        let row = $("<div>").addClass("grid-row-leaf");
+        row.append(name);
+        row.append($("<span>").addClass("grid-value").text(node.value));
+        node_elem.append(row);
+    }
+
+    return node_elem;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// What the document menu offers - null entries are separators.
+// These are placeholders for now, the actions come with the editable grid.
+$.fn.zato.ide.grid_view_menu_items = [
+    "Expand all",
+    "Collapse all",
+    null,
+    "Copy path",
+    "Copy value",
+    "Copy subtree",
+    null,
+    "Edit value",
+    "Rename",
+    "Add child",
+    "Add sibling",
+    "Duplicate",
+    "Delete",
+];
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Removes whatever document menu is on screen along with its dismiss handlers.
+$.fn.zato.ide.close_grid_menus = function() {
+    $("#grid-view-menu, #grid-card-menu, #grid-panel-menu").remove();
+    $(document).off("mousedown.grid-view-menu");
+    $(document).off("keydown.grid-view-menu");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Installs the handlers that dismiss the given menu - a press anywhere
+// outside of it or the Escape key.
+$.fn.zato.ide.install_grid_menu_dismiss = function(menu_id) {
+
+    $(document).on("mousedown.grid-view-menu", function(e) {
+        if(!$(e.target).closest(menu_id).length) {
+            $.fn.zato.ide.close_grid_menus();
+        }
+    });
+
+    $(document).on("keydown.grid-view-menu", function(e) {
+        if(e.key == "Escape") {
+            $.fn.zato.ide.close_grid_menus();
+        }
+    });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Picks the menu prototype for a node - the detail panel is under evaluation
+// on two sample nodes, everything else gets the plain list.
+$.fn.zato.ide.show_grid_menu_for_node = function(node, x, y) {
+
+    if(node.name == "Patient" || node.name == "active") {
+        $.fn.zato.ide.show_grid_panel_menu(node, x, y);
+    }
+    else {
+        $.fn.zato.ide.show_grid_view_menu(x, y);
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Shows the plain document menu at the given position.
+$.fn.zato.ide.show_grid_view_menu = function(x, y) {
+
+    $.fn.zato.ide.close_grid_menus();
+
+    let menu = $("<div>").attr("id", "grid-view-menu");
+
+    for(const item of $.fn.zato.ide.grid_view_menu_items) {
+
+        if(item === null) {
+            menu.append($("<div>").addClass("grid-view-menu-separator"));
+            continue;
+        }
+
+        let entry = $("<div>").addClass("grid-view-menu-item").text(item);
+        entry.on("click", function() {
+            $.fn.zato.ide.close_grid_menus();
+        });
+        menu.append(entry);
+    }
+
+    menu.css({"left": x + "px", "top": y + "px"});
+    $("body").append(menu);
+
+    $.fn.zato.ide.install_grid_menu_dismiss("#grid-view-menu");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// The detail panel - an action list on the left and a live information pane
+// on the right that describes whatever action is under the cursor,
+// so choosing is informed rather than hopeful. The hotkeys follow
+// the left-hand home rows - Q W E R, A S D F, Z X C V - in list order.
+// Items with children open a submenu next to the list.
+$.fn.zato.ide.grid_panel_menu_items = [
+    {"key": "Q", "label": "Edit value", "is_destructive": false, "children": null,
+        "description": "Change the value in place, the document underneath is re-serialized as you type.",
+        "details": [
+            ["Current value", "true"],
+            ["Type", "boolean"],
+            ["Applies to", "this node only"],
+        ]},
+    {"key": "W", "label": "Watch this field", "is_destructive": false, "children": null,
+        "description": "Alert when this field meets a condition as messages flow through the channel.",
+        "details": [
+            ["Suggested", "equals true"],
+            ["Evaluated", "in flight, per message"],
+            ["Cost at rest", "none"],
+        ]},
+    {"key": "E", "label": "Explain this value", "is_destructive": false, "children": null,
+        "description": "What this field means in the standard the document follows.",
+        "details": [
+            ["Field", "Patient.active"],
+            ["Meaning", "record is in active use"],
+            ["Type", "boolean"],
+        ]},
+    {"key": "R", "label": "Field history", "is_destructive": false, "children": null,
+        "description": "This field across every message the audit log holds for this channel.",
+        "details": [
+            ["Messages seen", "1,204"],
+            ["Distinct values", "2"],
+            ["Last change", "3 days ago"],
+        ]},
+    {"key": "A", "label": "Copy path", "is_destructive": false, "children": null,
+        "description": "Copy this node's address in the document's own notation.",
+        "details": [
+            ["Path", "Patient.active"],
+            ["Notation", "document native"],
+        ]},
+    {"key": "S", "label": "Copy value", "is_destructive": false, "children": null,
+        "description": "Copy the value exactly as it appears on the wire.",
+        "details": [
+            ["Value", "true"],
+            ["Length", "4 characters"],
+        ]},
+    {"key": "D", "label": "Convert to", "is_destructive": false,
+        "description": "Re-express this document in another standard, structure first, names mapped where the standards overlap.",
+        "details": [
+            ["Source", "FHIR"],
+            ["Scope", "whole document"],
+        ],
+        "children": [
+            {"key": "1", "label": "JSON",
+                "description": "A plain JSON document, names and nesting preserved as they are.",
+                "details": [
+                    ["Output", "application/json"],
+                    ["Lossless", "yes"],
+                ]},
+            {"key": "2", "label": "XML",
+                "description": "An XML document, attributes become elements where needed.",
+                "details": [
+                    ["Output", "application/xml"],
+                    ["Lossless", "yes"],
+                ]},
+            {"key": "3", "label": "HL7 v2",
+                "description": "An HL7 v2 message, fields mapped to their segment counterparts.",
+                "details": [
+                    ["Output", "ER7"],
+                    ["Mapped fields", "14 of 16"],
+                ]},
+            {"key": "4", "label": "EDIFACT",
+                "description": "An EDIFACT interchange, segments built from the mapped fields.",
+                "details": [
+                    ["Output", "UN/EDIFACT"],
+                    ["Mapped fields", "11 of 16"],
+                ]},
+        ]},
+    {"key": "F", "label": "Send as request", "is_destructive": false,
+        "description": "Use this document as the request payload of a new invocation.",
+        "details": [
+            ["Payload", "this subtree"],
+            ["Opens", "the invoker"],
+        ],
+        "children": [
+            {"key": "1", "label": "To this service",
+                "description": "Invoke the service currently open in the editor.",
+                "details": [
+                    ["Service", "demo.get-patient"],
+                ]},
+            {"key": "2", "label": "To another service",
+                "description": "Pick any deployed service to receive this document.",
+                "details": [
+                    ["Services", "247 deployed"],
+                ]},
+            {"key": "3", "label": "To a channel",
+                "description": "Send through a channel, with its security and encoding applied.",
+                "details": [
+                    ["Channels", "12 available"],
+                ]},
+        ]},
+    {"key": "Z", "label": "Delete", "is_destructive": true, "children": null,
+        "description": "Remove this node from the document.",
+        "details": [
+            ["Removes", "1 node"],
+            ["Undo", "available"],
+        ]},
+];
+
+$.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
+
+    $.fn.zato.ide.close_grid_menus();
+
+    let menu = $("<div>").attr("id", "grid-panel-menu");
+    let list = $("<div>").addClass("grid-panel-list");
+    let info = $("<div>").addClass("grid-panel-info");
+
+    // Fills the information pane with one action's story
+    let show_info = function(item) {
+
+        info.empty();
+        info.append($("<div>").addClass("grid-panel-info-title").text(item.label));
+        info.append($("<div>").addClass("grid-panel-info-desc").text(item.description));
+
+        for(const detail of item.details) {
+            let row = $("<div>").addClass("grid-panel-detail");
+            row.append($("<span>").addClass("grid-panel-detail-name").text(detail[0]));
+            row.append($("<span>").addClass("grid-panel-detail-value").text(detail[1]));
+            info.append(row);
+        }
+    }
+
+    // Opens a submenu next to the list, aligned with its parent entry -
+    // the entries share the look of the main list and drive
+    // the information pane the same way
+    // Whose submenu is on display, if any - the digit hotkeys go to it
+    let submenu_parent = null;
+
+    let open_submenu = function(entry, item) {
+
+        submenu_parent = item;
+        menu.find(".grid-panel-submenu").remove();
+
+        let submenu = $("<div>").addClass("grid-panel-submenu");
+
+        for(const child of item.children) {
+
+            let child_entry = $("<div>").addClass("grid-panel-item");
+            child_entry.append($("<span>").addClass("grid-panel-item-key").text(child.key));
+            child_entry.append($("<span>").addClass("grid-panel-item-label").text(child.label));
+
+            child_entry.on("mouseenter", function() {
+                submenu.find(".grid-panel-item").removeClass("current");
+                child_entry.addClass("current");
+                show_info(child);
+            });
+
+            child_entry.on("click", function() {
+                $.fn.zato.ide.close_grid_menus();
+            });
+
+            submenu.append(child_entry);
+        }
+
+        // The flyout starts at the list's right edge, level with its parent
+        submenu.css({
+            "left": list.outerWidth() + "px",
+            "top": entry.position().top + "px",
+        });
+
+        menu.append(submenu);
+    }
+
+    for(const item of $.fn.zato.ide.grid_panel_menu_items) {
+
+        let entry = $("<div>").addClass("grid-panel-item");
+        entry.append($("<span>").addClass("grid-panel-item-key").text(item.key));
+        entry.append($("<span>").addClass("grid-panel-item-label").text(item.label));
+
+        if(item.is_destructive) {
+            entry.addClass("grid-panel-item-destructive");
+        }
+
+        // Items with children carry an arrow and open their submenu on hover ..
+        if(item.children) {
+
+            entry.append($("<span>").addClass("grid-panel-item-more").text("\u203a"));
+
+            entry.on("mouseenter", function() {
+                list.find(".grid-panel-item").removeClass("current");
+                entry.addClass("current");
+                show_info(item);
+                open_submenu(entry, item);
+            });
+        }
+
+        // .. while plain items close whatever submenu is on display.
+        else {
+            entry.on("mouseenter", function() {
+                list.find(".grid-panel-item").removeClass("current");
+                entry.addClass("current");
+                show_info(item);
+                submenu_parent = null;
+                menu.find(".grid-panel-submenu").remove();
+            });
+
+            entry.on("click", function() {
+                $.fn.zato.ide.close_grid_menus();
+            });
+        }
+
+        list.append(entry);
+    }
+
+    menu.append(list);
+    menu.append(info);
+
+    // The first action's story is on display from the start
+    list.find(".grid-panel-item").first().addClass("current");
+    show_info($.fn.zato.ide.grid_panel_menu_items[0]);
+
+    menu.css({"left": x + "px", "top": y + "px"});
+    $("body").append(menu);
+
+    $.fn.zato.ide.install_grid_menu_dismiss("#grid-panel-menu");
+
+    // The hotkeys work for as long as the panel is open - a plain item's key
+    // triggers it, a parent's key brings up its submenu instead
+    $(document).on("keydown.grid-view-menu", function(e) {
+
+        // The digit keys go to the submenu on display
+        if(submenu_parent) {
+            for(const child of submenu_parent.children) {
+                if(e.key == child.key) {
+                    $.fn.zato.ide.close_grid_menus();
+                    return;
+                }
+            }
+        }
+
+        let items = $.fn.zato.ide.grid_panel_menu_items;
+
+        for(let idx=0; idx < items.length; idx++) {
+
+            let item = items[idx];
+
+            if(e.key.toUpperCase() != item.key) {
+                continue;
+            }
+
+            let entry = list.find(".grid-panel-item").eq(idx);
+            list.find(".grid-panel-item").removeClass("current");
+            entry.addClass("current");
+            show_info(item);
+
+            if(item.children) {
+                open_submenu(entry, item);
+            }
+            else {
+                $.fn.zato.ide.close_grid_menus();
+            }
+
+            return;
+        }
+    });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Renders the sample tree into the response pane and brings the parsed view
+// into view without persisting this as a user choice.
+$.fn.zato.ide.render_grid_view_demo = function() {
+
+    let pane = $("#data-response-parsed");
+    pane.empty();
+
+    let root = $("<div>").addClass("grid-view");
+    for(const node of $.fn.zato.ide.grid_view_demo_tree) {
+        root.append($.fn.zato.ide.build_grid_view_node(node));
+    }
+    pane.append(root);
+
+    $("#data-response").addClass("hidden");
+    pane.removeClass("hidden");
+    $("#response-view-raw").removeClass("current");
+    $("#response-view-parsed").addClass("current");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
 $.fn.zato.ide.apply_pane_view = function(pane_name) {
+
+    // Temporary - the response pane always shows the grid view sample
+    // while its style is being worked out
+    if(pane_name == "response" && $.fn.zato.ide.config.grid_view_demo) {
+        $.fn.zato.ide.render_grid_view_demo();
+        return;
+    }
 
     // The remembered choice for this pane and service ..
     let key = $.fn.zato.ide.get_pane_view_key(pane_name);
@@ -804,6 +1304,13 @@ $.fn.zato.ide.apply_pane_view = function(pane_name) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
+
+    // Temporary - the parsed view of the response pane is the grid view sample
+    // while its style is being worked out
+    if(pane_name == "response" && view_name == "parsed" && $.fn.zato.ide.config.grid_view_demo) {
+        $.fn.zato.ide.render_grid_view_demo();
+        return;
+    }
 
     let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
     let parsed_elem = $(`#data-${pane_name}-parsed`);

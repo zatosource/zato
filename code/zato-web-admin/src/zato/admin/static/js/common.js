@@ -363,7 +363,20 @@ $.fn.zato.data_table.on_submit_complete_callback_args = null;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// Returns the cell of a given logical column in a row - the index comes from the page's
+// get_columns list, so callers survive any reordering of the table's cells.
+$.fn.zato.data_table.get_cell = function(id, column_name) {
+    var columns = $.fn.zato.data_table.get_columns();
+    var cell_index = columns.indexOf(column_name);
+    return $('#tr_' + id).find('td').eq(cell_index);
+}
+
 $.fn.zato.data_table.row_updated = function(id) {
+
+    // Only one row carries the highlight at a time - marking this row takes it away
+    // from whichever row was highlighted before.
+    $('#data-table tr.updated').removeClass('updated');
+
     var tr = $('#tr_'+ id)
     tr.addClass('updated');
 
@@ -582,10 +595,24 @@ $.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// A one-shot override for where _bounce_row shows its confirmation - inline editing sets it
+// so the tippy appears on the link that was actually clicked instead of the row's Edit link.
+$.fn.zato.data_table.bounce_target_finder = null;
+
 $.fn.zato.data_table._bounce_row = function(tr, action) {
     if(action === 'edit') {
-        var edit_link = tr.find('a[href*="edit"]')[0];
-        var target = edit_link ? edit_link : tr.find('td:visible').last()[0];
+        var target = null;
+
+        var finder = $.fn.zato.data_table.bounce_target_finder;
+        if(finder) {
+            $.fn.zato.data_table.bounce_target_finder = null;
+            target = finder(tr);
+        }
+
+        if(!target) {
+            var edit_link = tr.find('a[href*="edit"]')[0];
+            target = edit_link ? edit_link : tr.find('td:visible').last()[0];
+        }
         var instance = tippy(target, {
             content: 'OK, saved',
             placement: 'top',
@@ -1286,13 +1313,15 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         }
 
         if(needs_create) {
+            // The new row takes over the highlight from any previously updated one.
+            $('#data-table tr.updated').removeClass('updated');
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
         }
         else {
             var tr = $(document.getElementById('tr_'+ json.id));
             tr.html(row);
-            tr.addClass('updated');
+            $.fn.zato.data_table.row_updated(json.id);
             $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
     }
@@ -2045,11 +2074,19 @@ $.fn.zato.time_ago.config = {
     'never_sort_value': '99999999999',
     'just_now_label': 'Just now',
     'ago_label': 'ago',
+    'ago_row_label': 'Ago',
     'utc_label': 'UTC',
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
     'spinner_min_visible_ms': 350,
     'value_fade_ms': 400,
+    'countdown_prefix': 'Refreshes in ',
+    'countdown_suffix': 's',
+
+    // Only one of these is meant to be active at a time - either the textual
+    // countdown next to the column name or the draining progress bar under it.
+    'countdown_enabled': true,
+    'progress_enabled': false,
     'units': [
         {'name': 'week',   'seconds': 604800},
         {'name': 'day',    'seconds': 86400},
@@ -2083,6 +2120,36 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
         }
     }
 
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Like humanize but exact - every non-zero unit is included,
+// e.g. "1 hour 12 minutes 5 seconds ago", with the same singular/plural handling.
+$.fn.zato.time_ago.humanize_detailed = function(age_seconds) {
+    var config = $.fn.zato.time_ago.config;
+
+    // Anything below one second reads better as a fixed label than as "0 seconds ago".
+    if(age_seconds < 1) {
+        return config.just_now_label;
+    }
+
+    var units = config.units;
+    var remaining = Math.floor(age_seconds);
+    var parts = [];
+
+    for(var unit_idx = 0; unit_idx < units.length; unit_idx++) {
+        var unit = units[unit_idx];
+        var count = Math.floor(remaining / unit.seconds);
+        if(count) {
+            var suffix = count == 1 ? '' : 's';
+            parts.push(count + ' ' + unit.name + suffix);
+            remaining -= count * unit.seconds;
+        }
+    }
+
+    var out = parts.join(' ') + ' ' + config.ago_label;
     return out;
 }
 
@@ -2132,9 +2199,17 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
     var local_text = $.fn.zato.time_ago.format_timestamp(when, false);
     var utc_text = $.fn.zato.time_ago.format_timestamp(when, true);
 
+    // The exact age, e.g. "1 hour 12 minutes 5 seconds ago" - the link keeps the coarse form.
+    var age_seconds = Math.floor((Date.now() - when.getTime()) / 1000);
+    if(age_seconds < 0) {
+        age_seconds = 0;
+    }
+    var ago_text = $.fn.zato.time_ago.humanize_detailed(age_seconds);
+
     var out = '<table class="zato-time-ago-tooltip">';
     out += '<tr><th>' + browser_timezone + '</th><td>' + local_text + '</td></tr>';
     out += '<tr><th>' + config.utc_label + '</th><td>' + utc_text + '</td></tr>';
+    out += '<tr><th>' + config.ago_row_label + '</th><td>' + ago_text + '</td></tr>';
     out += '</table>';
 
     return out;
@@ -2258,12 +2333,26 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
 
 $.fn.zato.time_ago.init = function(container_selector) {
 
-    // The column header carries one shared spinner for all the cells below it ..
+    // The column header carries one shared indicator slot for all the cells below it - the countdown
+    // and the spinner live in that one slot and swap places, so the spinner shows up exactly
+    // where the countdown text was, never next to it ..
+    var config = $.fn.zato.time_ago.config;
     var headers = $(container_selector).find('.zato-time-ago-header');
     headers.each(function() {
         var header = $(this);
-        if(!header.find('.zato-time-ago-spinner').length) {
-            header.append($('<span class="zato-time-ago-spinner"></span>'));
+
+        if(!header.find('.zato-time-ago-indicator').length) {
+            var indicator = $('<span class="zato-time-ago-indicator"></span>');
+
+            if(config.countdown_enabled) {
+                indicator.append($('<span class="zato-time-ago-countdown is-visible"></span>'));
+            }
+            if(config.progress_enabled) {
+                header.append($('<span class="zato-time-ago-progress is-visible"></span>'));
+            }
+
+            indicator.append($('<span class="zato-time-ago-spinner"></span>'));
+            header.append(indicator);
         }
     });
 
@@ -2277,14 +2366,51 @@ $.fn.zato.time_ago.init = function(container_selector) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// While the spinner is visible the countdown and the progress bar are not, and the other
+// way around - everything keeps occupying its space, so nothing ever shifts the layout.
 $.fn.zato.time_ago.show_spinners = function(container_selector) {
-    $(container_selector).find('.zato-time-ago-header .zato-time-ago-spinner').addClass('is-visible');
+    var headers = $(container_selector).find('.zato-time-ago-header');
+    headers.find('.zato-time-ago-spinner').addClass('is-visible');
+    headers.find('.zato-time-ago-countdown').removeClass('is-visible');
+    headers.find('.zato-time-ago-progress').removeClass('is-visible');
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.time_ago.hide_spinners = function(container_selector) {
-    $(container_selector).find('.zato-time-ago-header .zato-time-ago-spinner').removeClass('is-visible');
+    var headers = $(container_selector).find('.zato-time-ago-header');
+    headers.find('.zato-time-ago-spinner').removeClass('is-visible');
+    headers.find('.zato-time-ago-countdown').addClass('is-visible');
+
+    // The bar refills only now, once the refresh is over and the spinner is gone.
+    $.fn.zato.time_ago.restart_progress(container_selector);
+    headers.find('.zato-time-ago-progress').addClass('is-visible');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.update_countdowns = function(container_selector) {
+    var config = $.fn.zato.time_ago.config;
+    var text = config.countdown_prefix + $.fn.zato.time_ago.seconds_left + config.countdown_suffix;
+    $(container_selector).find('.zato-time-ago-header .zato-time-ago-countdown').text(text);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Refills the progress bar and lets it drain again over the full refresh interval.
+$.fn.zato.time_ago.restart_progress = function(container_selector) {
+    var config = $.fn.zato.time_ago.config;
+    var bars = $(container_selector).find('.zato-time-ago-header .zato-time-ago-progress');
+
+    bars.each(function() {
+        var bar = this;
+
+        // Clearing the animation and forcing a reflow makes the browser restart it from scratch.
+        bar.style.animation = 'none';
+        var _ = bar.offsetWidth;
+
+        bar.style.animation = 'zato-time-ago-drain ' + config.refresh_interval_ms + 'ms linear forwards';
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2353,10 +2479,371 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// One ticker drives both the countdown and the refresh itself so the two can never drift apart -
+// the counter goes 5s, 4s, .. 1s and once it reaches zero the refresh fires and the counter starts over.
 $.fn.zato.time_ago.start_auto_refresh = function(container_selector, url) {
+    var config = $.fn.zato.time_ago.config;
+    var interval_seconds = config.refresh_interval_ms / 1000;
+
+    $.fn.zato.time_ago.seconds_left = interval_seconds;
+    $.fn.zato.time_ago.update_countdowns(container_selector);
+    $.fn.zato.time_ago.restart_progress(container_selector);
+
     setInterval(function() {
-        $.fn.zato.time_ago.refresh(container_selector, url);
-    }, $.fn.zato.time_ago.config.refresh_interval_ms);
+        $.fn.zato.time_ago.seconds_left -= 1;
+
+        if($.fn.zato.time_ago.seconds_left <= 0) {
+            $.fn.zato.time_ago.seconds_left = interval_seconds;
+            $.fn.zato.time_ago.refresh(container_selector, url);
+        }
+
+        $.fn.zato.time_ago.update_countdowns(container_selector);
+    }, 1000);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Inline editing - a reusable way to change one or a few fields of a data-table row
+// without opening the edit dialog. The hidden edit form is populated exactly the way
+// the dialog populates it, selected fields are overridden and the form is submitted,
+// so the backend sees the same request an ordinary edit would produce.
+
+$.fn.zato.inline_edit = {};
+
+$.fn.zato.inline_edit.config = {
+
+    // The defaults below match the standard pattern used by most pages -
+    // one edit form with the edit- field prefix. Pages that deviate from it,
+    // like the scheduler, pass their own values instead.
+    'form_selector': '#edit-form',
+    'name_prefix': 'edit-',
+
+    'saving_label': 'Saving ..',
+    'saved_label': 'OK, saved',
+    'saved_hide_ms': 1200,
+    'error_label': 'Save failed',
+    'details_modal_title': 'Response',
+
+    // The saving tippy gets the same lead-in as the last-run spinner,
+    // so saves that complete quickly never flash it at all.
+    'saving_lead_in_ms': $.fn.zato.time_ago.config.spinner_min_visible_ms,
+
+    'ok_label': 'OK',
+    'cancel_label': 'Cancel',
+    'tippy_placement': 'top',
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Replays the edit action for one row with selected fields changed. Options:
+//
+//   link_elem     - the link that was clicked, the spinner and the outcome show on it
+//   id            - the row's ID in $.fn.zato.data_table.data
+//   overrides     - field name to new value, applied after the form is populated
+//   on_success    - called with the jqXHR so the page can rebuild the row,
+//                   defaults to the standard $.fn.zato.data_table.on_submit_complete path
+//   form_selector - the hidden edit form to replay, defaults to #edit-form
+//   name_prefix   - the form's field name prefix, defaults to edit-
+//
+$.fn.zato.inline_edit.submit = function(opts) {
+
+    var config = $.fn.zato.inline_edit.config;
+
+    var form_selector = opts.form_selector;
+    if(form_selector === undefined) {
+        form_selector = config.form_selector;
+    }
+
+    var name_prefix = opts.name_prefix;
+    if(name_prefix === undefined) {
+        name_prefix = config.name_prefix;
+    }
+
+    var on_success = opts.on_success;
+    if(on_success === undefined) {
+        on_success = function(jqXHR) {
+            $.fn.zato.data_table.on_submit_complete(jqXHR, 'success', 'edit');
+        };
+    }
+
+    var form = $(form_selector);
+    var id_prefix = '#id_' + name_prefix;
+    var instance = $.fn.zato.data_table.data[opts.id];
+    var link_elem = opts.link_elem;
+
+    // Fill the hidden edit form exactly the way the edit dialog does, so submitting it
+    // equals opening Edit and clicking OK without touching anything ..
+    $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
+
+    // .. then change only the fields this action is about ..
+    for(var field_name in opts.overrides) {
+        var field = form.find('[name="' + name_prefix + field_name + '"]');
+        var value = opts.overrides[field_name];
+        if(field.is(':checkbox')) {
+            field.prop('checked', value);
+        }
+        else {
+            field.val(value);
+        }
+    }
+
+    // .. and make sure every select carries the row's actual value. A select resets
+    // to its first option when populate hands it a value missing from its choices,
+    // e.g. internal zato.* services are never on the service list - such values get
+    // a temporary option injected so the request carries what the row really uses ..
+    form.find('option.zato-inline-edit-injected').remove();
+    form.find('select').each(function() {
+        var select = $(this);
+        var select_name = select.attr('name');
+
+        // Only prefixed fields map back to instance attributes.
+        if(select_name.indexOf(name_prefix) !== 0) {
+            return;
+        }
+
+        var field_name = select_name.substring(name_prefix.length);
+
+        // Overridden fields already carry the value this action wants.
+        if(field_name in opts.overrides) {
+            return;
+        }
+
+        var instance_value = instance[field_name];
+        if(instance_value && select.val() !== instance_value) {
+            var option = $('<option class="zato-inline-edit-injected"></option>');
+            option.attr('value', instance_value);
+            option.text(instance_value);
+            select.append(option);
+            select.val(instance_value);
+        }
+    });
+
+    var remove_injected = function() {
+        form.find('option.zato-inline-edit-injected').remove();
+    };
+
+    // .. and submit it, with the spinner and the outcome shown on the clicked link.
+    // The form is left populated on purpose - the on_success path reads it back
+    // to rebuild the row and cleans it up afterwards.
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: form.attr('action'),
+        data: form.serialize(),
+        spinner_label: config.saving_label,
+        details_modal_title: config.details_modal_title,
+        show_delay_ms: config.saving_lead_in_ms,
+
+        // The edit views reply with HTTP 200 and a JSON document on success and with
+        // an error page otherwise - there is no is_success field to look at.
+        parse: function(jqXHR, textStatus) {
+            var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+            // On error the row is not rebuilt, so the injected options can go right away.
+            if(!is_http_ok) {
+                remove_injected();
+            }
+
+            return {
+                is_success: is_http_ok,
+                label: is_http_ok ? config.saved_label : config.error_label,
+                details_title: config.error_label,
+                details_body: jqXHR.responseText,
+                jqXHR: jqXHR
+            };
+        },
+
+        on_success: function(tippy_instance, result) {
+
+            // The row rebuild replaces the clicked link, so remember which cell it sits in -
+            // _bounce_row then shows its confirmation on the link that takes its place.
+            var cell_index = $(link_elem).closest('td').index();
+            $.fn.zato.data_table.bounce_target_finder = function(tr) {
+                return tr.find('td').eq(cell_index).find('a')[0];
+            };
+
+            // The saving tippy must not survive the rebuild - _bounce_row shows
+            // the confirmation, there is no second tippy here.
+            tippy_instance.hide();
+            tippy_instance.destroy();
+
+            on_success(result.jqXHR);
+
+            // The rebuild has read the form back by now, the temporary options can go.
+            remove_injected();
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Flips the is_active flag of one row - a thin wrapper over submit. On pages following
+// the standard edit-form pattern it needs no options at all.
+$.fn.zato.inline_edit.toggle_active = function(id, link_elem, opts) {
+
+    if(opts === undefined) {
+        opts = {};
+    }
+
+    var instance = $.fn.zato.data_table.data[id];
+    var is_active = $.fn.zato.to_bool(instance.is_active);
+
+    $.fn.zato.inline_edit.submit({
+        link_elem: link_elem,
+        id: id,
+        overrides: {'is_active': !is_active},
+        form_selector: opts.form_selector,
+        name_prefix: opts.name_prefix,
+        on_success: opts.on_success
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// A small form inside a tippy shown above a link. Options:
+//
+//   link_elem      - the link the tippy points at
+//   title          - a heading above the rows
+//   rows           - a list of {name, label, value} - one table row per entry,
+//                    each with a label and a text input prefilled with value
+//   validate       - called with a map of trimmed input values, returns an error
+//                    message when the form must not be submitted or an empty string
+//   on_submit      - called with the map of values once they validate
+//   highlight_elem - optional, an element whose text wears a badge while the form is open
+//
+$.fn.zato.inline_edit.form_tippy = function(opts) {
+
+    var config = $.fn.zato.inline_edit.config;
+    var link_elem = opts.link_elem;
+
+    // Each click starts from scratch - any previous tippy on this link goes away first.
+    if(link_elem._tippy) {
+        link_elem._tippy.hide();
+        link_elem._tippy.destroy();
+    }
+
+    // Build the form ..
+    var container = $('<div class="zato-inline-form"></div>');
+
+    if(opts.title) {
+        container.append($('<div class="zato-inline-form-title"></div>').text(opts.title));
+    }
+
+    var table = $('<table></table>');
+    $.each(opts.rows, function(ignored, row) {
+        var tr = $('<tr></tr>');
+        tr.append($('<th></th>').text(row.label));
+
+        var input = $('<input type="text" />');
+        input.attr('name', row.name);
+        input.val(row.value);
+        tr.append($('<td></td>').append(input));
+
+        table.append(tr);
+    });
+    container.append(table);
+
+    // .. with its OK and Cancel buttons ..
+    var buttons = $('<div class="zato-inline-form-buttons"></div>');
+    var ok_button = $('<button type="button"></button>').text(config.ok_label);
+    var cancel_button = $('<button type="button"></button>').text(config.cancel_label);
+    buttons.append(ok_button);
+    buttons.append(cancel_button);
+    container.append(buttons);
+
+    // .. shown in an interactive tippy above the link ..
+    var instance = tippy(link_elem, {
+        content: container[0],
+        allowHTML: true,
+        placement: config.tippy_placement,
+        trigger: 'manual',
+        arrow: true,
+        animation: 'fade',
+        duration: [50, 50],
+        hideOnClick: false,
+        interactive: true,
+
+        // Keep the form out of the table, otherwise the table's own th/td styles leak into it.
+        appendTo: document.body,
+        zIndex: 100001,
+
+        // Let the Escape key and clicks outside the form close it while it is shown.
+        onShow: function(tippy_instance) {
+            var handle_escape = function(event) {
+                if(event.key === 'Escape') {
+                    tippy_instance.hide();
+                }
+            };
+            tippy_instance.handle_escape = handle_escape;
+            document.addEventListener('keydown', handle_escape);
+
+            var handle_outside_mousedown = function(event) {
+                var is_in_popper = tippy_instance.popper.contains(event.target);
+                var is_on_link = link_elem.contains(event.target);
+                if(!is_in_popper && !is_on_link) {
+                    tippy_instance.hide();
+                }
+            };
+            tippy_instance.handle_outside_mousedown = handle_outside_mousedown;
+            document.addEventListener('mousedown', handle_outside_mousedown);
+
+            // While the form is open, the related element wears a badge
+            // so it is clear which row the form belongs to.
+            if(opts.highlight_elem) {
+                var highlight = $(opts.highlight_elem);
+                highlight.wrapInner('<span class="zato-inline-form-badge"></span>');
+                tippy_instance.badge_elem = highlight;
+            }
+        },
+        onHide: function(tippy_instance) {
+            document.removeEventListener('keydown', tippy_instance.handle_escape);
+            document.removeEventListener('mousedown', tippy_instance.handle_outside_mousedown);
+
+            if(tippy_instance.badge_elem) {
+                var badge = tippy_instance.badge_elem.find('.zato-inline-form-badge');
+                badge.contents().unwrap();
+                tippy_instance.badge_elem = null;
+            }
+        },
+    });
+
+    cancel_button.on('click', function() {
+        instance.hide();
+    });
+
+    // .. OK collects the inputs and refuses to go on until they validate.
+    ok_button.on('click', function() {
+
+        var inputs = table.find('input');
+        var values = {};
+
+        inputs.each(function() {
+            var input = $(this);
+            values[input.attr('name')] = input.val().trim();
+        });
+
+        var error = opts.validate(values);
+        if(error) {
+            inputs.each(function() {
+                $.fn.zato.draw_attention_to($(this));
+            });
+            $.fn.zato.show_native_tooltip(inputs.first(), error);
+            return;
+        }
+
+        inputs.each(function() {
+            $.fn.zato.cleanup_elem_css_attention($(this));
+        });
+
+        instance.hide();
+        opts.on_submit(values);
+    });
+
+    instance.show();
+
+    // The first input is where typing starts right away.
+    table.find('input').first().trigger('focus');
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
