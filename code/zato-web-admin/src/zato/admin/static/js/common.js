@@ -2049,6 +2049,7 @@ $.fn.zato.time_ago.config = {
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
     'spinner_min_visible_ms': 350,
+    'value_fade_ms': 400,
     'units': [
         {'name': 'week',   'seconds': 604800},
         {'name': 'day',    'seconds': 86400},
@@ -2148,10 +2149,12 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
 
     cell.attr('data-time-utc', iso_utc);
 
-    // Make sure the cell has its value element ..
+    // Make sure the cell has its value element - the fade duration comes from the config
+    // so that the CSS transition and the swap timer below always use the same number ..
     var value_element = cell.find('.zato-time-ago-value');
     if(!value_element.length) {
         value_element = $('<span class="zato-time-ago-value"></span>');
+        value_element[0].style.setProperty('--zato-time-ago-value-fade-ms', config.value_fade_ms + 'ms');
         cell.empty();
         cell.append(value_element);
     }
@@ -2233,12 +2236,18 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
     // .. while unchanged cells are updated silently so nothing pulses without a reason.
     var current_text = value_element.text();
 
-    if(current_text && current_text !== new_text) {
+    // A previous fade may still be pending, e.g. after a background tab was throttled -
+    // in that case the update is applied directly so no cell ever gets stuck.
+    if(value_element.hasClass('zato-time-ago-fading')) {
+        value_element.removeClass('zato-time-ago-fading');
+        apply_text();
+    }
+    else if(current_text && current_text !== new_text) {
         value_element.addClass('zato-time-ago-fading');
-        value_element.one('transitionend', function() {
+        setTimeout(function() {
             apply_text();
             value_element.removeClass('zato-time-ago-fading');
-        });
+        }, config.value_fade_ms);
     }
     else {
         apply_text();
