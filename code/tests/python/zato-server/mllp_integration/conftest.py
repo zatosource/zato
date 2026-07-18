@@ -28,6 +28,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient as ZatoClient
+from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
@@ -150,15 +151,11 @@ def wait_for_port_closed(port:'int', timeout:'int'=_port_wait_timeout) -> 'None'
 # ################################################################################################################################
 
 def _kill_process(process:'subprocess.Popen[bytes] | None') -> 'None':
-
-    if process:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                _ = process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                _ = process.wait(timeout=5)
+    """ Kills a subprocess along with every descendant it spawned - the server is launched
+    through the zato launcher and a shell wrapper, so terminating the direct child alone
+    would orphan the actual server, which would then run and log forever.
+    """
+    kill_process_tree(process)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -296,12 +293,24 @@ def zato_server() -> 'strobj_dict_gen':
     server_environment['Zato_Audit_Log_DB_Name'] = audit_db_path
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
+    # start_new_session makes the launcher its own process-group leader, so the teardown
+    # can kill the whole group - the shell wrapper and the actual server included.
     _server_process = subprocess.Popen(
         [_zato_bin, 'start', server_directory, '--fg'],
         env=server_environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
+
+    # A detached watchdog kills the server's process group once this pytest process is gone -
+    # the atexit cleanup never runs when pytest is killed hard, and an orphaned server
+    # would otherwise run and log forever.
+    _watchdog_script = (
+        f'while kill -0 {os.getpid()} 2>/dev/null; do sleep 5; done; '
+        f'kill -- -{_server_process.pid} 2>/dev/null'
+    )
+    _ = subprocess.Popen(['/bin/sh', '-c', _watchdog_script], start_new_session=True)
 
     after_popen = time.monotonic()
     print(f'[TIMING] Popen started: {after_popen - after_patch:.1f}s')
@@ -349,6 +358,7 @@ def zato_server() -> 'strobj_dict_gen':
         env=listener_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
     # .. stream the listener's output too - it reports each file it picks up and deploys,

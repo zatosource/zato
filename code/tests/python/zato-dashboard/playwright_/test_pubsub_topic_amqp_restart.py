@@ -38,6 +38,9 @@ from amqp_fixtures import rabbitmq_broker # noqa: F401
 # The conftest's atexit cleanup reads this dict, so handing the new process over here means it will be killed at exit
 from cleanup_refs import cleanup_refs
 
+# The watchdog reaps the restarted server when the test process dies without its atexit cleanup
+from server_restart import start_orphan_watchdog
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -162,6 +165,10 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..
     zato_dashboard['server_process'] = new_process
     cleanup_refs['server_process'] = new_process
+
+    # .. and arm the watchdog that reaps the server if this test process dies
+    # without running its atexit cleanup.
+    start_orphan_watchdog(os.getpid(), new_process.pid)
 
     # .. and wait until the server answers pings again.
     # .. The browser is intentionally idle during this wait, the server is restarting ..

@@ -35,6 +35,24 @@ logger = logging.getLogger('zato.test.playwright')
 # How long to wait for the restarted server to answer pings
 _Restart_Timeout = 180
 
+# How often the orphan watchdog checks whether the test process is still alive
+_Watchdog_Interval_Seconds = 5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def start_orphan_watchdog(watched_pid:'int', server_group_pid:'int') -> 'None':
+    """ Starts a detached watchdog that kills the restarted server's process group once the
+    test process is gone. The atexit cleanup never runs when pytest is killed hard, and the
+    restarted server is detached, so without the watchdog it would run forever,
+    filling its log file in /tmp without bounds.
+    """
+    watchdog_script = (
+        f'while kill -0 {watched_pid} 2>/dev/null; do sleep {_Watchdog_Interval_Seconds}; done; '
+        f'kill -- -{server_group_pid} 2>/dev/null'
+    )
+    _ = subprocess.Popen(['/bin/sh', '-c', watchdog_script], start_new_session=True)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -93,6 +111,10 @@ def restart_server(zato_dashboard:'anydict') -> 'None':
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..
     zato_dashboard['server_process'] = new_process
     cleanup_refs['server_process'] = new_process
+
+    # .. and arm the watchdog that reaps the server if this test process dies
+    # without running its atexit cleanup.
+    start_orphan_watchdog(os.getpid(), new_process.pid)
 
     # .. and wait until the server answers pings again.
     # .. The browser is intentionally idle during this wait, the server is restarting ..
