@@ -65,7 +65,9 @@ $.fn.zato.scheduler.data_table.before_submit_hook = function(form) {
 
 $(document).ready(function() {
 
-    $('#data-table').tablesorter();
+    // Humanize the last-run cells first so that sorting can pick up their numeric sort values.
+    $.fn.zato.time_ago.init('#data-table');
+    $('#data-table').tablesorter({textExtraction: $.fn.zato.data_table.text_extraction});
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
     $.fn.zato.data_table.parse();
 
@@ -174,6 +176,9 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
             tr.addClass('updated');
             $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
+
+        // The row is in the DOM now, so its last-run cell can be humanized.
+        $.fn.zato.time_ago.init('#data-table');
     }
 
     $.fn.zato.data_table._on_submit_complete(data, status);
@@ -255,6 +260,17 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td>{0}</td>', job.name);
     row += String.format('<td style="text-align:center">{0}</td>', job.is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.definition_text);
+
+    // Carry over the existing last-run timestamp when a row is edited - a newly created job has not run yet.
+    var last_run_utc = '';
+    if(!include_tr) {
+        var existing_cell = $('#tr_' + job.id + ' td.zato-time-ago');
+        if(existing_cell.length) {
+            last_run_utc = existing_cell.attr('data-time-utc');
+        }
+    }
+    row += String.format('<td class="zato-time-ago" data-time-utc="{0}"></td>', last_run_utc);
+
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
     row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all&range={2}">Audit log</a></td>', job.id, cluster_id, $.fn.zato.scheduler.default_time_range_minutes);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));

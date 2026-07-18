@@ -135,11 +135,6 @@ Ctrl+K for full history"></textarea></form>
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0;">
                                 <div style="text-align: left;">
                                     <div id="singleton-form-parent" class="hidden"></div>
-                                    <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
-                                    <span id="invoking-please-wait" class="hidden">Invoking ..</span>
-                                    <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
-                                </div>
-                                <div style="text-align: right;">
                                     <a href="javascript:void(0)" id="insert-sample-link" class="common hidden">Samples</a>
                                     <select id="payload-format-select" class="default" title="How to treat the request and response payloads">
                                         <option value="auto">Auto</option>
@@ -157,6 +152,11 @@ Ctrl+K for full history"></textarea></form>
                                         type="button"
                                         {% if not data.current_fs_location and not data.current_file_service_list and not current_object_name %}disabled="disabled" class="no-click"{% endif %}
                                         value="Invoke"/>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
+                                    <span id="invoking-please-wait" class="hidden">Invoking ..</span>
+                                    <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
                                 </div>
                             </div>
                         </td>

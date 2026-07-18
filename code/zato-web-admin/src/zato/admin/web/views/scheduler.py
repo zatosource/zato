@@ -43,11 +43,18 @@ from zato.common.py23_.past.builtins import unicode
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 default_jitter_ms = ''
 default_timezone = ''
 default_max_execution_time_ms = ''
+default_last_run_utc = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,6 +84,24 @@ def _one_time_job_def(user_profile, start_date):
     return 'Execute once on {0} at {1}'.format(
         from_utc_to_user(start_date, user_profile, 'date'),
         from_utc_to_user(start_date, user_profile, 'time'))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _interval_text(weeks:'any_', days:'any_', hours:'any_', minutes:'any_', seconds:'any_') -> 'str':
+    """ Returns a human-readable interval only, e.g. "10 seconds" or "3 hours 5 minutes".
+    """
+    parts = []
+
+    for name, value in (('week',weeks), ('day',days), ('hour',hours), ('minute',minutes), ('second',seconds)):
+        if value:
+            # Values arriving from POST parameters are strings, hence the conversion.
+            value = int(value)
+            suffix = '' if value == 1 else 's'
+            parts.append(f'{value} {name}{suffix}')
+
+    out = ' '.join(parts)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -228,18 +253,13 @@ def _create_interval_based(client, user_profile, cluster, params):
     response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    start_date = _get_start_date(input_dict['start_date'])
-
-    repeats = params.get('create-interval_based-repeats')
-    repeats = int(repeats) if repeats else None
-
     weeks = params.get('create-interval_based-weeks')
     days = params.get('create-interval_based-days')
     hours = params.get('create-interval_based-hours')
     minutes = params.get('create-interval_based-minutes')
     seconds = params.get('create-interval_based-seconds')
 
-    definition = _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
+    definition = _interval_text(weeks, days, hours, minutes, seconds)
 
     return {'id': response.data.id, 'definition_text':definition}
 
@@ -269,18 +289,13 @@ def _edit_interval_based(client, user_profile, cluster, params):
     client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
 
-    start_date = _get_start_date(input_dict['start_date'])
-
-    repeats = params.get('edit-interval_based-repeats')
-    repeats = int(repeats) if repeats else None
-
     weeks = params.get('edit-interval_based-weeks')
     days = params.get('edit-interval_based-days')
     hours = params.get('edit-interval_based-hours')
     minutes = params.get('edit-interval_based-minutes')
     seconds = params.get('edit-interval_based-seconds')
 
-    definition = _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
+    definition = _interval_text(weeks, days, hours, minutes, seconds)
 
     return {'definition_text':definition, 'id':params['edit-interval_based-id']}
 
@@ -332,10 +347,8 @@ def index(req):
                     definition_text=_one_time_job_def(req.zato.user_profile, start_date)
 
                 elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-                    definition_text = _interval_based_job_def(req.zato.user_profile,
-                        _get_start_date(job_elem.start_date),
-                        job_elem.repeats, job_elem.weeks, job_elem.days,
-                        job_elem.hours, job_elem.minutes, job_elem.seconds)
+                    definition_text = _interval_text(
+                        job_elem.weeks, job_elem.days, job_elem.hours, job_elem.minutes, job_elem.seconds)
 
                     weeks = job_elem.weeks
                     days = job_elem.days
@@ -363,6 +376,7 @@ def index(req):
                     raise ZatoException(msg)
 
                 job.definition_text = definition_text
+                job.last_run_utc = getattr(job_elem, 'last_run_utc', default_last_run_utc)
                 job.on_success_service = getattr(job_elem, 'on_success_service', '')
                 job.on_success_job = getattr(job_elem, 'on_success_job', '')
                 job.on_error_service = getattr(job_elem, 'on_error_service', '')
