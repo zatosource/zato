@@ -53,7 +53,6 @@ let Copy_Tooltip_Timeout = 1000;
 
 $(document).ready(function() {
     $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
-    $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
 
     $("#payload-format-select").on("change", $.fn.zato.ide.on_payload_format_changed);
     $("#invoke-mode-select").on("change", $.fn.zato.ide.on_invoke_mode_changed);
@@ -75,6 +74,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     window.zato_local_storage_key = {
         "zato_action_area_size": "zato.action-area-size",
         "zato_request_history": "zato.request-history",
+        "zato_full_history": "zato.full-history",
     }
 
     // Request history tracking
@@ -213,7 +213,6 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         // and the parsed views fill the panel, so they always share one height
         // and the panel's bottom edge always stays in view.
         let responsePanel = document.getElementById('response-panel');
-        if (!responsePanel) return;
 
         let actionAreaHeight = actionArea.offsetHeight;
         let responsePanelTop = responsePanel.getBoundingClientRect().top;
@@ -573,8 +572,18 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
     $(".invoker-tr").show();
 
     // Left-hand side links
-    // $.fn.zato.ide.add_header_left_link("deploy", "Deploy");
     $.fn.zato.ide.add_header_left_link("file", "File");
+    $.fn.zato.ide.add_header_left_link("deploy", "Deploy", true);
+
+    // The Deploy button was just re-created, so its click handler
+    // and deployment status class need to be attached anew
+    $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
+    $.fn.zato.ide.set_deployment_status();
+
+    // The progress indicator and the confirmation flash both sit right of the Deploy
+    // button - only one of them is ever visible, the flash replaces the indicator
+    $('<span id="deploying-please-wait" class="hidden">Deploying ..</span>').insertAfter("#header-left-link-deploy");
+    $('<span id="deploy-result-flash" class="dimmed hidden">OK, deployed</span>').insertAfter("#deploying-please-wait");
     // $.fn.zato.ide.add_header_left_link("deploy-all-changed", "Deploy all changed");
     //$.fn.zato.ide.add_header_left_link("previous", "◄ Req.");
     //$.fn.zato.ide.add_header_left_link("next", "Req. ►", true);
@@ -663,6 +672,10 @@ $.fn.zato.ide.config = {
 
     // What the parsed pane shows when the payload does not parse
     "parse_failed_text": "(payload does not parse)",
+
+    // How long the "Deploying .." indicator stays on screen at a minimum,
+    // otherwise a fast deploy would make it a barely visible blip
+    "deploy_indicator_min_ms": 60,
 
     // Sample payloads offered per format
     "samples": {
@@ -1035,16 +1048,25 @@ $.fn.zato.ide.on_file_op_success_func = function(
 
         $.fn.zato.show_bottom_tooltip(`#file-${op_name}`, `${placeholder_verb} ..`, true);
         $.fn.zato.ide.set_current_fs_location(data.full_path);
+
+        // The callback fetches the service list and its response is what enables
+        // the Invoke button, so it must run only after the file finished loading -
+        // the file load sees no services in a just-created file and disables
+        // the button, which must not race with the enabling response.
+        let after_load_func = false;
+        if(after_on_file_op_success_func_callback) {
+            after_load_func = function() {
+                after_on_file_op_success_func_callback();
+            };
+        }
+
         $.fn.zato.ide.on_file_selected(
             data.full_path,
             data.full_path_url_safe,
             false,
-            false,
+            after_load_func,
             null, // _get_current_file_service_list_func,
         );
-        if(after_on_file_op_success_func_callback) {
-            after_on_file_op_success_func_callback();
-        }
     };
     return _on_success_func;
 };
@@ -2190,10 +2212,61 @@ $.fn.zato.invoker.on_deploy_submitted = function() {
         "on_started_activate_blinking": ["#deploying-please-wait"],
         "on_ended_draw_attention": ["#result-header"],
         "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
+        "on_success_flash_func": $.fn.zato.ide.flash_deploy_success,
         "on_post_success_func": $.fn.zato.ide.on_post_success_func,
 
     }
     $.fn.zato.invoker.run_sync_deployer(options);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Deploys the current file first and runs the given function once the deploy succeeded -
+// this is what invoking a modified service goes through before the actual invocation.
+$.fn.zato.ide.run_sync_deployer = function(on_deployed_func) {
+
+    const options = {
+        "request_form_id": "#editor-form",
+        "on_started_activate_blinking": ["#deploying-please-wait"],
+        "on_ended_draw_attention": ["#result-header"],
+        "get_request_url_func": $.fn.zato.invoker.get_sync_deploy_request_url,
+        "on_success_flash_func": $.fn.zato.ide.flash_deploy_success,
+        "on_post_success_func": function() {
+            $.fn.zato.ide.on_post_success_func();
+            on_deployed_func();
+        },
+    }
+    $.fn.zato.invoker.run_sync_deployer(options);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// A successful deploy reports through a short flash next to the Deploy button -
+// the result header and the response area stay untouched.
+$.fn.zato.ide.flash_deploy_success = function(options) {
+
+    // A fast deploy would replace the indicator with the flash near-instantly,
+    // so the swap waits until the indicator was on screen for a moment
+    setTimeout(function() {
+
+        // The deploying indicator stops blinking now that the deploy is done ..
+        let blinking = options["on_started_activate_blinking"];
+        blinking.each(function(element) {
+            $.fn.zato.toggle_css_class($(element), "invoker-blinking", "hidden");
+        });
+
+        // .. and the confirmation flashes with the same attention animation
+        // the result header uses, hiding again when the animation ends.
+        let flash = $("#deploy-result-flash");
+        flash.removeClass("hidden");
+        flash.addClass("invoker-draw-attention");
+
+        flash.one("animationend", function() {
+            flash.addClass("hidden");
+            flash.removeClass("invoker-draw-attention");
+        });
+
+    }, $.fn.zato.ide.config.deploy_indicator_min_ms);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2728,6 +2801,11 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
         history = $.fn.zato.ide.get_full_history();
     }
 
+    // Item selection reads from what the overlay actually shows, which may be
+    // a filtered subset whose indexes do not map to the full history
+    $.fn.zato.ide.history_overlay_items = history;
+    $.fn.zato.ide.history_overlay_is_search_result = !!is_search_result;
+
     let callbacks = {
         on_select: function(index) {
             $.fn.zato.ide.on_history_item_selected(index);
@@ -2750,7 +2828,8 @@ $.fn.zato.ide.populate_history_overlay = function(history, is_search_result) {
 $.fn.zato.ide.on_history_item_selected = function(index) {
     console.debug("on_history_item_selected: index:", index);
 
-    let history = $.fn.zato.ide.get_request_history();
+    // The list the overlay was populated with is the one the index refers to
+    let history = $.fn.zato.ide.history_overlay_items;
     let item = history[index];
     let request_text = typeof item === 'string' ? item : item.text;
 
@@ -2758,11 +2837,25 @@ $.fn.zato.ide.on_history_item_selected = function(index) {
 
     $("#data-request").val(request_text);
 
-    window.zato_request_history_index = parseInt(index);
+    // Browsing continues from the chosen item, except that indexes
+    // of a filtered list do not map to the full history
+    if($.fn.zato.ide.history_overlay_is_search_result) {
+        window.zato_request_history_index = -1;
+    }
+    else {
+        window.zato_request_history_index = parseInt(index);
+    }
     console.debug("on_history_item_selected: set window.zato_request_history_index to:", window.zato_request_history_index);
 
     $.fn.zato.ide.close_history_overlay();
     $.fn.zato.ide.update_request_history_buttons();
+
+    // Choosing a request must never leave the invoke button disabled
+    // as long as there is a service to invoke
+    let service_name = $.fn.zato.ide.get_current_service_name();
+    if(service_name) {
+        $.fn.zato.ide.enable_invoke_button();
+    }
 
     $("#data-request").focus();
 

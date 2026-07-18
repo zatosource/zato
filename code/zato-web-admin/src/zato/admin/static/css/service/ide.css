@@ -291,10 +291,13 @@ td.data-input-field-name {
     padding: 6px;
 }
 
+/* Block display kills the inline-block baseline gap, but it must not win
+   over the hidden class, whose display none is what swaps the panes */
+.invoker-area textarea:not(.hidden) {
+    display: block;
+}
+
 .invoker-area textarea {
-    /* Kills the inline-block baseline gap without overriding the display
-       that the hidden class needs to be able to set to none */
-    vertical-align: top;
     width: 100%;
     border: none;
     border-radius: 4px;
@@ -316,11 +319,36 @@ td.data-input-field-name {
 
 .invoker-view-link {
     cursor: pointer;
+    text-decoration: none !important;
+    /* The global a:not(.menu-link) rule paints a dashed underline with
+       a background gradient, so removing the decoration alone is not enough */
+    background-image: none !important;
+    padding-bottom: 0 !important;
 }
 
 .invoker-view-link.current {
     font-weight: 600;
-    text-decoration: underline !important;
+}
+
+/* The deploy progress indicator and the confirmation flash share the slot
+   to the right of the Deploy button */
+#deploying-please-wait,
+#deploy-result-flash {
+    margin-left: 10px;
+    padding: 0.4rem 0.2rem;
+}
+
+/* The flash sits on the header background, not on white,
+   so it fades back to the local background instead of #fff */
+#deploy-result-flash {
+    --invoker-draw-attention-base: transparent;
+}
+
+/* Formalize gives every focused input a 7px glow that lingers after a click,
+   so it goes away for all IDE buttons - the :not(:active) part keeps
+   the depressed state that formalize paints while a button is pressed */
+input[type="button"]:focus:not(:active) {
+    box-shadow: none;
 }
 
 .invoker-parsed-pane {
