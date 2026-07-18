@@ -433,6 +433,9 @@ $.fn.zato.scheduler.execute = function(id, link_elem) {
         on_success: function(instance) {
             instance.setContent('OK, job executed');
             setTimeout(function() { instance.hide(); }, 1200);
+
+            // Instant feedback - the next refresh pass brings the server-side timestamp anyway.
+            $.fn.zato.time_ago.mark_just_run(id);
         }
     });
 }
@@ -462,6 +465,8 @@ $.fn.zato.scheduler.edit_interval = function(id, link_elem) {
         link_elem: link_elem,
         highlight_elem: name_cell,
         title: 'Interval',
+        input_type: 'number',
+        input_min: '0',
         rows: [
             {name: 'weeks',   label: 'Weeks',   value: instance.weeks},
             {name: 'days',    label: 'Days',    value: instance.days},

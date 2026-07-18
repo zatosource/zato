@@ -57,6 +57,19 @@ proptest! {
     }
 
     #[test]
+    fn reactivate_restores_fire(minutes in 1u32..60) {
+        let scheduler_job = make_job(minutes, false);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
+        prop_assert!(running_job.next_fire_utc.is_none());
+
+        // Re-activating with an unchanged schedule must still compute the next fire time.
+        let mut edited = scheduler_job;
+        edited.is_active = true;
+        running_job.update_from_job(&edited);
+        prop_assert!(running_job.next_fire_utc.is_some());
+    }
+
+    #[test]
     fn schedule_change_recomputes_fire(
         old_min in 1u32..30,
         new_min in 31u32..60,

@@ -1381,7 +1381,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 'Triggering %s callback job=%s for source job_id=%s name=%s', event_label, target_job_name, source_job_id, source_job_name)
 
             target_job_id = target_job.id
-            self._scheduler.execute_job(target_job_id)
+            self._scheduler.execute_job(target_job_id, target_job_name)
 
         except Exception:
             logger.warning(

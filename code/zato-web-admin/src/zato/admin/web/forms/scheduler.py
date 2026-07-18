@@ -54,11 +54,11 @@ class OneTimeSchedulerJobForm(_Base):
 _tz_choices = [('', '--- Same as server ---')] + [(tz, tz) for tz in tz_names]
 
 class IntervalBasedSchedulerJobForm(_Base):
-    weeks = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
-    days = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
-    hours = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
-    minutes = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
-    seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    weeks = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:8%', 'min':'0'}))
+    days = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:8%', 'min':'0'}))
+    hours = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:8%', 'min':'0'}))
+    minutes = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:8%', 'min':'0'}))
+    seconds = forms.CharField(widget=forms.NumberInput(attrs={'class':'validate-digits', 'style':'width:8%', 'min':'0'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
     repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
     jitter_ms = forms.CharField(required=False, initial='500', widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
