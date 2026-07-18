@@ -91,7 +91,15 @@ class RedisPushDelivery:
             def release(self, connection:'any_') -> 'None':
                 pass
 
-        pool = _SingleConnPool(**self._redis_conn_params)
+        # The bare ssl flag is a convenience only Redis(...) understands - a connection pool
+        # needs the SSL connection class instead, with the ssl_* keyword arguments kept as they are.
+        pool_params = dict(self._redis_conn_params)
+
+        if pool_params.pop('ssl', False):
+            from redis.connection import SSLConnection
+            pool_params['connection_class'] = SSLConnection
+
+        pool = _SingleConnPool(**pool_params)
         redis_conn = Redis(connection_pool=pool)
 
         out = RedisPubSubBackend(redis_conn, self.server.pubsub_redis.disk_store, server=self.server)

@@ -23,12 +23,21 @@ class Rollup(ZatoCommand):
     """ Aggregates new audit log events into the analytics store as hourly rows.
     """
 
-    opts = []
+    opts = [
+        {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
+    ]
 
     def execute(self, args:'Namespace') -> 'int':
 
         # Zato
         from zato.common.analytics.rollup import run_rollup
+        from zato.common.util.env import populate_environment_from_file
+
+        # The rollup runs as its own process, e.g. out of cron, so the audit and analytics
+        # database variables saved by the Config DB screens are loaded from the same env
+        # file the server uses.
+        if args.env_file:
+            _ = populate_environment_from_file(args.env_file)
 
         result = run_rollup()
 
@@ -49,6 +58,7 @@ if __name__ == '__main__':
     args.verbose      = True
     args.store_log    = False
     args.store_config = False
+    args.env_file     = ''
 
     command = Rollup(args)
     command.run(args)

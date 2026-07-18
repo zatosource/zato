@@ -23,6 +23,9 @@ from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.quota_tier import QuotaTierImporter
+from zato.cli.enmasse.importers.alert_rule import AlertRuleImporter
+from zato.cli.enmasse.importers.audit_retention import AuditRetentionImporter
+from zato.cli.enmasse.importers.audit_extraction import AuditExtractionImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.cli.enmasse.importers.email_imap import IMAPImporter
 from zato.cli.enmasse.importers.es import ElasticSearchImporter
@@ -119,6 +122,9 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.group_defs = {}
         self.quota_tier_defs = {}
+        self.alert_rule_defs = {}
+        self.audit_retention_defs = {}
+        self.audit_extraction_defs = {}
         self.odoo_defs = {}
         self.smtp_defs = {}
         self.imap_defs = {}
@@ -166,6 +172,9 @@ class EnmasseYAMLImporter:
         self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
         self.quota_tier_importer = QuotaTierImporter(self)
+        self.alert_rule_importer = AlertRuleImporter(self)
+        self.audit_retention_importer = AuditRetentionImporter(self)
+        self.audit_extraction_importer = AuditExtractionImporter(self)
         self.odoo_importer = OdooImporter(self)
         self.smtp_importer = SMTPImporter(self)
         self.imap_importer = IMAPImporter(self)
@@ -368,6 +377,75 @@ class EnmasseYAMLImporter:
         logger.info(f'Processed quota tiers: created={created_count} updated={updated_count}')
 
         return tiers_created, tiers_updated
+
+# ################################################################################################################################
+
+    def sync_alert_rules(self, rule_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes alert rules from a YAML configuration with the database.
+        """
+        if not rule_list:
+            return [], []
+
+        count = len(rule_list)
+        noun = 'rule' if count == 1 else 'rules'
+        logger.info(f'Processing {count} alert {noun}')
+
+        rules_created, rules_updated = self.alert_rule_importer.sync_alert_rules(rule_list, session)
+
+        # Get rule definitions from the rule importer and store them in our instance
+        self.alert_rule_defs = self.alert_rule_importer.rule_defs
+
+        created_count = len(rules_created)
+        updated_count = len(rules_updated)
+        logger.info(f'Processed alert rules: created={created_count} updated={updated_count}')
+
+        return rules_created, rules_updated
+
+# ################################################################################################################################
+
+    def sync_audit_retention(self, policy_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes audit retention policies from a YAML configuration with the database.
+        """
+        if not policy_list:
+            return [], []
+
+        count = len(policy_list)
+        noun = 'policy' if count == 1 else 'policies'
+        logger.info(f'Processing {count} retention {noun}')
+
+        policies_created, policies_updated = self.audit_retention_importer.sync_retention_policies(policy_list, session)
+
+        # Get policy definitions from the policy importer and store them in our instance
+        self.audit_retention_defs = self.audit_retention_importer.policy_defs
+
+        created_count = len(policies_created)
+        updated_count = len(policies_updated)
+        logger.info(f'Processed retention policies: created={created_count} updated={updated_count}')
+
+        return policies_created, policies_updated
+
+# ################################################################################################################################
+
+    def sync_audit_extraction(self, extraction_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes attribute-extraction rule sets from a YAML configuration with the database.
+        """
+        if not extraction_list:
+            return [], []
+
+        count = len(extraction_list)
+        noun = 'set' if count == 1 else 'sets'
+        logger.info(f'Processing {count} extraction rule {noun}')
+
+        extraction_created, extraction_updated = self.audit_extraction_importer.sync_extraction_rules(extraction_list, session)
+
+        # Get set definitions from the extraction importer and store them in our instance
+        self.audit_extraction_defs = self.audit_extraction_importer.extraction_defs
+
+        created_count = len(extraction_created)
+        updated_count = len(extraction_updated)
+        logger.info(f'Processed extraction rule sets: created={created_count} updated={updated_count}')
+
+        return extraction_created, extraction_updated
 
 # ################################################################################################################################
 
@@ -1276,6 +1354,27 @@ class EnmasseYAMLImporter:
             self.created_objects['quota_tier'] = tiers_created
         if tiers_updated:
             self.updated_objects['quota_tier'] = tiers_updated
+
+        # Process alert rules - they reference nothing else, nothing else references them
+        alert_rules_created, alert_rules_updated = self.sync_alert_rules(yaml_config.get('alert_rule', []), session)
+        if alert_rules_created:
+            self.created_objects['alert_rule'] = alert_rules_created
+        if alert_rules_updated:
+            self.updated_objects['alert_rule'] = alert_rules_updated
+
+        # Process audit retention policies
+        retention_created, retention_updated = self.sync_audit_retention(yaml_config.get('audit_retention', []), session)
+        if retention_created:
+            self.created_objects['audit_retention'] = retention_created
+        if retention_updated:
+            self.updated_objects['audit_retention'] = retention_updated
+
+        # Process attribute-extraction rule sets
+        extraction_created, extraction_updated = self.sync_audit_extraction(yaml_config.get('audit_extraction', []), session)
+        if extraction_created:
+            self.created_objects['audit_extraction'] = extraction_created
+        if extraction_updated:
+            self.updated_objects['audit_extraction'] = extraction_updated
 
         # Process security definitions next
         sec_created, sec_updated = self.sync_security(yaml_config.get('security', []), session)

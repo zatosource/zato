@@ -1117,6 +1117,18 @@ class Quota_Tiers:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Audit_Config:
+    """ Generic-object types storing audit-related definitions - alert rules,
+    the retention policy and per-channel attribute-extraction rules.
+    """
+    class Type:
+        Alert_Rule       = 'zato-audit-alert-rule'
+        Retention_Policy = 'zato-audit-retention-policy'
+        Extraction_Rules = 'zato-audit-extraction-rules'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class LDAP:
 
     class DEFAULT:

@@ -163,9 +163,6 @@ class AuditLog:
         # Per-cid sequence counters - ordered so the least recently used ones can be dropped
         self._cid_sequence:'OrderedDict' = OrderedDict()
 
-        # All the instances in a process share one engine per configuration
-        self.engine = get_audit_engine()
-
         # The flush configuration comes from the environment unless given explicitly ..
         if flush_max_size is None:
             flush_max_size = get_flush_max_size()
@@ -177,6 +174,18 @@ class AuditLog:
 
         # .. and the buffer holds events between flushes.
         self._buffer = EventBuffer(max_size=flush_max_size, max_wait_ms=flush_max_wait_ms, write_batch=self._write_batch)
+
+# ################################################################################################################################
+
+    @property
+    def engine(self) -> 'Engine':
+        """ The engine behind the current Zato_Audit_Log_DB_* configuration - resolved on each
+        access, with the per-configuration cache in db_env making the lookup cheap, so changing
+        the variables at runtime redirects all new writes, the background flusher's included,
+        to the new database.
+        """
+        out = get_audit_engine()
+        return out
 
 # ################################################################################################################################
 

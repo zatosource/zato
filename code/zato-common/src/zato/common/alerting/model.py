@@ -37,6 +37,12 @@ rule_list    = list['AlertRule']
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How long repeated findings keep incrementing an existing alert instead of raising a new one
+Default_Dedup_Window_Seconds = 3600
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AlertAction:
     """ What a rule does when it fires - the action menu. Slack and Teams
     are incoming-webhook posts, the rule stores the webhook URL.
@@ -159,7 +165,7 @@ class AlertRule:
 
     # Repeated findings about the same object within this window increment
     # the existing alert's count instead of raising a new one.
-    dedup_window_seconds: int = 3600
+    dedup_window_seconds: int = Default_Dedup_Window_Seconds
 
 # ################################################################################################################################
 
@@ -171,7 +177,7 @@ def new_rule(
     object_name:'str' = '',
     action:'str' = AlertAction.Email_Digest,
     action_config:'stranydict | None' = None,
-    dedup_window_seconds:'int' = 3600,
+    dedup_window_seconds:'int' = Default_Dedup_Window_Seconds,
     is_active:'bool' = True,
     ) -> 'AlertRule':
     """ Builds one alerting rule.

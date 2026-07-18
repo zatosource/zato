@@ -6,10 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Config DB - services behind the dashboard screens that configure the environment-driven
-# databases, i.e. the SQL ones (audit log and analytics) and the default Redis connection.
-# All the configuration lives in environment variables, the same ones the stores themselves
-# read, so saving here has the same semantics as the environment variables screen.
+# Config DB - services behind the dashboard screens that configure the databases the server
+# itself uses. The SQL screen drives the audit log and analytics databases through the
+# Zato_Audit_Log_DB_* and Zato_Analytics_DB_* environment variables, applied live and
+# persisted into an env file. The Redis screen drives the [redis] section of server.conf,
+# persisted on disk and applied live to the cache's Redis client.
 
 # stdlib
 import os
@@ -23,15 +24,18 @@ from sqlalchemy import text as sa_text
 # Zato
 from zato.common.analytics.api import analytics_db_file_name, metadata as analytics_metadata
 from zato.common.audit_log.common import audit_db_file_name, metadata as audit_metadata
+from zato.common.config_db import apply_env_variables, build_env_variables, Env_File_Name, persist_env_variables, \
+    sql_env_prefix_by_database, sql_field_suffixes
 from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
-from zato.common.redis_env import get_redis_conn_from_values, get_redis_values
+from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
+from zato.common.util.config import get_config_object, update_config_file
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,85 +54,31 @@ _redis_service_prefix = 'zato.config-db.redis.'
 # The environment-configured SQL databases the SQL screen knows about
 _sql_databases = {
     'audit-log': EnvDBConfig(
-        env_prefix='Zato_Audit_Log_DB_',
+        env_prefix=sql_env_prefix_by_database['audit-log'],
         sqlite_file_name=audit_db_file_name,
         metadata=audit_metadata,
     ),
     'analytics': EnvDBConfig(
-        env_prefix='Zato_Analytics_DB_',
+        env_prefix=sql_env_prefix_by_database['analytics'],
         sqlite_file_name=analytics_db_file_name,
         metadata=analytics_metadata,
     ),
 }
 
-# Maps the SQL form fields to the suffixes of the corresponding environment variables
-_sql_suffixes = {
-    'display_name':  'Display_Name',
-    'description':   'Description',
-    'type':          'Type',
-    'host':          'Host',
-    'port':          'Port',
-    'username':      'Username',
-    'password':      'Password',
-    'name':          'Name',
-    'ssl':           'SSL',
-    'ssl_ca_file':   'SSL_CA_File',
-    'ssl_cert_file': 'SSL_Cert_File',
-    'ssl_key_file':  'SSL_Key_File',
-    'ssl_verify':    'SSL_Verify',
+# The keys of the [redis] section of server.conf the Redis screen saves, mapped from the form fields
+_redis_conf_keys = {
+    'display_name':  'name',
+    'description':   'description',
+    'host':          'host',
+    'port':          'port',
+    'db':            'db',
+    'username':      'username',
+    'ssl':           'ssl',
+    'ssl_ca_file':   'ssl_ca_file',
+    'ssl_cert_file': 'ssl_cert_file',
+    'ssl_key_file':  'ssl_key_file',
+    'ssl_verify':    'ssl_verify',
 }
-
-# The prefix of the environment variables configuring the default Redis connection
-_redis_env_prefix = 'Zato_Redis_'
-
-# Maps the Redis form fields to the suffixes of the corresponding environment variables
-_redis_suffixes = {
-    'display_name':  'Display_Name',
-    'description':   'Description',
-    'host':          'Host',
-    'port':          'Port',
-    'db':            'DB',
-    'username':      'Username',
-    'password':      'Password',
-    'ssl':           'SSL',
-    'ssl_ca_file':   'SSL_CA_File',
-    'ssl_cert_file': 'SSL_Cert_File',
-    'ssl_key_file':  'SSL_Key_File',
-    'ssl_verify':    'SSL_Verify',
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _save_env_values(env_prefix:'str', suffixes:'stranydict', values:'stranydict') -> 'int':
-    """ Writes a dict of form values into the environment variables under a given prefix.
-    Empty values delete their variables so the built-in defaults apply again,
-    booleans are always written out explicitly.
-    """
-
-    # How many variables were set
-    set_count = 0
-
-    for key, suffix in suffixes.items():
-
-        env_name = env_prefix + suffix
-        value = values[key]
-
-        # Booleans are always written out so an unchecked box overrides a non-empty default ..
-        if isinstance(value, bool):
-            os.environ[env_name] = str(value)
-            set_count += 1
-
-        # .. non-empty strings are set as they are ..
-        elif value:
-            os.environ[env_name] = value
-            set_count += 1
-
-        # .. and empty ones remove their variables so the defaults apply again.
-        else:
-            _ = os.environ.pop(env_name, None)
-
-    return set_count
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -201,7 +151,10 @@ class SQLTest(AdminService):
 # ################################################################################################################################
 
 class SQLSave(AdminService):
-    """ Writes the submitted SQL form values into this database's environment variables.
+    """ Applies the submitted SQL form values to this database's environment variables,
+    live in this process and persisted into an env file so they survive restarts.
+    The audit log resolves its engine per write and the analytics rollup and queries
+    resolve theirs per call, so new operations use the new database immediately.
     """
     name = _sql_service_prefix + 'save'
 
@@ -211,34 +164,55 @@ class SQLSave(AdminService):
         database = self.request.raw_request['database']
         values = self.request.raw_request['values']
 
-        config = _sql_databases[database]
+        env_prefix = sql_env_prefix_by_database[database]
 
-        # .. write everything out into the environment.
-        set_count = _save_env_values(config.env_prefix, _sql_suffixes, values)
+        # .. turn the form values into their environment variables ..
+        env_variables = build_env_variables(env_prefix, sql_field_suffixes, values)
 
-        logger.info('Config DB SQL save: `%s`, set %d variables', database, set_count)
+        # .. apply them to the running server ..
+        set_count = apply_env_variables(env_variables)
+
+        # .. persist them so a restart re-applies them - into the file the server
+        # .. was started with or, without one, into a well-known file in the config
+        # .. repo that startup learns to load on its own ..
+        if env_path := self.server.env_file:
+            pass
+        else:
+            env_path = os.path.join(self.server.repo_location, Env_File_Name)
+
+        message = f'Saved, {set_count} variables set'
+
+        try:
+            persist_env_variables(env_path, env_variables)
+        except OSError as e:
+            # .. the values are live in RAM even when the file cannot be written, e.g. on a read-only mount.
+            message = f'Saved in RAM only, could not persist to `{env_path}` - {e}'
+
+        logger.info('Config DB SQL save: `%s`, set %d variables, env file `%s`', database, set_count, env_path)
 
         self.response.payload = {
             'success': True,
-            'message': f'Saved, {set_count} variables set',
+            'message': message,
+            'env_variables': env_variables,
         }
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RedisGet(AdminService):
-    """ Returns the current configuration of the default Redis connection.
+    """ Returns the current configuration of the server's Redis connection,
+    read from the [redis] section of server.conf.
     """
     name = _redis_service_prefix + 'get'
 
     def handle(self):
 
-        # The connection values come out of the environment with defaults filled in ..
-        values = get_redis_values()
+        # The on-disk section is the source of truth for what was saved ..
+        config = get_config_object(self.server.repo_location, 'server.conf')
+        values = get_redis_values_from_section(config['redis'])
 
-        # .. and so do the display name and description.
-        values['display_name'] = os.environ.get(_redis_env_prefix + 'Display_Name', '')
-        values['description']  = os.environ.get(_redis_env_prefix + 'Description', '')
+        # .. the on-disk password is an encrypted pointer, never shown in the form.
+        values['password'] = ''
 
         self.response.payload = {
             'success': True,
@@ -288,7 +262,11 @@ class RedisTest(AdminService):
 # ################################################################################################################################
 
 class RedisSave(AdminService):
-    """ Writes the submitted Redis form values into the connection's environment variables.
+    """ Saves the submitted Redis form values into the [redis] section of server.conf,
+    persisted on disk so restarts see them, applied to the in-RAM configuration,
+    and followed by a rebuild of the cache's live Redis client. The pub/sub backend
+    keeps its startup connection - repointing delivery greenlets is a restart-level
+    operation.
     """
     name = _redis_service_prefix + 'save'
 
@@ -296,15 +274,61 @@ class RedisSave(AdminService):
 
         values = self.request.raw_request['values']
 
-        # Write everything out into the environment.
-        set_count = _save_env_values(_redis_env_prefix, _redis_suffixes, values)
+        # The port and the database number arrive as strings from the form
+        values['port'] = int(values['port'])
+        values['db']   = int(values['db'])
 
-        logger.info('Config DB Redis save: set %d variables', set_count)
+        # First, update the persistent configuration on disk ..
+        config = get_config_object(self.server.repo_location, 'server.conf')
+        self._apply_values(config['redis'], values)
+
+        update_config_file(config, self.server.repo_location, 'server.conf') # type: ignore
+
+        # .. a newly given password goes encrypted into secrets.conf - the on-disk
+        # .. server.conf keeps its zato+secret pointer to that entry ..
+        password = values['password']
+
+        if password:
+            self._save_password(password)
+
+        # .. then, apply the same values to the in-RAM server-wide configuration,
+        # .. with the password in the clear, the way startup decryption leaves it ..
+        ram_section = self.server.fs_server_config.redis
+        self._apply_values(ram_section, values)
+
+        if password:
+            ram_section['password'] = password
+
+        # .. and finally, rebuild the live Redis client behind self.cache.
+        self.server.config_manager.reconfigure_redis_cache()
+
+        logger.info('Config DB Redis save: `%s:%s` db `%s`', values['host'], values['port'], values['db'])
 
         self.response.payload = {
             'success': True,
-            'message': f'Saved, {set_count} variables set',
+            'message': 'Saved, the cache connection now uses the new configuration',
         }
+
+# ################################################################################################################################
+
+    def _apply_values(self, section:'any_', values:'stranydict') -> 'None':
+        """ Writes the form values into a [redis] section, be it the on-disk one or the in-RAM one.
+        """
+        for field, key in _redis_conf_keys.items():
+            section[key] = values[field]
+
+# ################################################################################################################################
+
+    def _save_password(self, password:'str') -> 'None':
+        """ Encrypts the password and stores it in secrets.conf, the same entry
+        the zato+secret pointer in server.conf points to.
+        """
+        encrypted = self.crypto.encrypt(password.encode('utf8'), needs_str=True)
+
+        config = get_config_object(self.server.repo_location, 'secrets.conf')
+        config['zato']['server_conf.redis.password'] = encrypted # type: ignore
+
+        update_config_file(config, self.server.repo_location, 'secrets.conf') # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

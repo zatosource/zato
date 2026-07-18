@@ -6,13 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Environment-configured Redis connections - the connection details live in a family
-# of environment variables, e.g. Zato_Redis_*, defaulting to a plain localhost server.
-# This module reads such variables and builds Redis clients out of them, including
-# SSL/TLS connections with optional client certificates.
+# The one place that builds Redis clients for the server - the connection details live
+# in the [redis] section of server.conf and this module normalizes such a section into
+# a dict of connection values and builds Redis clients out of it, including SSL/TLS
+# connections with optional client certificates.
 
 # stdlib
-import os
 import ssl
 
 # Redis
@@ -25,15 +24,12 @@ from zato.common.util.api import as_bool
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The prefix of the environment variables configuring the default Redis connection
-Env_Prefix = 'Zato_Redis_'
-
-# What is used when the corresponding variable is not set
+# What is used when the corresponding key is not set
 Default_Host = 'localhost'
 Default_Port = 6379
 Default_DB   = 0
@@ -47,129 +43,106 @@ Default_SSL_Verify = True
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EnvRedisConfig:
-    """ Describes one environment-configured Redis connection - the environment variables selecting it.
+def _get_section_value(section:'any_', key:'str', default:'any_') -> 'any_':
+    """ Returns one key from a [redis] configuration section, falling back to the default
+    when the key is absent or empty - sections written by older releases do not carry
+    the newer keys at all.
     """
+    value = section.get(key)
 
-    def __init__(self, *, env_prefix:'str') -> 'None':
+    if value is None or value == '':
+        value = default
 
-        self.env_prefix = env_prefix
-
-        # The full names of the environment variables selecting and configuring the connection
-        self.env_host     = f'{env_prefix}Host'
-        self.env_port     = f'{env_prefix}Port'
-        self.env_db       = f'{env_prefix}DB'
-        self.env_username = f'{env_prefix}Username'
-        self.env_password = f'{env_prefix}Password'
-
-        # The full names of the environment variables configuring SSL/TLS
-        self.env_ssl           = f'{env_prefix}SSL'
-        self.env_ssl_ca_file   = f'{env_prefix}SSL_CA_File'
-        self.env_ssl_cert_file = f'{env_prefix}SSL_Cert_File'
-        self.env_ssl_key_file  = f'{env_prefix}SSL_Key_File'
-        self.env_ssl_verify    = f'{env_prefix}SSL_Verify'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# How the default Redis connection is selected and configured through the environment
-_env_config = EnvRedisConfig(env_prefix=Env_Prefix)
+    return value
 
 # ################################################################################################################################
 
-def get_redis_values(config:'EnvRedisConfig'=_env_config) -> 'stranydict':
-    """ Reads this connection's environment variables into a dict of connection values,
-    filling in the defaults for anything that is not set.
+def get_redis_values_from_section(section:'any_') -> 'stranydict':
+    """ Normalizes a [redis] configuration section, e.g. fs_server_config.redis or the section
+    read from server.conf on disk, into a dict of connection values with defaults filled in.
     """
 
     # Our response to produce
     out:'stranydict' = {}
 
-    out['host']     = os.environ.get(config.env_host, Default_Host)
-    out['username'] = os.environ.get(config.env_username, '')
-    out['password'] = os.environ.get(config.env_password, '')
+    out['host']     = _get_section_value(section, 'host', Default_Host)
+    out['username'] = _get_section_value(section, 'username', '')
+    out['password'] = _get_section_value(section, 'password', '')
 
-    # The port and the database number are integers with well-known defaults ..
-    if port := os.environ.get(config.env_port, ''):
-        out['port'] = int(port)
-    else:
-        out['port'] = Default_Port
+    # The display details live in the same section
+    out['display_name'] = _get_section_value(section, 'name', '')
+    out['description']  = _get_section_value(section, 'description', '')
 
-    if db := os.environ.get(config.env_db, ''):
-        out['db'] = int(db)
-    else:
-        out['db'] = Default_DB
+    # The port and the database number may arrive as strings from a config file
+    port = _get_section_value(section, 'port', Default_Port)
+    db   = _get_section_value(section, 'db', Default_DB)
 
-    # .. SSL is off unless requested explicitly ..
-    if ssl_enabled := os.environ.get(config.env_ssl, ''):
-        out['ssl'] = as_bool(ssl_enabled)
-    else:
-        out['ssl'] = Default_SSL
+    out['port'] = int(port)
+    out['db']   = int(db)
 
-    # .. the server certificate is verified by default when SSL is on ..
-    if verify := os.environ.get(config.env_ssl_verify, ''):
-        out['ssl_verify'] = as_bool(verify)
-    else:
-        out['ssl_verify'] = Default_SSL_Verify
+    # SSL is off unless requested explicitly and verification is on by default
+    out['ssl']        = as_bool(_get_section_value(section, 'ssl', Default_SSL))
+    out['ssl_verify'] = as_bool(_get_section_value(section, 'ssl_verify', Default_SSL_Verify))
 
-    # .. and the certificate paths are empty unless given.
-    out['ssl_ca_file']   = os.environ.get(config.env_ssl_ca_file, '')
-    out['ssl_cert_file'] = os.environ.get(config.env_ssl_cert_file, '')
-    out['ssl_key_file']  = os.environ.get(config.env_ssl_key_file, '')
+    # The certificate paths are empty unless given
+    out['ssl_ca_file']   = _get_section_value(section, 'ssl_ca_file', '')
+    out['ssl_cert_file'] = _get_section_value(section, 'ssl_cert_file', '')
+    out['ssl_key_file']  = _get_section_value(section, 'ssl_key_file', '')
 
     return out
 
 # ################################################################################################################################
 
-def get_redis_conn_from_values(values:'stranydict') -> 'Redis':
-    """ Builds a Redis client out of a dict of connection values, e.g. one returned by get_redis_values.
+def build_redis_connect_args(values:'stranydict', *, decode_responses:'bool'=False) -> 'stranydict':
+    """ Turns a dict of connection values into the keyword arguments a Redis client accepts.
     """
 
     # The basic connection parameters are always present ..
-    connect_args:'stranydict' = {
+    out:'stranydict' = {
         'host': values['host'],
         'port': values['port'],
         'db':   values['db'],
     }
 
+    # .. callers that exchange text rather than bytes ask for decoded responses ..
+    if decode_responses:
+        out['decode_responses'] = True
+
     # .. credentials are only passed if they were given ..
     if username := values['username']:
-        connect_args['username'] = username
+        out['username'] = username
 
     if password := values['password']:
-        connect_args['password'] = password
+        out['password'] = password
 
     # .. and so is the whole SSL/TLS configuration ..
     if values['ssl']:
-        connect_args['ssl'] = True
+        out['ssl'] = True
 
         if ca_file := values['ssl_ca_file']:
-            connect_args['ssl_ca_certs'] = ca_file
+            out['ssl_ca_certs'] = ca_file
 
         # .. a client certificate is only needed for mutual TLS ..
         if cert_file := values['ssl_cert_file']:
-            connect_args['ssl_certfile'] = cert_file
-            connect_args['ssl_keyfile']  = values['ssl_key_file']
+            out['ssl_certfile'] = cert_file
+            out['ssl_keyfile']  = values['ssl_key_file']
 
         # .. and verification can be turned off explicitly.
         if not values['ssl_verify']:
-            connect_args['ssl_cert_reqs'] = ssl.CERT_NONE
-            connect_args['ssl_check_hostname'] = False
-
-    out = Redis(**connect_args)
+            out['ssl_cert_reqs'] = ssl.CERT_NONE
+            out['ssl_check_hostname'] = False
 
     return out
 
 # ################################################################################################################################
 
-def get_redis_conn(config:'EnvRedisConfig'=_env_config) -> 'Redis':
-    """ Returns a Redis client for an environment-configured connection.
-    Which server is used comes from the environment variables named after
-    this connection's prefix, defaulting to a plain localhost server.
+def get_redis_conn_from_values(values:'stranydict', *, decode_responses:'bool'=False) -> 'Redis':
+    """ Builds a Redis client out of a dict of connection values,
+    e.g. one returned by get_redis_values_from_section.
     """
-    values = get_redis_values(config)
+    connect_args = build_redis_connect_args(values, decode_responses=decode_responses)
 
-    out = get_redis_conn_from_values(values)
+    out = Redis(**connect_args)
     return out
 
 # ################################################################################################################################

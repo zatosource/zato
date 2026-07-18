@@ -6,111 +6,52 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-from contextlib import contextmanager
-
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.redis_env import get_redis_conn
+from zato.common.redis_env import get_redis_conn_from_values, Default_DB, Default_Host, Default_Port, Default_SSL, \
+    Default_SSL_Verify
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Iterator
-    from zato.common.typing_ import stranydict, strlist
-
-    envgen = Iterator[None]
+    from zato.common.typing_ import stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The prefix all the Redis connection environment variables share
-_env_prefix = 'Zato_Redis_'
-
-# Maps connection detail keys to the suffix of the corresponding environment variable
-_detail_suffixes = {
-    'host':          'Host',
-    'port':          'Port',
-    'db':            'DB',
-    'username':      'Username',
-    'password':      'Password',
-    'ssl':           'SSL',
-    'ssl_ca_file':   'SSL_CA_File',
-    'ssl_cert_file': 'SSL_Cert_File',
-    'ssl_key_file':  'SSL_Key_File',
-    'ssl_verify':    'SSL_Verify',
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_env_names() -> 'strlist':
-    """ Returns the names of all the environment variables the Redis prefix expands to.
+def build_values(details:'stranydict') -> 'stranydict':
+    """ Expands a Redis server's connection details into a complete dict of connection values,
+    the same shape a normalized [redis] section of server.conf has.
     """
 
-    # Our response to produce
-    out:'strlist' = []
+    # Our response to produce - the defaults first ..
+    out:'stranydict' = {
+        'host':          Default_Host,
+        'port':          Default_Port,
+        'db':            Default_DB,
+        'username':      '',
+        'password':      '',
+        'ssl':           Default_SSL,
+        'ssl_ca_file':   '',
+        'ssl_cert_file': '',
+        'ssl_key_file':  '',
+        'ssl_verify':    Default_SSL_Verify,
+    }
 
-    for suffix in _detail_suffixes.values():
-        out.append(_env_prefix + suffix)
+    # .. overlaid with the details of the server under test.
+    out.update(details)
 
     return out
 
 # ################################################################################################################################
 
-def build_env(details:'stranydict') -> 'stranydict':
-    """ Turns a Redis server's connection details into environment variables.
-    Everything becomes a string because that is what the environment holds.
-    """
-
-    # Our response to produce
-    out:'stranydict' = {}
-
-    for key, value in details.items():
-        suffix = _detail_suffixes[key]
-        out[_env_prefix + suffix] = str(value)
-
-    return out
-
-# ################################################################################################################################
-
-@contextmanager
-def redis_env(details:'stranydict') -> 'envgen':
-    """ Points the Zato_Redis_* variables at one server for the duration of a block.
-    """
-    env_names = get_env_names()
-    values = build_env(details)
-
-    # Save everything that is set now so it can be restored later ..
-    saved:'stranydict' = {}
-
-    for name in env_names:
-        saved[name] = os.environ.pop(name, None)
-
-    # .. apply the server under test ..
-    os.environ.update(values)
-
-    try:
-        yield
-
-    # .. and restore the previous environment afterwards.
-    finally:
-        for name in env_names:
-            _ = os.environ.pop(name, None)
-
-        for name, value in saved.items():
-            if value is not None:
-                os.environ[name] = value
-
-# ################################################################################################################################
-
-def run_redis_scenario() -> 'None':
-    """ The complete scenario run against whichever server the environment points at -
+def run_redis_scenario(details:'stranydict') -> 'None':
+    """ The complete scenario run against the server the details point at -
     ping the server, then write, read and delete a key.
     """
-    conn = get_redis_conn()
+    values = build_values(details)
+    conn = get_redis_conn_from_values(values)
 
     # The server must be reachable ..
     assert conn.ping() is True

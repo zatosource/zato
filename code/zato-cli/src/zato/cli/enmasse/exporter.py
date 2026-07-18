@@ -15,6 +15,9 @@ from zato.cli.enmasse.exporters.email_smtp import SMTPExporter
 from zato.cli.enmasse.exporters.group import GroupExporter
 from zato.cli.enmasse.exporters.odoo import OdooExporter
 from zato.cli.enmasse.exporters.quota_tier import QuotaTierExporter
+from zato.cli.enmasse.exporters.alert_rule import AlertRuleExporter
+from zato.cli.enmasse.exporters.audit_retention import AuditRetentionExporter
+from zato.cli.enmasse.exporters.audit_extraction import AuditExtractionExporter
 from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
@@ -79,6 +82,9 @@ class EnmasseYAMLExporter:
         self.group_exporter = GroupExporter(self)
         self.odoo_exporter = OdooExporter(self)
         self.quota_tier_exporter = QuotaTierExporter(self)
+        self.alert_rule_exporter = AlertRuleExporter(self)
+        self.audit_retention_exporter = AuditRetentionExporter(self)
+        self.audit_extraction_exporter = AuditExtractionExporter(self)
         self.scheduler_exporter = SchedulerExporter(self)
         self.security_exporter = SecurityExporter(self)
         self.sql_exporter = SQLExporter(self)
@@ -163,6 +169,33 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
         quota_tier_list = self.quota_tier_exporter.export(session, self.cluster_id)
         return quota_tier_list
+
+# ################################################################################################################################
+
+    def export_alert_rule(self, session:'SASession') -> 'list':
+        """ Exports alert rule definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        alert_rule_list = self.alert_rule_exporter.export(session, self.cluster_id)
+        return alert_rule_list
+
+# ################################################################################################################################
+
+    def export_audit_retention(self, session:'SASession') -> 'list':
+        """ Exports audit retention policy definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        audit_retention_list = self.audit_retention_exporter.export(session, self.cluster_id)
+        return audit_retention_list
+
+# ################################################################################################################################
+
+    def export_audit_extraction(self, session:'SASession') -> 'list':
+        """ Exports attribute-extraction rule set definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded if needed by exporter
+        audit_extraction_list = self.audit_extraction_exporter.export(session, self.cluster_id)
+        return audit_extraction_list
 
 # ################################################################################################################################
 
@@ -544,6 +577,21 @@ class EnmasseYAMLExporter:
         quota_tier_defs = self.export_quota_tier(session)
         if quota_tier_defs:
             output_dict['quota_tier'] = quota_tier_defs
+
+        # Export alert rule definitions
+        alert_rule_defs = self.export_alert_rule(session)
+        if alert_rule_defs:
+            output_dict['alert_rule'] = alert_rule_defs
+
+        # Export audit retention policy definitions
+        audit_retention_defs = self.export_audit_retention(session)
+        if audit_retention_defs:
+            output_dict['audit_retention'] = audit_retention_defs
+
+        # Export attribute-extraction rule set definitions
+        audit_extraction_defs = self.export_audit_extraction(session)
+        if audit_extraction_defs:
+            output_dict['audit_extraction'] = audit_extraction_defs
 
         # Export security definitions
         security_defs = self.export_security(session)

@@ -308,8 +308,17 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         with open(_blocked_paths_file, 'w') as _f:
             _ = _f.write('/.env\n')
 
-    # Now, import environment variables and store the variable for later use
-    if env_file := options.get('env_file', ''):
+    # Now, import environment variables and store the variable for later use.
+    # Without an explicit env file, an env file previously saved in the config repo,
+    # e.g. by the Config DB screens, is loaded instead so its values survive restarts.
+    env_file = options.get('env_file', '')
+
+    if not env_file:
+        default_env_file = os.path.join(base_dir, 'config', 'repo', 'env.ini')
+        if os.path.exists(default_env_file):
+            env_file = default_env_file
+
+    if env_file:
         initial_env_variables = populate_environment_from_file(env_file)
     else:
         initial_env_variables = []
