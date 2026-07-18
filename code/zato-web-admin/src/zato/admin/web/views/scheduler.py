@@ -55,6 +55,7 @@ default_jitter_ms = ''
 default_timezone = ''
 default_max_execution_time_ms = ''
 default_last_run_utc = ''
+default_last_duration_ms = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -377,6 +378,7 @@ def index(req):
 
                 job.definition_text = definition_text
                 job.last_run_utc = getattr(job_elem, 'last_run_utc', default_last_run_utc)
+                job.last_duration_ms = getattr(job_elem, 'last_duration_ms', default_last_duration_ms)
                 job.on_success_service = getattr(job_elem, 'on_success_service', '')
                 job.on_success_job = getattr(job_elem, 'on_success_job', '')
                 job.on_error_service = getattr(job_elem, 'on_error_service', '')
@@ -499,10 +501,13 @@ def get_last_run_list(req:'any_') -> 'HttpResponse':
     # .. one invocation covers all of them ..
     response = req.zato.client.invoke('zato.scheduler.job.get-last-run-list', {'id_list': id_list})
 
-    # .. and the response maps each ID to its last run time, keyed by strings for easy lookups in JavaScript.
+    # .. and the response maps each ID to its last run details, keyed by strings for easy lookups in JavaScript.
     last_run_by_id = {}
     for item in response.data['items']:
-        last_run_by_id[str(item['id'])] = item['last_run_utc']
+        last_run_by_id[str(item['id'])] = {
+            'last_run_utc': item['last_run_utc'],
+            'last_duration_ms': item['last_duration_ms'],
+        }
 
     out = dumps(last_run_by_id)
     return HttpResponse(out, content_type='application/json')

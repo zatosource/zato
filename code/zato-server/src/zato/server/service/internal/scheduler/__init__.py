@@ -396,7 +396,7 @@ class _Get(_SchedulerAdmin):
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
         '-jitter_ms', '-timezone', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
-        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind', '-last_run_utc'
+        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind', '-last_run_utc', Int('-last_duration_ms')
 
 # ################################################################################################################################
 # ################################################################################################################################
