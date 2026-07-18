@@ -62,6 +62,7 @@ class AuditSource:
     X12           = 'x12'
     MCP           = 'mcp'
     HL7           = 'hl7'
+    Config        = 'config'
 
 # ################################################################################################################################
 
@@ -92,6 +93,10 @@ class AuditEvent:
     MCP_Session_Delete   = 'mcp-session-delete'
     MCP_Batch            = 'mcp-batch'
     Bulk_Repair          = 'bulk-repair'
+    Config_Created       = 'config-created'
+    Config_Edited        = 'config-edited'
+    Config_Deleted       = 'config-deleted'
+    Content_Viewed       = 'content-viewed'
 
 # ################################################################################################################################
 

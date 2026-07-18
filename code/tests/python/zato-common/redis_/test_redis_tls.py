@@ -14,7 +14,7 @@ from redis import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 # Zato
-from common import redis_env, run_redis_scenario
+from common import run_redis_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +29,7 @@ def test_redis_tls(redis_tls_server:'stranydict') -> 'None':
     """ The complete scenario against a TLS-only Redis server,
     with the server certificate verified against the test CA.
     """
-    with redis_env(redis_tls_server):
-        run_redis_scenario()
+    run_redis_scenario(redis_tls_server)
 
 # ################################################################################################################################
 

@@ -7,10 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 from traceback import format_exc
 
 # Django
+from django.conf import settings
 from django.http import HttpResponse
 from django.http.response import HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -18,6 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.config import config_db_redis_page_config, config_db_sql_page_config
+from zato.common.config_db import apply_env_variables, Env_File_Name, persist_env_variables
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -63,6 +66,14 @@ def _invoke(req:'any_', service_name:'str') -> 'HttpResponse':
 
         if response.ok:
             data = response.data
+
+            # The SQL save returns the variables it applied on the server - the dashboard
+            # reads the audit and analytics databases directly with its own environment,
+            # so the same variables are applied to this process too and persisted for
+            # this process's own restarts.
+            if data['success'] and service_name == 'zato.config-db.sql.save':
+                _apply_sql_env_variables(data['env_variables'])
+
             return _json_response(data, success=data['success'])
         else:
             return _json_response({'success': False, 'error': str(response)}, success=False)
@@ -70,6 +81,23 @@ def _invoke(req:'any_', service_name:'str') -> 'HttpResponse':
     except Exception as e:
         logger.error('config_db `%s`: %s', service_name, format_exc())
         return _json_response({'success': False, 'error': str(e)}, success=False)
+
+# ################################################################################################################################
+
+def _apply_sql_env_variables(env_variables:'any_') -> 'None':
+    """ Applies server-saved SQL environment variables to the dashboard process
+    and persists them into the dashboard's own env file.
+    """
+    _ = apply_env_variables(env_variables)
+
+    # The same well-known location the dashboard's startup loads on its own
+    env_path = os.path.join(settings.config_dir, 'config', 'repo', Env_File_Name)
+
+    try:
+        persist_env_variables(env_path, env_variables)
+    except OSError:
+        # The values are live in this process even when the file cannot be written
+        logger.warning('config_db: could not persist env variables to `%s`: %s', env_path, format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################

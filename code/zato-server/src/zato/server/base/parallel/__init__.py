@@ -1709,38 +1709,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _start_pubsub_redis(self):
 
-        from redis import Redis
         from zato.common.pubsub.disk_store import DiskMessageStore
+        from zato.common.redis_env import build_redis_connect_args, get_redis_conn_from_values, get_redis_values_from_section
         from zato.server.base.parallel.delivery import RedisPushDelivery
 
-        redis_config = self.fs_server_config.redis
-        redis_password = redis_config.password if redis_config.password else None
+        # The [redis] section of server.conf describes the connection, SSL included
+        redis_values = get_redis_values_from_section(self.fs_server_config.redis)
 
         # .. set up the disk store for message payloads ..
         work_dir = self.work_dir
         disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
         disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
 
-        redis_conn = Redis(
-            host=redis_config.host,
-            port=redis_config.port,
-            db=redis_config.db,
-            password=redis_password,
-            decode_responses=True,
-        )
+        redis_conn = get_redis_conn_from_values(redis_values, decode_responses=True)
         self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
 
         self.config_manager._sync_pubsub_subscriptions()
         self.config_manager._sync_pubsub_topics()
 
         # .. pass connection params so each delivery greenlet creates its own connection ..
-        redis_conn_params = {
-            'host': redis_config.host,
-            'port': redis_config.port,
-            'db': redis_config.db,
-            'password': redis_password,
-            'decode_responses': True,
-        }
+        redis_conn_params = build_redis_connect_args(redis_values, decode_responses=True)
 
         self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
 

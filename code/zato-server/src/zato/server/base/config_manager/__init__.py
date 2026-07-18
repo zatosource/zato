@@ -765,24 +765,34 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _build_cache_redis_conn(self) -> 'any_':
+        """ Builds a Redis client out of the server's current [redis] configuration, SSL included.
+        """
+        from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
+
+        values = get_redis_values_from_section(self.server.fs_server_config.redis)
+        out = get_redis_conn_from_values(values, decode_responses=True)
+
+        return out
+
+# ################################################################################################################################
+
     def _build_cache_api(self) -> 'CacheAPI':
         """ Creates a Redis-backed CacheAPI using the server's [redis] configuration.
         """
-        from redis import Redis
-
-        redis_config = self.server.fs_server_config.redis
-        redis_password = redis_config.password if redis_config.password else None
-
-        redis_client = Redis(
-            host=redis_config.host,
-            port=redis_config.port,
-            db=redis_config.db,
-            password=redis_password,
-            decode_responses=True,
-        )
+        redis_client = self._build_cache_redis_conn()
 
         out = CacheAPI(redis_client, config_manager=self)
         return out
+
+# ################################################################################################################################
+
+    def reconfigure_redis_cache(self) -> 'None':
+        """ Rebuilds the cache's Redis client from the current [redis] configuration -
+        called after the configuration was changed at runtime so self.cache
+        immediately talks to the newly configured server.
+        """
+        self.cache_api.redis = self._build_cache_redis_conn()
 
 # ################################################################################################################################
 

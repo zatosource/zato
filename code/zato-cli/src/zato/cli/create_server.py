@@ -121,11 +121,19 @@ service_invoker_allow_internal="demo.ping", "zato.api.invoke"
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
 [redis]
+name=default
+description=
 host={{redis_host}}
 port={{redis_port}}
 unix_socket_path=
+username=
 password=zato+secret://zato.server_conf.redis.password
 db=0
+ssl=False
+ssl_ca_file=
+ssl_cert_file=
+ssl_key_file=
+ssl_verify=True
 socket_timeout=
 charset=
 errors=
