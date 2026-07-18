@@ -106,8 +106,8 @@ def complete_dedup_key(engine:'Engine', dedup_key:'str', outcome:'str') -> 'None
 # ################################################################################################################################
 
 def release_dedup_key(engine:'Engine', dedup_key:'str') -> 'None':
-    """ Gives one claimed key back - what a failed resubmit does, because a failure
-    must stay retryable as-is, while a completed one stays claimed forever.
+    """ Releases one claimed key - the path a failed resubmit takes, because a failure
+    must remain retryable as-is, while a completed one remains claimed permanently.
     """
     statement = delete(event_dedup_table)
     statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)

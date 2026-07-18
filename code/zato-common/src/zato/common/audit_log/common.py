@@ -227,6 +227,32 @@ event_dedup_table = Table('event_dedup', metadata,
 )
 
 # ################################################################################################################################
+
+# Alerts with their dedup count and lifecycle - one row per (rule, object, kind) within
+# the dedup window, repeated findings increment the count instead of adding rows,
+# and acknowledgment is recorded in place, so an alert never exists twice half-resolved.
+alert_table = Table('alert', metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('rule_name', String(_short_column_len)),
+    Column('source', String(_short_column_len)),
+    Column('object_name', String(_short_column_len)),
+    Column('kind', String(_short_column_len)),
+    Column('severity', String(_short_column_len)),
+    Column('message', Text),
+    Column('link', String(_endpoint_column_len)),
+    Column('count', Integer),
+    Column('state', String(_short_column_len)),
+    Column('first_raised_iso', String(_short_column_len)),
+    Column('last_raised_iso', String(_short_column_len)),
+    Column('observed_by', String(_short_column_len)),
+    Column('observed_iso', String(_short_column_len)),
+    Column('resolved_by', String(_short_column_len)),
+    Column('resolved_iso', String(_short_column_len)),
+    Index('idx_alert_rule_object', 'rule_name', 'object_name', 'kind'),
+    Index('idx_alert_state', 'state'),
+)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Markers meaning a failure is transient - resubmitting the message as-is can work

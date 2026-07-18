@@ -187,9 +187,9 @@ class HopResendResult:
 
 def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:'str') -> 'HopResendResult':
     """ Sends the exact payload stored with one outgoing event through the same connection again -
-    "the lab was down, repeat just that delivery" - without re-running the service that produced it
-    and without touching any other destination. The attempt is recorded as its own outgoing event
-    linked to the original by the correlation id, whether it worked or not.
+    repeating a single delivery to one destination without re-running the service that produced it
+    and without involving any other destination. The attempt is recorded as its own outgoing event
+    linked to the original by the correlation id, regardless of the outcome.
     """
     require_event_type(event, AuditEvent.Request_Sent, 'resent per hop')
 
@@ -348,8 +348,8 @@ def bulk_repair(
             continue
 
         # One failing row never aborts the rest of the operation - and a failed row
-        # gives its key back, so retrying the same repair later stays possible,
-        # while a successful one stays claimed forever.
+        # releases its key, so the same repair remains retryable later,
+        # while a successful one remains claimed permanently.
         try:
             resubmit_one(event, payload)
         except Exception:
