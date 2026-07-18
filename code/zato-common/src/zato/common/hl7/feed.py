@@ -17,10 +17,8 @@ from dataclasses import dataclass
 from random import Random
 from time import monotonic, sleep
 
-# Faker
-from faker import Faker
-
 # Zato
+from zato.hl7v2.tests.fakers import fake
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta01, fake_adta02, fake_adta03, fake_adta05
 from zato.hl7v2.tests.fakers.msg_oru import fake_orur01
 
@@ -162,8 +160,10 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
 
     # One generator drives both the mix and the error placement, and the shared faker
     # underneath the message content is reseeded too, so a seed fixes the whole run.
+    # The instance is seeded directly because a class-level seed stops applying
+    # once anything anywhere seeded the instance, e.g. another test module.
     random_source = Random(config.seed)
-    Faker.seed(config.seed)
+    fake.seed_instance(config.seed)
 
     # The weighted-choice inputs are unzipped out of the mix once
     entries = [(msg_type, faker) for msg_type, faker, _ in config.mix]
