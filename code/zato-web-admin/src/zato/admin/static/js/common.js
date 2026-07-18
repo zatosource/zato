@@ -2083,6 +2083,10 @@ $.fn.zato.show_left_tooltip = function(elem_id_selector, text, should_draw_atten
 // the full timestamp both in the browser's timezone and in UTC.
 $.fn.zato.time_ago = {};
 
+// A click on the countdown text flips this - while it is true the ticker stands still
+// and no refresh requests go out.
+$.fn.zato.time_ago.paused = false;
+
 $.fn.zato.time_ago.config = {
     'never_label': 'Never',
     'never_sort_value': '99999999999',
@@ -2092,13 +2096,22 @@ $.fn.zato.time_ago.config = {
     'duration_row_label': 'Duration',
     'duration_ms_label': 'ms',
     'tooltip_title': 'Last run',
+
+    // The logical column whose cell wears the highlight badge while the tooltip is open -
+    // set to an empty string on pages that have no such column.
+    'highlight_column': 'name',
     'utc_label': 'UTC',
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
     'spinner_min_visible_ms': 350,
-    'value_fade_ms': 400,
+    'value_fade_ms': 250,
+
+    // How dim a changing value gets mid-fade - 1 is fully opaque, 0 is invisible.
+    // A subtle dip is enough to signal the change without drawing the eye.
+    'value_fade_opacity': 0.5,
     'countdown_prefix': 'Refreshes in ',
     'countdown_suffix': 's',
+    'paused_label': 'Refresh paused',
 
     // Only one of these is meant to be active at a time - either the textual
     // countdown next to the column name or the draining progress bar under it.
@@ -2292,6 +2305,7 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
     if(!value_element.length) {
         value_element = $('<span class="zato-time-ago-value"></span>');
         value_element[0].style.setProperty('--zato-time-ago-value-fade-ms', config.value_fade_ms + 'ms');
+        value_element[0].style.setProperty('--zato-time-ago-value-fade-opacity', config.value_fade_opacity);
         cell.empty();
         cell.append(value_element);
     }
@@ -2332,14 +2346,16 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
             return;
         }
 
-        // Build the link and its tippy on the first update only.
+        // Build the link and its tippy on the first update only. The tippy anchors
+        // to the fixed-width value element rather than the link itself, so the tooltip
+        // never shifts around when the link text changes width mid-refresh.
         var link = value_element.find('a');
         if(!link.length) {
             value_element.empty();
             link = $('<a href="javascript:void(0)"></a>');
             value_element.append(link);
 
-            tippy(link[0], {
+            tippy(value_element[0], {
                 allowHTML: true,
                 trigger: 'click',
                 placement: config.tippy_placement,
@@ -2358,15 +2374,28 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
                     };
                     instance.handle_escape = handle_escape;
                     document.addEventListener('keydown', handle_escape);
+
+                    // The row's name cell wears the same badge the inline forms use,
+                    // so it is clear which row the tooltip belongs to.
+                    if(config.highlight_column) {
+                        var row_id = cell.closest('tr').attr('id').replace('tr_', '');
+                        var highlight = $.fn.zato.data_table.get_cell(row_id, config.highlight_column);
+                        instance.badge_elem = $.fn.zato.inline_edit.badge_on(highlight);
+                    }
                 },
                 onHide: function(instance) {
                     document.removeEventListener('keydown', instance.handle_escape);
+
+                    if(instance.badge_elem) {
+                        $.fn.zato.inline_edit.badge_off(instance.badge_elem);
+                        instance.badge_elem = null;
+                    }
                 },
             });
         }
 
         link.text(new_text);
-        link[0]._tippy.setContent(tooltip_html);
+        value_element[0]._tippy.setContent(tooltip_html);
     };
 
     // .. changed values fade out gently, swap once invisible and fade back in,
@@ -2416,7 +2445,21 @@ $.fn.zato.time_ago.init = function(container_selector) {
             var indicator = $('<span class="zato-time-ago-indicator"></span>');
 
             if(config.countdown_enabled) {
-                indicator.append($('<span class="zato-time-ago-countdown is-visible"></span>'));
+                var countdown = $('<span class="zato-time-ago-countdown is-visible"></span>');
+
+                // A click on the countdown pauses the auto-refresh and another click resumes it.
+                // Both events stop here so the table sorter bound to the header never sees them.
+                countdown.on('mousedown', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+                countdown.on('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    $.fn.zato.time_ago.toggle_paused(container_selector);
+                });
+
+                indicator.append(countdown);
             }
             if(config.progress_enabled) {
                 header.append($('<span class="zato-time-ago-progress is-visible"></span>'));
@@ -2424,6 +2467,22 @@ $.fn.zato.time_ago.init = function(container_selector) {
 
             indicator.append($('<span class="zato-time-ago-spinner"></span>'));
             header.append(indicator);
+
+            // The slot reserves the width of the wider of its two texts up front,
+            // so flipping between the countdown and the paused label never resizes the column.
+            if(config.countdown_enabled) {
+                var interval_seconds = config.refresh_interval_ms / 1000;
+                var countdown_text = config.countdown_prefix + interval_seconds + config.countdown_suffix;
+
+                countdown.text(countdown_text);
+                var countdown_width = countdown.outerWidth();
+
+                countdown.text(config.paused_label);
+                var paused_width = countdown.outerWidth();
+
+                countdown.text('');
+                countdown.css('min-width', Math.max(countdown_width, paused_width) + 'px');
+            }
         }
     });
 
@@ -2462,8 +2521,39 @@ $.fn.zato.time_ago.hide_spinners = function(container_selector) {
 
 $.fn.zato.time_ago.update_countdowns = function(container_selector) {
     var config = $.fn.zato.time_ago.config;
-    var text = config.countdown_prefix + $.fn.zato.time_ago.seconds_left + config.countdown_suffix;
+
+    var text;
+    if($.fn.zato.time_ago.paused) {
+        text = config.paused_label;
+    }
+    else {
+        text = config.countdown_prefix + $.fn.zato.time_ago.seconds_left + config.countdown_suffix;
+    }
+
     $(container_selector).find('.zato-time-ago-header .zato-time-ago-countdown').text(text);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Flips between a running and a paused auto-refresh - invoked by clicking the countdown text.
+$.fn.zato.time_ago.toggle_paused = function(container_selector) {
+    var config = $.fn.zato.time_ago.config;
+    $.fn.zato.time_ago.paused = !$.fn.zato.time_ago.paused;
+
+    var bars = $(container_selector).find('.zato-time-ago-header .zato-time-ago-progress');
+
+    if($.fn.zato.time_ago.paused) {
+        // The bar freezes mid-drain so it is clear nothing is moving.
+        bars.css('animation-play-state', 'paused');
+    }
+    else {
+        // Resuming starts a fresh cycle rather than continuing a stale one.
+        $.fn.zato.time_ago.seconds_left = config.refresh_interval_ms / 1000;
+        bars.css('animation-play-state', 'running');
+        $.fn.zato.time_ago.restart_progress(container_selector);
+    }
+
+    $.fn.zato.time_ago.update_countdowns(container_selector);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2562,6 +2652,12 @@ $.fn.zato.time_ago.start_auto_refresh = function(container_selector, url) {
     $.fn.zato.time_ago.restart_progress(container_selector);
 
     setInterval(function() {
+
+        // A paused ticker stands still - the countdown text already says why.
+        if($.fn.zato.time_ago.paused) {
+            return;
+        }
+
         $.fn.zato.time_ago.seconds_left -= 1;
 
         if($.fn.zato.time_ago.seconds_left <= 0) {
@@ -2793,6 +2889,23 @@ $.fn.zato.inline_edit.toggle_active = function(id, link_elem, opts) {
 //   highlight_elem - optional, an element whose text wears a badge while the form is open
 //
 // The Enter key anywhere in the inputs submits the form, Escape closes it.
+// Wraps an element's contents in the highlight badge - the honey background that marks
+// which row an open form or tooltip belongs to. Returns the element for later cleanup.
+$.fn.zato.inline_edit.badge_on = function(elem) {
+    var highlight = $(elem);
+    highlight.wrapInner('<span class="zato-inline-form-badge"></span>');
+    return highlight;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.inline_edit.badge_off = function(elem) {
+    var badge = $(elem).find('.zato-inline-form-badge');
+    badge.contents().unwrap();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     var config = $.fn.zato.inline_edit.config;
@@ -2826,6 +2939,12 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
         if(opts.input_min !== undefined) {
             input.attr('min', opts.input_min);
         }
+
+        // Text fields like names need more room than the default numeric width.
+        if(opts.input_width !== undefined) {
+            input.css('width', opts.input_width);
+        }
+
         input.attr('name', row.name);
         input.val(row.value);
         tr.append($('<td></td>').append(input));
@@ -2881,9 +3000,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
             // While the form is open, the related element wears a badge
             // so it is clear which row the form belongs to.
             if(opts.highlight_elem) {
-                var highlight = $(opts.highlight_elem);
-                highlight.wrapInner('<span class="zato-inline-form-badge"></span>');
-                tippy_instance.badge_elem = highlight;
+                tippy_instance.badge_elem = $.fn.zato.inline_edit.badge_on(opts.highlight_elem);
             }
         },
         onHide: function(tippy_instance) {
@@ -2891,8 +3008,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
             document.removeEventListener('mousedown', tippy_instance.handle_outside_mousedown);
 
             if(tippy_instance.badge_elem) {
-                var badge = tippy_instance.badge_elem.find('.zato-inline-form-badge');
-                badge.contents().unwrap();
+                $.fn.zato.inline_edit.badge_off(tippy_instance.badge_elem);
                 tippy_instance.badge_elem = null;
             }
         },
@@ -2940,8 +3056,18 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     instance.show();
 
-    // The first input is where typing starts right away.
-    table.find('input').first().trigger('focus');
+    // Typing starts in the first field that already has a value - only when all
+    // of them are empty does the focus land on the first one.
+    var all_inputs = table.find('input');
+    var focus_target = all_inputs.filter(function() {
+        return $(this).val() !== '';
+    }).first();
+
+    if(!focus_target.length) {
+        focus_target = all_inputs.first();
+    }
+
+    focus_target.trigger('focus');
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

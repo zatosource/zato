@@ -341,6 +341,7 @@ $.fn.zato.how_it_works._activate = function(badge) {
         fieldTippy: null,
         lastIndexPerTab: {},
         tabObserver: null,
+        visibilityObserver: null,
     };
 
     $.fn.zato.how_it_works._state = state;
@@ -429,6 +430,17 @@ $.fn.zato.how_it_works._activate = function(badge) {
         });
     }
 
+    // .. watch for anything that hides the field the tooltip points at, e.g. a collapsed
+    // .. toggle block with callbacks - a tooltip must never outlive its now-invisible field ..
+    state.visibilityObserver = new MutationObserver(function() {
+        $.fn.zato.how_it_works._onVisibilityChange(state);
+    });
+    state.visibilityObserver.observe(container, {
+        attributes: true,
+        attributeFilter: ['style', 'class', 'hidden'],
+        subtree: true,
+    });
+
     // .. clicking anywhere except inputs/selects/labels deactivates help mode ..
     $(document).on('mousedown.how_it_works_outside', function(event) {
         var target = event.target;
@@ -475,6 +487,38 @@ $.fn.zato.how_it_works._refreshFields = function(state) {
         }
     }
     state.currentIndex = newIndex;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.how_it_works._onVisibilityChange = function(state) {
+
+    // .. nothing shown means nothing to hide ..
+    if (!state.fieldTippy) {
+        return;
+    }
+
+    var field = state.fields[state.currentIndex];
+    if (!field) {
+        return;
+    }
+
+    // .. offsetParent is null for an element that is hidden itself
+    // .. or sits inside a hidden ancestor, e.g. a collapsed block ..
+    if (field.element.offsetParent !== null) {
+        return;
+    }
+
+    // .. a field inside a hidden tab panel means a tab switch,
+    // .. which the tab observer handles on its own ..
+    var panel = field.element.closest('.dashboard-tab-panel');
+    if (panel && panel.hidden) {
+        return;
+    }
+
+    // .. the field is gone from view, so help mode ends altogether -
+    // .. the tooltip disappears and the badge pops back up ..
+    $.fn.zato.how_it_works._deactivate();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -553,6 +597,11 @@ $.fn.zato.how_it_works._deactivate = function() {
     // .. disconnect tab observer ..
     if (state.tabObserver) {
         state.tabObserver.disconnect();
+    }
+
+    // .. disconnect the field visibility observer ..
+    if (state.visibilityObserver) {
+        state.visibilityObserver.disconnect();
     }
 
     // .. remove depressed look ..

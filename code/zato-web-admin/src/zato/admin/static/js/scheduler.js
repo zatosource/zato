@@ -262,9 +262,10 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', job.name);
 
-    // The Active flag and the interval are editable in place - each is a link.
+    // The name, the Active flag and the interval are editable in place - each is a link.
+    row += String.format('<td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_name(\'{0}\', \'{1}\', this)">{2}</a></td>',
+        job.job_type, job.id, job.name);
     row += String.format('<td style="text-align:center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active(\'{0}\', \'{1}\', this)">{2}</a></td>',
         job.job_type, job.id, job.is_active ? 'Yes' : 'No');
 
@@ -453,6 +454,44 @@ $.fn.zato.scheduler.toggle_active = function(job_type, id, link_elem) {
         name_prefix: 'edit-' + job_type + '-',
         on_success: function(jqXHR) {
             $.fn.zato.scheduler.data_table.on_submit_complete(jqXHR, 'success', 'edit', job_type);
+        }
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.edit_name = function(job_type, id, link_elem) {
+
+    var instance = $.fn.zato.data_table.data[id];
+
+    // The name cell wears a badge while the form is open, so it is clear which job is edited.
+    var name_cell = $.fn.zato.data_table.get_cell(id, 'name');
+
+    $.fn.zato.inline_edit.form_tippy({
+        link_elem: link_elem,
+        highlight_elem: name_cell,
+        title: 'Name',
+        input_width: '18em',
+        rows: [
+            {name: 'name', label: 'Name', value: instance.name}
+        ],
+        validate: function(values) {
+            if(!values.name) {
+                return 'This field is required: Name';
+            }
+            return '';
+        },
+        on_submit: function(values) {
+            $.fn.zato.inline_edit.submit({
+                link_elem: link_elem,
+                id: id,
+                overrides: values,
+                form_selector: '#edit-form-' + job_type,
+                name_prefix: 'edit-' + job_type + '-',
+                on_success: function(jqXHR) {
+                    $.fn.zato.scheduler.data_table.on_submit_complete(jqXHR, 'success', 'edit', job_type);
+                }
+            });
         }
     });
 }
