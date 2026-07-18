@@ -51,9 +51,9 @@ _generic_service_name    = 'zato.generic.connection'
 _http_soap_service_name  = 'zato.http-soap'
 
 # MSH-3 values routing messages to the channels this module creates
-_error_sender_app  = 'AudErrApp'
-_quiet_sender_app  = 'AudQuietApp'
-_forward_sender_app = 'AudFwdApp'
+_error_sender_application   = 'ERROR_SYSTEM'
+_quiet_sender_application   = 'UNAUDITED_SYSTEM'
+_forward_sender_application = 'FORWARDING_SYSTEM'
 
 # The forward service sends through an outconn of this exact name
 _forward_outconn_name = 'test-mllp-wire-outconn'
@@ -67,13 +67,18 @@ _audit_wait_seconds = 3.0
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build_adt_a01(control_id:'str', sender_application:'str'='AudSend', sender_facility:'str'='AudFac') -> 'bytes':
+def _build_adt_a01(
+    control_id:'str',
+    sender_application:'str'='HIS',
+    sender_facility:'str'='GENERAL_HOSPITAL',
+    ) -> 'bytes':
     """ Builds a standard ADT^A01 message with an MR-typed patient identifier.
     """
     message = (
-        f'MSH|^~\\&|{sender_application}|{sender_facility}|ZatoRecv|ZatoFac|20260507120000||ADT^A01|{control_id}|P|2.5\r'
+        f'MSH|^~\\&|{sender_application}|{sender_facility}|INTEGRATION_ENGINE|CENTRAL_HOSPITAL|'
+        f'20260507120000||ADT^A01|{control_id}|P|2.5\r'
         f'EVN|A01|20260507120000\r'
-        f'PID|||MRN-777^^^Hospital^MR||Doe^John||19800101|M\r'
+        f'PID|||445566^^^GENERAL_HOSPITAL^MR||SMITH^JOHN||19800101|M\r'
         f'PV1||I|ICU^Room1'
     )
 
@@ -86,13 +91,15 @@ def _build_batch(control_id_one:'str', control_id_two:'str') -> 'bytes':
     """ Builds a BHS batch with two ADT messages inside.
     """
     message = (
-        f'BHS|^~\\&|AudSend|AudFac|ZatoRecv|ZatoFac|20260507120000\r'
-        f'MSH|^~\\&|AudSend|AudFac|ZatoRecv|ZatoFac|20260507120000||ADT^A01|{control_id_one}|P|2.5\r'
+        f'BHS|^~\\&|HIS|GENERAL_HOSPITAL|INTEGRATION_ENGINE|CENTRAL_HOSPITAL|20260507120000\r'
+        f'MSH|^~\\&|HIS|GENERAL_HOSPITAL|INTEGRATION_ENGINE|CENTRAL_HOSPITAL|'
+        f'20260507120000||ADT^A01|{control_id_one}|P|2.5\r'
         f'EVN|A01|20260507120000\r'
-        f'PID|||BATCH-MRN-1^^^Hospital^MR||One^Alice||19800101|F\r'
-        f'MSH|^~\\&|AudSend|AudFac|ZatoRecv|ZatoFac|20260507120000||ADT^A03|{control_id_two}|P|2.5\r'
+        f'PID|||112233^^^GENERAL_HOSPITAL^MR||SMITH^ALICE||19800101|F\r'
+        f'MSH|^~\\&|HIS|GENERAL_HOSPITAL|INTEGRATION_ENGINE|CENTRAL_HOSPITAL|'
+        f'20260507120000||ADT^A03|{control_id_two}|P|2.5\r'
         f'EVN|A03|20260507120000\r'
-        f'PID|||BATCH-MRN-2^^^Hospital^MR||Two^Bob||19900101|M\r'
+        f'PID|||778899^^^GENERAL_HOSPITAL^MR||JONES^ROBERT||19900101|M\r'
         f'BTS|2'
     )
 
@@ -143,12 +150,12 @@ def _send_rest(host:'str', port:'int', url_path:'str', payload_bytes:'bytes', pa
     url = f'http://{host}:{port}{url_path}'
     auth = b64encode(f'admin.invoke:{password}'.encode()).decode()
 
-    req = Request(url, data=payload_bytes, method='POST')
-    req.add_header('Authorization', f'Basic {auth}')
-    req.add_header('Content-Type', 'application/hl7-v2')
+    request = Request(url, data=payload_bytes, method='POST')
+    request.add_header('Authorization', f'Basic {auth}')
+    request.add_header('Content-Type', 'application/hl7-v2')
 
-    with urlopen(req, timeout=_socket_timeout) as resp:
-        out = resp.read()
+    with urlopen(request, timeout=_socket_timeout) as response:
+        out = response.read()
 
     return out
 
@@ -339,7 +346,7 @@ class TestMLLPAudit:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.error',
-            msh3_sending_app=_error_sender_app,
+            msh3_sending_app=_error_sender_application,
             pool_size=1,
             is_audit_log_active=True,
         )
@@ -358,7 +365,7 @@ class TestMLLPAudit:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.accept',
-            msh3_sending_app=_quiet_sender_app,
+            msh3_sending_app=_quiet_sender_application,
             pool_size=1,
         )
 
@@ -390,12 +397,12 @@ class TestMLLPAudit:
 
         attrs = _get_attr_map(audit_db_path, received['id'])
         assert attrs['msg_type'] == 'ADT^A01', attrs
-        assert attrs['mrn'] == 'MRN-777', attrs
-        assert attrs['facility'] == 'AudFac', attrs
+        assert attrs['mrn'] == '445566', attrs
+        assert attrs['facility'] == 'GENERAL_HOSPITAL', attrs
 
         # .. the full message body is stored by reference ..
         bodies = _get_body_map(audit_db_path, received['id'])
-        assert 'PID|||MRN-777^^^Hospital^MR||Doe^John' in bodies['request']
+        assert 'PID|||445566^^^GENERAL_HOSPITAL^MR||SMITH^JOHN' in bodies['request']
 
         # .. and the acknowledgment landed on the same cid, marked accepted.
         ack_events = _wait_for_events(
@@ -416,7 +423,7 @@ class TestMLLPAudit:
         """
         audit_db_path = zato_server['audit_db_path']
 
-        message_bytes = _build_adt_a01('AUDIT-ERR-001', sender_application=_error_sender_app)
+        message_bytes = _build_adt_a01('AUDIT-ERR-001', sender_application=_error_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         assert b'MSA|AE|AUDIT-ERR-001' in ack_bytes
 
@@ -440,7 +447,7 @@ class TestMLLPAudit:
         """
         audit_db_path = zato_server['audit_db_path']
 
-        message_bytes = _build_adt_a01('AUDIT-QUIET-001', sender_application=_quiet_sender_app)
+        message_bytes = _build_adt_a01('AUDIT-QUIET-001', sender_application=_quiet_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         assert b'MSA|AA|AUDIT-QUIET-001' in ack_bytes
 
@@ -541,7 +548,7 @@ class TestMLLPAudit:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.forward',
-            msh3_sending_app=_forward_sender_app,
+            msh3_sending_app=_forward_sender_application,
             pool_size=1,
 
             # The forward service needs the raw ER7 text
@@ -555,7 +562,7 @@ class TestMLLPAudit:
         time.sleep(1)
 
         # .. one message through the channel goes out through the outconn ..
-        message_bytes = _build_adt_a01('AUDIT-FWD-001', sender_application=_forward_sender_app)
+        message_bytes = _build_adt_a01('AUDIT-FWD-001', sender_application=_forward_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         assert b'MSA|AA|AUDIT-FWD-001' in ack_bytes
 
@@ -629,7 +636,7 @@ class TestMLLPAudit:
 
         attrs = _get_attr_map(audit_db_path, received['id'])
         assert attrs['msg_type'] == 'ADT^A01', attrs
-        assert attrs['facility'] == 'AudFac', attrs
+        assert attrs['facility'] == 'GENERAL_HOSPITAL', attrs
 
         # .. and the response landed as the acknowledgment answering it, on the same cid.
         ack_events = _wait_for_events(

@@ -44,7 +44,7 @@ Default_Error_Ratio = 0.0
 
 # The MSH-3 sending application marking a message as an injected failure -
 # a channel routes this value to an erroring service, which is how failures materialize
-Default_Error_Sending_App = 'FeedErrApp'
+Default_Error_Sending_Application = 'ERROR_FEED_SYSTEM'
 
 # The seed making a feed reproducible unless configured otherwise
 Default_Seed = 12345
@@ -90,7 +90,7 @@ class FeedConfig:
     error_ratio:'float' = Default_Error_Ratio
 
     # The MSH-3 value marking a message as an injected failure
-    error_sending_app:'str' = Default_Error_Sending_App
+    error_sending_application:'str' = Default_Error_Sending_Application
 
     # The seed the message mix and error placement are drawn from
     seed:'int' = Default_Seed
@@ -162,7 +162,7 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
 
     # One generator drives both the mix and the error placement, and the shared faker
     # underneath the message content is reseeded too, so a seed fixes the whole run.
-    rng = Random(config.seed)
+    random_source = Random(config.seed)
     Faker.seed(config.seed)
 
     # The weighted-choice inputs are unzipped out of the mix once
@@ -174,12 +174,12 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
 
     for index in range(count):
 
-        msg_type, faker = rng.choices(entries, weights=weights)[0]
+        msg_type, faker = random_source.choices(entries, weights=weights)[0]
 
         item = FeedItem()
         item.msg_type = msg_type
         item.control_id = f'{Control_Id_Prefix}-{index + 1:08d}'
-        item.is_error = rng.random() < config.error_ratio
+        item.is_error = random_source.random() < config.error_ratio
 
         # The faker authors the message, the feed only stamps its own control id ..
         text = faker()
@@ -188,7 +188,7 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
         # .. and an injected failure is a routing marker, not corrupted content -
         # a channel routes this MSH-3 value to a service that fails.
         if item.is_error:
-            text = _rewrite_msh_field(text, _MSH3_Index, config.error_sending_app)
+            text = _rewrite_msh_field(text, _MSH3_Index, config.error_sending_application)
 
         item.text = text
         out.append(item)
