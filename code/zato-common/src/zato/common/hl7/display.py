@@ -264,3 +264,39 @@ def build_display_tree(msg:'HL7Message') -> 'stranydict':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# How far each level of the rendered tree is indented
+_render_field_indent = '  '
+_render_component_indent = '      '
+
+def render_display_text(tree:'stranydict') -> 'str':
+    """ Renders a display tree as indented plain text - the parsed tab of the details
+    overlay and any other plain-text consumer show the same segment tree the same way.
+    """
+
+    lines:'strlist' = []
+
+    # The header line names the message
+    lines.append('{} (control id {})'.format(tree['msg_type'], tree['control_id']))
+
+    for segment in tree['segments']:
+
+        # A blank line separates each segment block
+        lines.append('')
+        lines.append(segment['segment_id'])
+
+        for field in segment['fields']:
+
+            lines.append('{}{}  {}: {}'.format(_render_field_indent, field['reference'], field['label'], field['value']))
+
+            # Components appear under their field, one per line
+            for repetition in field['repetitions']:
+                for component in repetition['components']:
+                    lines.append('{}{}  {}: {}'.format(
+                        _render_component_indent, component['reference'], component['label'], component['value']))
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

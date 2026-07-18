@@ -130,6 +130,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
@@ -157,6 +158,7 @@
 
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
 
+                        <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>

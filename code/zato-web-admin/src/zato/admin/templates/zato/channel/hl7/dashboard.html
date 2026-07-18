@@ -1,0 +1,90 @@
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
+
+{% block html_title %}HL7 channels{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    var dash = $.fn.zato.channel.hl7.dashboard;
+    dash.config.poll_url = '{{ poll_url }}';
+    dash.config.time_range = '{{ time_range }}';
+    dash.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Messages</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-messages">-</div>
+                        <div class="dashboard-tile-spark" id="spark-messages"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Error rate</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-error-rate">-</div>
+                        <div class="dashboard-tile-spark" id="spark-error-rate"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Channels</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-channels">-</div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-channels-sublabel"></div>
+                </div>
+
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Health</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-health">-</div>
+                    </div>
+                    <div class="dashboard-tile-sublabel" id="stat-health-sublabel"></div>
+                </div>
+
+{% endblock %}
+
+{% block dashboard_chart_title %}Traffic{% endblock %}
+
+{% block dashboard_time_range_options %}
+                        {% for item in ranges %}
+                        <div class="dashboard-time-range-option{% if item.value == time_range %} dashboard-time-range-active{% endif %}" data-range="{{ item.value }}">{{ item.label }}</div>
+                        {% endfor %}
+{% endblock %}
+
+{% block dashboard_refresh_options %}
+{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h3>Channels <span class="dashboard-pill" id="hl7-channels-count"></span></h3>
+            </div>
+            <div class="dashboard-card-scroll">
+                <table class="zato-table" id="hl7-channels-table">
+                    <thead>
+                        <tr>
+                            <th>Health</th>
+                            <th>Channel</th>
+                            <th>Trend</th>
+                            <th>Messages</th>
+                            <th>Error rate</th>
+                            <th>Live counters</th>
+                            <th>Last message</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hl7-channels-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+{% endblock %}
