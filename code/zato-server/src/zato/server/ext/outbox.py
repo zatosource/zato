@@ -21,7 +21,7 @@ Description: Simple wrapper around smtplib for sending an email.
 # flake8: noqa
 
 import smtplib
-import socket, sys
+import socket, ssl, sys
 
 from email.header import Header
 from email.mime.base import MIMEBase
@@ -30,6 +30,9 @@ from email.mime.text import MIMEText
 from email.utils import formatdate
 
 from zato.common.py23_.past.builtins import basestring
+
+if 0:
+    from zato.common.typing_ import strnone
 
 PY2 = sys.version_info[0] == 2
 
@@ -146,7 +149,9 @@ class Outbox:
     """ Thin wrapper around the SMTP and SMTP_SSL classes from the smtplib module.
     """
 
-    def __init__(self, username, password, server, port, mode='TLS', debug=False, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+    def __init__(self, username, password, server, port, mode='TLS', debug=False, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+            *, needs_tls_verify:'bool'=True, ca_certs_path:'strnone'=None, helo_hostname:'strnone'=None,
+            from_address:'strnone'=None):
         if mode not in ('SSL', 'TLS', None):
             raise ValueError("Mode must be one of TLS, SSL, or None")
 
@@ -155,6 +160,10 @@ class Outbox:
         self.username = username
         self.password = password
         self.connection_details = (server, port, mode, debug, timeout)
+        self.needs_tls_verify = needs_tls_verify
+        self.ca_certs_path = ca_certs_path
+        self.helo_hostname = helo_hostname
+        self.from_address = from_address
         self._conn = None
 
     def __enter__(self):
@@ -164,21 +173,41 @@ class Outbox:
     def __exit__(self, type, value, traceback):
         self.disconnect()
 
+    def _build_tls_context(self) -> 'ssl.SSLContext':
+        """ Builds the TLS context used both for SSL connections and for STARTTLS upgrades.
+        """
+        # A custom CA bundle takes precedence over the system-wide one ..
+        out = ssl.create_default_context(cafile=self.ca_certs_path)
+
+        # .. and certificate verification can be turned off for servers with self-signed certificates.
+        if not self.needs_tls_verify:
+            out.check_hostname = False
+            out.verify_mode = ssl.CERT_NONE
+
+        return out
+
     def _login(self):
         """ Login to the SMTP server specified at instantiation. Returns an authenticated SMTP instance.
         """
         server, port, mode, debug, timeout = self.connection_details
 
-        if mode == 'SSL':
-            smtp_class = smtplib.SMTP_SSL
+        # A TLS context is needed only when the connection is secured in either mode ..
+        if mode in ('SSL', 'TLS'):
+            tls_context = self._build_tls_context()
         else:
-            smtp_class = smtplib.SMTP
+            tls_context = None
 
-        smtp = smtp_class(server, port, timeout=timeout)
+        # .. SSL mode secures the connection from the very start ..
+        if mode == 'SSL':
+            smtp = smtplib.SMTP_SSL(server, port, local_hostname=self.helo_hostname, timeout=timeout, context=tls_context)
+        else:
+            smtp = smtplib.SMTP(server, port, local_hostname=self.helo_hostname, timeout=timeout)
+
         smtp.set_debuglevel(debug)
 
+        # .. whereas TLS mode upgrades a plain connection after the initial EHLO.
         if mode == 'TLS':
-            smtp.starttls()
+            _ = smtp.starttls(context=tls_context)
 
         self.authenticate(smtp)
 
@@ -186,6 +215,24 @@ class Outbox:
 
     def connect(self):
         self._conn = self._login()
+
+    def ping(self) -> 'str':
+        """ Connects, secures the connection and authenticates as configured, without sending any message.
+        Returns the server's EHLO response.
+        """
+        # Connect and authenticate the same way an actual send would ..
+        smtp = self._login()
+
+        # .. confirm that the server responds to commands, keeping its EHLO response for the caller ..
+        _, ehlo_response = smtp.ehlo()
+        _ = smtp.noop()
+
+        out = ehlo_response.decode('utf8')
+
+        # .. and close the connection cleanly.
+        _ = smtp.quit()
+
+        return out
 
     def authenticate(self, smtp):
         """ Perform login with the given smtplib.SMTP instance.
@@ -221,23 +268,25 @@ class Outbox:
         recipients.extend(bcc)
 
         if self._conn:
-            self._conn.sendmail(from_ or self.username, recipients,
+            self._conn.sendmail(from_ or self.sender_address(), recipients,
                                 msg.as_string())
         else:
             with self:
-                self._conn.sendmail(from_ or self.username, recipients,
+                self._conn.sendmail(from_ or self.sender_address(), recipients,
                                     msg.as_string())
 
     def sender_address(self):
         """ Return the sender address.
 
-        The default implementation is to use the username that is used for
-        signing in.
-
-        If you want pretty names, e.g. <Captain Awesome> foo@example.com,
-        override this method to do what you want.
+        The default implementation is to use the connection's From address,
+        with the username that is used for signing in as the default.
         """
-        return self.username
+        if self.from_address:
+            out = self.from_address
+        else:
+            out = self.username
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

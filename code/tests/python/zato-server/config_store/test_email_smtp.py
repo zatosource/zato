@@ -109,7 +109,8 @@ class TestEmailSMTP:
             ping_id = resp['id']
             try:
                 result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
-                assert 'Ping submitted' in result['info']
+                assert 'Ping OK' in result['info']
+                assert 'Test message sent' in result['info']
             finally:
                 client.delete(f'{SERVICE}.delete', id=ping_id)
         finally:

@@ -321,6 +321,26 @@ class SMTPConnection(_Connection):
             self.config.timeout
         ]
 
+        # These may be empty strings in the configuration and the underlying transport expects None in such cases
+        ca_certs_path = self.config.ca_certs_path
+        if not ca_certs_path:
+            ca_certs_path = None
+
+        helo_hostname = self.config.helo_hostname
+        if not helo_hostname:
+            helo_hostname = None
+
+        from_address = self.config.from_address
+        if not from_address:
+            from_address = None
+
+        self.conn_kwargs = {
+            'needs_tls_verify': self.config.needs_tls_verify,
+            'ca_certs_path': ca_certs_path,
+            'helo_hostname': helo_hostname,
+            'from_address': from_address,
+        }
+
         if config.username or config.password:
 
             password = (self.config.password or '')
@@ -336,6 +356,18 @@ class SMTPConnection(_Connection):
 
 # ################################################################################################################################
 
+    def ping(self) -> 'str':
+        """ Connects to the server, authenticating as configured, without sending any message.
+        Returns the server's EHLO response.
+        """
+        # The transport opens and closes its own connection during a ping
+        conn = self.conn_class(*self.conn_args, **self.conn_kwargs)
+        out = conn.ping()
+
+        return out
+
+# ################################################################################################################################
+
     def send(self, msg, from_=None) -> 'bool':
 
         headers = msg.headers or {}
@@ -347,8 +379,10 @@ class SMTPConnection(_Connection):
                 att = Attachment(item['name'], BytesIO(contents))
                 atts.append(att)
 
+        # Messages without an explicit From address use the connection's own one, filled in by the underlying transport
         if 'From' not in msg.headers:
-            headers['From'] = msg.from_
+            if msg.from_:
+                headers['From'] = msg.from_
 
         if msg.cc and 'CC' not in headers:
             headers['CC'] = ', '.join(msg.cc) if not isinstance(msg.cc, basestring) else msg.cc
@@ -360,7 +394,7 @@ class SMTPConnection(_Connection):
         email = Email(msg.to, msg.subject, body, html_body, msg.charset, headers, msg.is_rfc2231)
 
         try:
-            with self.conn_class(*self.conn_args) as conn:
+            with self.conn_class(*self.conn_args, **self.conn_kwargs) as conn:
                 conn.send(email, atts, from_ or msg.from_)
         except Exception:
 
