@@ -101,9 +101,9 @@ def test_error_injection_marks_msh3() -> 'None':
         # The marker and the flag always agree
         if item.is_error:
             error_count += 1
-            assert msh_fields[2] == config.error_sending_app
+            assert msh_fields[2] == config.error_sending_application
         else:
-            assert msh_fields[2] != config.error_sending_app
+            assert msh_fields[2] != config.error_sending_application
 
     # With 500 draws at a 0.2 ratio the count lands well inside this band
     assert 60 <= error_count <= 140, error_count

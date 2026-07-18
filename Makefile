@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
@@ -647,10 +647,21 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
 		$(CURDIR)/code/tests/python/zato-common/hl7_audit/ \
+		$(CURDIR)/code/tests/python/zato-common/hl7_feed/ \
 		$(CURDIR)/code/tests/python/zato-common/channel_state/ \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-hl7-volume: ## HL7 volume proof - sustained MLLP load against a real server through the buffered audit writer, opt-in.
+	ZATO_TEST_BASE_DIR=$(CURDIR) \
+	Zato_Test_HL7_Volume=1 \
+	Zato_Audit_Log_Flush_Max_Size=200 \
+	Zato_Audit_Log_Flush_Max_Wait_Ms=500 \
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mllp_integration/test_volume.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_volume -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against downloaded fixtures.

@@ -71,12 +71,18 @@ outconn_int_config_keys = ('recv_timeout', 'max_msg_size', 'read_buffer_size')
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
-    def __init__(self, config:'object', audit_log:'AuditLog | None') -> 'None':
+    def __init__(self, config:'object', audit_log:'AuditLog | None' = None) -> 'None':
 
-        # What the audit events are filed under and where they say the message went
+        # What the audit events are filed under and where they say the message went -
+        # the name is only read when auditing is on, because offline tests build
+        # minimal configs without one.
         self.audit_log = audit_log
-        self.name = config.name # type: ignore[union-attr]
         self.address = config.address # type: ignore[union-attr]
+
+        if audit_log:
+            self.name = config.name # type: ignore[union-attr]
+        else:
+            self.name = ''
 
         host, port_string = parse_address(config.address) # type: ignore[union-attr]
         port = int(port_string)
