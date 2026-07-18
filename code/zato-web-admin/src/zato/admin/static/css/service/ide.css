@@ -330,10 +330,12 @@ td.data-input-field-name {
     font-weight: 600;
 }
 
-/* The gap between a button and the status text that follows it,
+/* The gap between a button and the status text that follows it and the
+   downward nudge that puts the text at the buttons' optical middle,
    shared by the Deploy and the Invoke rows */
 :root {
     --zato-status-gap: 10px;
+    --zato-status-nudge: 2px;
 }
 
 /* The deploy progress indicator and the confirmation flash share the slot
@@ -438,6 +440,32 @@ input[type="button"]:focus:not(:active) {
 #invoking-please-wait,
 #getting-info-please-wait {
     margin-left: var(--zato-status-gap);
+}
+
+/* The buttons, the selects and the status texts next to them all line up
+   on their vertical middle instead of the default text baseline */
+#header-links-left input[type="button"],
+#deploying-please-wait,
+#deploy-result-flash,
+#payload-format-select,
+#invoke-mode-select,
+#open-history-overlay,
+#invoke-service,
+#result-header,
+#invoking-please-wait,
+#getting-info-please-wait {
+    vertical-align: middle;
+}
+
+/* Strict middle still reads as slightly too high next to the buttons,
+   so the status texts get nudged down to the optical middle */
+#deploying-please-wait,
+#deploy-result-flash,
+#result-header,
+#invoking-please-wait,
+#getting-info-please-wait {
+    position: relative;
+    top: var(--zato-status-nudge);
 }
 
 #result-header {

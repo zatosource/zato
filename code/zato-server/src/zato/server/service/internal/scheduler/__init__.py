@@ -674,22 +674,42 @@ class GetLastRunList(_SchedulerAdmin):
     input = List('id_list')
 
     def handle(self) -> 'None':
+        from contextlib import closing
 
         # The IDs arrive as strings from the network, hence the conversion ..
         id_list = set()
         for job_id in self.request.input.id_list:
             id_list.add(int(job_id))
 
-        # .. one call returns summaries for all jobs and the response is filtered down to the requested ones ..
-        items = []
-        for summary in self.server._scheduler.get_job_summaries():
-            if summary['id'] in id_list:
-                last_run_utc = summary['last_run_utc']
-                if last_run_utc is None:
-                    last_run_utc = ''
-                items.append({'id': summary['id'], 'last_run_utc': last_run_utc})
+        # .. map each requested ID to its name so that jobs can also be matched by name
+        # .. if their IDs changed, e.g. after a redeployment ..
+        name_by_id = {}
+        with closing(self.odb.session()) as session:
+            job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
+            for job in job_rows:
+                if job.id in id_list:
+                    name_by_id[job.id] = job.name
 
-        # .. and everything found can be returned now.
+        # .. one call returns runtime summaries for all jobs ..
+        last_run_by_id = {}
+        last_run_by_name = {}
+
+        for summary in self.server._scheduler.get_job_summaries():
+            last_run_by_id[summary['id']] = summary['last_run_utc']
+            last_run_by_name[summary['name']] = summary['last_run_utc']
+
+        # .. and each requested job is looked up by ID first and by name second,
+        # .. with an empty string for jobs that never ran.
+        items = []
+        for job_id in id_list:
+            last_run_utc = last_run_by_id.get(job_id)
+            if last_run_utc is None:
+                name = name_by_id.get(job_id)
+                last_run_utc = last_run_by_name.get(name)
+            if last_run_utc is None:
+                last_run_utc = ''
+            items.append({'id': job_id, 'last_run_utc': last_run_utc})
+
         self.response.payload = {'items': items}
 
 # ################################################################################################################################

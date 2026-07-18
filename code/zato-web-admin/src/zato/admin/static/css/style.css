@@ -1242,9 +1242,9 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 
 /* The value keeps a fixed minimum width so that texts of different lengths,
    e.g. "9 seconds ago" and "14 seconds ago", never resize the whole column.
-   Changed values fade out gently, swap their text and fade back in. */
+   Changed values fade out gently, swap their text and fade back in.
+   The fade duration variable is set from the time_ago config in JavaScript. */
 .zato-time-ago-value {
-    --zato-time-ago-value-fade-ms: 400ms;
     display: inline-block;
     min-width: 8em;
     opacity: 1;
@@ -1263,25 +1263,33 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     padding-right: 0;
 }
 
-/* The one shared spinner in the column header is three pulsing dots - the element
-   itself is the first dot and its box-shadows draw the other two, with the right
-   margin reserving their space so the spinner never shifts the layout around it.
+/* The one shared spinner in the column header is a ring of eight dots drawn
+   with box-shadows around the element, rotating in discrete steps so the
+   brightest dot appears to march around the circle. The margins reserve the
+   ring's full extent so the spinner never shifts the layout around it.
    Fade-in and fade-out have their own durations - set the fade-in one
    to zero to make the spinner appear instantly and only fade out. */
 .zato-time-ago-spinner {
     --zato-time-ago-spinner-fade-in-ms: 350ms;
     --zato-time-ago-spinner-fade-out-ms: 350ms;
-    --zato-time-ago-spinner-dot-resting: #ccc;
-    --zato-time-ago-spinner-dot-active: #666;
     display: inline-block;
     opacity: 0;
-    width: 6px;
-    height: 6px;
-    margin-left: 5px;
-    margin-right: 20px;
+    width: 3px;
+    height: 3px;
+    margin-left: 9px;
+    margin-right: 9px;
     border-radius: 50%;
     vertical-align: middle;
-    animation: zato-time-ago-dots 0.9s linear infinite;
+    box-shadow:
+        0 -6px 0 rgba(102, 102, 102, 1),
+        4.2px -4.2px 0 rgba(102, 102, 102, 0.85),
+        6px 0 0 rgba(102, 102, 102, 0.7),
+        4.2px 4.2px 0 rgba(102, 102, 102, 0.55),
+        0 6px 0 rgba(102, 102, 102, 0.4),
+        -4.2px 4.2px 0 rgba(102, 102, 102, 0.3),
+        -6px 0 0 rgba(102, 102, 102, 0.2),
+        -4.2px -4.2px 0 rgba(102, 102, 102, 0.1);
+    animation: zato-time-ago-dots 0.8s steps(8) infinite;
     transition: opacity var(--zato-time-ago-spinner-fade-out-ms) ease;
 }
 
@@ -1291,22 +1299,5 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 }
 
 @keyframes zato-time-ago-dots {
-    0%, 100% {
-        background-color: var(--zato-time-ago-spinner-dot-active);
-        box-shadow:
-            10px 0 var(--zato-time-ago-spinner-dot-resting),
-            20px 0 var(--zato-time-ago-spinner-dot-resting);
-    }
-    33% {
-        background-color: var(--zato-time-ago-spinner-dot-resting);
-        box-shadow:
-            10px 0 var(--zato-time-ago-spinner-dot-active),
-            20px 0 var(--zato-time-ago-spinner-dot-resting);
-    }
-    66% {
-        background-color: var(--zato-time-ago-spinner-dot-resting);
-        box-shadow:
-            10px 0 var(--zato-time-ago-spinner-dot-resting),
-            20px 0 var(--zato-time-ago-spinner-dot-active);
-    }
+    to { transform: rotate(360deg); }
 }
