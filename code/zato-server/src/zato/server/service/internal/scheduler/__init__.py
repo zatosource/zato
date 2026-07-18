@@ -362,7 +362,7 @@ class _Get(_SchedulerAdmin):
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
         '-jitter_ms', '-timezone', '-max_execution_time_ms', \
         '-on_success_service', '-on_success_job', '-on_error_service', '-on_error_job', \
-        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind'
+        '-imap_conn_id', '-link_conn_type', '-link_conn_id', '-link_kind', '-last_run_utc'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -393,6 +393,23 @@ class GetList(_Get):
                 row['service'] = row.pop('service_name')
                 row['start_date'] = row['start_date'].isoformat()
                 items.append(self._enrich_job(row))
+
+        # Map runtime summaries by ID, with a lookup by name for jobs whose IDs changed, e.g. after a redeployment ..
+        last_run_by_id = {}
+        last_run_by_name = {}
+
+        for summary in self.server._scheduler.get_job_summaries():
+            last_run_by_id[summary['id']] = summary['last_run_utc']
+            last_run_by_name[summary['name']] = summary['last_run_utc']
+
+        # .. and attach the last run time to each job - it is an empty string for jobs that never ran.
+        for item in items:
+            last_run_utc = last_run_by_id.get(item['id'])
+            if last_run_utc is None:
+                last_run_utc = last_run_by_name.get(item['name'])
+            if last_run_utc is None:
+                last_run_utc = ''
+            item['last_run_utc'] = last_run_utc
 
         self.response.payload = items
 

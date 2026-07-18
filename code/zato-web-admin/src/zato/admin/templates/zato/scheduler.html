@@ -37,6 +37,7 @@
             'name',
             '_is_active',
             '_definition_text',
+            '_last_run',
             'service',
             '_audit_log',
             '_execute',
@@ -103,7 +104,8 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
-                        <th>Definition</th>
+                        <th>Interval</th>
+                        <th><a href="#">Last run</a></th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -131,6 +133,7 @@
                         <td>{{ job.name }}</td>
                         <td style="text-align:center">{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.definition_text|safe }}</td>
+                        <td class="zato-time-ago" data-time-utc="{{ job.last_run_utc }}"></td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}&outcomes=all">Audit log</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
@@ -158,7 +161,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='22'>No results</td>
+                        <td colspan='23'>No results</td>
                     </tr>
                 {% endif %}
 

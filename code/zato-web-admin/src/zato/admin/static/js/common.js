@@ -419,6 +419,18 @@ $.fn.zato.data_table.parse = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// A tablesorter textExtraction function - cells that carry a data-sort-value attribute
+// sort by that value instead of their visible text, e.g. "time ago" cells sort by their numeric age.
+$.fn.zato.data_table.text_extraction = function(node) {
+    var sort_value = node.getAttribute('data-sort-value');
+    if(sort_value !== null) {
+        return sort_value;
+    }
+    return node.textContent;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.data_table.reset_form = function(form_id) {
     var form = $(form_id);
 
@@ -2019,6 +2031,174 @@ $.fn.zato.show_bottom_tooltip = function(elem_id_selector, text, should_draw_att
 
 $.fn.zato.show_left_tooltip = function(elem_id_selector, text, should_draw_attention) {
     $.fn.zato.show_tooltip_common("left", elem_id_selector, text, should_draw_attention);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Reusable "time ago" cells - each element with the .zato-time-ago class and a data-time-utc attribute
+// is turned into a humanized link, e.g. "3 minutes ago", with a click-triggered tippy that shows
+// the full timestamp both in the browser's timezone and in UTC.
+$.fn.zato.time_ago = {};
+
+$.fn.zato.time_ago.config = {
+    'never_label': 'Never',
+    'never_sort_value': '99999999999',
+    'just_now_label': 'Just now',
+    'ago_label': 'ago',
+    'utc_label': 'UTC',
+    'tippy_placement': 'top',
+    'units': [
+        {'name': 'week',   'seconds': 604800},
+        {'name': 'day',    'seconds': 86400},
+        {'name': 'hour',   'seconds': 3600},
+        {'name': 'minute', 'seconds': 60},
+        {'name': 'second', 'seconds': 1},
+    ]
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.humanize = function(age_seconds) {
+    var config = $.fn.zato.time_ago.config;
+
+    // Anything below one second reads better as a fixed label than as "0 seconds ago".
+    if(age_seconds < 1) {
+        return config.just_now_label;
+    }
+
+    var units = config.units;
+    var out = '';
+
+    // Find the largest unit that fits, e.g. 3700 seconds turn into "1 hour ago".
+    for(var unit_idx = 0; unit_idx < units.length; unit_idx++) {
+        var unit = units[unit_idx];
+        if(age_seconds >= unit.seconds) {
+            var count = Math.floor(age_seconds / unit.seconds);
+            var suffix = count == 1 ? '' : 's';
+            out = count + ' ' + unit.name + suffix + ' ' + config.ago_label;
+            break;
+        }
+    }
+
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.format_timestamp = function(when, use_utc) {
+
+    var pad_two = function(value) {
+        return String(value).padStart(2, '0');
+    };
+
+    var year, month, day, hours, minutes, seconds;
+
+    if(use_utc) {
+        year    = when.getUTCFullYear();
+        month   = when.getUTCMonth() + 1;
+        day     = when.getUTCDate();
+        hours   = when.getUTCHours();
+        minutes = when.getUTCMinutes();
+        seconds = when.getUTCSeconds();
+    }
+    else {
+        year    = when.getFullYear();
+        month   = when.getMonth() + 1;
+        day     = when.getDate();
+        hours   = when.getHours();
+        minutes = when.getMinutes();
+        seconds = when.getSeconds();
+    }
+
+    var date_part = year + '-' + pad_two(month) + '-' + pad_two(day);
+    var time_part = pad_two(hours) + ':' + pad_two(minutes) + ':' + pad_two(seconds);
+
+    var out = date_part + ' ' + time_part;
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
+    var config = $.fn.zato.time_ago.config;
+    var when = new Date(iso_utc);
+
+    // The browser knows best what timezone the user is in.
+    var browser_timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    var local_text = $.fn.zato.time_ago.format_timestamp(when, false);
+    var utc_text = $.fn.zato.time_ago.format_timestamp(when, true);
+
+    var out = '<table class="zato-time-ago-tooltip">';
+    out += '<tr><th>' + browser_timezone + '</th><td>' + local_text + '</td></tr>';
+    out += '<tr><th>' + config.utc_label + '</th><td>' + utc_text + '</td></tr>';
+    out += '</table>';
+
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.init = function(container_selector) {
+    var config = $.fn.zato.time_ago.config;
+    var cells = $(container_selector).find('.zato-time-ago');
+
+    cells.each(function() {
+        var cell = $(this);
+        var iso_utc = cell.attr('data-time-utc');
+
+        // No timestamp means the underlying item has not run yet - such cells sort after all the others.
+        if(!iso_utc) {
+            cell.attr('data-sort-value', config.never_sort_value);
+            cell.text(config.never_label);
+            return;
+        }
+
+        var when = new Date(iso_utc);
+        var now = new Date();
+        var age_seconds = Math.floor((now.getTime() - when.getTime()) / 1000);
+
+        // The source clock and the browser may disagree by a moment - never show a negative age.
+        if(age_seconds < 0) {
+            age_seconds = 0;
+        }
+
+        // The numeric age is what table sorting uses, which is why ascending order
+        // puts "4 seconds ago" before "1 hour ago" regardless of the humanized text.
+        cell.attr('data-sort-value', age_seconds);
+
+        var link = $('<a href="javascript:void(0)"></a>');
+        link.text($.fn.zato.time_ago.humanize(age_seconds));
+
+        cell.empty();
+        cell.append(link);
+
+        tippy(link[0], {
+            content: $.fn.zato.time_ago.build_tooltip_html(iso_utc),
+            allowHTML: true,
+            trigger: 'click',
+            placement: config.tippy_placement,
+            arrow: true,
+            interactive: true,
+
+            // Keep the tooltip out of the table, otherwise the table's own th/td styles leak into it.
+            appendTo: document.body,
+
+            // Let the Escape key close the tooltip while it is shown.
+            onShow: function(instance) {
+                var handle_escape = function(event) {
+                    if(event.key === 'Escape') {
+                        instance.hide();
+                    }
+                };
+                instance.handle_escape = handle_escape;
+                document.addEventListener('keydown', handle_escape);
+            },
+            onHide: function(instance) {
+                document.removeEventListener('keydown', instance.handle_escape);
+            },
+        });
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

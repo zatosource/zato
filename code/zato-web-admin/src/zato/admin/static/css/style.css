@@ -1214,3 +1214,24 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     --toggle-off-background: #999;
     --toggle-on-background: #2d6392;
 }
+
+/* ------------------------------------------------------------ */
+/* Time ago - tooltip table                                      */
+/* ------------------------------------------------------------ */
+
+.zato-time-ago-tooltip {
+    margin: 2px;
+    border-collapse: collapse;
+}
+
+.zato-time-ago-tooltip th,
+.zato-time-ago-tooltip td {
+    padding: 3px 6px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.zato-time-ago-tooltip th {
+    padding-right: 12px;
+    font-weight: bold;
+}

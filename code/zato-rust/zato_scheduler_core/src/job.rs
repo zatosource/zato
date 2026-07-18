@@ -58,6 +58,8 @@ pub struct JobSummary {
     pub last_outcome: Option<String>,
     /// Duration of the most recent completed execution (ms), if any.
     pub last_duration_ms: Option<u64>,
+    /// Actual fire time of the most recent execution as an ISO string, if any.
+    pub last_run_utc: Option<String>,
     /// Outcome labels of the last 10 executions (most recent last).
     pub recent_outcomes: Vec<String>,
     /// Per-outcome execution counts, indexed by `COUNTABLE` position.
@@ -422,6 +424,9 @@ impl RunningJob {
         let last_outcome = self.history.back().map(|rec| rec.outcome.clone());
         let last_duration_ms = self.history.iter().rev().find_map(|rec| rec.duration_ms);
 
+        // The newest record sits at the back of the ring buffer, so its actual fire time is the last run time.
+        let last_run_utc = self.history.back().map(|rec| rec.actual_fire_time_iso.clone());
+
         let recent_start = self.history.len().saturating_sub(10);
         let recent_outcomes: Vec<String> = self.history.range(recent_start..).map(|rec| rec.outcome.clone()).collect();
 
@@ -437,6 +442,7 @@ impl RunningJob {
             next_fire_utc: self.next_fire_utc.map(|fire_dt| fire_dt.to_rfc3339()),
             last_outcome,
             last_duration_ms,
+            last_run_utc,
             recent_outcomes,
             outcome_counts,
         }

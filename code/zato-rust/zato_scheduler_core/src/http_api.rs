@@ -93,6 +93,7 @@ async fn get_job_summaries(state: web::Data<AppState>) -> HttpResponse {
                 next_fire_utc: summary.next_fire_utc.clone(),
                 last_outcome: summary.last_outcome.clone(),
                 last_duration_ms: summary.last_duration_ms,
+                last_run_utc: summary.last_run_utc.clone(),
                 recent_outcomes: summary.recent_outcomes.clone(),
                 outcome_counts,
             }
@@ -127,6 +128,8 @@ struct JobSummaryResponse {
     last_outcome: Option<String>,
     /// Duration of the most recent completed execution (ms).
     last_duration_ms: Option<u64>,
+    /// Actual fire time of the most recent execution as an ISO string.
+    last_run_utc: Option<String>,
     /// Outcome labels of the last 10 executions.
     recent_outcomes: Vec<String>,
     /// Per-outcome execution counts.
