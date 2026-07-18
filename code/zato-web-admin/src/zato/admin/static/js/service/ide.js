@@ -208,17 +208,21 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     let actionArea = document.getElementById('action-area');
 
     function resizeDataResponse() {
-        let dataResponse = document.getElementById('data-response');
-        if (!dataResponse) return;
+
+        // The panel is resized rather than the textarea inside it - both the raw
+        // and the parsed views fill the panel, so they always share one height
+        // and the panel's bottom edge always stays in view.
+        let responsePanel = document.getElementById('response-panel');
+        if (!responsePanel) return;
 
         let actionAreaHeight = actionArea.offsetHeight;
-        let dataResponseTop = dataResponse.getBoundingClientRect().top;
+        let responsePanelTop = responsePanel.getBoundingClientRect().top;
         let actionAreaTop = actionArea.getBoundingClientRect().top;
-        let offsetFromTop = dataResponseTop - actionAreaTop;
+        let offsetFromTop = responsePanelTop - actionAreaTop;
         let availableHeight = actionAreaHeight - offsetFromTop - 16;
 
         if (availableHeight > 100) {
-            dataResponse.style.height = availableHeight + 'px';
+            responsePanel.style.height = availableHeight + 'px';
         }
     }
 
@@ -234,6 +238,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         }
 
         let resizeIndicator = document.createElement('div');
+        resizeIndicator.id = 'data-request-resize-indicator';
         resizeIndicator.textContent = '⋯';
         resizeIndicator.style.cssText = 'position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #999; pointer-events: none; padding: 0 5px; z-index: 10; line-height: 1;';
         dataRequest.parentElement.style.position = 'relative';
@@ -644,11 +649,14 @@ $.fn.zato.ide.config = {
     // What the format selector falls back to when a service has no remembered choice
     "default_payload_format": "auto",
 
-    // Formats whose request and response panes offer a parsed view
-    "parsed_payload_formats": ["hl7-v2", "fhir"],
-
     // localStorage key prefix for the per-service payload format
     "payload_format_key_prefix": "zato.ide.payload-format.",
+
+    // localStorage key prefix for the per-service raw/parsed choice of each pane
+    "pane_view_key_prefix": "zato.ide.pane-view.",
+
+    // What view a pane starts with when a service has no remembered choice
+    "default_pane_view": "raw",
 
     // Where the parsed view of a payload is rendered
     "parse_payload_url": "/zato/service/ide/parse-payload/",
@@ -734,20 +742,10 @@ $.fn.zato.ide.on_invoke_mode_changed = function() {
 $.fn.zato.ide.update_parsed_toggles = function() {
 
     let format = $.fn.zato.ide.get_payload_format();
-    let has_parsed_view = $.fn.zato.ide.config.parsed_payload_formats.includes(format);
 
-    if(has_parsed_view) {
-        $("#request-view-toggle").removeClass("hidden");
-        $("#response-view-toggle").removeClass("hidden");
-    }
-    else {
-        $("#request-view-toggle").addClass("hidden");
-        $("#response-view-toggle").addClass("hidden");
-
-        // Falling back to raw prevents a stale parsed view from lingering
-        $.fn.zato.ide.show_pane_view("request", "raw");
-        $.fn.zato.ide.show_pane_view("response", "raw");
-    }
+    // The remembered view of each pane is re-applied under the new format
+    $.fn.zato.ide.apply_pane_view("request");
+    $.fn.zato.ide.apply_pane_view("response");
 
     // Samples exist only for some formats
     let sample_list = $.fn.zato.ide.config.samples[format];
@@ -762,19 +760,77 @@ $.fn.zato.ide.update_parsed_toggles = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.show_pane_view = function(pane_name, view_name) {
+$.fn.zato.ide.get_pane_view_key = function(pane_name) {
+    let service_name = $.fn.zato.ide.get_current_service_name();
+    return $.fn.zato.ide.config.pane_view_key_prefix + pane_name + "." + service_name;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.apply_pane_view = function(pane_name) {
+
+    // The remembered choice for this pane and service ..
+    let key = $.fn.zato.ide.get_pane_view_key(pane_name);
+    var view_name = localStorage.getItem(key);
+
+    // .. a pane seen for the first time starts with the default ..
+    if(view_name === null) {
+        view_name = $.fn.zato.ide.config.default_pane_view;
+    }
+
+    // .. an empty pane has nothing to parse, so it stays raw without
+    // .. overwriting the remembered choice ..
+    let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
+
+    if(view_name == "parsed") {
+        if(!text_elem.val()) {
+            view_name = "raw";
+        }
+    }
+
+    // .. and re-applying a remembered view is not a new choice to persist.
+    $.fn.zato.ide.show_pane_view(pane_name, view_name, false);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
 
     let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
     let parsed_elem = $(`#data-${pane_name}-parsed`);
     let raw_link = $(`#${pane_name}-view-raw`);
     let parsed_link = $(`#${pane_name}-view-parsed`);
 
+    // A view chosen by hand is remembered for this pane and service
+    if(should_persist !== false) {
+        let service_name = $.fn.zato.ide.get_current_service_name();
+        if(service_name) {
+            localStorage.setItem($.fn.zato.ide.get_pane_view_key(pane_name), view_name);
+        }
+    }
+
+    // The drag-to-resize indicator belongs to the raw request view only
+    let resize_indicator = $("#data-request-resize-indicator");
+
     if(view_name == "raw") {
         parsed_elem.addClass("hidden");
         text_elem.removeClass("hidden");
         parsed_link.removeClass("current");
         raw_link.addClass("current");
+
+        if(pane_name == "request") {
+            resize_indicator.removeClass("hidden");
+        }
         return;
+    }
+
+    // The parsed view takes over the exact height of the raw one,
+    // so the swap never moves anything below the pane
+    if(pane_name == "request") {
+        let raw_height = text_elem[0].style.height;
+        if(raw_height) {
+            parsed_elem.css("height", raw_height);
+        }
     }
 
     // Parsed view - render the current pane content through the parse endpoint
@@ -799,6 +855,10 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name) {
             parsed_elem.removeClass("hidden");
             raw_link.removeClass("current");
             parsed_link.addClass("current");
+
+            if(pane_name == "request") {
+                resize_indicator.addClass("hidden");
+            }
         }
     });
 }
@@ -845,7 +905,8 @@ $.fn.zato.ide.insert_sample = function(format, index) {
         // A sample becomes a fixture - it lands in the per-service request history
         $.fn.zato.ide.save_request_to_history(data);
 
-        $.fn.zato.ide.show_pane_view("request", "raw");
+        // The pane keeps whatever view is remembered for it
+        $.fn.zato.ide.apply_pane_view("request");
     }, "text");
 }
 

@@ -7,20 +7,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 
 # Django
+from django.http import JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import BaseCallView, invoke_action_handler, method_allowed
+from zato.common.fhir.display import parse_and_render as fhir_parse_and_render
+from zato.common.hl7.display import parse_and_render as hl7_parse_and_render
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from django.http import HttpRequest, HttpResponse
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +137,81 @@ def delete_file(req:'HttpRequest') -> 'HttpResponse':
 @method_allowed('POST')
 def get_file_list(req:'HttpRequest') -> 'HttpResponse':
     return invoke_action_handler(req, 'zato.service.ide.get-file-list')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _json_parse_and_render(data:'str') -> 'str':
+    """ Renders a JSON payload pretty-printed - a payload that is not JSON renders as an empty string.
+    """
+    try:
+        parsed = json.loads(data)
+    except Exception:
+        return ''
+
+    out = json.dumps(parsed, indent=2)
+    return out
+
+# ################################################################################################################################
+
+def _key_value_parse_and_render(data:'str') -> 'str':
+    """ Renders key=value lines as an aligned key: value list -
+    a payload without any such line renders as an empty string.
+    """
+    lines:'strlist' = []
+
+    for line in data.splitlines():
+        if '=' not in line:
+            continue
+        name, _, value = line.partition('=')
+        name = name.strip()
+        value = value.strip()
+        lines.append(f'{name}: {value}')
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
+def _auto_parse_and_render(data:'str') -> 'str':
+    """ Renders a payload the same way the direct invoke's auto mode treats it -
+    a first line with = means key=value, anything else is tried as JSON.
+    """
+    parts = data.split('\n', 1)
+    first_line = parts[0]
+
+    if '=' in first_line:
+        out = _key_value_parse_and_render(data)
+    else:
+        out = _json_parse_and_render(data)
+
+    return out
+
+# ################################################################################################################################
+
+# Per-format parsed-view renderers - each returns an empty string when the payload does not parse
+_payload_parsers = {
+    'auto': _auto_parse_and_render,
+    'json': _json_parse_and_render,
+    'key-value': _key_value_parse_and_render,
+    'hl7-v2': hl7_parse_and_render,
+    'fhir': fhir_parse_and_render,
+}
+
+@method_allowed('POST')
+def parse_payload(req:'HttpRequest') -> 'JsonResponse':
+    """ Renders the parsed view of a payload for the IDE's request and response panes -
+    parsing happens right here in the Django process, the same way the audit-log browser does it.
+    """
+    body = json.loads(req.body)
+
+    data = body['data']
+    data_format = body['data_format']
+
+    parser = _payload_parsers[data_format]
+    parsed_text = parser(data)
+
+    return JsonResponse({'parsed_text': parsed_text})
 
 # ################################################################################################################################
 # ################################################################################################################################

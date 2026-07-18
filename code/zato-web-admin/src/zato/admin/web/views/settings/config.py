@@ -255,29 +255,6 @@ config_db_redis_page_config['restart_step_id'] = ''
 config_db_redis_page_config['restart_step_label'] = ''
 config_db_redis_page_config['content_rows'] = []
 
-logging_page_config = {}
-logging_page_config['title'] = 'Logging'
-logging_page_config['api_prefix'] = '/zato/logging/'
-logging_page_config['step1_label'] = 'Saving'
-logging_page_config['step2_label'] = ''
-logging_page_config['check_button_label'] = 'Test'
-logging_page_config['action_button_label'] = 'Save'
-logging_page_config['version_section_title'] = 'Logging'
-logging_page_config['config_section_title'] = ''
-logging_page_config['logs_section_title'] = ''
-logging_page_config['save_button_label'] = 'Save'
-logging_page_config['download_logs_label'] = ''
-logging_page_config['show_sidebar'] = False
-logging_page_config['show_restart_steps'] = False
-logging_page_config['show_allow_delete'] = False
-logging_page_config['panel_width'] = '55%'
-logging_page_config['restart_step_id'] = ''
-logging_page_config['restart_step_label'] = ''
-logging_page_config['textarea_id'] = 'logging-config'
-logging_page_config['textarea_label'] = 'Loggers'
-logging_page_config['textarea_placeholder'] = 'logger=LEVEL, one per line, e.g.:\nzato=DEBUG\nroot=INFO'
-logging_page_config['content_rows'] = []
-
 sbom_page_config = {}
 sbom_page_config['title'] = 'CycloneDX SBOM'
 sbom_page_config['api_prefix'] = '/zato/sbom/'

@@ -1,0 +1,15 @@
+{
+    "resourceType": "OperationOutcome",
+    "issue": [
+        {
+            "severity": "error",
+            "code": "invalid",
+            "diagnostics": "Element Patient.birthDate has an invalid value"
+        },
+        {
+            "severity": "warning",
+            "code": "code-invalid",
+            "details": {"text": "Unknown code in value set"}
+        }
+    ]
+}

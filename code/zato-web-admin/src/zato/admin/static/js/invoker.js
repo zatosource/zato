@@ -212,9 +212,9 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
         $.fn.zato.ide.save_request_to_history(requestText, responseText);
     }
 
-    // A new response always lands in the raw view first
-    if ($.fn.zato.ide && $.fn.zato.ide.show_pane_view) {
-        $.fn.zato.ide.show_pane_view('response', 'raw');
+    // A new response opens in whatever view is remembered for the pane
+    if ($.fn.zato.ide && $.fn.zato.ide.apply_pane_view) {
+        $.fn.zato.ide.apply_pane_view('response');
     }
 
     if (window.zato && window.zato.updateMessageViewer) {
