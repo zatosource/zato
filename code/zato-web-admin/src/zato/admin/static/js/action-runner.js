@@ -232,6 +232,8 @@ $.fn.zato.action_runner = {
         var parse = opts.parse || _default_parse;
         var on_success = opts.on_success || null;
         var details_modal_title = opts.details_modal_title || 'Response';
+        var spinner_label = opts.spinner_label || 'Pinging ..';
+        var show_delay_ms = opts.show_delay_ms || 0;
 
         console.log('[action_runner] run: url=' + url + ' data_length=' + data.length + ' has_on_success=' + !!on_success);
         console.log('[action_runner] run: link_elem=' + (link_elem ? link_elem.tagName + '.' + link_elem.className : 'null'));
@@ -263,7 +265,7 @@ $.fn.zato.action_runner = {
         $.fn.zato.action_runner.close_details();
 
         var _spinner_html = '<div style="display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:13px;color:#fff;margin:-5px -9px;padding:5px 9px">' +
-            _spinner_svg + '<span style="margin-left:5px">Pinging ..</span></div>';
+            _spinner_svg + '<span style="margin-left:5px">' + _escape_html(spinner_label) + '</span></div>';
 
         var instance = tippy(link_elem, {
             content: _spinner_html,
@@ -280,20 +282,41 @@ $.fn.zato.action_runner = {
         });
 
         _active_instance = instance;
-        instance.show();
+
+        // A lead-in delay means the spinner shows up only for requests that actually take
+        // a while - anything that completes sooner never flashes it at all.
+        var show_timer = null;
+        if(show_delay_ms) {
+            show_timer = setTimeout(function() {
+                show_timer = null;
+                instance.show();
+            }, show_delay_ms);
+        }
+        else {
+            instance.show();
+        }
 
         var callback = function(jqXHR, textStatus) {
             console.log('[action_runner] callback: status=' + jqXHR.status + ' textStatus=' + textStatus);
             console.log('[action_runner] callback: responseText=' + (jqXHR.responseText || '').substring(0, 300));
+
+            // The response beat the lead-in - the spinner is no longer needed.
+            if(show_timer) {
+                clearTimeout(show_timer);
+                show_timer = null;
+            }
+
             var r = parse(jqXHR, textStatus);
             console.log('[action_runner] callback: parsed is_success=' + r.is_success + ' label=' + (r.label || '').substring(0, 100));
             if(r.is_success) {
                 if(on_success) {
                     on_success(instance, r);
                 } else {
+                    instance.show();
                     _render_success(instance, r.label);
                 }
             } else {
+                instance.show();
                 _details_seq += 1;
                 var details_id = 'action-details-' + _details_seq + '-' + Date.now();
                 _details_store[details_id] = {

@@ -170,13 +170,15 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
                 $('#data-table tr:last').remove();
             }
 
+            // The new row takes over the highlight from any previously updated one.
+            $('#data-table tr.updated').removeClass('updated');
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
         }
         else {
-            var tr = $.fn.zato.data_table.row_updated(json.id);
+            var tr = $(document.getElementById('tr_'+ json.id));
             tr.html(row);
-            tr.addClass('updated');
+            $.fn.zato.data_table.row_updated(json.id);
             $.fn.zato.data_table._bounce_row(tr, 'edit');
         }
 
@@ -261,8 +263,18 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', job.name);
-    row += String.format('<td style="text-align:center">{0}</td>', job.is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.definition_text);
+
+    // The Active flag and the interval are editable in place - each is a link.
+    row += String.format('<td style="text-align:center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active(\'{0}\', \'{1}\', this)">{2}</a></td>',
+        job.job_type, job.id, job.is_active ? 'Yes' : 'No');
+
+    if(job.job_type == 'interval_based') {
+        row += String.format('<td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_interval(\'{0}\', this)">{1}</a></td>',
+            job.id, data.definition_text);
+    }
+    else {
+        row += String.format('<td>{0}</td>', data.definition_text);
+    }
 
     // Carry over the existing last-run timestamp when a row is edited - a newly created job has not run yet.
     var last_run_utc = '';
@@ -306,6 +318,12 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", jitter_ms);
     row += String.format("<td class='ignore'>{0}</td>", timezone);
     row += String.format("<td class='ignore'>{0}</td>", max_execution_time_ms);
+
+    // The callback cells keep the rebuilt row aligned with get_columns.
+    row += String.format("<td class='ignore'>{0}</td>", job.on_success_service);
+    row += String.format("<td class='ignore'>{0}</td>", job.on_success_job);
+    row += String.format("<td class='ignore'>{0}</td>", job.on_error_service);
+    row += String.format("<td class='ignore'>{0}</td>", job.on_error_job);
 
     if(include_tr) {
         row += '</tr>';
@@ -415,6 +433,59 @@ $.fn.zato.scheduler.execute = function(id, link_elem) {
         on_success: function(instance) {
             instance.setContent('OK, job executed');
             setTimeout(function() { instance.hide(); }, 1200);
+        }
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.toggle_active = function(job_type, id, link_elem) {
+    $.fn.zato.inline_edit.toggle_active(id, link_elem, {
+        form_selector: '#edit-form-' + job_type,
+        name_prefix: 'edit-' + job_type + '-',
+        on_success: function(jqXHR) {
+            $.fn.zato.scheduler.data_table.on_submit_complete(jqXHR, 'success', 'edit', job_type);
+        }
+    });
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.edit_interval = function(id, link_elem) {
+
+    var instance = $.fn.zato.data_table.data[id];
+
+    // The name cell wears a badge while the form is open, so it is clear which job is edited.
+    var name_cell = $.fn.zato.data_table.get_cell(id, 'name');
+
+    $.fn.zato.inline_edit.form_tippy({
+        link_elem: link_elem,
+        highlight_elem: name_cell,
+        title: 'Interval',
+        rows: [
+            {name: 'weeks',   label: 'Weeks',   value: instance.weeks},
+            {name: 'days',    label: 'Days',    value: instance.days},
+            {name: 'hours',   label: 'Hours',   value: instance.hours},
+            {name: 'minutes', label: 'Minutes', value: instance.minutes},
+            {name: 'seconds', label: 'Seconds', value: instance.seconds}
+        ],
+        validate: function(values) {
+            if(!(values.weeks || values.days || values.hours || values.minutes || values.seconds)) {
+                return 'At least one of these fields is required: Weeks, Days, Hours, Minutes or Seconds';
+            }
+            return '';
+        },
+        on_submit: function(values) {
+            $.fn.zato.inline_edit.submit({
+                link_elem: link_elem,
+                id: id,
+                overrides: values,
+                form_selector: '#edit-form-interval_based',
+                name_prefix: 'edit-interval_based-',
+                on_success: function(jqXHR) {
+                    $.fn.zato.scheduler.data_table.on_submit_complete(jqXHR, 'success', 'edit', 'interval_based');
+                }
+            });
         }
     });
 }
