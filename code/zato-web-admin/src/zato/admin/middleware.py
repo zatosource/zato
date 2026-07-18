@@ -24,6 +24,7 @@ from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import ZatoClient
 from zato.common.const import ServiceConst
+from zato.common.config_db import get_default_env_file_path, refresh_env_from_file
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.util.api import asbool
@@ -164,6 +165,10 @@ class ZatoMiddleware:
 
     def process_request(self, req):
 
+        # A Config DB save may have landed in another gunicorn worker - re-apply the env file
+        # this process reads its audit and analytics database configuration from when it changed.
+        self._refresh_env_file()
+
         # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
         # of the request object. The attributes are SQLAlchemy sessions tied databases defined in app's settings.py
         req.zato = Bunch()
@@ -213,6 +218,19 @@ class ZatoMiddleware:
         except Exception:
             req.zato.odb.rollback()
             raise
+
+# ################################################################################################################################
+
+    def _refresh_env_file(self):
+
+        # The same well-known location the dashboard's startup loads on its own -
+        # config_dir is a lowercase setting, which Django's settings proxy does not expose,
+        # so it is read from the settings module directly.
+        from zato.admin import settings as admin_settings
+
+        repo_location = os.path.join(admin_settings.config_dir, 'config', 'repo')
+        env_path = get_default_env_file_path(repo_location)
+        _ = refresh_env_from_file(env_path)
 
 # ################################################################################################################################
 

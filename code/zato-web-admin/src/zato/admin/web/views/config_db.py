@@ -12,7 +12,6 @@ from logging import getLogger
 from traceback import format_exc
 
 # Django
-from django.conf import settings
 from django.http import HttpResponse
 from django.http.response import HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -20,7 +19,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.config import config_db_redis_page_config, config_db_sql_page_config
-from zato.common.config_db import apply_env_variables, Env_File_Name, persist_env_variables
+from zato.common.config_db import apply_env_variables, get_default_env_file_path, persist_env_variables
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -90,8 +89,13 @@ def _apply_sql_env_variables(env_variables:'any_') -> 'None':
     """
     _ = apply_env_variables(env_variables)
 
-    # The same well-known location the dashboard's startup loads on its own
-    env_path = os.path.join(settings.config_dir, 'config', 'repo', Env_File_Name)
+    # The same well-known location the dashboard's startup loads on its own -
+    # config_dir is a lowercase setting, which Django's settings proxy does not expose,
+    # so it is read from the settings module directly.
+    from zato.admin import settings as admin_settings
+
+    repo_location = os.path.join(admin_settings.config_dir, 'config', 'repo')
+    env_path = get_default_env_file_path(repo_location)
 
     try:
         persist_env_variables(env_path, env_variables)

@@ -107,8 +107,9 @@ class TestConfigDBRedis:
 # ################################################################################################################################
 
     def test_03_save_and_reload(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Saves the connection details and verifies that they all come back
-        after the page is reloaded.
+        """ Saves the connection details, verifies that they all come back after
+        the page is reloaded, and restores the original values afterwards -
+        the save reconfigures the server's actual Redis connection.
         """
 
         page = logged_in_page
@@ -122,6 +123,12 @@ class TestConfigDBRedis:
         # Navigate to the Redis screen ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#id_host', state='visible')
+
+        # .. remember the original values so they can be restored at the end ..
+        original_values = {} # type: anydict
+
+        for field in ('display_name', 'description', 'host', 'port', 'db'):
+            original_values[field] = page.input_value(f'#id_{field}')
 
         # .. fill in the connection details ..
         page.fill('#id_display_name', display_name)
@@ -142,7 +149,7 @@ class TestConfigDBRedis:
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
         _ = page.wait_for_selector('#id_host', state='visible')
 
-        # .. and verify the values came back from the server.
+        # .. verify the values came back from the server ..
         name_value = page.input_value('#id_display_name')
         assert name_value == display_name, f'Expected "{display_name}", got: "{name_value}"'
 
@@ -154,6 +161,13 @@ class TestConfigDBRedis:
 
         port_value = page.input_value('#id_port')
         assert port_value == str(redis_port), f'Expected "{redis_port}", got: "{port_value}"'
+
+        # .. and restore the original connection so later tests see the environment they expect.
+        for field, value in original_values.items():
+            page.fill(f'#id_{field}', value)
+
+        page.click('#update-button')
+        _ = page.wait_for_selector('#progress-configure .progress-icon.completed', state='visible', timeout=10000)
 
 # ################################################################################################################################
 # ################################################################################################################################

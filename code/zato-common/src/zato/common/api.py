@@ -895,10 +895,10 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 class EMAIL:
     class DEFAULT:
         TIMEOUT = 10
-        PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
         FILTER_CRITERIA = 'isRead ne true'
         IMAP_DEBUG_LEVEL = 0
+        SMTP_PORT = 587
 
     class IMAP:
 
@@ -971,7 +971,33 @@ class EMAIL:
             STARTTLS = 'starttls'
 
             def __iter__(self):
-                return iter((self.PLAIN, self.SSL, self.STARTTLS))
+                return iter((self.STARTTLS, self.SSL, self.PLAIN))
+
+        # Default ports matching each connection mode
+        ModePort = {
+            MODE.PLAIN: 25,
+            MODE.SSL: 465,
+            MODE.STARTTLS: 587,
+        }
+
+        # Preset connection details for commonly used SMTP relay providers
+        ProviderList = (
+            {'name': 'Generic', 'host': '', 'port': 587, 'mode': MODE.STARTTLS, 'username_hint': ''},
+            {'name': 'Amazon SES', 'host': 'email-smtp.us-east-1.amazonaws.com', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'SMTP credentials access key'},
+            {'name': 'Brevo', 'host': 'smtp-relay.brevo.com', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'SMTP login address'},
+            {'name': 'Google Workspace', 'host': 'smtp-relay.gmail.com', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'Sender address'},
+            {'name': 'Mailgun', 'host': 'smtp.mailgun.org', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'postmaster@your-domain'},
+            {'name': 'Microsoft 365', 'host': 'smtp.office365.com', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'Full mailbox address'},
+            {'name': 'Postmark', 'host': 'smtp.postmarkapp.com', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'Server API token'},
+            {'name': 'SendGrid', 'host': 'smtp.sendgrid.net', 'port': 587, 'mode': MODE.STARTTLS,
+                'username_hint': 'apikey'},
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################

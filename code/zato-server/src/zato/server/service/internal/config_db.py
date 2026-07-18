@@ -24,8 +24,8 @@ from sqlalchemy import text as sa_text
 # Zato
 from zato.common.analytics.api import analytics_db_file_name, metadata as analytics_metadata
 from zato.common.audit_log.common import audit_db_file_name, metadata as audit_metadata
-from zato.common.config_db import apply_env_variables, build_env_variables, Env_File_Name, persist_env_variables, \
-    sql_env_prefix_by_database, sql_field_suffixes
+from zato.common.config_db import apply_env_variables, build_env_variables, get_default_env_file_path, \
+    persist_env_variables, sql_env_prefix_by_database, sql_field_suffixes
 from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
 from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
 from zato.common.util.config import get_config_object, update_config_file
@@ -173,12 +173,12 @@ class SQLSave(AdminService):
         set_count = apply_env_variables(env_variables)
 
         # .. persist them so a restart re-applies them - into the file the server
-        # .. was started with or, without one, into a well-known file in the config
-        # .. repo that startup learns to load on its own ..
+        # .. was started with or, without one, into a well-known file under the config
+        # .. repo that startup loads on its own ..
         if env_path := self.server.env_file:
             pass
         else:
-            env_path = os.path.join(self.server.repo_location, Env_File_Name)
+            env_path = get_default_env_file_path(self.server.repo_location)
 
         message = f'Saved, {set_count} variables set'
 

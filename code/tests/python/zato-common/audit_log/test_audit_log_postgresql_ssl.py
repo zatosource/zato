@@ -52,7 +52,9 @@ def test_audit_log_postgresql_ssl_is_required(postgresql_ssl_server:'DatabaseSer
 
     with audit_log_env(details):
         with pytest.raises(DBAPIError):
-            _ = AuditLog('test-audit-log-server')
+            # The engine is resolved per access, not in __init__, so the connection
+            # attempt - and the failure - happens on the property read.
+            _ = AuditLog('test-audit-log-server').engine
 
 # ################################################################################################################################
 # ################################################################################################################################

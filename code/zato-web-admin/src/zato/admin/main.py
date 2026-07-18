@@ -115,10 +115,11 @@ def main():
     store_pidfile(base_dir_abs)
     repo_dir = os.path.join(base_dir, 'config', 'repo')
 
-    # Without an explicit env file, an env file previously saved in the config repo,
+    # Without an explicit env file, an env file previously saved under the config repo,
     # e.g. by the Config DB screens, is loaded instead so its values survive restarts.
     if not env_file:
-        default_env_file = os.path.join(repo_dir, 'env.ini')
+        from zato.common.config_db import get_default_env_file_path
+        default_env_file = get_default_env_file_path(repo_dir)
         if os.path.exists(default_env_file):
             _ = populate_environment_from_file(default_env_file)
 

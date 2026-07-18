@@ -23,7 +23,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The name of the env file the saved variables are persisted into when there is no explicit one
+# Where the saved variables are persisted when there is no explicit env file - a dedicated
+# subdirectory of the config repo, because the server watches the env file's parent directory
+# for changes and scans it for user config, so the file cannot sit next to server.conf itself.
+Env_Dir_Name  = 'env'
 Env_File_Name = 'env.ini'
 
 # The environment prefixes of the SQL databases the SQL screen knows about
@@ -99,14 +102,68 @@ def apply_env_variables(env_variables:'stranydict') -> 'int':
 
 # ################################################################################################################################
 
+def get_default_env_file_path(repo_location:'str') -> 'str':
+    """ Returns the path to the default env file under a component's config repo directory.
+    """
+    out = os.path.join(repo_location, Env_Dir_Name, Env_File_Name)
+    return out
+
+# ################################################################################################################################
+
+# The modification time of the env file as of when it was last applied to this process,
+# and the keys it carried then - used by refresh_env_from_file to re-apply the file only
+# when it actually changed and to delete variables that disappeared from it.
+_last_env_file_mtime:'float' = 0.0
+_last_env_file_keys:'list' = []
+
+def refresh_env_from_file(env_path:'str') -> 'bool':
+    """ Re-applies the variables from an env file when its modification time changed
+    since the last call in this process. In multi-worker deployments, e.g. the dashboard
+    under gunicorn, a save lands in one worker only - the other workers pick the change up
+    through this call. Variables that were removed from the file since the last application
+    are deleted from the environment too. Returns True if the file was (re-)applied.
+    """
+
+    # Zato
+    from zato.common.util.env import populate_environment_from_file
+
+    global _last_env_file_mtime, _last_env_file_keys
+
+    # A missing file means there is nothing saved yet
+    try:
+        mtime = os.path.getmtime(env_path)
+    except OSError:
+        return False
+
+    # The file has not changed since it was last applied here
+    if mtime == _last_env_file_mtime:
+        return False
+
+    # Keys applied previously but no longer in the file are to be removed
+    to_delete = list(_last_env_file_keys)
+
+    applied_keys = populate_environment_from_file(env_path, to_delete=to_delete, use_print=False)
+
+    _last_env_file_mtime = mtime
+    _last_env_file_keys = applied_keys
+
+    return True
+
+# ################################################################################################################################
+
 def persist_env_variables(env_path:'str', env_variables:'stranydict') -> 'None':
     """ Writes a dict of environment variables into the [env] section of an ini file,
-    creating the file if needed, so the values are re-applied on the next start
-    through populate_environment_from_file. Empty values remove their keys.
+    creating the file and its directory if needed, so the values are re-applied
+    on the next start through populate_environment_from_file.
+    Empty values remove their keys.
     """
 
     # Zato
     from zato.common.ext.configobj_ import ConfigObj
+
+    # The file's directory may not exist yet
+    env_dir = os.path.dirname(env_path)
+    os.makedirs(env_dir, exist_ok=True)
 
     # Read the file if it exists, start empty otherwise ..
     env_config = ConfigObj(env_path)

@@ -32,7 +32,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
 # Zato - test services deployed to the server under test
-from _services import echo_service_source, error_service_source, forward_service_source, inspect_service_source
+from _services import accept_service_source, echo_service_source, error_service_source, fhir_invoke_service_source, \
+    forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -277,11 +278,17 @@ def zato_server() -> 'strobj_dict_gen':
     # The file test services use to exchange received messages with the test process
     messages_file = os.path.join(_temp_directory, 'mllp_messages.txt')
 
+    # The audit database lives in the test's own temporary directory,
+    # so the test process can read what the server wrote.
+    audit_db_path = os.path.join(_temp_directory, 'audit.db')
+
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_environment['Zato_HL7_MLLP_Port'] = str(mllp_port)
     server_environment['Zato_Test_MLLP_Messages_File'] = messages_file
+    server_environment['Zato_Audit_Log_DB_Type'] = 'sqlite'
+    server_environment['Zato_Audit_Log_DB_Name'] = audit_db_path
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
     _server_process = subprocess.Popen(
@@ -349,6 +356,7 @@ def zato_server() -> 'strobj_dict_gen':
         'password': _password,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
+        'audit_db_path': audit_db_path,
     }
 
     # .. teardown ..
@@ -488,6 +496,8 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
         '_test_hl7_mllp_error.py':   error_service_source,
         '_test_hl7_mllp_forward.py': forward_service_source,
         '_test_hl7_mllp_inspect.py': inspect_service_source,
+        '_test_hl7_mllp_accept.py':  accept_service_source,
+        '_test_hl7_fhir_invoke.py':  fhir_invoke_service_source,
     }
 
     deployed_paths:'strlist' = []

@@ -8,13 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from time import monotonic
 from traceback import format_exc
 
 # Zato
 from zato.common.api import HL7
+from zato.common.audit_log.api import AuditLog
+from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
 from zato.common.hl7.mllp.client import HL7MLLPClient
+from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.tls import build_client_ssl_context
-from zato.common.util.api import hex_sequence_to_bytes
+from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
 from zato.common.util.tcp import parse_address
 from zato.server.connection.queue import Wrapper
 
@@ -24,6 +28,12 @@ from zato.server.connection.queue import Wrapper
 if 0:
     from zato.common.ext.bunch import Bunch
     from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many milliseconds one second holds - used when converting send durations
+_ms_per_second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +53,9 @@ outconn_config_defaults:'dict[str, object]' = {
     'read_buffer_size': HL7.Default.read_buffer_size,
     'should_log_messages': False,
 
+    # Audit - separate from server-log verbosity, off unless turned on per connection
+    'is_audit_log_active': False,
+
     # TLS is off by default - it turns on when a CA bundle is configured
     'tls_ca_path': '',
     'tls_cert_path': '',
@@ -58,7 +71,12 @@ outconn_int_config_keys = ('recv_timeout', 'max_msg_size', 'read_buffer_size')
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
-    def __init__(self, config:'object') -> 'None':
+    def __init__(self, config:'object', audit_log:'AuditLog | None') -> 'None':
+
+        # What the audit events are filed under and where they say the message went
+        self.audit_log = audit_log
+        self.name = config.name # type: ignore[union-attr]
+        self.address = config.address # type: ignore[union-attr]
 
         host, port_string = parse_address(config.address) # type: ignore[union-attr]
         port = int(port_string)
@@ -98,7 +116,42 @@ class _HL7MLLPConnection:
         if isinstance(data, str):
             data = data.encode('utf-8')
 
-        out = self.impl.send(data)
+        # The control id correlates the ACK with the message - it also lets the client
+        # validate that the ACK actually acknowledges what was sent.
+        message_text = data.decode('utf-8', errors='replace')
+        msh_line = message_text.split('\r', 1)[0]
+        control_id = extract_control_id(msh_line)
+
+        # The sent event and its acknowledgment share one correlation id
+        if self.audit_log:
+            audit_cid = new_cid_server()
+            _ = audit_message_sent(
+                self.audit_log, self.name, message_text,
+                cid=audit_cid, msg_id=control_id, attrs=get_wire_attrs(msh_line), endpoint=self.address)
+        else:
+            audit_cid = ''
+
+        send_start = monotonic()
+
+        # A send that raises means no acknowledgment ever arrived - a transient
+        # failure on the audit trail, because a resend can work.
+        try:
+            out = self.impl.send(data, control_id)
+        except Exception:
+            if self.audit_log:
+                duration_ms = int((monotonic() - send_start) * _ms_per_second)
+                _ = audit_ack_received(
+                    self.audit_log, self.name, ACKStatus.Timeout,
+                    cid=audit_cid, msg_id=control_id, duration_ms=duration_ms)
+            raise
+
+        # The acknowledgment arrived - its code decides the outcome on its own row
+        if self.audit_log:
+            duration_ms = int((monotonic() - send_start) * _ms_per_second)
+            _ = audit_ack_received(
+                self.audit_log, self.name, out.ack_code,
+                cid=audit_cid, msg_id=control_id, duration_ms=duration_ms, error_text=out.error_text)
+
         return out
 
 # ################################################################################################################################
@@ -111,11 +164,17 @@ class OutconnHL7MLLPWrapper(Wrapper):
         config.auth_url = config.address
         super().__init__(config, 'HL7 MLLP', server)
 
+        # A connection whose audit log is on writes a sent and an ACK event per message
+        if asbool(self.config.is_audit_log_active):
+            self.audit_log = AuditLog(server.name)
+        else:
+            self.audit_log = None
+
 # ################################################################################################################################
 
     def add_client(self) -> 'None':
         try:
-            connection = _HL7MLLPConnection(self.config)
+            connection = _HL7MLLPConnection(self.config, self.audit_log)
             _ = self.client.put_client(connection)
         except Exception:
             logger.warning('Error adding HL7 MLLP client (%s); e:`%s`', self.config.name, format_exc())
