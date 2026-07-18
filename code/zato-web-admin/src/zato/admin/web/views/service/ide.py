@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import re
 
 # Django
 from django.http import JsonResponse
@@ -31,6 +32,10 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# What an ER7 segment line looks like - a three-character segment id followed by the field separator,
+# any segment counts because a payload may be a fragment that does not start with MSH.
+_er7_segment_prefix = re.compile('^[A-Z][A-Z0-9]{2}\\|')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,8 +180,17 @@ def _key_value_parse_and_render(data:'str') -> 'str':
 
 def _auto_parse_and_render(data:'str') -> 'str':
     """ Renders a payload the same way the direct invoke's auto mode treats it -
-    a first line with = means key=value, anything else is tried as JSON.
+    a payload opening with an ER7 segment line means HL7 v2, a first line with =
+    means key=value, anything else is tried as JSON.
     """
+
+    # HL7 first because its lines never carry a leading = and JSON never opens with a segment id
+    stripped = data.lstrip()
+
+    if _er7_segment_prefix.match(stripped):
+        out = hl7_parse_and_render(data)
+        return out
+
     parts = data.split('\n', 1)
     first_line = parts[0]
 

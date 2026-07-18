@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # stdlib
+import re
 from typing import NamedTuple
 
 # Zato
@@ -46,6 +47,9 @@ field_details_dict = dict[int, _FieldDetails]
 
 # Field names and datatypes per segment, resolved from the model once and reused
 _field_details_cache:'dict[str, field_details_dict]' = {}
+
+# What an ER7 segment line looks like - a three-character segment id followed by the field separator
+_segment_line_pattern = re.compile('^[A-Z][A-Z0-9]{2}\\|')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -265,9 +269,107 @@ def build_display_tree(msg:'HL7Message') -> 'stranydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _build_lenient_field_data(field_text:'str') -> 'anylist':
+    """ Turns one field's wire text into the repetition, component and subcomponent
+    structure the field node builder expects.
+    """
+    out:'anylist' = []
+
+    for repetition_text in field_text.split('~'):
+
+        components:'anylist' = []
+
+        for component_text in repetition_text.split('^'):
+            subcomponents = component_text.split('&')
+            components.append(subcomponents)
+
+        out.append(components)
+
+    return out
+
+# ################################################################################################################################
+
+def build_segment_display_tree(data:'str') -> 'stranydict':
+    """ Builds a display tree out of ER7 segment lines without parsing them as a complete
+    message - fragments and in-progress edits get their fields named all the same.
+    """
+    segment_nodes:'anylist' = []
+
+    for line in data.splitlines():
+
+        line = line.strip()
+
+        # Only lines shaped like a segment take part
+        if not _segment_line_pattern.match(line):
+            continue
+
+        tokens = line.split('|')
+        segment_id = tokens[0]
+        field_details = _get_field_details(segment_id)
+
+        fields:'anylist' = []
+
+        for index, field_text in enumerate(tokens[1:]):
+
+            # An empty field has nothing to display
+            if not field_text:
+                continue
+
+            # MSH-1 is the field separator itself, so the first token after the id is MSH-2 ..
+            is_encoding_characters = False
+
+            if segment_id == 'MSH':
+                position = index + 2
+
+                # .. and MSH-2 is the encoding characters, one opaque value that must not
+                # be split by the very separators it declares.
+                if position == 2:
+                    is_encoding_characters = True
+            else:
+                position = index + 1
+
+            if is_encoding_characters:
+                field_data = [[[field_text]]]
+            else:
+                field_data = _build_lenient_field_data(field_text)
+
+            field_node = _build_field_node(segment_id, position, field_data, field_details)
+            fields.append(field_node)
+
+        segment_node = {
+            'segment_id': segment_id,
+            'fields': fields,
+        }
+
+        segment_nodes.append(segment_node)
+
+    out = {'segments': segment_nodes}
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # How far each level of the rendered tree is indented
 _render_field_indent = '  '
 _render_component_indent = '      '
+
+def _append_segment_lines(segment:'stranydict', lines:'strlist') -> 'None':
+    """ Appends one segment block's rendered lines - the segment id and each field
+    with its components underneath.
+    """
+    lines.append(segment['segment_id'])
+
+    for field in segment['fields']:
+
+        lines.append('{}{}  {}: {}'.format(_render_field_indent, field['reference'], field['label'], field['value']))
+
+        # Components appear under their field, one per line
+        for repetition in field['repetitions']:
+            for component in repetition['components']:
+                lines.append('{}{}  {}: {}'.format(
+                    _render_component_indent, component['reference'], component['label'], component['value']))
+
+# ################################################################################################################################
 
 def render_display_text(tree:'stranydict') -> 'str':
     """ Renders a display tree as indented plain text - the parsed tab of the details
@@ -283,17 +385,27 @@ def render_display_text(tree:'stranydict') -> 'str':
 
         # A blank line separates each segment block
         lines.append('')
-        lines.append(segment['segment_id'])
+        _append_segment_lines(segment, lines)
 
-        for field in segment['fields']:
+    out = '\n'.join(lines)
+    return out
 
-            lines.append('{}{}  {}: {}'.format(_render_field_indent, field['reference'], field['label'], field['value']))
+# ################################################################################################################################
 
-            # Components appear under their field, one per line
-            for repetition in field['repetitions']:
-                for component in repetition['components']:
-                    lines.append('{}{}  {}: {}'.format(
-                        _render_component_indent, component['reference'], component['label'], component['value']))
+def render_segments_text(tree:'stranydict') -> 'str':
+    """ Renders a segment-only display tree as indented plain text - there is no header
+    line because a fragment has no message identity to name it with.
+    """
+
+    lines:'strlist' = []
+
+    for segment in tree['segments']:
+
+        # A blank line separates each segment block after the first one
+        if lines:
+            lines.append('')
+
+        _append_segment_lines(segment, lines)
 
     out = '\n'.join(lines)
     return out
@@ -302,19 +414,34 @@ def render_display_text(tree:'stranydict') -> 'str':
 # ################################################################################################################################
 
 def parse_and_render(data:'str') -> 'str':
-    """ Parses ER7 text and renders its display tree as indented plain text -
-    a payload that does not parse renders as an empty string.
+    """ Parses ER7 text and renders its display tree as indented plain text.
+    Text that does not parse as a complete message renders segment by segment instead,
+    so fragments and in-progress edits display too - only text with no segment lines
+    at all renders as an empty string.
     """
 
     # Imported here because this convenience is the module's only parsing entry point -
     # everything else works on messages already parsed by the caller.
     from zato.hl7v2 import parse_hl7
 
+    # Only a complete message opens with its header segment - anything else is a fragment
+    # and goes segment by segment, the full parser would misattribute its fields otherwise.
+    stripped = data.lstrip()
+
+    if not stripped.startswith('MSH|'):
+        tree = build_segment_display_tree(data)
+        out = render_segments_text(tree)
+        return out
+
     try:
         message = parse_hl7(data, validate=False)
         tree = build_display_tree(message)
     except Exception:
-        return ''
+
+        # A header that still does not parse renders segment by segment too
+        tree = build_segment_display_tree(data)
+        out = render_segments_text(tree)
+        return out
 
     out = render_display_text(tree)
     return out

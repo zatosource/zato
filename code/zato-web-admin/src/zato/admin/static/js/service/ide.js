@@ -62,11 +62,6 @@ $(document).ready(function() {
         window.zato.initializeMessageViewer();
     }
 
-    // Temporary - the grid view sample is on screen from the start
-    // while its style is being worked out
-    if($.fn.zato.ide.config.grid_view_demo) {
-        $.fn.zato.ide.render_grid_view_demo();
-    }
 });
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -680,9 +675,9 @@ $.fn.zato.ide.config = {
     // What the parsed pane shows when the payload does not parse
     "parse_failed_text": "(payload does not parse)",
 
-    // Temporary - the response pane shows a hardcoded grid view sample
-    // while its style is being worked out
-    "grid_view_demo": true,
+    // What a grid view root is called when the payload has no name
+    // of its own, e.g. it is a plain array or a scalar
+    "grid_view_root_name": "data",
 
     // How close the document menu and its flyouts may come
     // to the edges of the viewport
@@ -690,6 +685,9 @@ $.fn.zato.ide.config = {
 
     // How long the "Copied to clipboard" confirmation stays on screen
     "grid_menu_copied_shown_ms": 600,
+
+    // What the menu shows when no service is open in the editor
+    "grid_menu_no_service_text": "(no service open)",
 
     // Sample payloads offered per format
     "samples": {
@@ -794,33 +792,41 @@ $.fn.zato.ide.get_pane_view_key = function(pane_name) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// A hardcoded sample tree for working out the grid view's style,
-// to be replaced with real parsed payloads later.
-$.fn.zato.ide.grid_view_demo_tree = [
-    {"name": "Patient", "value": "", "kind": "element", "children": [
-        {"name": "id", "value": "12345", "kind": "attribute", "children": []},
-        {"name": "active", "value": "true", "kind": "element", "children": []},
-        {"name": "name", "value": "", "kind": "element", "children": [
-            {"name": "use", "value": "official", "kind": "attribute", "children": []},
-            {"name": "family", "value": "Smith", "kind": "element", "children": []},
-            {"name": "given", "value": "John", "kind": "element", "children": []},
-            {"name": "given", "value": "Robert", "kind": "element", "children": []},
-        ]},
-        {"name": "birthDate", "value": "1980-01-15", "kind": "element", "children": []},
-        {"name": "address", "value": "", "kind": "element", "children": [
-            {"name": "use", "value": "home", "kind": "attribute", "children": []},
-            {"name": "line", "value": "10 Main Street", "kind": "element", "children": []},
-            {"name": "city", "value": "Paris", "kind": "element", "children": []},
-            {"name": "postalCode", "value": "00-001", "kind": "element", "children": []},
-        ]},
-        {"name": "maritalStatus", "value": "", "kind": "element", "children": [
-            {"name": "coding", "value": "", "kind": "element", "children": [
-                {"name": "system", "value": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "kind": "element", "children": []},
-                {"name": "code", "value": "M", "kind": "element", "children": []},
-            ]},
-        ]},
-    ]},
-];
+// Builds a grid view node out of any parsed JSON value - objects become
+// containers, arrays flatten into one sibling node per item under the same
+// name, everything else becomes a leaf with its wire form.
+$.fn.zato.ide.build_grid_tree_from_json = function(name, value) {
+
+    let node = {"name": name, "value": "", "kind": "element", "children": []};
+
+    if(Array.isArray(value)) {
+        for(const [index, item] of value.entries()) {
+            node.children.push($.fn.zato.ide.build_grid_tree_from_json(`[${index}]`, item));
+        }
+    }
+    else if(value !== null && typeof value == "object") {
+        for(const key of Object.keys(value)) {
+
+            let child = value[key];
+
+            // An array of values shows as repeated siblings, the way
+            // repeated elements read in a document
+            if(Array.isArray(child)) {
+                for(const item of child) {
+                    node.children.push($.fn.zato.ide.build_grid_tree_from_json(key, item));
+                }
+            }
+            else {
+                node.children.push($.fn.zato.ide.build_grid_tree_from_json(key, child));
+            }
+        }
+    }
+    else {
+        node.value = value === null ? "null" : String(value);
+    }
+
+    return node;
+}
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
@@ -849,7 +855,7 @@ $.fn.zato.ide.build_grid_view_node = function(node, parent_path) {
     name.on("contextmenu", function(e) {
         e.preventDefault();
         e.stopPropagation();
-        $.fn.zato.ide.show_grid_panel_menu(node, e.pageX, e.pageY, full_path);
+        $.fn.zato.ide.show_grid_panel_menu(node, node_elem, e.pageX, e.pageY, full_path);
     });
 
     // A container has a toggle in its header row and its children
@@ -939,8 +945,28 @@ $.fn.zato.ide.install_grid_menu_dismiss = function(menu_id) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 // The node the document menu is currently about - the handlers read it
-// from here so an open menu can switch nodes without being rebuilt.
-$.fn.zato.ide.grid_menu_context = {"node": null, "full_path": null};
+// from here so an open menu can switch nodes without being rebuilt,
+// and repopulate is how the open menu refills its list for a new node.
+$.fn.zato.ide.grid_menu_context = {"node": null, "node_elem": null, "full_path": null, "repopulate": null};
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// A node's subtree as a plain structure - leaves become their values,
+// containers become objects of their children.
+$.fn.zato.ide.grid_node_to_plain = function(node) {
+
+    if(!node.children.length) {
+        return node.value;
+    }
+
+    let out = {};
+
+    for(const child of node.children) {
+        out[child.name] = $.fn.zato.ide.grid_node_to_plain(child);
+    }
+
+    return out;
+}
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
@@ -957,7 +983,9 @@ $.fn.zato.ide.copy_node_to_clipboard = function(elem, action, node, full_path) {
         var text = node.value;
     }
     else {
-        var text = JSON.stringify(node, null, 2);
+        let subtree = {};
+        subtree[node.name] = $.fn.zato.ide.grid_node_to_plain(node);
+        var text = JSON.stringify(subtree, null, 2);
     }
 
     navigator.clipboard.writeText(text);
@@ -988,212 +1016,300 @@ $.fn.zato.ide.copy_node_to_clipboard = function(elem, action, node, full_path) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// The detail panel - an action list on the left and a live information pane
-// on the right that describes whatever action is under the cursor,
-// so choosing is informed rather than hopeful. The hotkeys follow
-// the left-hand home rows - Q W E R, A S D F, Z X C V - in list order,
-// null entries are separators between groups. Items with children open
-// a submenu next to the list and submenus nest to any depth.
-$.fn.zato.ide.grid_panel_menu_items = [
+// How many nodes there are in a subtree, the node itself included.
+$.fn.zato.ide.count_grid_subtree = function(node) {
 
-    // The value under the cursor
-    {"key": "Q", "label": "Edit value", "is_destructive": false, "children": null,
-        "description": "Change the value in place, the document underneath is re-serialized as you type.",
-        "details": [
-            ["Current value", "true"],
-            ["Type", "boolean"],
-            ["Applies to", "this node only"],
-        ]},
-    {"key": "W", "label": "Watch this field", "is_destructive": false, "children": null,
-        "description": "Alert when this field meets a condition as messages flow through the channel.",
-        "details": [
-            ["Suggested", "equals true"],
-            ["Evaluated", "in flight, per message"],
-            ["Cost at rest", "none"],
-        ]},
-    {"key": "E", "label": "Explain this value", "is_destructive": false, "children": null,
-        "description": "What this field means in the standard the document follows.",
-        "details": [
-            ["Field", "Patient.active"],
-            ["Meaning", "record is in active use"],
-            ["Type", "boolean"],
-        ]},
-    {"key": "R", "label": "Field history", "is_destructive": false, "children": null,
-        "description": "This field across every message the audit log holds for this channel.",
-        "details": [
-            ["Messages seen", "1,204"],
-            ["Distinct values", "2"],
-            ["Last change", "3 days ago"],
-        ]},
+    let count = 1;
 
-    null,
+    for(const child of node.children) {
+        count += $.fn.zato.ide.count_grid_subtree(child);
+    }
 
-    // Working with the document
-    {"key": "A", "label": "Copy", "is_destructive": false,
-        "description": "Copy this node to the clipboard, in one of a few shapes.",
-        "details": [
-            ["Node", "Patient.active"],
-        ],
-        "children": [
-            {"key": "1", "label": "Path", "children": null, "action": "copy_path",
-                "description": "The node's address in the document's own notation.",
+    return count;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// How many containers there are in a subtree, the node itself included
+// when it is one.
+$.fn.zato.ide.count_grid_containers = function(node) {
+
+    let count = node.children.length ? 1 : 0;
+
+    for(const child of node.children) {
+        count += $.fn.zato.ide.count_grid_containers(child);
+    }
+
+    return count;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// What kind of a value a leaf holds, going by its wire form alone.
+$.fn.zato.ide.get_grid_value_type = function(value) {
+
+    if(value === "") {
+        return "empty";
+    }
+
+    if(value === "true" || value === "false") {
+        return "boolean";
+    }
+
+    // An optional sign, digits and an optional fraction make a number
+    if(/^-?\d+(\.\d+)?$/.test(value)) {
+        return "number";
+    }
+
+    return "text";
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// The detail panel's items, computed for the node at hand - an action list
+// on the left and a live information pane on the right that describes
+// whatever action is under the cursor, so choosing is informed rather
+// than hopeful. The hotkeys follow the left-hand home rows - Q W E R,
+// A S D F, Z X C V - null entries are separators between groups.
+// Items with children open a submenu next to the list and submenus
+// nest to any depth.
+$.fn.zato.ide.build_grid_panel_menu_items = function(node, full_path) {
+
+    let is_container = node.children.length > 0;
+
+    let subtree_count = $.fn.zato.ide.count_grid_subtree(node);
+    let subtree_text = subtree_count == 1 ? "1 node" : `${subtree_count} nodes`;
+
+    let items = [];
+
+    // Leaves hold a value that can be edited ..
+    if(!is_container) {
+        items.push(
+            {"key": "Q", "label": "Edit value", "is_destructive": false, "children": null, "action": null,
+                "description": "Change the value in place, the document underneath is re-serialized as you type.",
                 "details": [
-                    ["Copies", "Patient.active"],
+                    ["Current value", node.value],
+                    ["Type", $.fn.zato.ide.get_grid_value_type(node.value)],
                 ]},
+        );
+        items.push(null);
+    }
+
+    // .. and every node can be copied in the shapes it actually has.
+    let copy_children = [
+        {"key": "1", "label": "Path", "children": null, "action": "copy_path",
+            "description": "The node's address in the document's own notation.",
+            "details": [
+                ["Copies", full_path],
+            ]},
+    ];
+
+    if(!is_container) {
+        copy_children.push(
             {"key": "2", "label": "Value", "children": null, "action": "copy_value",
                 "description": "The value exactly as it appears on the wire.",
                 "details": [
-                    ["Copies", "true"],
-                    ["Length", "4 characters"],
+                    ["Copies", node.value],
+                    ["Length", `${node.value.length} characters`],
                 ]},
-            {"key": "3", "label": "Subtree", "children": null, "action": "copy_subtree",
-                "description": "The node and everything below it, serialized whole.",
-                "details": [
-                    ["Copies", "1 node"],
-                ]},
-        ]},
-    {"key": "S", "label": "Structure", "is_destructive": false,
-        "description": "Reshape the document around this node.",
-        "details": [
-            ["Node", "Patient.active"],
-        ],
-        "children": [
-            {"key": "1", "label": "Add child", "children": null,
+        );
+    }
+
+    copy_children.push(
+        {"key": `${copy_children.length + 1}`, "label": "Subtree", "children": null, "action": "copy_subtree",
+            "description": "The node and everything below it, serialized whole.",
+            "details": [
+                ["Copies", subtree_text],
+            ]},
+    );
+
+    items.push(
+        {"key": "A", "label": "Copy", "is_destructive": false, "action": null,
+            "description": "Copy this node to the clipboard, in one of a few shapes.",
+            "details": [
+                ["Node", full_path],
+            ],
+            "children": copy_children},
+    );
+
+    // Only containers can be given children
+    let structure_children = [];
+
+    if(is_container) {
+        structure_children.push(
+            {"key": "1", "label": "Add child", "children": null, "action": null,
                 "description": "A new node nested under this one.",
                 "details": [
                     ["Position", "last child"],
                 ]},
-            {"key": "2", "label": "Add sibling", "children": null,
-                "description": "A new node next to this one, at the same depth.",
-                "details": [
-                    ["Position", "after this node"],
-                ]},
-            {"key": "3", "label": "Rename", "children": null,
-                "description": "Change the node's name, the value stays as it is.",
-                "details": [
-                    ["Current name", "active"],
-                ]},
-            {"key": "4", "label": "Duplicate", "children": null,
-                "description": "An exact copy of this node, placed right after it.",
-                "details": [
-                    ["Copies", "1 node"],
-                ]},
-        ]},
-    {"key": "D", "label": "Convert to", "is_destructive": false,
-        "description": "Re-express this document in another standard, structure first, names mapped where the standards overlap.",
-        "details": [
-            ["Source", "FHIR"],
-            ["Scope", "whole document"],
-        ],
-        "children": [
-            {"key": "1", "label": "JSON", "children": null,
-                "description": "A plain JSON document, names and nesting preserved as they are.",
-                "details": [
-                    ["Output", "application/json"],
-                    ["Lossless", "yes"],
-                ]},
-            {"key": "2", "label": "XML", "children": null,
-                "description": "An XML document, attributes become elements where needed.",
-                "details": [
-                    ["Output", "application/xml"],
-                    ["Lossless", "yes"],
-                ]},
-            {"key": "3", "label": "HL7 v2", "children": null,
-                "description": "An HL7 v2 message, fields mapped to their segment counterparts.",
-                "details": [
-                    ["Output", "ER7"],
-                    ["Mapped fields", "14 of 16"],
-                ]},
-            {"key": "4", "label": "EDIFACT", "children": null,
-                "description": "An EDIFACT interchange, segments built from the mapped fields.",
-                "details": [
-                    ["Output", "UN/EDIFACT"],
-                    ["Mapped fields", "11 of 16"],
-                ]},
-        ]},
-    {"key": "F", "label": "Send as request", "is_destructive": false,
-        "description": "Use this document as the request payload of a new invocation.",
-        "details": [
-            ["Payload", "this subtree"],
-            ["Opens", "the invoker"],
-        ],
-        "children": [
-            {"key": "1", "label": "To this service", "children": null,
-                "description": "Invoke the service currently open in the editor.",
-                "details": [
-                    ["Service", "demo.get-patient"],
-                ]},
-            {"key": "2", "label": "To another service", "children": null,
-                "description": "Pick any deployed service to receive this document.",
-                "details": [
-                    ["Services", "247 deployed"],
-                ]},
-            {"key": "3", "label": "To a channel",
-                "description": "Send through a channel, with its security and encoding applied.",
-                "details": [
-                    ["Channels", "4 available"],
-                ],
-                "children": [
-                    {"key": "1", "label": "hl7.mllp.intake", "children": null,
-                        "description": "The MLLP listener that admissions flow through.",
-                        "details": [
-                            ["Type", "HL7 MLLP"],
-                            ["Address", "0.0.0.0:30901"],
-                            ["Security", "TLS"],
-                        ]},
-                    {"key": "2", "label": "rest.emr.patient", "children": null,
-                        "description": "The REST channel the EMR system calls.",
-                        "details": [
-                            ["Type", "REST"],
-                            ["Path", "/emr/patient"],
-                            ["Security", "Bearer token"],
-                        ]},
-                    {"key": "3", "label": "soap.legacy.adt", "children": null,
-                        "description": "The SOAP endpoint kept for the legacy ADT feed.",
-                        "details": [
-                            ["Type", "SOAP"],
-                            ["Path", "/legacy/adt"],
-                            ["Security", "Basic Auth"],
-                        ]},
-                    {"key": "4", "label": "file.batch.drop", "children": null,
-                        "description": "The directory listener that picks up batch files.",
-                        "details": [
-                            ["Type", "File listener"],
-                            ["Directory", "/data/incoming"],
-                            ["Security", "none"],
-                        ]},
-                ]},
-        ]},
+        );
+    }
 
-    null,
+    structure_children.push(
+        {"key": `${structure_children.length + 1}`, "label": "Add sibling", "children": null, "action": null,
+            "description": "A new node next to this one, at the same depth.",
+            "details": [
+                ["Position", "after this node"],
+            ]},
+    );
 
-    // The view itself
-    {"key": "X", "label": "Expand all", "is_destructive": false, "children": null,
-        "description": "Open every container below this node.",
-        "details": [
-            ["Containers", "5"],
-        ]},
-    {"key": "C", "label": "Collapse all", "is_destructive": false, "children": null,
-        "description": "Fold every container below this node.",
-        "details": [
-            ["Containers", "5"],
-        ]},
+    structure_children.push(
+        {"key": `${structure_children.length + 1}`, "label": "Rename", "children": null, "action": null,
+            "description": "Change the node's name, everything below stays as it is.",
+            "details": [
+                ["Current name", node.name],
+            ]},
+    );
 
-    null,
+    structure_children.push(
+        {"key": `${structure_children.length + 1}`, "label": "Duplicate", "children": null, "action": null,
+            "description": "An exact copy of this node, placed right after it.",
+            "details": [
+                ["Copies", subtree_text],
+            ]},
+    );
 
-    {"key": "Z", "label": "Delete", "is_destructive": true, "children": null,
-        "description": "Remove this node from the document.",
-        "details": [
-            ["Removes", "1 node"],
-            ["Undo", "available"],
-        ]},
-];
+    items.push(
+        {"key": "S", "label": "Structure", "is_destructive": false, "action": null,
+            "description": "Reshape the document around this node.",
+            "details": [
+                ["Node", full_path],
+            ],
+            "children": structure_children},
+    );
 
-$.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
+    items.push(
+        {"key": "D", "label": "Convert to", "is_destructive": false, "action": null,
+            "description": "Re-express this document in another standard, structure first, names mapped where the standards overlap.",
+            "details": [
+                ["Scope", "whole document"],
+            ],
+            "children": [
+                {"key": "1", "label": "JSON", "children": null, "action": null,
+                    "description": "A plain JSON document, names and nesting preserved as they are.",
+                    "details": [
+                        ["Output", "application/json"],
+                    ]},
+                {"key": "2", "label": "XML", "children": null, "action": null,
+                    "description": "An XML document, attributes become elements where needed.",
+                    "details": [
+                        ["Output", "application/xml"],
+                    ]},
+                {"key": "3", "label": "HL7 v2", "children": null, "action": null,
+                    "description": "An HL7 v2 message, fields mapped to their segment counterparts.",
+                    "details": [
+                        ["Output", "ER7"],
+                    ]},
+                {"key": "4", "label": "EDIFACT", "children": null, "action": null,
+                    "description": "An EDIFACT interchange, segments built from the mapped fields.",
+                    "details": [
+                        ["Output", "UN/EDIFACT"],
+                    ]},
+            ]},
+    );
+
+    // The service currently open in the editor, when there is one
+    let service_name = $.fn.zato.ide.get_current_service_name();
+
+    if(!service_name) {
+        service_name = $.fn.zato.ide.config.grid_menu_no_service_text;
+    }
+
+    items.push(
+        {"key": "F", "label": "Send as request", "is_destructive": false, "action": null,
+            "description": "Use this document as the request payload of a new invocation.",
+            "details": [
+                ["Payload", "this subtree"],
+                ["Opens", "the invoker"],
+            ],
+            "children": [
+                {"key": "1", "label": "To this service", "children": null, "action": null,
+                    "description": "Invoke the service currently open in the editor.",
+                    "details": [
+                        ["Service", service_name],
+                    ]},
+                {"key": "2", "label": "To another service", "children": null, "action": null,
+                    "description": "Pick any deployed service to receive this document.",
+                    "details": [
+                        ["Chooses from", "all deployed services"],
+                    ]},
+                {"key": "3", "label": "To a channel", "children": null, "action": null,
+                    "description": "Send through a channel, with its security and encoding applied.",
+                    "details": [
+                        ["Chooses from", "all channels"],
+                    ]},
+            ]},
+    );
+
+    // Only containers have anything to fold or unfold
+    if(is_container) {
+
+        let container_count = $.fn.zato.ide.count_grid_containers(node);
+        let container_text = container_count == 1 ? "1 container" : `${container_count} containers`;
+
+        items.push(null);
+
+        items.push(
+            {"key": "X", "label": "Expand all", "is_destructive": false, "children": null, "action": "expand_all",
+                "description": "Open this node and every container below it.",
+                "details": [
+                    ["Containers", container_text],
+                ]},
+        );
+
+        items.push(
+            {"key": "C", "label": "Collapse all", "is_destructive": false, "children": null, "action": "collapse_all",
+                "description": "Fold this node and every container below it.",
+                "details": [
+                    ["Containers", container_text],
+                ]},
+        );
+    }
+
+    items.push(null);
+
+    items.push(
+        {"key": "Z", "label": "Delete", "is_destructive": true, "children": null, "action": null,
+            "description": "Remove this node from the document.",
+            "details": [
+                ["Removes", subtree_text],
+            ]},
+    );
+
+    return items;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Runs a menu item's action against the node the menu is about -
+// the copy and the fold actions keep the menu open, anything
+// without an action yet closes it.
+$.fn.zato.ide.run_grid_menu_item = function(elem, item) {
+
+    let context = $.fn.zato.ide.grid_menu_context;
+
+    if(item.action == "copy_path" || item.action == "copy_value" || item.action == "copy_subtree") {
+        $.fn.zato.ide.copy_node_to_clipboard(elem, item.action, context.node, context.full_path);
+    }
+    else if(item.action == "expand_all") {
+        context.node_elem.removeClass("grid-collapsed");
+        context.node_elem.find(".grid-node").removeClass("grid-collapsed");
+    }
+    else if(item.action == "collapse_all") {
+        context.node_elem.addClass("grid-collapsed");
+        context.node_elem.find(".grid-node").addClass("grid-collapsed");
+    }
+    else {
+        $.fn.zato.ide.close_grid_menus();
+    }
+}
+
+$.fn.zato.ide.show_grid_panel_menu = function(node, node_elem, x, y, full_path) {
 
     // Whatever happens next, the menu is about this node now
     let context = $.fn.zato.ide.grid_menu_context;
     context.node = node;
+    context.node_elem = node_elem;
     context.full_path = full_path;
 
     // A menu already on screen only takes on the new node's details,
@@ -1201,7 +1317,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
     let existing = $("#grid-panel-menu");
 
     if(existing.length) {
-        existing.find(".grid-panel-header-path").text(full_path);
+        context.repopulate();
         return;
     }
 
@@ -1225,7 +1341,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
 
     for(const spec of badge_specs) {
 
-        let badge = $("<span>").addClass("grid-panel-header-badge").text(spec[0]);
+        let badge = $("<span>").addClass("grid-panel-header-badge").attr("data-action", spec[1]).text(spec[0]);
 
         badge.on("click", function() {
             let current = $.fn.zato.ide.grid_menu_context;
@@ -1333,17 +1449,9 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
                 }
             });
 
-            // Copy entries copy without closing the menu,
-            // the other leaf entries close it
             if(!child.children) {
                 child_entry.on("click", function() {
-                    if(child.action) {
-                        let current = $.fn.zato.ide.grid_menu_context;
-                        $.fn.zato.ide.copy_node_to_clipboard(child_entry[0], child.action, current.node, current.full_path);
-                    }
-                    else {
-                        $.fn.zato.ide.close_grid_menus();
-                    }
+                    $.fn.zato.ide.run_grid_menu_item(child_entry[0], child);
                 });
             }
 
@@ -1387,39 +1495,70 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
     let main_items = [];
     let main_entries = [];
 
-    for(const item of $.fn.zato.ide.grid_panel_menu_items) {
+    // Fills the header and the list for the node the menu is currently
+    // about - this also runs each time an open menu switches nodes,
+    // which is why it never touches the menu's shell
+    let populate = function() {
 
-        // Separators split the groups
-        if(item === null) {
-            list.append($("<div>").addClass("grid-panel-separator"));
-            continue;
+        header.find(".grid-panel-header-path").text(context.full_path);
+
+        // Containers have no value of their own, so their menu
+        // has no value badge either
+        let value_badge = header.find(".grid-panel-header-badge[data-action='copy_value']");
+
+        if(context.node.children.length) {
+            value_badge.addClass("hidden");
+        }
+        else {
+            value_badge.removeClass("hidden");
         }
 
-        let entry = build_entry(item);
+        close_submenus_from(0);
+        list.empty();
+        main_items = [];
+        main_entries = [];
 
-        entry.on("mouseenter", function() {
-            list.find(".grid-panel-item").removeClass("current");
-            entry.addClass("current");
-            show_info(item);
+        for(const item of $.fn.zato.ide.build_grid_panel_menu_items(context.node, context.full_path)) {
 
-            if(item.children) {
-                open_submenu(entry, item, 0);
+            // Separators split the groups
+            if(item === null) {
+                list.append($("<div>").addClass("grid-panel-separator"));
+                continue;
             }
-            else {
-                close_submenus_from(0);
-            }
-        });
 
-        if(!item.children) {
-            entry.on("click", function() {
-                $.fn.zato.ide.close_grid_menus();
+            let entry = build_entry(item);
+
+            entry.on("mouseenter", function() {
+                list.find(".grid-panel-item").removeClass("current");
+                entry.addClass("current");
+                show_info(item);
+
+                if(item.children) {
+                    open_submenu(entry, item, 0);
+                }
+                else {
+                    close_submenus_from(0);
+                }
             });
+
+            if(!item.children) {
+                entry.on("click", function() {
+                    $.fn.zato.ide.run_grid_menu_item(entry[0], item);
+                });
+            }
+
+            main_items.push(item);
+            main_entries.push(entry);
+            list.append(entry);
         }
 
-        main_items.push(item);
-        main_entries.push(entry);
-        list.append(entry);
+        // The first action's story is on display from the start
+        main_entries[0].addClass("current");
+        show_info(main_items[0]);
     }
+
+    populate();
+    context.repopulate = populate;
 
     body.append(list);
     body.append(info);
@@ -1462,10 +1601,6 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
             localStorage.setItem(window.zato_local_storage_key.zato_grid_menu_position, stored);
         });
     });
-
-    // The first action's story is on display from the start
-    main_entries[0].addClass("current");
-    show_info(main_items[0]);
 
     // On the page first, invisible, so its size is measurable
     $("body").append(menu);
@@ -1542,7 +1677,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
                     open_submenu(child_entry, child, submenu_stack.length);
                 }
                 else {
-                    $.fn.zato.ide.close_grid_menus();
+                    $.fn.zato.ide.run_grid_menu_item(child_entry[0], child);
                 }
 
                 return;
@@ -1566,7 +1701,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
                 open_submenu(entry, item, 0);
             }
             else {
-                $.fn.zato.ide.close_grid_menus();
+                $.fn.zato.ide.run_grid_menu_item(entry[0], item);
             }
 
             return;
@@ -1576,35 +1711,31 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// Renders the sample tree into the response pane and brings the parsed view
-// into view without persisting this as a user choice.
-$.fn.zato.ide.render_grid_view_demo = function() {
+// Renders a parsed JSON payload into a pane as the grid view - a top-level
+// object shows one node per key, anything else is a single root node.
+$.fn.zato.ide.render_grid_view = function(pane, parsed) {
 
-    let pane = $("#data-response-parsed");
     pane.empty();
 
     let root = $("<div>").addClass("grid-view");
-    for(const node of $.fn.zato.ide.grid_view_demo_tree) {
-        root.append($.fn.zato.ide.build_grid_view_node(node, ""));
-    }
-    pane.append(root);
 
-    $("#data-response").addClass("hidden");
-    pane.removeClass("hidden");
-    $("#response-view-raw").removeClass("current");
-    $("#response-view-parsed").addClass("current");
+    if(parsed !== null && typeof parsed == "object" && !Array.isArray(parsed)) {
+        for(const key of Object.keys(parsed)) {
+            let tree = $.fn.zato.ide.build_grid_tree_from_json(key, parsed[key]);
+            root.append($.fn.zato.ide.build_grid_view_node(tree, ""));
+        }
+    }
+    else {
+        let tree = $.fn.zato.ide.build_grid_tree_from_json($.fn.zato.ide.config.grid_view_root_name, parsed);
+        root.append($.fn.zato.ide.build_grid_view_node(tree, ""));
+    }
+
+    pane.append(root);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.apply_pane_view = function(pane_name) {
-
-    // Temporary - the response pane always shows the grid view sample
-    // while its style is being worked out
-    if(pane_name == "response" && $.fn.zato.ide.config.grid_view_demo) {
-        $.fn.zato.ide.render_grid_view_demo();
-        return;
-    }
 
     // The remembered choice for this pane and service ..
     let key = $.fn.zato.ide.get_pane_view_key(pane_name);
@@ -1632,13 +1763,6 @@ $.fn.zato.ide.apply_pane_view = function(pane_name) {
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
-
-    // Temporary - the parsed view of the response pane is the grid view sample
-    // while its style is being worked out
-    if(pane_name == "response" && view_name == "parsed" && $.fn.zato.ide.config.grid_view_demo) {
-        $.fn.zato.ide.render_grid_view_demo();
-        return;
-    }
 
     let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
     let parsed_elem = $(`#data-${pane_name}-parsed`);
@@ -1677,9 +1801,39 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
         }
     }
 
-    // Parsed view - render the current pane content through the parse endpoint
-    let format = $.fn.zato.ide.get_payload_format();
+    // Brings the parsed pane forward once it has its content
+    let show_parsed = function() {
+        text_elem.addClass("hidden");
+        parsed_elem.removeClass("hidden");
+        raw_link.removeClass("current");
+        parsed_link.addClass("current");
+
+        if(pane_name == "request") {
+            resize_indicator.addClass("hidden");
+        }
+    }
+
     let data = text_elem.val();
+
+    // A payload that parses as JSON becomes the grid view,
+    // built right here without a round trip ..
+    try {
+        var parsed_json = JSON.parse(data);
+        var is_json = true;
+    }
+    catch(ignored) {
+        var is_json = false;
+    }
+
+    if(is_json) {
+        $.fn.zato.ide.render_grid_view(parsed_elem, parsed_json);
+        show_parsed();
+        return;
+    }
+
+    // .. every other format goes through the parse endpoint
+    // and comes back as text.
+    let format = $.fn.zato.ide.get_payload_format();
 
     $.ajax({
         type: "POST",
@@ -1695,14 +1849,7 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
             }
 
             parsed_elem.text(parsed_text);
-            text_elem.addClass("hidden");
-            parsed_elem.removeClass("hidden");
-            raw_link.removeClass("current");
-            parsed_link.addClass("current");
-
-            if(pane_name == "request") {
-                resize_indicator.addClass("hidden");
-            }
+            show_parsed();
         }
     });
 }

@@ -1327,8 +1327,9 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 
 /* The value keeps a fixed minimum width so that texts of different lengths,
    e.g. "9 seconds ago" and "14 seconds ago", never resize the whole column.
-   Changed values fade out gently, swap their text and fade back in.
-   The fade duration variable is set from the time_ago config in JavaScript. */
+   Changed values dim slightly, swap their text and come back - a subtle dip
+   rather than a full fade-out, so refreshes never pull the eye. Both the
+   duration and the dip opacity are set from the time_ago config in JavaScript. */
 .zato-time-ago-value {
     display: inline-block;
     min-width: 8em;
@@ -1337,7 +1338,7 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 }
 
 .zato-time-ago-value.zato-time-ago-fading {
-    opacity: 0;
+    opacity: var(--zato-time-ago-value-fade-opacity);
 }
 
 /* The header link is a block element by default, which would push the spinner
@@ -1393,6 +1394,9 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     opacity: 0;
     vertical-align: middle;
     transition: opacity var(--zato-time-ago-countdown-fade-ms) ease;
+
+    /* The countdown doubles as a pause and resume toggle. */
+    cursor: pointer;
 }
 
 .zato-time-ago-countdown.is-visible {
