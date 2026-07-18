@@ -1273,10 +1273,12 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     --zato-time-ago-spinner-fade-in-ms: 350ms;
     --zato-time-ago-spinner-fade-out-ms: 350ms;
     display: inline-block;
+    position: relative;
+    top: -2px;
     opacity: 0;
     width: 3px;
     height: 3px;
-    margin-left: 9px;
+    margin-left: 12px;
     margin-right: 9px;
     border-radius: 50%;
     vertical-align: middle;
