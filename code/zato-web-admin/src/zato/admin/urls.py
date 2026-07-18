@@ -132,6 +132,8 @@ urlpatterns += [
         login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
+    url(r'^zato/service/ide/parse-payload/$',
+        login_required(service_ide.parse_payload), name='service-ide-parse-payload'),
     url(r'^zato/service/ide/create-file/$',
         login_required(service_ide.create_file), name='service-ide-create-file'),
     url(r'^zato/service/ide/delete-file/$',
@@ -1555,6 +1557,12 @@ urlpatterns += [
         login_required(logging_.test), name='settings-logging-test'),
     url(r'^zato/logging/save$',
         login_required(logging_.save), name='settings-logging-save'),
+    url(r'^zato/logging/destination/save$',
+        login_required(logging_.destination_save), name='settings-logging-destination-save'),
+    url(r'^zato/logging/destination/delete$',
+        login_required(logging_.destination_delete), name='settings-logging-destination-delete'),
+    url(r'^zato/logging/destination/ping$',
+        login_required(logging_.destination_ping), name='settings-logging-destination-ping'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

@@ -265,8 +265,6 @@ td.data-input-field-name {
 }
 
 #data-response {
-    height: 39.1vh;
-    margin-top: 3px;
     font-size: 1rem;
 }
 
@@ -294,6 +292,9 @@ td.data-input-field-name {
 }
 
 .invoker-area textarea {
+    /* Kills the inline-block baseline gap without overriding the display
+       that the hidden class needs to be able to set to none */
+    vertical-align: top;
     width: 100%;
     border: none;
     border-radius: 4px;
@@ -310,7 +311,7 @@ td.data-input-field-name {
 
 .invoker-view-toggle {
     font-size: 0.86em;
-    padding: 2px 0.2rem;
+    padding: 2px 0.2rem 6px 0.2rem;
 }
 
 .invoker-view-link {
@@ -339,9 +340,19 @@ td.data-input-field-name {
     height: 19.1vh;
 }
 
-#data-response-parsed {
+/* The response panel owns the height - raw and parsed views both fill it,
+   so switching between them never changes where the bottom edge sits.
+   The height here is only the pre-JS default, init_editor resizes the panel
+   to end just above the action area's bottom edge. */
+#response-panel {
+    box-sizing: border-box;
     height: 39.1vh;
     margin-top: 3px;
+}
+
+#data-response,
+#data-response-parsed {
+    height: 100%;
 }
 
 /* *********************************** */
@@ -351,6 +362,12 @@ td.data-input-field-name {
 #action-area .invoker-tr,
 #action-area .invoker-tr * {
     overflow: visible !important;
+}
+
+/* The parsed panes scroll within their fixed height - without this,
+   the overflow override above would let their content spill below the pane */
+#action-area .invoker-parsed-pane {
+    overflow: auto !important;
 }
 
 #result-header {

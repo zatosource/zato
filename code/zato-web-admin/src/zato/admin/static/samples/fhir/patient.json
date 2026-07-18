@@ -1,0 +1,11 @@
+{
+    "resourceType": "Patient",
+    "id": "patient-001",
+    "active": true,
+    "name": [
+        {"family": "Smith", "given": ["John", "A"], "use": "official"},
+        {"family": "Smith", "given": ["Johnny"], "use": "nickname"}
+    ],
+    "birthDate": "1985-03-15",
+    "managingOrganization": {"reference": "Organization/general-hospital"}
+}

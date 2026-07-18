@@ -211,6 +211,14 @@ class ServerInvoker(AdminService):
         elif func_name in ('test_logging', 'set_logging'):
             text = self.request.raw_request['text']
             response = func(text)
+        elif func_name == 'set_log_destination':
+            vendor = self.request.raw_request['vendor']
+            destination = self.request.raw_request['destination']
+            response = func(vendor, destination)
+        elif func_name in ('delete_log_destination', 'ping_log_destination'):
+            vendor = self.request.raw_request['vendor']
+            destination_id = self.request.raw_request['destination_id']
+            response = func(vendor, destination_id)
         elif func_name == 'get_bearer_token':
             from json import loads as json_loads
             security_id = self.request.raw_request.get('security_id', '')
