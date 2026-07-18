@@ -1242,6 +1242,11 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 
 .zato-inline-form {
     margin: 2px;
+
+    /* The same typography the edit dialogs use, otherwise the tippy's own
+       larger default font makes the field names look oversized. */
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 12px;
 }
 
 .zato-inline-form-title {
@@ -1290,8 +1295,12 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 
 .zato-inline-form-buttons button {
     margin-left: 6px;
-    padding: 1px 8px;
-    font-size: 11px;
+
+    /* Buttons do not inherit fonts on their own - these values make them
+       identical to the OK/Cancel buttons in the edit dialogs. */
+    padding: 3px 10px;
+    font-family: inherit;
+    font-size: 12px;
     cursor: pointer;
 }
 

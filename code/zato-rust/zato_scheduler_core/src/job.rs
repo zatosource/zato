@@ -307,6 +307,9 @@ impl RunningJob {
 
     /// Applies changes from an updated `SchedulerJob` definition, recomputing the schedule if needed.
     pub fn update_from_job(&mut self, job: &SchedulerJob) {
+        // Remembered so a flip from inactive to active can be detected below.
+        let was_active = self.is_active;
+
         self.name.clone_from(&job.name);
         self.is_active = job.is_active;
         self.service = ServiceName(job.service.clone());
@@ -338,7 +341,11 @@ impl RunningJob {
             self.jitter_rng = SmallRng::seed_from_u64(self.id.0.unsigned_abs());
         }
 
-        if schedule_changed && self.is_active {
+        // A job that has just been re-activated has no next fire time - deactivation cleared it -
+        // so the schedule must be recomputed even when none of the interval fields changed.
+        let just_activated = self.is_active && !was_active;
+
+        if self.is_active && (schedule_changed || just_activated) {
             self.compute_next_fire(Utc::now());
         } else if !self.is_active {
             self.next_fire_utc = None;

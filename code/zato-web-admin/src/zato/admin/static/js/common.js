@@ -595,18 +595,26 @@ $.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// A one-shot override for where _bounce_row shows its confirmation - inline editing sets it
-// so the tippy appears on the link that was actually clicked instead of the row's Edit link.
+// One-shot overrides for _bounce_row - inline editing sets them so the confirmation
+// appears next to the link that was actually clicked instead of the row's Edit link.
 $.fn.zato.data_table.bounce_target_finder = null;
+$.fn.zato.data_table.bounce_placement = null;
 
 $.fn.zato.data_table._bounce_row = function(tr, action) {
     if(action === 'edit') {
         var target = null;
+        var placement = 'top';
 
         var finder = $.fn.zato.data_table.bounce_target_finder;
         if(finder) {
             $.fn.zato.data_table.bounce_target_finder = null;
             target = finder(tr);
+        }
+
+        var custom_placement = $.fn.zato.data_table.bounce_placement;
+        if(custom_placement) {
+            $.fn.zato.data_table.bounce_placement = null;
+            placement = custom_placement;
         }
 
         if(!target) {
@@ -615,7 +623,7 @@ $.fn.zato.data_table._bounce_row = function(tr, action) {
         }
         var instance = tippy(target, {
             content: 'OK, saved',
-            placement: 'top',
+            placement: placement,
             trigger: 'manual',
             hideOnClick: false,
             theme: 'dark',
@@ -1581,6 +1589,12 @@ $.fn.zato.cleanup_form_css_attention = function(parent_id) {
 
 $.fn.zato.get_chosen_elems_by_elem = function(elem) {
     let elem_id = $(elem).attr("id");
+
+    // Elements without an ID, e.g. inputs in inline edit forms, have no chosen counterpart.
+    if(elem_id === undefined) {
+        return $();
+    }
+
     let chosen_elem_id = elem_id.replaceAll("-", "_") + "_chosen";
     let chosen_elems = $("#" + chosen_elem_id + " .chosen-single");
     return chosen_elems;
@@ -2126,7 +2140,8 @@ $.fn.zato.time_ago.humanize = function(age_seconds) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 // Like humanize but exact - every non-zero unit is included,
-// e.g. "1 hour 12 minutes 5 seconds ago", with the same singular/plural handling.
+// e.g. "1 hour 12 minutes 5 seconds", with the same singular/plural handling.
+// There is no trailing "ago" - the tooltip's row label already says that.
 $.fn.zato.time_ago.humanize_detailed = function(age_seconds) {
     var config = $.fn.zato.time_ago.config;
 
@@ -2149,7 +2164,7 @@ $.fn.zato.time_ago.humanize_detailed = function(age_seconds) {
         }
     }
 
-    var out = parts.join(' ') + ' ' + config.ago_label;
+    var out = parts.join(' ');
     return out;
 }
 
@@ -2199,7 +2214,7 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
     var local_text = $.fn.zato.time_ago.format_timestamp(when, false);
     var utc_text = $.fn.zato.time_ago.format_timestamp(when, true);
 
-    // The exact age, e.g. "1 hour 12 minutes 5 seconds ago" - the link keeps the coarse form.
+    // The exact age, e.g. "1 hour 12 minutes 5 seconds" - the link keeps the coarse form.
     var age_seconds = Math.floor((Date.now() - when.getTime()) / 1000);
     if(age_seconds < 0) {
         age_seconds = 0;
@@ -2207,9 +2222,9 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
     var ago_text = $.fn.zato.time_ago.humanize_detailed(age_seconds);
 
     var out = '<table class="zato-time-ago-tooltip">';
+    out += '<tr><th>' + config.ago_row_label + '</th><td>' + ago_text + '</td></tr>';
     out += '<tr><th>' + browser_timezone + '</th><td>' + local_text + '</td></tr>';
     out += '<tr><th>' + config.utc_label + '</th><td>' + utc_text + '</td></tr>';
-    out += '<tr><th>' + config.ago_row_label + '</th><td>' + ago_text + '</td></tr>';
     out += '</table>';
 
     return out;
@@ -2327,6 +2342,15 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
     else {
         apply_text();
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Marks one row's time-ago cell as having run right now - instant feedback after
+// a manual trigger. The next refresh pass replaces it with the server-side timestamp.
+$.fn.zato.time_ago.mark_just_run = function(id) {
+    var cell = $('#tr_' + id + ' td.zato-time-ago');
+    $.fn.zato.time_ago.update_cell(cell, new Date().toISOString());
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2533,6 +2557,10 @@ $.fn.zato.inline_edit.config = {
     'ok_label': 'OK',
     'cancel_label': 'Cancel',
     'tippy_placement': 'top',
+
+    // The saved confirmation shows to the left of the edited link,
+    // so it never covers the value that has just changed.
+    'confirmation_placement': 'left',
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2657,11 +2685,13 @@ $.fn.zato.inline_edit.submit = function(opts) {
         on_success: function(tippy_instance, result) {
 
             // The row rebuild replaces the clicked link, so remember which cell it sits in -
-            // _bounce_row then shows its confirmation on the link that takes its place.
+            // _bounce_row then shows its confirmation on the link that takes its place,
+            // placed so that it does not cover the value that has just changed.
             var cell_index = $(link_elem).closest('td').index();
             $.fn.zato.data_table.bounce_target_finder = function(tr) {
                 return tr.find('td').eq(cell_index).find('a')[0];
             };
+            $.fn.zato.data_table.bounce_placement = config.confirmation_placement;
 
             // The saving tippy must not survive the rebuild - _bounce_row shows
             // the confirmation, there is no second tippy here.
@@ -2706,12 +2736,15 @@ $.fn.zato.inline_edit.toggle_active = function(id, link_elem, opts) {
 //   link_elem      - the link the tippy points at
 //   title          - a heading above the rows
 //   rows           - a list of {name, label, value} - one table row per entry,
-//                    each with a label and a text input prefilled with value
+//                    each with a label and an input prefilled with value
+//   input_type     - optional, the type of all the inputs, e.g. number, defaults to text
+//   input_min      - optional, the minimum value of all the inputs, for number inputs
 //   validate       - called with a map of trimmed input values, returns an error
 //                    message when the form must not be submitted or an empty string
 //   on_submit      - called with the map of values once they validate
 //   highlight_elem - optional, an element whose text wears a badge while the form is open
 //
+// The Enter key anywhere in the inputs submits the form, Escape closes it.
 $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     var config = $.fn.zato.inline_edit.config;
@@ -2730,12 +2763,21 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
         container.append($('<div class="zato-inline-form-title"></div>').text(opts.title));
     }
 
+    var input_type = opts.input_type;
+    if(input_type === undefined) {
+        input_type = 'text';
+    }
+
     var table = $('<table></table>');
     $.each(opts.rows, function(ignored, row) {
         var tr = $('<tr></tr>');
         tr.append($('<th></th>').text(row.label));
 
-        var input = $('<input type="text" />');
+        var input = $('<input />');
+        input.attr('type', input_type);
+        if(opts.input_min !== undefined) {
+            input.attr('min', opts.input_min);
+        }
         input.attr('name', row.name);
         input.val(row.value);
         tr.append($('<td></td>').append(input));
@@ -2810,6 +2852,14 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     cancel_button.on('click', function() {
         instance.hide();
+    });
+
+    // Enter anywhere in the inputs submits the form.
+    table.find('input').on('keydown', function(event) {
+        if(event.key === 'Enter') {
+            event.preventDefault();
+            ok_button.trigger('click');
+        }
     });
 
     // .. OK collects the inputs and refuses to go on until they validate.

@@ -24,6 +24,7 @@ from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
+from zato.common.typing_ import anylist, anytuple
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
@@ -68,6 +69,39 @@ def _item_by_id(items, id_):
         if item['id'] == id_:
             return item
     return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _map_job_summaries(summaries:'anylist') -> 'anytuple':
+    """ Maps runtime job summaries by ID, with a lookup by name for jobs whose IDs changed, e.g. after a redeployment.
+    """
+    summary_by_id = {}
+    summary_by_name = {}
+
+    for summary in summaries:
+        name = summary['name']
+        summary_by_id[summary['id']] = summary
+
+        # Two summaries may share a name if runtime IDs diverged from ODB ones -
+        # keep the one with the newest last run time so a stale leftover cannot shadow the live entry.
+        existing = summary_by_name.get(name)
+
+        if existing is None:
+            summary_by_name[name] = summary
+            continue
+
+        last_run_utc = summary['last_run_utc']
+
+        if last_run_utc:
+            existing_last_run = existing['last_run_utc']
+            if existing_last_run is None:
+                summary_by_name[name] = summary
+            elif last_run_utc > existing_last_run:
+                summary_by_name[name] = summary
+
+    out = summary_by_id, summary_by_name
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -395,32 +429,24 @@ class GetList(_Get):
                 items.append(self._enrich_job(row))
 
         # Map runtime summaries by ID, with a lookup by name for jobs whose IDs changed, e.g. after a redeployment ..
-        last_run_by_id = {}
-        last_run_by_name = {}
+        summary_by_id, summary_by_name = _map_job_summaries(self.server._scheduler.get_job_summaries())
 
-        for summary in self.server._scheduler.get_job_summaries():
-            name = summary['name']
-            last_run_utc = summary['last_run_utc']
-            last_run_by_id[summary['id']] = last_run_utc
-
-            # Two summaries may share a name if runtime IDs diverged from ODB ones -
-            # keep the newest last run time so a stale leftover cannot shadow the live entry.
-            existing = last_run_by_name.get(name)
-
-            if not existing:
-                last_run_by_name[name] = last_run_utc
-            elif last_run_utc:
-                if last_run_utc > existing:
-                    last_run_by_name[name] = last_run_utc
-
-        # .. and attach the last run time to each job - it is an empty string for jobs that never ran.
+        # .. and attach the last run details to each job - the time is an empty string
+        # .. and the duration is None for jobs that never ran.
         for item in items:
-            last_run_utc = last_run_by_id.get(item['id'])
-            if last_run_utc is None:
-                last_run_utc = last_run_by_name.get(item['name'])
-            if last_run_utc is None:
-                last_run_utc = ''
-            item['last_run_utc'] = last_run_utc
+            summary = summary_by_id.get(item['id'])
+            if summary is None:
+                summary = summary_by_name.get(item['name'])
+
+            if summary is None:
+                item['last_run_utc'] = ''
+                item['last_duration_ms'] = None
+            else:
+                last_run_utc = summary['last_run_utc']
+                if last_run_utc is None:
+                    last_run_utc = ''
+                item['last_run_utc'] = last_run_utc
+                item['last_duration_ms'] = summary['last_duration_ms']
 
         self.response.payload = items
 
@@ -603,7 +629,7 @@ class Execute(_SchedulerAdmin):
             if not job_row:
                 raise ZatoException(self.cid, 'Job not found')
 
-            self.server._scheduler.execute_job(job_row.id)
+            self.server._scheduler.execute_job(job_row.id, job_row.name)
         except Exception:
             self.logger.error('Could not execute the job, e:`%s`', format_exc())
             raise
@@ -702,35 +728,27 @@ class GetLastRunList(_SchedulerAdmin):
                     name_by_id[job.id] = job.name
 
         # .. one call returns runtime summaries for all jobs ..
-        last_run_by_id = {}
-        last_run_by_name = {}
+        summary_by_id, summary_by_name = _map_job_summaries(self.server._scheduler.get_job_summaries())
 
-        for summary in self.server._scheduler.get_job_summaries():
-            name = summary['name']
-            last_run_utc = summary['last_run_utc']
-            last_run_by_id[summary['id']] = last_run_utc
-
-            # Two summaries may share a name if runtime IDs diverged from ODB ones -
-            # keep the newest last run time so a stale leftover cannot shadow the live entry.
-            existing = last_run_by_name.get(name)
-
-            if not existing:
-                last_run_by_name[name] = last_run_utc
-            elif last_run_utc:
-                if last_run_utc > existing:
-                    last_run_by_name[name] = last_run_utc
-
-        # .. and each requested job is looked up by ID first and by name second,
-        # .. with an empty string for jobs that never ran.
+        # .. and each requested job is looked up by ID first and by name second - the last run time
+        # .. is an empty string and the duration is None for jobs that never ran.
         items = []
         for job_id in id_list:
-            last_run_utc = last_run_by_id.get(job_id)
-            if last_run_utc is None:
+            summary = summary_by_id.get(job_id)
+            if summary is None:
                 name = name_by_id.get(job_id)
-                last_run_utc = last_run_by_name.get(name)
-            if last_run_utc is None:
+                summary = summary_by_name.get(name)
+
+            if summary is None:
                 last_run_utc = ''
-            items.append({'id': job_id, 'last_run_utc': last_run_utc})
+                last_duration_ms = None
+            else:
+                last_run_utc = summary['last_run_utc']
+                if last_run_utc is None:
+                    last_run_utc = ''
+                last_duration_ms = summary['last_duration_ms']
+
+            items.append({'id': job_id, 'last_run_utc': last_run_utc, 'last_duration_ms': last_duration_ms})
 
         self.response.payload = {'items': items}
 

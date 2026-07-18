@@ -316,11 +316,21 @@ struct JobCommandPayload {
     job_data: SchedulerJob,
 }
 
-/// Payload for delete_job and execute_job commands.
+/// Payload for the delete_job command.
 #[derive(Deserialize)]
 struct JobIdPayload {
     /// The ODB job identifier.
     job_id: i64,
+}
+
+/// Payload for the execute_job command.
+#[derive(Deserialize)]
+struct ExecuteJobPayload {
+    /// The ODB job identifier.
+    job_id: i64,
+    /// Job name, used when the runtime knows the job under a different ID.
+    #[serde(default)]
+    name: String,
 }
 
 /// Payload for mark_complete command.
@@ -437,7 +447,7 @@ fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
 }
 
 pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
-    let parsed: JobIdPayload = match serde_json::from_str(payload) {
+    let parsed: ExecuteJobPayload = match serde_json::from_str(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse execute_job payload: {err}");
@@ -452,8 +462,22 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     };
 
     let mut state = shared.state.lock();
-    let Some(running_job) = state.jobs.get_mut(&parsed.job_id) else {
-        tracing::warn!("Forced execute: job_id={} not found", parsed.job_id);
+
+    // Look the job up by its ODB ID first - when the runtime knows it under an older ID,
+    // e.g. after a redeployment recreated the ODB rows, fall back to a name match.
+    let mut job_key = parsed.job_id;
+    if !state.jobs.contains_key(&job_key) {
+        let name_match_key = state
+            .jobs
+            .iter()
+            .find_map(|(key, job)| (job.name == parsed.name).then_some(*key));
+        if let Some(matched_key) = name_match_key {
+            job_key = matched_key;
+        }
+    }
+
+    let Some(running_job) = state.jobs.get_mut(&job_key) else {
+        tracing::warn!("Forced execute: job_id={} name={} not found", parsed.job_id, parsed.name);
         return;
     };
 

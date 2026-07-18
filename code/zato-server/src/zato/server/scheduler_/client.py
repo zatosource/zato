@@ -182,8 +182,11 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
-    def execute_job(self, job_id:'int') -> 'None':
-        self.invoke('execute_job', {'job_id': job_id})
+    def execute_job(self, job_id:'int', name:'str') -> 'None':
+
+        # The name lets the scheduler find the job even when its runtime ID
+        # diverged from the ODB one, e.g. after a redeployment.
+        self.invoke('execute_job', {'job_id': job_id, 'name': name})
 
 # ################################################################################################################################
 

@@ -81,6 +81,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         "zato_action_area_size": "zato.action-area-size",
         "zato_request_history": "zato.request-history",
         "zato_full_history": "zato.full-history",
+        "zato_grid_menu_position": "zato.grid-menu-position",
     }
 
     // Request history tracking
@@ -683,6 +684,13 @@ $.fn.zato.ide.config = {
     // while its style is being worked out
     "grid_view_demo": true,
 
+    // How close the document menu and its flyouts may come
+    // to the edges of the viewport
+    "grid_menu_edge_gap": 4,
+
+    // How long the "Copied to clipboard" confirmation stays on screen
+    "grid_menu_copied_shown_ms": 600,
+
     // Sample payloads offered per format
     "samples": {
         "hl7-v2": [
@@ -818,10 +826,13 @@ $.fn.zato.ide.grid_view_demo_tree = [
 
 // Builds one node of the grid view - a name/value row for leaves,
 // a header row plus an indented children block for containers.
-$.fn.zato.ide.build_grid_view_node = function(node) {
+$.fn.zato.ide.build_grid_view_node = function(node, parent_path) {
 
     let node_elem = $("<div>").addClass("grid-node");
     let has_children = node.children.length > 0;
+
+    // Where this node lives in the document, dot by dot from the root
+    let full_path = parent_path ? `${parent_path}.${node.name}` : node.name;
 
     // The name cell is shared by both kinds of node ..
     let name = $("<span>").addClass("grid-name").addClass(`grid-kind-${node.kind}`);
@@ -833,11 +844,12 @@ $.fn.zato.ide.build_grid_view_node = function(node) {
 
     name.append($("<span>").addClass("grid-name-text").text(node.name));
 
-    // Every name opens a document menu on right click
+    // A right click on a name opens the document menu at the cursor,
+    // values do not trigger it
     name.on("contextmenu", function(e) {
         e.preventDefault();
         e.stopPropagation();
-        $.fn.zato.ide.show_grid_menu_for_node(node, e.pageX, e.pageY);
+        $.fn.zato.ide.show_grid_panel_menu(node, e.pageX, e.pageY, full_path);
     });
 
     // A container has a toggle in its header row and its children
@@ -865,7 +877,7 @@ $.fn.zato.ide.build_grid_view_node = function(node) {
             if(child.children.length > 0) {
                 has_container_children = true;
             }
-            children_block.append($.fn.zato.ide.build_grid_view_node(child));
+            children_block.append($.fn.zato.ide.build_grid_view_node(child, full_path));
         }
 
         if(!has_container_children) {
@@ -888,31 +900,14 @@ $.fn.zato.ide.build_grid_view_node = function(node) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// What the document menu offers - null entries are separators.
-// These are placeholders for now, the actions come with the editable grid.
-$.fn.zato.ide.grid_view_menu_items = [
-    "Expand all",
-    "Collapse all",
-    null,
-    "Copy path",
-    "Copy value",
-    "Copy subtree",
-    null,
-    "Edit value",
-    "Rename",
-    "Add child",
-    "Add sibling",
-    "Duplicate",
-    "Delete",
-];
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-// Removes whatever document menu is on screen along with its dismiss handlers.
+// Removes the document menu from the screen along with its dismiss
+// and drag handlers.
 $.fn.zato.ide.close_grid_menus = function() {
-    $("#grid-view-menu, #grid-card-menu, #grid-panel-menu").remove();
+    $("#grid-panel-menu").remove();
     $(document).off("mousedown.grid-view-menu");
     $(document).off("keydown.grid-view-menu");
+    $(document).off("mousemove.grid-panel-drag");
+    $(document).off("mouseup.grid-panel-drag");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -922,6 +917,13 @@ $.fn.zato.ide.close_grid_menus = function() {
 $.fn.zato.ide.install_grid_menu_dismiss = function(menu_id) {
 
     $(document).on("mousedown.grid-view-menu", function(e) {
+
+        // A right-button press on a name is about to re-target the menu,
+        // taking it down first only to rebuild it would read as flickering
+        if(e.which == 3 && $(e.target).closest(".grid-name").length) {
+            return;
+        }
+
         if(!$(e.target).closest(menu_id).length) {
             $.fn.zato.ide.close_grid_menus();
         }
@@ -936,45 +938,52 @@ $.fn.zato.ide.install_grid_menu_dismiss = function(menu_id) {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// Picks the menu prototype for a node - the detail panel is under evaluation
-// on two sample nodes, everything else gets the plain list.
-$.fn.zato.ide.show_grid_menu_for_node = function(node, x, y) {
-
-    if(node.name == "Patient" || node.name == "active") {
-        $.fn.zato.ide.show_grid_panel_menu(node, x, y);
-    }
-    else {
-        $.fn.zato.ide.show_grid_view_menu(x, y);
-    }
-}
+// The node the document menu is currently about - the handlers read it
+// from here so an open menu can switch nodes without being rebuilt.
+$.fn.zato.ide.grid_menu_context = {"node": null, "full_path": null};
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// Shows the plain document menu at the given position.
-$.fn.zato.ide.show_grid_view_menu = function(x, y) {
+// Copies one of the node's shapes to the clipboard and confirms it with
+// a short-lived tooltip over the element that was clicked - the menu
+// itself stays open. The same handler serves the header badges
+// and the Copy submenu.
+$.fn.zato.ide.copy_node_to_clipboard = function(elem, action, node, full_path) {
 
-    $.fn.zato.ide.close_grid_menus();
-
-    let menu = $("<div>").attr("id", "grid-view-menu");
-
-    for(const item of $.fn.zato.ide.grid_view_menu_items) {
-
-        if(item === null) {
-            menu.append($("<div>").addClass("grid-view-menu-separator"));
-            continue;
-        }
-
-        let entry = $("<div>").addClass("grid-view-menu-item").text(item);
-        entry.on("click", function() {
-            $.fn.zato.ide.close_grid_menus();
-        });
-        menu.append(entry);
+    if(action == "copy_path") {
+        var text = full_path;
+    }
+    else if(action == "copy_value") {
+        var text = node.value;
+    }
+    else {
+        var text = JSON.stringify(node, null, 2);
     }
 
-    menu.css({"left": x + "px", "top": y + "px"});
-    $("body").append(menu);
+    navigator.clipboard.writeText(text);
 
-    $.fn.zato.ide.install_grid_menu_dismiss("#grid-view-menu");
+    // A fresh tooltip each time, the previous one may still be fading
+    if(elem._tippy) {
+        elem._tippy.destroy();
+    }
+
+    tippy(elem, {
+        content: "Copied to clipboard",
+        trigger: "manual",
+        placement: "top",
+        theme: "dark",
+        arrow: true,
+        appendTo: document.body,
+        zIndex: 10001,
+    });
+
+    elem._tippy.show();
+
+    setTimeout(function() {
+        if(elem._tippy) {
+            elem._tippy.destroy();
+        }
+    }, $.fn.zato.ide.config.grid_menu_copied_shown_ms);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1026,18 +1035,18 @@ $.fn.zato.ide.grid_panel_menu_items = [
             ["Node", "Patient.active"],
         ],
         "children": [
-            {"key": "1", "label": "Path", "children": null,
+            {"key": "1", "label": "Path", "children": null, "action": "copy_path",
                 "description": "The node's address in the document's own notation.",
                 "details": [
                     ["Copies", "Patient.active"],
                 ]},
-            {"key": "2", "label": "Value", "children": null,
+            {"key": "2", "label": "Value", "children": null, "action": "copy_value",
                 "description": "The value exactly as it appears on the wire.",
                 "details": [
                     ["Copies", "true"],
                     ["Length", "4 characters"],
                 ]},
-            {"key": "3", "label": "Subtree", "children": null,
+            {"key": "3", "label": "Subtree", "children": null, "action": "copy_subtree",
                 "description": "The node and everything below it, serialized whole.",
                 "details": [
                     ["Copies", "1 node"],
@@ -1180,11 +1189,57 @@ $.fn.zato.ide.grid_panel_menu_items = [
         ]},
 ];
 
-$.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
+$.fn.zato.ide.show_grid_panel_menu = function(node, x, y, full_path) {
+
+    // Whatever happens next, the menu is about this node now
+    let context = $.fn.zato.ide.grid_menu_context;
+    context.node = node;
+    context.full_path = full_path;
+
+    // A menu already on screen only takes on the new node's details,
+    // rebuilding it from scratch would read as flickering
+    let existing = $("#grid-panel-menu");
+
+    if(existing.length) {
+        existing.find(".grid-panel-header-path").text(full_path);
+        return;
+    }
 
     $.fn.zato.ide.close_grid_menus();
 
     let menu = $("<div>").attr("id", "grid-panel-menu");
+
+    // The header names the node the menu is about, by its full path,
+    // with a drag grip in front of it and the copy badges on its right
+    let header = $("<div>").addClass("grid-panel-header");
+    header.append($("<span>").addClass("grid-panel-header-grip").text("\u2261"));
+    header.append($("<span>").addClass("grid-panel-header-path").text(full_path));
+
+    let header_actions = $("<span>").addClass("grid-panel-header-actions");
+
+    let badge_specs = [
+        ["Copy path", "copy_path"],
+        ["Copy value", "copy_value"],
+        ["Copy subtree", "copy_subtree"],
+    ];
+
+    for(const spec of badge_specs) {
+
+        let badge = $("<span>").addClass("grid-panel-header-badge").text(spec[0]);
+
+        badge.on("click", function() {
+            let current = $.fn.zato.ide.grid_menu_context;
+            $.fn.zato.ide.copy_node_to_clipboard(badge[0], spec[1], current.node, current.full_path);
+        });
+
+        header_actions.append(badge);
+    }
+
+    header.append(header_actions);
+
+    // The action list and the information pane sit side by side
+    // in their own row under the header
+    let body = $("<div>").addClass("grid-panel-body");
     let list = $("<div>").addClass("grid-panel-list");
     let info = $("<div>").addClass("grid-panel-info");
 
@@ -1237,7 +1292,8 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
 
     // Opens a flyout for an item's children, next to whatever holds
     // the parent entry - the main list or a deeper flyout. Submenus nest
-    // to any depth, each new one starts at its parent's right edge.
+    // to any depth, each new one starts at its parent's right edge
+    // and flips to the left one when the screen ends.
     let open_submenu = function(entry, item, level) {
 
         close_submenus_from(level);
@@ -1247,12 +1303,16 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
         // Where the parent entry lives - the flyout starts at its right edge,
         // level with the entry itself
         if(level == 0) {
-            var left = list.outerWidth();
+            var holder_left = 0;
+            var holder_width = list.outerWidth();
+            var left = holder_width;
             var top = entry.position().top;
         }
         else {
             let holder = submenu_stack[level - 1].elem;
-            var left = holder.position().left + holder.outerWidth();
+            var holder_left = holder.position().left;
+            var holder_width = holder.outerWidth();
+            var left = holder_left + holder_width;
             var top = holder.position().top + entry.position().top;
         }
 
@@ -1273,17 +1333,51 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
                 }
             });
 
+            // Copy entries copy without closing the menu,
+            // the other leaf entries close it
             if(!child.children) {
                 child_entry.on("click", function() {
-                    $.fn.zato.ide.close_grid_menus();
+                    if(child.action) {
+                        let current = $.fn.zato.ide.grid_menu_context;
+                        $.fn.zato.ide.copy_node_to_clipboard(child_entry[0], child.action, current.node, current.full_path);
+                    }
+                    else {
+                        $.fn.zato.ide.close_grid_menus();
+                    }
                 });
             }
 
             submenu.append(child_entry);
         }
 
-        submenu.css({"left": left + "px", "top": top + "px"});
+        // On the page first, so its size is measurable against the viewport
         menu.append(submenu);
+
+        let edge_gap = $.fn.zato.ide.config.grid_menu_edge_gap;
+        let menu_offset = menu.offset();
+
+        // A flyout that would run past the right edge opens
+        // on its holder's left side instead ..
+        let submenu_right = menu_offset.left + left + submenu.outerWidth();
+
+        if(submenu_right > window.scrollX + window.innerWidth) {
+            left = holder_left - submenu.outerWidth();
+        }
+
+        // .. one that would run past the bottom slides up just enough ..
+        let submenu_bottom = menu_offset.top + top + submenu.outerHeight();
+        let bottom_overflow = submenu_bottom - (window.scrollY + window.innerHeight);
+
+        if(bottom_overflow > 0) {
+            top = top - bottom_overflow - edge_gap;
+        }
+
+        // .. and never above the top of the screen either.
+        if(menu_offset.top + top < window.scrollY) {
+            top = window.scrollY - menu_offset.top + edge_gap;
+        }
+
+        submenu.css({"left": left + "px", "top": top + "px"});
 
         submenu_stack.push({"item": item, "elem": submenu});
     }
@@ -1327,15 +1421,98 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
         list.append(entry);
     }
 
-    menu.append(list);
-    menu.append(info);
+    body.append(list);
+    body.append(info);
+    menu.append(header);
+    menu.append(body);
+
+    // Any of the menu's own surface drags it around the screen -
+    // the actions, the badges and the flyouts keep their own behaviour
+    menu.on("mousedown", function(e) {
+
+        if($(e.target).closest(".grid-panel-item, .grid-panel-header-badge, .grid-panel-submenu").length) {
+            return;
+        }
+
+        e.preventDefault();
+        menu.addClass("grid-panel-dragging");
+
+        // How far into the menu the grab landed - the menu keeps
+        // this offset under the cursor for the whole drag
+        let grab_offset = menu.offset();
+        let grab_x = e.pageX - grab_offset.left;
+        let grab_y = e.pageY - grab_offset.top;
+
+        $(document).on("mousemove.grid-panel-drag", function(move) {
+            menu.css({
+                "left": (move.pageX - grab_x) + "px",
+                "top": (move.pageY - grab_y) + "px",
+            });
+        });
+
+        $(document).on("mouseup.grid-panel-drag", function() {
+
+            menu.removeClass("grid-panel-dragging");
+            $(document).off("mousemove.grid-panel-drag");
+            $(document).off("mouseup.grid-panel-drag");
+
+            // Where the menu ended up is where it opens the next time
+            let position = menu.offset();
+            let stored = JSON.stringify({"x": position.left, "y": position.top});
+            localStorage.setItem(window.zato_local_storage_key.zato_grid_menu_position, stored);
+        });
+    });
 
     // The first action's story is on display from the start
     main_entries[0].addClass("current");
     show_info(main_items[0]);
 
-    menu.css({"left": x + "px", "top": y + "px"});
+    // On the page first, invisible, so its size is measurable
     $("body").append(menu);
+
+    // A menu the user has dragged before opens where they left it,
+    // otherwise it opens at the cursor
+    let stored_position = localStorage.getItem(window.zato_local_storage_key.zato_grid_menu_position);
+
+    if(stored_position !== null) {
+        let position = JSON.parse(stored_position);
+        x = position.x;
+        y = position.y;
+    }
+
+    // The top-left corner sits at the remembered or cursor position,
+    // pulled back wherever the menu would otherwise run past an edge
+    // of the viewport - a window smaller than the last time is one
+    // of the ways this happens
+    let edge_gap = $.fn.zato.ide.config.grid_menu_edge_gap;
+
+    let viewport_left = window.scrollX;
+    let viewport_top = window.scrollY;
+    let viewport_right = viewport_left + window.innerWidth;
+    let viewport_bottom = viewport_top + window.innerHeight;
+
+    if(x + menu.outerWidth() > viewport_right) {
+        x = viewport_right - menu.outerWidth() - edge_gap;
+    }
+
+    if(y + menu.outerHeight() > viewport_bottom) {
+        y = viewport_bottom - menu.outerHeight() - edge_gap;
+    }
+
+    if(x < viewport_left) {
+        x = viewport_left + edge_gap;
+    }
+
+    if(y < viewport_top) {
+        y = viewport_top + edge_gap;
+    }
+
+    menu.css({"left": x + "px", "top": y + "px"});
+
+    // The visible class lands one frame later so the fade-in transition runs
+    requestAnimationFrame(function() {
+        menu.addClass("grid-menu-visible");
+    });
 
     $.fn.zato.ide.install_grid_menu_dismiss("#grid-panel-menu");
 
@@ -1408,7 +1585,7 @@ $.fn.zato.ide.render_grid_view_demo = function() {
 
     let root = $("<div>").addClass("grid-view");
     for(const node of $.fn.zato.ide.grid_view_demo_tree) {
-        root.append($.fn.zato.ide.build_grid_view_node(node));
+        root.append($.fn.zato.ide.build_grid_view_node(node, ""));
     }
     pane.append(root);
 

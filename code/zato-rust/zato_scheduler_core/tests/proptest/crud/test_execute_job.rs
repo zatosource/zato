@@ -101,6 +101,24 @@ proptest! {
     }
 
     #[test]
+    fn execute_unknown_id_matches_by_name(_n in 0u32..10) {
+        let (shared, receiver) = setup_shared(true);
+
+        // The runtime knows the job under ID 1 - an execute for a diverged ODB ID
+        // must still find it through the name.
+        handle_execute_job(&shared, r#"{"job_id": 999, "name": "test"}"#);
+
+        let batch = receiver.try_recv().unwrap();
+        prop_assert_eq!(batch.job_id.0, 1);
+        prop_assert_eq!(batch.service.0, "svc");
+
+        let state = shared.state.lock();
+        let job = &state.jobs[&1];
+        prop_assert!(job.in_flight);
+        prop_assert_eq!(job.current_run, 1);
+    }
+
+    #[test]
     fn execute_records_history(_n in 0u32..10) {
         let (shared, _receiver) = setup_shared(true);
 

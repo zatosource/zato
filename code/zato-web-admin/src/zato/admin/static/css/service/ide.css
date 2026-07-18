@@ -481,7 +481,7 @@ input[type="button"]:focus:not(:active) {
     border-left: none;
 }
 
-/* Name cells - bold on the classic silver-gray */
+/* Name cells - bold on the classic silver-gray, every name is clickable */
 .grid-name {
     background: var(--grid-view-name-bg);
     color: var(--grid-view-name-color);
@@ -490,6 +490,7 @@ input[type="button"]:focus:not(:active) {
     border-right: 1px dashed var(--grid-view-line-color);
     border-bottom: 1px dashed var(--grid-view-line-color);
     user-select: none;
+    cursor: pointer;
 }
 
 /* Value cells - normal face on white */
@@ -510,50 +511,16 @@ input[type="button"]:focus:not(:active) {
     margin-right: 3px;
 }
 
-/* Container names collapse and expand on click */
-.grid-name-branch {
-    cursor: pointer;
-}
-
-/* The document menu shown on right-clicking a name */
-#grid-view-menu {
-    position: absolute;
-    z-index: 1000;
-    min-width: 150px;
-    background: #fff;
-    border: 1px solid #d5d2c8;
-    border-radius: 4px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-    padding: 4px 0;
-    font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
-    font-size: 12px;
-    color: #000;
-    user-select: none;
-}
-
-.grid-view-menu-item {
-    padding: 4px 14px;
-    cursor: pointer;
-}
-
-.grid-view-menu-item:hover {
-    background: #f1efe7;
-}
-
-.grid-view-menu-separator {
-    height: 1px;
-    margin: 4px 0;
-    background: #e2dfd6;
-}
-
 /* The detail panel - an action list on the left, a live information pane
    on the right describing the action under the cursor */
 /* No overflow clipping here - the nested flyouts may reach
-   beyond the menu's own box */
+   beyond the menu's own box. The menu fades in briefly instead
+   of popping onto the screen. */
 #grid-panel-menu {
     position: absolute;
     z-index: 1000;
     display: flex;
+    flex-direction: column;
     background: #fff;
     border: 1px solid #d5d2c8;
     border-radius: 6px;
@@ -562,6 +529,79 @@ input[type="button"]:focus:not(:active) {
     font-size: 12px;
     color: #000;
     user-select: none;
+    opacity: 0;
+    transition: opacity 0.08s ease;
+}
+
+#grid-panel-menu.grid-menu-visible {
+    opacity: 1;
+}
+
+/* The header - the full path of the node the menu is about,
+   on the same dark slate as the hotkey caps, with the copy badges
+   pushed to its right edge */
+.grid-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 12px;
+    background: #2e333c;
+    color: #e8ebf0;
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    border-radius: 5px 5px 0 0;
+}
+
+.grid-panel-header-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* The copy badges - quiet chips that light up under the cursor */
+.grid-panel-header-badge {
+    padding: 2px 9px;
+    font-size: 10.5px;
+    letter-spacing: normal;
+    color: #cdd5e0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid #46516a;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.grid-panel-header-badge:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+/* The drag grip in front of the path */
+.grid-panel-header-grip {
+    font-size: 13px;
+    line-height: 1;
+    color: #8fa3c0;
+}
+
+/* Everything that is not an action drags the menu, so the whole surface
+   shows the grab hand - the items and the badges override it
+   with their own pointer */
+#grid-panel-menu {
+    cursor: grab;
+}
+
+/* Mid-drag the closed fist stays on, whatever is under the cursor */
+#grid-panel-menu.grid-panel-dragging,
+#grid-panel-menu.grid-panel-dragging * {
+    cursor: grabbing;
+}
+
+/* The action list and the information pane, side by side under the header */
+.grid-panel-body {
+    display: flex;
+    flex: 1;
 }
 
 .grid-panel-list {
@@ -569,7 +609,7 @@ input[type="button"]:focus:not(:active) {
     padding: 5px 0;
     background: #faf9f5;
     border-right: 1px solid #e4e1d8;
-    border-radius: 6px 0 0 6px;
+    border-radius: 0 0 0 6px;
 }
 
 /* The line between groups of actions */
@@ -622,9 +662,10 @@ input[type="button"]:focus:not(:active) {
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
 }
 
+/* The highlight is a background change only - a heavier face would widen
+   the label and make the whole menu shift around */
 .grid-panel-item.current {
-    background: #fff;
-    font-weight: 600;
+    background: #ece9de;
 }
 
 .grid-panel-item-destructive {
