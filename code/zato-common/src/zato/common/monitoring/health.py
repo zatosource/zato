@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Three-state health over a monitored endpoint - an MLLP channel, an outgoing connection,
 # a trigger source such as a mailbox poll - anything with a connection, an error rate
 # and an expectation of activity. Green means healthy, amber means degraded (connected
-# but erroring, backlogged or going quiet), red means down or dead. Transitions
+# but erroring, backlogged or increasingly silent), red means down or dead. Transitions
 # toward the worse are immediate, transitions back require clearing the threshold
 # by a margin, so an indicator hovering around a threshold never flaps.
 
@@ -48,7 +48,7 @@ class HealthThresholds:
     error_rate_amber: float = 0.10
     error_rate_red: float = 0.50
 
-    # How long a silent feed counts as going quiet, then dead.
+    # How long a feed may be silent before it counts as degraded, then dead.
     # Zero disables silence checking - not every endpoint expects steady traffic.
     silence_amber_seconds: float = 300.0
     silence_red_seconds: float = 900.0
