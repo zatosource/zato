@@ -487,6 +487,30 @@ def execute(req, job_id, cluster_id):
 # ################################################################################################################################
 
 @method_allowed('POST')
+def get_last_run_list(req:'any_') -> 'HttpResponse':
+    """ Returns a mapping of job IDs to their last run times for the jobs given on input.
+    """
+    # The IDs of the jobs currently shown arrive as one comma-separated parameter ..
+    if id_list := req.POST.get('id_list'):
+        id_list = id_list.split(',')
+    else:
+        id_list = []
+
+    # .. one invocation covers all of them ..
+    response = req.zato.client.invoke('zato.scheduler.job.get-last-run-list', {'id_list': id_list})
+
+    # .. and the response maps each ID to its last run time, keyed by strings for easy lookups in JavaScript.
+    last_run_by_id = {}
+    for item in response.data['items']:
+        last_run_by_id[str(item['id'])] = item['last_run_utc']
+
+    out = dumps(last_run_by_id)
+    return HttpResponse(out, content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds) -> 'HttpResponse':
     start_date = _get_start_date(start_date)
 

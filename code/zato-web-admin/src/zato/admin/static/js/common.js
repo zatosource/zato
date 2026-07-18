@@ -2047,6 +2047,8 @@ $.fn.zato.time_ago.config = {
     'ago_label': 'ago',
     'utc_label': 'UTC',
     'tippy_placement': 'top',
+    'refresh_interval_ms': 5000,
+    'spinner_min_visible_ms': 350,
     'units': [
         {'name': 'week',   'seconds': 604800},
         {'name': 'day',    'seconds': 86400},
@@ -2139,66 +2141,213 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.time_ago.init = function(container_selector) {
+// Updates one cell in place - existing link and tippy instances are reused
+// so that periodic refreshes never make the cell flicker.
+$.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
     var config = $.fn.zato.time_ago.config;
-    var cells = $(container_selector).find('.zato-time-ago');
 
-    cells.each(function() {
-        var cell = $(this);
-        var iso_utc = cell.attr('data-time-utc');
+    cell.attr('data-time-utc', iso_utc);
 
-        // No timestamp means the underlying item has not run yet - such cells sort after all the others.
-        if(!iso_utc) {
-            cell.attr('data-sort-value', config.never_sort_value);
-            cell.text(config.never_label);
-            return;
-        }
+    // Make sure the cell has its value element ..
+    var value_element = cell.find('.zato-time-ago-value');
+    if(!value_element.length) {
+        value_element = $('<span class="zato-time-ago-value"></span>');
+        cell.empty();
+        cell.append(value_element);
+    }
 
+    // .. work out the new text and sort value - no timestamp means the underlying item
+    // .. has not run yet and such cells sort after all the others ..
+    var new_text;
+    var tooltip_html = '';
+
+    if(!iso_utc) {
+        cell.attr('data-sort-value', config.never_sort_value);
+        new_text = config.never_label;
+    }
+    else {
         var when = new Date(iso_utc);
         var now = new Date();
         var age_seconds = Math.floor((now.getTime() - when.getTime()) / 1000);
 
-        // The source clock and the browser may disagree by a moment - never show a negative age.
+        // .. the source clock and the browser may disagree by a moment - never show a negative age ..
         if(age_seconds < 0) {
             age_seconds = 0;
         }
 
-        // The numeric age is what table sorting uses, which is why ascending order
-        // puts "4 seconds ago" before "1 hour ago" regardless of the humanized text.
+        // .. the numeric age is what table sorting uses, which is why ascending order
+        // .. puts "4 seconds ago" before "1 hour ago" regardless of the humanized text ..
         cell.attr('data-sort-value', age_seconds);
 
-        var link = $('<a href="javascript:void(0)"></a>');
-        link.text($.fn.zato.time_ago.humanize(age_seconds));
+        new_text = $.fn.zato.time_ago.humanize(age_seconds);
+        tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc);
+    }
 
-        cell.empty();
-        cell.append(link);
+    // .. this is what actually writes the new content out ..
+    var apply_text = function() {
 
-        tippy(link[0], {
-            content: $.fn.zato.time_ago.build_tooltip_html(iso_utc),
-            allowHTML: true,
-            trigger: 'click',
-            placement: config.tippy_placement,
-            arrow: true,
-            interactive: true,
+        // A cell without a timestamp shows a plain label only.
+        if(!iso_utc) {
+            value_element.text(new_text);
+            return;
+        }
 
-            // Keep the tooltip out of the table, otherwise the table's own th/td styles leak into it.
-            appendTo: document.body,
+        // Build the link and its tippy on the first update only.
+        var link = value_element.find('a');
+        if(!link.length) {
+            value_element.empty();
+            link = $('<a href="javascript:void(0)"></a>');
+            value_element.append(link);
 
-            // Let the Escape key close the tooltip while it is shown.
-            onShow: function(instance) {
-                var handle_escape = function(event) {
-                    if(event.key === 'Escape') {
-                        instance.hide();
-                    }
-                };
-                instance.handle_escape = handle_escape;
-                document.addEventListener('keydown', handle_escape);
-            },
-            onHide: function(instance) {
-                document.removeEventListener('keydown', instance.handle_escape);
-            },
+            tippy(link[0], {
+                allowHTML: true,
+                trigger: 'click',
+                placement: config.tippy_placement,
+                arrow: true,
+                interactive: true,
+
+                // Keep the tooltip out of the table, otherwise the table's own th/td styles leak into it.
+                appendTo: document.body,
+
+                // Let the Escape key close the tooltip while it is shown.
+                onShow: function(instance) {
+                    var handle_escape = function(event) {
+                        if(event.key === 'Escape') {
+                            instance.hide();
+                        }
+                    };
+                    instance.handle_escape = handle_escape;
+                    document.addEventListener('keydown', handle_escape);
+                },
+                onHide: function(instance) {
+                    document.removeEventListener('keydown', instance.handle_escape);
+                },
+            });
+        }
+
+        link.text(new_text);
+        link[0]._tippy.setContent(tooltip_html);
+    };
+
+    // .. changed values fade out gently, swap once invisible and fade back in,
+    // .. while unchanged cells are updated silently so nothing pulses without a reason.
+    var current_text = value_element.text();
+
+    if(current_text && current_text !== new_text) {
+        value_element.addClass('zato-time-ago-fading');
+        value_element.one('transitionend', function() {
+            apply_text();
+            value_element.removeClass('zato-time-ago-fading');
         });
+    }
+    else {
+        apply_text();
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.init = function(container_selector) {
+
+    // The column header carries one shared spinner for all the cells below it ..
+    var headers = $(container_selector).find('.zato-time-ago-header');
+    headers.each(function() {
+        var header = $(this);
+        if(!header.find('.zato-time-ago-spinner').length) {
+            header.append($('<span class="zato-time-ago-spinner"></span>'));
+        }
     });
+
+    // .. and each cell gets its humanized value.
+    var cells = $(container_selector).find('.zato-time-ago');
+    cells.each(function() {
+        var cell = $(this);
+        $.fn.zato.time_ago.update_cell(cell, cell.attr('data-time-utc'));
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.show_spinners = function(container_selector) {
+    $(container_selector).find('.zato-time-ago-header .zato-time-ago-spinner').addClass('is-visible');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.hide_spinners = function(container_selector) {
+    $(container_selector).find('.zato-time-ago-header .zato-time-ago-spinner').removeClass('is-visible');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Runs one refresh cycle - the IDs of the rows currently shown go out in a single request
+// and the response maps each ID to its new timestamp. Cells keep their current content
+// while the request is in flight, only a tiny spinner appears next to each of them.
+$.fn.zato.time_ago.refresh = function(container_selector, url) {
+    var config = $.fn.zato.time_ago.config;
+
+    // Collect the IDs of the rows currently shown - each data-table row's DOM ID is tr_{id} ..
+    var id_list = [];
+    $(container_selector).find('td.zato-time-ago').each(function() {
+        var row_id = $(this).closest('tr').attr('id');
+        id_list.push(row_id.replace('tr_', ''));
+    });
+
+    // .. an empty table means there is nothing to ask about ..
+    if(!id_list.length) {
+        return;
+    }
+
+    var started_at = Date.now();
+    $.fn.zato.time_ago.show_spinners(container_selector);
+
+    $.ajax({
+        url: url,
+        type: 'POST',
+        data: {'id_list': id_list.join(',')},
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data) {
+            if(typeof data === 'string') {
+                data = JSON.parse(data);
+            }
+
+            var apply_update = function() {
+                $(container_selector).find('td.zato-time-ago').each(function() {
+                    var cell = $(this);
+                    var row_id = cell.closest('tr').attr('id');
+                    var item_id = row_id.replace('tr_', '');
+                    if(item_id in data) {
+                        $.fn.zato.time_ago.update_cell(cell, data[item_id]);
+                    }
+                });
+                $.fn.zato.time_ago.hide_spinners(container_selector);
+
+                // Refreshed sort values need to reach the sorter's cache.
+                $(container_selector).trigger('update');
+            };
+
+            // The spinner stays up for at least its minimum visibility time so it never just blinks.
+            var elapsed = Date.now() - started_at;
+            var remaining = config.spinner_min_visible_ms - elapsed;
+            if(remaining > 0) {
+                setTimeout(apply_update, remaining);
+            }
+            else {
+                apply_update();
+            }
+        },
+        error: function() {
+            $.fn.zato.time_ago.hide_spinners(container_selector);
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.time_ago.start_auto_refresh = function(container_selector, url) {
+    setInterval(function() {
+        $.fn.zato.time_ago.refresh(container_selector, url);
+    }, $.fn.zato.time_ago.config.refresh_interval_ms);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

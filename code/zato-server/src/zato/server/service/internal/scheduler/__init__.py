@@ -666,6 +666,35 @@ class GetRunDetail(_SchedulerAdmin):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetLastRunList(_SchedulerAdmin):
+    """ Returns last run times for a list of jobs, based on the scheduler's runtime summaries.
+    """
+    name = _service_name_prefix + 'get-last-run-list'
+
+    input = List('id_list')
+
+    def handle(self) -> 'None':
+
+        # The IDs arrive as strings from the network, hence the conversion ..
+        id_list = set()
+        for job_id in self.request.input.id_list:
+            id_list.add(int(job_id))
+
+        # .. one call returns summaries for all jobs and the response is filtered down to the requested ones ..
+        items = []
+        for summary in self.server._scheduler.get_job_summaries():
+            if summary['id'] in id_list:
+                last_run_utc = summary['last_run_utc']
+                if last_run_utc is None:
+                    last_run_utc = ''
+                items.append({'id': summary['id'], 'last_run_utc': last_run_utc})
+
+        # .. and everything found can be returned now.
+        self.response.payload = {'items': items}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetLogEntries(_SchedulerAdmin):
     """ Returns log entries for a specific execution record, supporting incremental fetching.
     """

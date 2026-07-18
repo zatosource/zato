@@ -1,5 +1,14 @@
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.invoker.config = {
+
+    // How long the "Invoking .." and "Deploying .." indicators stay on screen
+    // at a minimum, otherwise a fast call makes them a barely visible blip
+    "indicator_min_ms": 60,
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.invoker.on_invoke_submitted = function() {
     let currentObjectSelect = $.fn.zato.ide.get_current_object_select();
     let isModified = currentObjectSelect.attr('data-is-modified') == '1';
@@ -237,7 +246,11 @@ $.fn.zato.invoker.on_form_ended_common = function(
         var response = $.parseJSON(data);
     }
 
-    $.fn.zato.invoker.on_form_ended_common_impl(options, status, response)
+    // The blinking indicator stays on screen at least this long,
+    // otherwise a fast call would make it a barely visible blip
+    setTimeout(function() {
+        $.fn.zato.invoker.on_form_ended_common_impl(options, status, response);
+    }, $.fn.zato.invoker.config.indicator_min_ms);
 
 };
 

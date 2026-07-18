@@ -673,10 +673,6 @@ $.fn.zato.ide.config = {
     // What the parsed pane shows when the payload does not parse
     "parse_failed_text": "(payload does not parse)",
 
-    // How long the "Deploying .." indicator stays on screen at a minimum,
-    // otherwise a fast deploy would make it a barely visible blip
-    "deploy_indicator_min_ms": 60,
-
     // Sample payloads offered per format
     "samples": {
         "hl7-v2": [
@@ -930,13 +926,18 @@ $.fn.zato.ide.populate_invoke_mode_select = function(binding_list) {
     let select = $("#invoke-mode-select");
     let previous_value = select.val();
 
-    // Rebuild the options from scratch - direct invocation is always available ..
+    // Rebuild the options from scratch, under the same in-select header
+    // the template starts with - direct invocation is always available ..
     select.empty();
+
+    let mode_optgroup = $("<optgroup>");
+    mode_optgroup.attr("label", "Invoke as");
+    select.append(mode_optgroup);
 
     let service_option = $("<option>");
     service_option.attr("value", "service");
-    service_option.text("As service");
-    select.append(service_option);
+    service_option.text("Service");
+    mode_optgroup.append(service_option);
 
     // .. followed by one option per channel the service is exposed through ..
     for(const binding of binding_list) {
@@ -944,7 +945,7 @@ $.fn.zato.ide.populate_invoke_mode_select = function(binding_list) {
         let option = $("<option>");
         option.attr("value", `${binding.channel_type}:${binding.id}`);
         option.text(`${label}: ${binding.name}`);
-        select.append(option);
+        mode_optgroup.append(option);
     }
 
     // .. keep the previous mode if the new service still offers it, otherwise fall back to direct invocation ..
@@ -953,14 +954,6 @@ $.fn.zato.ide.populate_invoke_mode_select = function(binding_list) {
     }
     else {
         select.val("service");
-    }
-
-    // .. the selector appears only when there is an actual choice to make.
-    if(binding_list.length) {
-        select.removeClass("hidden");
-    }
-    else {
-        select.addClass("hidden");
     }
 
     // The payload format follows the service too
@@ -2266,7 +2259,7 @@ $.fn.zato.ide.flash_deploy_success = function(options) {
             flash.removeClass("invoker-draw-attention");
         });
 
-    }, $.fn.zato.ide.config.deploy_indicator_min_ms);
+    }, $.fn.zato.invoker.config.indicator_min_ms);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

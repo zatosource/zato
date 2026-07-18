@@ -68,6 +68,9 @@ $(document).ready(function() {
     // Humanize the last-run cells first so that sorting can pick up their numeric sort values.
     $.fn.zato.time_ago.init('#data-table');
     $('#data-table').tablesorter({textExtraction: $.fn.zato.data_table.text_extraction});
+
+    // Keep the last-run column up to date - all the rows currently shown are refreshed in one call.
+    $.fn.zato.time_ago.start_auto_refresh('#data-table', '/zato/scheduler/get-last-run-list/');
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
     $.fn.zato.data_table.parse();
 

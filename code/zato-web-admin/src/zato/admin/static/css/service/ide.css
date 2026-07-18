@@ -330,11 +330,17 @@ td.data-input-field-name {
     font-weight: 600;
 }
 
+/* The gap between a button and the status text that follows it,
+   shared by the Deploy and the Invoke rows */
+:root {
+    --zato-status-gap: 10px;
+}
+
 /* The deploy progress indicator and the confirmation flash share the slot
    to the right of the Deploy button */
 #deploying-please-wait,
 #deploy-result-flash {
-    margin-left: 10px;
+    margin-left: var(--zato-status-gap);
     padding: 0.4rem 0.2rem;
 }
 
@@ -350,6 +356,34 @@ td.data-input-field-name {
 input[type="button"]:focus:not(:active) {
     box-shadow: none;
 }
+
+/* The channel select is always on screen and keeps a constant width
+   no matter how many options it holds, so channels loading in
+   never changes anything about the row */
+#invoke-mode-select {
+    width: 170px;
+}
+
+/* The in-select headers - shown by the browser at the top of the dropdown */
+#payload-format-select optgroup,
+#invoke-mode-select optgroup {
+    font-style: normal;
+    font-weight: 600;
+    font-size: 0.86em;
+    letter-spacing: 0.05em;
+    color: #5a6472;
+}
+
+/* The options themselves must not inherit the header look - their indentation
+   is not controllable, Firefox's menu renderer ignores padding on options */
+#payload-format-select option,
+#invoke-mode-select option {
+    font-weight: 400;
+    font-size: 1rem;
+    letter-spacing: normal;
+    color: #000;
+}
+
 
 .invoker-parsed-pane {
     width: 100%;
@@ -396,6 +430,14 @@ input[type="button"]:focus:not(:active) {
    the overflow override above would let their content spill below the pane */
 #action-area .invoker-parsed-pane {
     overflow: auto !important;
+}
+
+/* The status texts follow the Invoke button at the same distance
+   as the deploy indicator follows the Deploy button */
+#result-header,
+#invoking-please-wait,
+#getting-info-please-wait {
+    margin-left: var(--zato-status-gap);
 }
 
 #result-header {
