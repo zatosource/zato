@@ -137,14 +137,18 @@ Ctrl+K for full history"></textarea></form>
                                     <div id="singleton-form-parent" class="hidden"></div>
                                     <a href="javascript:void(0)" id="insert-sample-link" class="common hidden">Samples</a>
                                     <select id="payload-format-select" class="default" title="How to treat the request and response payloads">
-                                        <option value="auto">Auto</option>
-                                        <option value="json">JSON</option>
-                                        <option value="key-value">Key=value</option>
-                                        <option value="hl7-v2">HL7 v2</option>
-                                        <option value="fhir">FHIR</option>
+                                        <optgroup label="Data format">
+                                            <option value="auto">Auto</option>
+                                            <option value="json">JSON</option>
+                                            <option value="key-value">Key=value</option>
+                                            <option value="hl7-v2">HL7 v2</option>
+                                            <option value="fhir">FHIR</option>
+                                        </optgroup>
                                     </select>
-                                    <select id="invoke-mode-select" class="default hidden" title="How to invoke the service">
-                                        <option value="service">As service</option>
+                                    <select id="invoke-mode-select" class="default" title="How to invoke the service">
+                                        <optgroup label="Invoke as">
+                                            <option value="service">Service</option>
+                                        </optgroup>
                                     </select>
                                     <input type="button" id="open-history-overlay" value="History" title="Open full history (Ctrl+K)" onclick="$.fn.zato.ide.open_history_overlay();"/><span style="user-select: none;"></span>
                                     <input
@@ -152,9 +156,7 @@ Ctrl+K for full history"></textarea></form>
                                         type="button"
                                         {% if not data.current_fs_location and not data.current_file_service_list and not current_object_name %}disabled="disabled" class="no-click"{% endif %}
                                         value="Invoke"/>
-                                </div>
-                                <div style="text-align: right;">
-                                    <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
+                                    <span id="result-header" class="dimmed zato-not-used"></span>
                                     <span id="invoking-please-wait" class="hidden">Invoking ..</span>
                                     <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
                                 </div>

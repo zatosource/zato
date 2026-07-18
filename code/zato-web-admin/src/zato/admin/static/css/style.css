@@ -1235,3 +1235,78 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     padding-right: 12px;
     font-weight: bold;
 }
+
+/* ------------------------------------------------------------ */
+/* Time ago - refresh spinner                                    */
+/* ------------------------------------------------------------ */
+
+/* The value keeps a fixed minimum width so that texts of different lengths,
+   e.g. "9 seconds ago" and "14 seconds ago", never resize the whole column.
+   Changed values fade out gently, swap their text and fade back in. */
+.zato-time-ago-value {
+    --zato-time-ago-value-fade-ms: 400ms;
+    display: inline-block;
+    min-width: 8em;
+    opacity: 1;
+    transition: opacity var(--zato-time-ago-value-fade-ms) ease;
+}
+
+.zato-time-ago-value.zato-time-ago-fading {
+    opacity: 0;
+}
+
+/* The header link is a block element by default, which would push the spinner
+   to its own line - inline-block keeps them side by side, and dropping
+   the built-in right padding keeps the spinner close to the column name. */
+#data-table th.zato-time-ago-header a {
+    display: inline-block;
+    padding-right: 0;
+}
+
+/* The one shared spinner in the column header is three pulsing dots - the element
+   itself is the first dot and its box-shadows draw the other two, with the right
+   margin reserving their space so the spinner never shifts the layout around it.
+   Fade-in and fade-out have their own durations - set the fade-in one
+   to zero to make the spinner appear instantly and only fade out. */
+.zato-time-ago-spinner {
+    --zato-time-ago-spinner-fade-in-ms: 350ms;
+    --zato-time-ago-spinner-fade-out-ms: 350ms;
+    --zato-time-ago-spinner-dot-resting: #ccc;
+    --zato-time-ago-spinner-dot-active: #666;
+    display: inline-block;
+    opacity: 0;
+    width: 6px;
+    height: 6px;
+    margin-left: 5px;
+    margin-right: 20px;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: zato-time-ago-dots 0.9s linear infinite;
+    transition: opacity var(--zato-time-ago-spinner-fade-out-ms) ease;
+}
+
+.zato-time-ago-spinner.is-visible {
+    opacity: 1;
+    transition: opacity var(--zato-time-ago-spinner-fade-in-ms) ease;
+}
+
+@keyframes zato-time-ago-dots {
+    0%, 100% {
+        background-color: var(--zato-time-ago-spinner-dot-active);
+        box-shadow:
+            10px 0 var(--zato-time-ago-spinner-dot-resting),
+            20px 0 var(--zato-time-ago-spinner-dot-resting);
+    }
+    33% {
+        background-color: var(--zato-time-ago-spinner-dot-resting);
+        box-shadow:
+            10px 0 var(--zato-time-ago-spinner-dot-active),
+            20px 0 var(--zato-time-ago-spinner-dot-resting);
+    }
+    66% {
+        background-color: var(--zato-time-ago-spinner-dot-resting);
+        box-shadow:
+            10px 0 var(--zato-time-ago-spinner-dot-resting),
+            20px 0 var(--zato-time-ago-spinner-dot-active);
+    }
+}

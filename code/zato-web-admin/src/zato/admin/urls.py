@@ -320,6 +320,8 @@ urlpatterns += [
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/' + \
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
+    url(r'^zato/scheduler/get-last-run-list/$',
+        login_required(scheduler.get_last_run_list), name='scheduler-job-get-last-run-list'),
 
     # Scheduler dashboard
 
