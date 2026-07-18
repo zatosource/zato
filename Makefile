@@ -646,6 +646,7 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
+		$(CURDIR)/code/tests/python/zato-common/hl7_audit/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)

@@ -158,6 +158,8 @@ def _build_test_haproxy_cfg(
     # .. strip sections we don't need ..
     config_text = re.sub(r'(?m)^# Dashboard frontend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^backend dashboard_backend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
+    config_text = re.sub(r'(?m)^# OpenAPI console frontend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
+    config_text = re.sub(r'(?m)^# OpenAPI console backend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^userlist .*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^listen stats.*', '', config_text, flags=re.DOTALL)
 
@@ -276,7 +278,7 @@ def haproxy_routing_env() -> 'routing_env_gen':
             time.sleep(0.1)
     else:
         haproxy_process.kill()
-        raise RuntimeError(f'HAProxy did not start within {_haproxy_startup_timeout_seconds}s')
+        raise Exception(f'HAProxy did not start within {_haproxy_startup_timeout_seconds}s')
 
     yield env
 
