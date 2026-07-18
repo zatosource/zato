@@ -18,9 +18,11 @@ from traceback import format_exc
 from typing import NamedTuple
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
+from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.bearer_token_verifier import extract_bearer_token
 from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
@@ -97,6 +99,7 @@ _transport_plain_http = URL_TYPE.PLAIN_HTTP
 _transport_soap = URL_TYPE.SOAP
 _transport_as2 = URL_TYPE.AS2
 _transport_as4 = URL_TYPE.AS4
+_data_format_hl7_v2 = HL7.Const.Version.v2.id
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
@@ -1036,11 +1039,39 @@ class RequestDispatcher:
         if not isinstance(data, str):
             data = str(data)
 
-        # .. the source depends on the channel's transport ..
-        if channel_item['transport'] == _transport_plain_http:
-            source = AuditSource.REST_Channel
+        # .. HL7 arriving over REST is re-tagged at the writer - the event lands as the HL7 source
+        # .. with HL7 fields, so the message browser shows one consistent HL7 view
+        # .. regardless of transport (WS.1.4). A request is the message itself
+        # .. and the response is the acknowledgment answering it ..
+        if channel_item['data_format'] == _data_format_hl7_v2:
+
+            source = AuditSource.HL7
+
+            if event_type == AuditEvent.Request_Received:
+                event_type = AuditEvent.Message_Received
+
+                # The control id and searchable attributes come straight off the wire
+                msh_line = data.split('\r', 1)[0]
+                msg_id = extract_control_id(msh_line)
+                attrs = get_wire_attrs(msh_line)
+
+            else:
+                event_type = AuditEvent.Ack_Sent
+
+                # An acknowledgment quotes the original control id in MSA-2
+                msg_id = get_wire_msa_control_id(data)
+                attrs = {}
+
+        # .. otherwise the source depends on the channel's transport ..
         else:
-            source = AuditSource.SOAP_Channel
+
+            msg_id = ''
+            attrs = {}
+
+            if channel_item['transport'] == _transport_plain_http:
+                source = AuditSource.REST_Channel
+            else:
+                source = AuditSource.SOAP_Channel
 
         # .. the caller is the security definition that authenticated the request - requests audited
         # before authentication have no caller yet, so only response events carry one ..
@@ -1065,12 +1096,14 @@ class RequestDispatcher:
             event_type,
             channel_item['name'],
             cid=cid,
+            msg_id=msg_id,
             endpoint=channel_item['service_name'],
             size=len(data),
             outcome=outcome,
             status=status,
             duration_ms=duration_ms,
             data=data,
+            attrs=attrs,
             ext_client_id=ext_client_id,
         )
 

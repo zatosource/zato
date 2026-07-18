@@ -10,9 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket
 import ssl
 from logging import getLogger
+from time import monotonic
 from traceback import format_exc
 
 # Zato
+from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, audit_message_received, get_audit_attrs, \
+    get_control_id, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
@@ -20,13 +23,27 @@ from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.state import ChannelState
+from zato.common.util.api import new_cid_server
 
 from zato.hl7v2 import HL7ValidationError, parse_hl7
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.audit_log.api import AuditLog
+    AuditLog = AuditLog
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many milliseconds one second holds - used when converting callback durations
+_ms_per_second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,6 +115,7 @@ class HL7MLLPServer:
         allow_short_encoding_characters:'bool' = True,
         fix_off_by_one_field_index:'bool' = False,
         ssl_context:'ssl.SSLContext | None' = None,
+        audit_log:'AuditLog | None' = None,
         ) -> 'None':
 
         self.address = address
@@ -105,6 +123,10 @@ class HL7MLLPServer:
         self.start_sequence = start_sequence
         self.end_sequence   = end_sequence
         self.ssl_context    = ssl_context
+
+        # The shared audit log all audited channels write through -
+        # whether a given message is audited is each route's own flag.
+        self.audit_log = audit_log
 
         self.receive_timeout  = receive_timeout
         self.max_message_size = max_message_size
@@ -336,6 +358,20 @@ class HL7MLLPServer:
         # .. find the matching route using the first MSH ..
         matched_route = self.router.match(msh_line)
 
+        # .. a batch is audited when its channel says so - with no route there is no channel to ask ..
+        needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
+
+        # .. all the batch's audit events share one correlation id ..
+        if needs_audit:
+            audit_cid = new_cid_server()
+            peer_endpoint = f'{connection_context.peer_ip}:{connection_context.peer_port}'
+
+            # .. the parent row for the batch plus a child row per contained message ..
+            _ = audit_batch_received(
+                self.audit_log, matched_route.channel_name, raw, cid=audit_cid, endpoint=peer_endpoint) # type: ignore[union-attr, arg-type]
+        else:
+            audit_cid = ''
+
         # .. no route found - reject the entire batch ..
         if matched_route is None:
             logger.warning('No matching MLLP channel for batch from %s:%d (MSH: %s)',
@@ -374,6 +410,12 @@ class HL7MLLPServer:
 
         # .. build the ACK using the first MSH from the batch ..
         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+
+        # .. one acknowledgment covers the entire batch, on the same cid as its rows ..
+        if needs_audit:
+            _ = audit_ack_sent(
+                self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
+                cid=audit_cid, msg_id=extract_control_id(msh_line))
 
         # .. encode and frame the ACK for MLLP transport ..
         ack_bytes = ack_string.encode(self.default_character_encoding)
@@ -475,6 +517,25 @@ class HL7MLLPServer:
             # .. find the matching route for this message ..
             matched_route = self.router.match(msh_line)
 
+            # .. a message is audited when its channel says so - with no route there is no channel to ask ..
+            needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
+
+            # .. the received event and its acknowledgment share one correlation id,
+            # .. with the wire-level attributes as the fallback the parsed ones replace ..
+            if needs_audit:
+                audit_cid = new_cid_server()
+                audit_msg_id = extract_control_id(msh_line)
+                audit_attrs = get_wire_attrs(msh_line)
+                peer_endpoint = f'{connection_context.peer_ip}:{connection_context.peer_port}'
+            else:
+                audit_cid = ''
+                audit_msg_id = ''
+                audit_attrs = {}
+                peer_endpoint = ''
+
+            # .. how long the service callback ran, reported on the acknowledgment's row ..
+            callback_duration_ms = 0
+
             if matched_route is None:
                 logger.warning('No matching MLLP channel for message from %s:%d (MSH: %s)',
                     connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
@@ -500,6 +561,12 @@ class HL7MLLPServer:
                         callback_data = parse_hl7(
                             message_text, validate=self.should_validate, tolerance=self.tolerance_config)
 
+                        # .. a parsed message contributes richer searchable attributes,
+                        # .. including the patient's medical record number ..
+                        if needs_audit:
+                            audit_attrs = get_audit_attrs(callback_data)
+                            audit_msg_id = get_control_id(callback_data)
+
                     # .. parsing or validation failed - send an AE reject ACK
                     # .. back to the sender and skip this message ..
                     except (ValueError, HL7ValidationError):
@@ -520,6 +587,16 @@ class HL7MLLPServer:
                         ack_bytes = ack_string.encode(self.default_character_encoding)
                         framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
+                        # .. a rejected message still leaves its audit trail - the receipt
+                        # .. and the negative acknowledgment that answered it ..
+                        if needs_audit:
+                            _ = audit_message_received(
+                                self.audit_log, matched_route.channel_name, message_text, # type: ignore[arg-type]
+                                cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                            _ = audit_ack_sent(
+                                self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[arg-type]
+                                cid=audit_cid, msg_id=audit_msg_id)
+
                         try:
                             active_socket.sendall(framed_ack)
                         except (BrokenPipeError, ConnectionResetError):
@@ -532,7 +609,16 @@ class HL7MLLPServer:
                 else:
                     callback_data = message_text
 
+                # .. the receipt is recorded before the service runs, so a message
+                # .. that crashes its service is still visibly received ..
+                if needs_audit:
+                    _ = audit_message_received(
+                        self.audit_log, matched_route.channel_name, message_text, # type: ignore[arg-type]
+                        cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+
                 # .. invoke the matched route's service callback ..
+                callback_start = monotonic()
+
                 try:
                     _ = matched_route.callback(callback_data)
                     ack_code = 'AA'
@@ -544,6 +630,8 @@ class HL7MLLPServer:
                         matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
                     ack_code = 'AE'
                     error_text = 'Internal processing error'
+
+                callback_duration_ms = int((monotonic() - callback_start) * _ms_per_second)
 
             # .. suppress error details if configured to not return errors ..
             if not self.should_return_errors:
@@ -559,6 +647,12 @@ class HL7MLLPServer:
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)
             ack_bytes = ack_string.encode(self.default_character_encoding)
             framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
+
+            # .. the acknowledgment lands on the same cid as the receipt it answers ..
+            if needs_audit:
+                _ = audit_ack_sent(
+                    self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
+                    cid=audit_cid, msg_id=audit_msg_id, duration_ms=callback_duration_ms)
 
             # .. send the framed ACK back.
             try:

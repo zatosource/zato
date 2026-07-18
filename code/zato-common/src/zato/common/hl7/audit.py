@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # HL7 audit semantics - what a parsed HL7 v2 message contributes to the shared audit log:
-# the searchable attributes each message row carries and what an MSA acknowledgment
-# means for the outcome of the exchange it acknowledges.
+# the searchable attributes each message row carries, what an MSA acknowledgment
+# means for the outcome of the exchange it acknowledges, and the wire producers
+# every HL7 transport writes its events through.
 
 from __future__ import annotations
 
@@ -17,15 +18,18 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 # Zato
-from zato.common.audit_log.api import AuditClassification, AuditOutcome
+from zato.common.audit_log.api import AuditBody, AuditClassification, AuditEvent, AuditLink, AuditOutcome, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.audit_log.api import AuditLog
+    from zato.common.typing_ import intnone, stranydict
     from zato.hl7v2.base import HL7Message
+    AuditLog = AuditLog
     HL7Message = HL7Message
+    intnone = intnone
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -244,6 +248,255 @@ def interpret_ack_timeout() -> 'ACKResult':
     out.ack_status = ACKStatus.Timeout
     out.outcome = AuditOutcome.Error
     out.classification = AuditClassification.Transient
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_wire_attrs(msh_line:'str') -> 'stranydict':
+    """ Returns the searchable attributes available straight off the wire, without a full parse -
+    the message type and the sending facility out of a pipe-delimited MSH line.
+    Used when a channel runs with parsing turned off.
+    """
+
+    # A local import because the router module also imports this one's siblings
+    from zato.common.hl7.mllp.router import parse_msh_fields
+
+    fields = parse_msh_fields(msh_line)
+
+    # The type and trigger combine the same way a parsed message's attributes do
+    if fields['msh9_trigger']:
+        msg_type = f'{fields["msh9_type"]}^{fields["msh9_trigger"]}'
+    else:
+        msg_type = fields['msh9_type']
+
+    out = {
+        'msg_type': msg_type,
+        'facility': fields['msh4'],
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def get_wire_msa_control_id(message_text:'str') -> 'str':
+    """ Returns MSA-2 out of a raw acknowledgment text - the control id of the message
+    being acknowledged. An empty string means the text carries no MSA segment.
+    """
+
+    # The index of MSA-2 within a pipe-delimited MSA segment
+    msa_control_id_index = 2
+
+    for line in message_text.split('\r'):
+
+        if line.startswith('MSA|'):
+            fields = line.split('|')
+
+            if len(fields) > msa_control_id_index:
+                return fields[msa_control_id_index]
+
+    return ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def audit_message_received(
+    audit_log:'AuditLog',
+    channel_name:'str',
+    message_text:'str',
+    *,
+    cid:'str',
+    msg_id:'str',
+    attrs:'stranydict',
+    endpoint:'str' = '',
+    ) -> 'intnone':
+    """ Writes the event of one HL7 message arriving on a channel. The receipt itself
+    always succeeds - whatever happens next is the acknowledgment's story.
+    """
+    out = audit_log.insert(
+        AuditSource.HL7,
+        AuditEvent.Message_Received,
+        channel_name,
+        cid=cid,
+        msg_id=msg_id,
+        endpoint=endpoint,
+        size=len(message_text),
+        outcome=AuditOutcome.OK,
+        attrs=attrs,
+        bodies={AuditBody.Request: message_text},
+    )
+
+    return out
+
+# ################################################################################################################################
+
+def audit_ack_sent(
+    audit_log:'AuditLog',
+    channel_name:'str',
+    ack_code:'str',
+    ack_text:'str',
+    *,
+    cid:'str',
+    msg_id:'str',
+    duration_ms:'int' = 0,
+    ) -> 'intnone':
+    """ Writes the event of an acknowledgment leaving a channel - the ACK code decides
+    the outcome, so a rejected message is visibly a failure on its own row.
+    """
+    result = interpret_ack_code(ack_code)
+
+    out = audit_log.insert(
+        AuditSource.HL7,
+        AuditEvent.Ack_Sent,
+        channel_name,
+        cid=cid,
+        msg_id=msg_id,
+        outcome=result.outcome,
+        application_outcome=result.application_outcome,
+        classification=result.classification,
+        duration_ms=duration_ms,
+        attrs={'ack_status': ack_code},
+        bodies={AuditBody.Response: ack_text},
+    )
+
+    return out
+
+# ################################################################################################################################
+
+def audit_message_sent(
+    audit_log:'AuditLog',
+    outconn_name:'str',
+    message_text:'str',
+    *,
+    cid:'str',
+    msg_id:'str',
+    attrs:'stranydict',
+    endpoint:'str' = '',
+    ) -> 'intnone':
+    """ Writes the event of one HL7 message leaving through an outgoing connection.
+    """
+    out = audit_log.insert(
+        AuditSource.HL7,
+        AuditEvent.Message_Sent,
+        outconn_name,
+        cid=cid,
+        msg_id=msg_id,
+        endpoint=endpoint,
+        size=len(message_text),
+        outcome=AuditOutcome.OK,
+        attrs=attrs,
+        bodies={AuditBody.Request: message_text},
+    )
+
+    return out
+
+# ################################################################################################################################
+
+def audit_ack_received(
+    audit_log:'AuditLog',
+    outconn_name:'str',
+    ack_code:'str',
+    *,
+    cid:'str',
+    msg_id:'str',
+    duration_ms:'int' = 0,
+    error_text:'str' = '',
+    ) -> 'intnone':
+    """ Writes the event of an acknowledgment arriving for a message sent earlier
+    on the same cid - or of no acknowledgment arriving at all, when the code
+    is the timeout marker.
+    """
+
+    # A timeout has its own interpretation - transient, a resend can work
+    if ack_code == ACKStatus.Timeout:
+        result = interpret_ack_timeout()
+    else:
+        result = interpret_ack_code(ack_code)
+
+    out = audit_log.insert(
+        AuditSource.HL7,
+        AuditEvent.Ack_Received,
+        outconn_name,
+        cid=cid,
+        msg_id=msg_id,
+        outcome=result.outcome,
+        application_outcome=result.application_outcome,
+        classification=result.classification,
+        status=error_text,
+        duration_ms=duration_ms,
+        attrs={'ack_status': result.ack_status},
+    )
+
+    return out
+
+# ################################################################################################################################
+
+def audit_batch_received(
+    audit_log:'AuditLog',
+    channel_name:'str',
+    batch_text:'str',
+    *,
+    cid:'str',
+    endpoint:'str' = '',
+    ) -> 'intnone':
+    """ Writes the audit rows of one FHS/BHS batch file - a parent event for the batch
+    itself plus a child row per contained message, each child with its own attributes
+    and linked to the parent, so one failing record can show up on its own row.
+    Returns the parent event's id.
+    """
+
+    # A local import because batch parsing lives in the generated hl7v2 tree
+    from zato.hl7v2.batch import parse_batch_or_file
+
+    # The children are parsed out of the batch - a batch that cannot be parsed at all
+    # still gets its parent row, there is just nothing to hang under it.
+    # The .messages accessor walks both shapes - a BHS batch directly
+    # and an FHS file through the batches it contains.
+    try:
+        parsed_batch = parse_batch_or_file(batch_text, validate=False)
+        messages = list(parsed_batch.messages)
+    except Exception:
+        messages = []
+
+    # The parent event describes the batch as a unit
+    out = audit_log.insert(
+        AuditSource.HL7,
+        AuditEvent.Interchange_Received,
+        channel_name,
+        cid=cid,
+        endpoint=endpoint,
+        size=len(batch_text),
+        outcome=AuditOutcome.OK,
+        attrs={'batch_count': len(messages)},
+        bodies={AuditBody.Request: batch_text},
+    )
+
+    # Lineage links need the parent's id, which only the synchronous writer returns -
+    # under a buffered writer the children are still written, just without links.
+    if out is not None:
+        parents = [out]
+    else:
+        parents = []
+
+    # Each contained message becomes its own row with its own searchable attributes
+    for message in messages:
+
+        attrs = get_audit_attrs(message)
+        control_id = get_control_id(message)
+
+        _ = audit_log.insert(
+            AuditSource.HL7,
+            AuditEvent.Message_Received,
+            channel_name,
+            cid=cid,
+            msg_id=control_id,
+            endpoint=endpoint,
+            outcome=AuditOutcome.OK,
+            attrs=attrs,
+            parents=parents,
+            parent_link_type=AuditLink.Batch_Item_Of,
+        )
 
     return out
 

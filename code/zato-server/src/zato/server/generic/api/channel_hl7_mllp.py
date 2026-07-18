@@ -13,6 +13,7 @@ from threading import Lock
 
 # Zato
 from zato.common.api import HL7
+from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.mllp.haproxy import find_haproxy_config, reload_haproxy, resolve_internal_port, \
     update_mllp_backend_port
 from zato.common.hl7.mllp.router import HL7MessageRouter
@@ -56,6 +57,9 @@ channel_config_defaults:'dict[str, object]' = {
     # Logging
     'should_log_messages': False,
     'should_return_errors': False,
+
+    # Audit - separate from server-log verbosity, off unless turned on per channel
+    'is_audit_log_active': False,
 
     # Parsing
     'should_parse_on_input': True,
@@ -187,12 +191,17 @@ class ChannelHL7MLLPWrapper(Wrapper):
         dedup_ttl_value = self.config.dedup_ttl_value
         dedup_ttl_unit = self.config.dedup_ttl_unit
 
+        # .. the shared audit log all audited channels write through -
+        # .. whether a given message is audited is each route's own flag ..
+        audit_log = AuditLog(self.server.name) # pyright: ignore[reportOptionalMemberAccess]
+
         # .. create and start the shared server ..
         _shared_state.server = HL7MLLPServer(
             address,
             _shared_state.router,
             start_sequence,
             end_sequence,
+            audit_log=audit_log,
             receive_timeout=recv_timeout_seconds,
             max_message_size=max_msg_size_bytes,
             should_log_messages=asbool(self.config.should_log_messages),
@@ -271,6 +280,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     msh11_processing_id=self.config.msh11_processing_id,
                     msh12_version_id=self.config.msh12_version_id,
                     is_default=asbool(self.config.is_default),
+                    is_audit_log_active=asbool(self.config.is_audit_log_active),
                 )
 
             # .. start the shared server if needed, now that the route is in place ..

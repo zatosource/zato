@@ -309,12 +309,13 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
             _ = _f.write('/.env\n')
 
     # Now, import environment variables and store the variable for later use.
-    # Without an explicit env file, an env file previously saved in the config repo,
+    # Without an explicit env file, an env file previously saved under the config repo,
     # e.g. by the Config DB screens, is loaded instead so its values survive restarts.
     env_file = options.get('env_file', '')
 
     if not env_file:
-        default_env_file = os.path.join(base_dir, 'config', 'repo', 'env.ini')
+        from zato.common.config_db import get_default_env_file_path
+        default_env_file = get_default_env_file_path(os.path.join(base_dir, 'config', 'repo'))
         if os.path.exists(default_env_file):
             env_file = default_env_file
 

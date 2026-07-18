@@ -52,7 +52,9 @@ def test_audit_log_mysql_ssl_is_required(mysql_ssl_server:'DatabaseServer') -> '
 
     with audit_log_env(details):
         with pytest.raises(OperationalError):
-            _ = AuditLog('test-audit-log-server')
+            # The engine is resolved per access, not in __init__, so the connection
+            # attempt - and the failure - happens on the property read.
+            _ = AuditLog('test-audit-log-server').engine
 
 # ################################################################################################################################
 # ################################################################################################################################

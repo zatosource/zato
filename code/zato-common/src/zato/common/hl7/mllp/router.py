@@ -61,6 +61,9 @@ class ChannelRoute:
     # When True, this route is evaluated last and handles all unmatched messages
     is_default:'bool'
 
+    # When True, messages arriving on this channel are written to the audit log
+    is_audit_log_active:'bool'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -143,6 +146,7 @@ class HL7MessageRouter:
         msh11_processing_id:'str' = '',
         msh12_version_id:'str' = '',
         is_default:'bool' = False,
+        is_audit_log_active:'bool' = False,
         ) -> 'None':
         """ Registers a new routing rule. All match fields are optional - empty string means match any.
         Only one route can be the default at a time - setting a new default clears the previous one.
@@ -170,6 +174,7 @@ class HL7MessageRouter:
         route.msh11_processing_id       = msh11_processing_id
         route.msh12_version_id          = msh12_version_id
         route.is_default                = is_default
+        route.is_audit_log_active       = is_audit_log_active
 
         with self._lock:
             self._routes.append(route)
