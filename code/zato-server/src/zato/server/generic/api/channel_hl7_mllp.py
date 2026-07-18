@@ -165,6 +165,18 @@ def get_current_state() -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_internal_port() -> 'int':
+    """ Returns the internal port the shared MLLP listener is bound to in this process -
+    zero when no listener has started yet, i.e. when no MLLP channel exists.
+    """
+    with _shared_state.lock:
+        out = _shared_state.internal_port
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_current_metrics() -> 'stranydict':
     """ Returns the live endpoint metrics of every HL7 MLLP channel in this process,
     keyed by channel name - what the alerting sweep's feed-silent collector runs over.

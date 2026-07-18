@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.hl7.display import build_display_tree
+from zato.common.hl7.display import build_display_tree, render_display_text
 from zato.hl7v2 import parse_hl7
 
 # ################################################################################################################################
@@ -207,6 +207,37 @@ class TestComponents:
 
         assert sex['value'] == 'M'
         assert sex['repetitions'][0]['components'] == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRenderDisplayText:
+    """ The plain-text rendering of a display tree - what the details overlay's
+    parsed tab shows.
+    """
+
+    def test_the_rendering_covers_the_whole_tree(self) -> 'None':
+
+        msg = parse_hl7(_adt_a01, validate=False)
+        tree = build_display_tree(msg)
+
+        text = render_display_text(tree)
+        lines = text.split('\n')
+
+        # The header line names the message
+        assert lines[0] == 'ADT^A01 (control id MSG000001)'
+
+        # Every segment appears as its own block, in wire order
+        segment_lines = [line for line in lines if line and not line.startswith(' ')]
+        assert segment_lines[1:] == ['MSH', 'EVN', 'PID', 'PV1', 'ZAU']
+
+        # Fields render indented under their segment, with label and value
+        assert '  PID-8  Administrative Sex: M' in lines
+
+        # Composite fields additionally list their components
+        component_lines = [line for line in lines if line.startswith('      PID-5.')]
+        assert component_lines, lines
+        assert any('SMITH' in line for line in component_lines), component_lines
 
 # ################################################################################################################################
 # ################################################################################################################################

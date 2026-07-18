@@ -18,6 +18,7 @@ from zato.admin.web.views import account, config_db, datadog, env_variables, gra
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import as4 as channel_as4
+from zato.admin.web.views.channel.hl7 import dashboard as channel_hl7_dashboard
 from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import openapi_ as channel_openapi
@@ -900,6 +901,13 @@ urlpatterns += [
 # ################################################################################################################################
 
 urlpatterns += [
+
+    # .. the HL7 channel dashboard
+
+    url(r'^zato/channel/hl7/dashboard/$',
+        login_required(channel_hl7_dashboard.index), name='channel-hl7-dashboard'),
+    url(r'^zato/channel/hl7/dashboard/poll/$',
+        login_required(channel_hl7_dashboard.poll), name='channel-hl7-dashboard-poll'),
 
     # .. HL7 MLLP
 

@@ -21,9 +21,12 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
 from zato.common.as2.mdn import describe_disposition
-from zato.common.audit_log.api import AuditEvent, event_table, get_audit_engine
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine, AuditEvent
+from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.query import outstanding_conditions
 from zato.common.defaults import default_cluster_id
+from zato.common.hl7.display import build_display_tree, render_display_text
+from zato.hl7v2 import parse_hl7
 from zato.x12.render import render_document
 
 # ################################################################################################################################
@@ -70,6 +73,8 @@ _source_title = {
     'as2': 'AS2 audit log',
     'x12': 'X12 audit log',
     'mcp': 'MCP audit log',
+    'hl7': 'HL7 audit log',
+    'fhir': 'FHIR audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -170,6 +175,33 @@ _mcp_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
+_hl7_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Control id', 'type': 'text'},
+    {'key': 'msg_type', 'label': 'Type', 'type': 'text'},
+    {'key': 'mrn', 'label': 'MRN', 'type': 'text'},
+    {'key': 'facility', 'label': 'Facility', 'type': 'text'},
+    {'key': 'ack_status', 'label': 'ACK', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+    {'key': 'action', 'label': 'Actions', 'type': 'action'},
+]
+
+_fhir_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Request', 'type': 'text'},
+    {'key': 'resource_type', 'label': 'Resource', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+    {'key': 'action', 'label': 'Actions', 'type': 'action'},
+]
+
 # Per-source table columns
 _source_columns = {
     'pubsub': _pubsub_columns,
@@ -181,7 +213,22 @@ _source_columns = {
     'as2': _as2_columns,
     'x12': _x12_columns,
     'mcp': _mcp_columns,
+    'hl7': _hl7_columns,
+    'fhir': _fhir_columns,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Per-source attr columns - these render as columns of their own, read out of the event_attr
+# table in one query per page, and the free-text search covers them through the attr-to-cid shape.
+_source_attr_columns = {
+    'hl7': ('msg_type', 'mrn', 'facility', 'ack_status'),
+    'fhir': ('resource_type', 'method'),
+}
+
+# The sources whose payloads live in the event_body table rather than the data column
+_source_body_preview = {'hl7'}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -212,6 +259,7 @@ def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_na
 _source_outstanding = {
     'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
     'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
+    'hl7': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
 }
 
 # ################################################################################################################################
@@ -224,9 +272,20 @@ _as2_resubmit = {
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.as2.reprocess'},
 }
 
+_hl7_resubmit = {
+    AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.hl7.resend'},
+    AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.hl7.reprocess'},
+}
+
+_fhir_resubmit = {
+    AuditEvent.Request_Sent: {'label': 'Resend', 'service': 'zato.audit-log.resend-hop'},
+}
+
 # The sources whose pages carry resubmit actions
 _source_resubmit = {
     'as2': _as2_resubmit,
+    'hl7': _hl7_resubmit,
+    'fhir': _fhir_resubmit,
 }
 
 # ################################################################################################################################
@@ -305,6 +364,19 @@ def _build_where(source:'str', object_name:'str', query:'str', status:'str',
             column = event_table.c[column_name]
             like_parts.append(column.like(like_value, escape='\\'))
 
+        # Sources with attr columns also search through them, with the attr-to-cid shape -
+        # the cids of the events whose attr matches, then every event on those cids,
+        # so a search by an MRN returns the whole trace the MRN appears in.
+        if attr_names := _source_attr_columns.get(source):
+
+            attr_event_ids = select(event_attr_table.c.event_id)
+            attr_event_ids = attr_event_ids.where(event_attr_table.c.name.in_(attr_names))
+            attr_event_ids = attr_event_ids.where(event_attr_table.c.value.like(like_value, escape='\\'))
+
+            matching_cids = select(event_table.c.cid).where(event_table.c.id.in_(attr_event_ids))
+
+            like_parts.append(event_table.c.cid.in_(matching_cids))
+
         out.append(or_(*like_parts))
 
     # The outstanding filter narrows the page down to the open exchanges of this source -
@@ -368,6 +440,70 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
     for row in rows:
         if row['cid'] in resubmitted:
             row['is_resubmitted'] = True
+
+# ################################################################################################################################
+
+def _attach_attr_columns(connection:'any_', source:'str', rows:'anylist') -> 'None':
+    """ Merges this source's attr columns into the page rows - one query
+    for the whole page, empty strings where an event has no such attr.
+    """
+    attr_names = _source_attr_columns.get(source)
+
+    if not attr_names:
+        return
+
+    row_by_event_id:'anydict' = {}
+
+    for row in rows:
+        for attr_name in attr_names:
+            row[attr_name] = ''
+
+        row_by_event_id[row['id']] = row
+
+    if not row_by_event_id:
+        return
+
+    statement = select(event_attr_table.c.event_id, event_attr_table.c.name, event_attr_table.c.value)
+    statement = statement.where(event_attr_table.c.event_id.in_(row_by_event_id))
+    statement = statement.where(event_attr_table.c.name.in_(attr_names))
+
+    result = connection.execute(statement)
+
+    for event_id, name, value in result:
+        row_by_event_id[event_id][name] = value
+
+# ################################################################################################################################
+
+def _attach_body_previews(connection:'any_', source:'str', rows:'anylist') -> 'None':
+    """ Fills the data previews of a source whose payloads live in the body table -
+    one query for the whole page, truncated in the database already.
+    """
+    if source not in _source_body_preview:
+        return
+
+    row_by_event_id:'anydict' = {}
+
+    for row in rows:
+        if not row['data']:
+            row_by_event_id[row['id']] = row
+
+    if not row_by_event_id:
+        return
+
+    statement = select(
+        event_body_table.c.event_id,
+        func.substr(event_body_table.c.data, 1, _data_preview_len),
+    )
+    statement = statement.where(event_body_table.c.event_id.in_(row_by_event_id))
+    statement = statement.order_by(event_body_table.c.id)
+
+    result = connection.execute(statement)
+
+    # An event with both a request and a response body previews the earlier one
+    for event_id, preview in result:
+        row = row_by_event_id[event_id]
+        if not row['data']:
+            row['data'] = preview
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -494,6 +630,12 @@ def poll(req:'any_') -> 'HttpResponse':
 
             rows.append(row)
 
+        # Sources with attr columns get them merged in, one query for the page ..
+        _attach_attr_columns(connection, source, rows)
+
+        # .. and sources whose payloads live in the body table get their previews the same way.
+        _attach_body_previews(connection, source, rows)
+
         # Rows already resubmitted get their marker, on sources with resubmit actions.
         if source in _source_resubmit:
             _mark_resubmitted(connection, source, rows)
@@ -507,19 +649,55 @@ def poll(req:'any_') -> 'HttpResponse':
 
 # ################################################################################################################################
 
+def _render_hl7_parsed(data:'str') -> 'str':
+    """ Renders the parsed view of an HL7 payload - the display tree as indented text.
+    A payload that does not parse simply has no parsed view.
+    """
+
+    # A resubmitted event stores its payload wrapped in JSON, the resubmit convention -
+    # the message inside is what parses.
+    if data.startswith('{'):
+        try:
+            wrapper = json.loads(data)
+        except ValueError:
+            wrapper = {}
+
+        if isinstance(wrapper, dict) and 'payload' in wrapper:
+            data = wrapper['payload']
+
+    try:
+        message = parse_hl7(data, validate=False)
+        tree = build_display_tree(message)
+    except Exception:
+        return ''
+
+    out = render_display_text(tree)
+    return out
+
+# ################################################################################################################################
+
+# Per-source parsed renderers - the default is the EDI renderer, which returns
+# an empty string for payloads that do not embed an EDI document.
+_source_parse = {
+    'hl7': _render_hl7_parsed,
+}
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def details(req:'any_') -> 'HttpResponse':
     """ Returns the complete payload of one audit event, without any truncation,
-    along with the human-readable rendering of the EDI document the payload carries,
+    along with the human-readable rendering of the document the payload carries,
     if it carries one at all.
     """
     body = json.loads(req.body)
     event_id = body['id']
 
     data = ''
+    source = ''
 
     # Read the full payload of this one event from the shared audit log database.
-    details_query = select(event_table.c.data).where(event_table.c.id == event_id)
+    details_query = select(event_table.c.source, event_table.c.data).where(event_table.c.id == event_id)
     engine = get_audit_engine()
 
     with engine.connect() as connection:
@@ -528,10 +706,23 @@ def details(req:'any_') -> 'HttpResponse':
         row = result.fetchone()
 
         if row:
-            data = row[0]
+            source = row[0]
+            data = row[1]
 
-    # A payload that embeds an EDI document additionally renders as its parsed view.
-    parsed = render_document(data)
+    # A payload stored outside the data column resolves through the body registry -
+    # sources with their own body stores answer for themselves, everything else
+    # reads the shared body table.
+    if not data:
+        resolved = resolve_body(engine, source, event_id)
+        if resolved is not None:
+            data = resolved
+
+    # The parsed view comes from the source's own renderer, with the EDI renderer
+    # as the shared default - an empty result means no parsed tab at all.
+    if renderer := _source_parse.get(source):
+        parsed = renderer(data)
+    else:
+        parsed = render_document(data)
 
     response_json = json.dumps({'data': data, 'parsed': parsed})
     response_bytes = response_json.encode('utf-8')

@@ -89,6 +89,9 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     row += String.format("<td>{0}</td>", security_name || $.fn.zato.empty_value);
 
     // 3
+    // The audit log of this connection's requests is filed under the connection's name
+    row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{0}');\">Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));

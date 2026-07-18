@@ -294,6 +294,9 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
 
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
 
+    // The audit log of this channel's messages is filed under the channel's name
+    row += String.format('<td><a href="/zato/audit-log/?source=hl7&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.delete_('{0}');\">Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.invoke('{0}')\">Invoke</a>", item.id));

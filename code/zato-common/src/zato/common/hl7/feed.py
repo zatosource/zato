@@ -70,8 +70,8 @@ Default_Mix = (
 # ################################################################################################################################
 
 # Field indexes within a pipe-split MSH segment, where index 0 is the segment name itself
-_MSH3_Index  = 2
-_MSH10_Index = 9
+MSH3_Index  = 2
+MSH10_Index = 9
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,9 +136,10 @@ class FeedRunResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _rewrite_msh_field(message_text:'str', field_index:'int', value:'str') -> 'str':
+def rewrite_msh_field(message_text:'str', field_index:'int', value:'str') -> 'str':
     """ Returns the message with one MSH field replaced - how the feed assigns
-    its own control ids and failure markers without authoring message content.
+    its own control ids and failure markers without authoring message content,
+    and how other callers stamp routing values onto generated messages.
     """
 
     # The MSH segment is everything up to the first segment separator
@@ -183,12 +184,12 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
 
         # The faker authors the message, the feed only stamps its own control id ..
         text = faker()
-        text = _rewrite_msh_field(text, _MSH10_Index, item.control_id)
+        text = rewrite_msh_field(text, MSH10_Index, item.control_id)
 
         # .. and an injected failure is a routing marker, not corrupted content -
         # a channel routes this MSH-3 value to a service that fails.
         if item.is_error:
-            text = _rewrite_msh_field(text, _MSH3_Index, config.error_sending_application)
+            text = rewrite_msh_field(text, MSH3_Index, config.error_sending_application)
 
         item.text = text
         out.append(item)

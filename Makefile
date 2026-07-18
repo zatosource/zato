@@ -9,7 +9,7 @@
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
-	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-logging test-ibm-mq test-mongodb test-es \
+	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -650,6 +650,7 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		$(CURDIR)/code/tests/python/zato-common/hl7_feed/ \
 		$(CURDIR)/code/tests/python/zato-common/channel_state/ \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
+		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
@@ -765,6 +766,13 @@ test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and c
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-demo-seed: ## Demo-data seeder tests - the seeded week of traffic, alerts and config history, fully offline.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/demo_seed/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_demo_seed -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-mongodb: ## MongoDB connection tests against a live server, plain and TLS.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-server/mongodb/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -841,7 +849,7 @@ test-safeguards: ## Response safeguard tests with 100% branch coverage.
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_safeguards --show-missing --fail-under=100
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
 
 test: test-all ## Alias for test-all.
 

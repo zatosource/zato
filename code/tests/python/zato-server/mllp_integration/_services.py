@@ -256,6 +256,66 @@ class TestAlertingRuleDelete(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+demo_import_service_source = '''\
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from zato.common.demo.seed import SeedConfig
+from zato.common.json_internal import dumps, loads
+from zato.server.demo import import_demo_data, remove_demo_data
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDemoImport(Service):
+    """ Runs the demo-data import on this server - the same plain function
+    a dashboard view invokes, exercised here over a live environment.
+    The request may size the run down, so the test stays fast.
+    """
+    name = 'test.demo.import'
+
+    def handle(self):
+
+        request = self.request.raw_request
+        if isinstance(request, (str, bytes)):
+            request = loads(request)
+
+        config = SeedConfig()
+        config.days = request['days']
+        config.messages_per_day = request['messages_per_day']
+        config.burst_message_count = request['burst_message_count']
+        config.fhir_pair_count = request['fhir_pair_count']
+
+        result = import_demo_data(self.server, config=config)
+        self.response.payload = dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDemoPurge(Service):
+    """ Undoes the demo import through the same server-side function the
+    dashboard's removal path uses, so this test module leaves nothing behind.
+    """
+    name = 'test.demo.purge'
+
+    def handle(self):
+        result = remove_demo_data(self.server)
+        self.response.payload = dumps(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 error_service_source = '''\
 # -*- coding: utf-8 -*-
 
