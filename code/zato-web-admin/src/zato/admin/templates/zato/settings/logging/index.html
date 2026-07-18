@@ -1,9 +1,256 @@
-{% extends "zato/settings/textarea-page.html" %}
+{% extends "zato/dashboard_base.html" %}
+{% load extras %}
 
-{% block textarea_page_css %}
+{% block html_title %}Logging{% endblock %}
+
+{% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/logging.css">
 {% endblock %}
 
-{% block textarea_page_js %}
-<script type="text/javascript" src="/static/js/logging.js" nonce="{{ CSP_NONCE }}"></script>
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/logging/levels.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/logging/destinations.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/logging/main.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.logging.init({{ page_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card logging-card" id="logging-card-container">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Logging categories">
+
+                    <button type="button"
+                            class="dashboard-tab{% if active_tab == 'logging' %} dashboard-tab-active{% endif %}"
+                            data-tab="logging"
+                            role="tab"
+                            aria-selected="{% if active_tab == 'logging' %}true{% else %}false{% endif %}">
+                        <span class="dashboard-tab-label">Logging</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab{% if active_tab == 'splunk' %} dashboard-tab-active{% endif %}"
+                            data-tab="splunk"
+                            role="tab"
+                            aria-selected="{% if active_tab == 'splunk' %}true{% else %}false{% endif %}">
+                        <span class="dashboard-tab-label">Splunk</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab{% if active_tab == 'datadog' %} dashboard-tab-active{% endif %}"
+                            data-tab="datadog"
+                            role="tab"
+                            aria-selected="{% if active_tab == 'datadog' %}true{% else %}false{% endif %}">
+                        <span class="dashboard-tab-label">Datadog</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab{% if active_tab == 'grafana' %} dashboard-tab-active{% endif %}"
+                            data-tab="grafana"
+                            role="tab"
+                            aria-selected="{% if active_tab == 'grafana' %}true{% else %}false{% endif %}">
+                        <span class="dashboard-tab-label">Grafana</span>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Logging -->
+            <div class="dashboard-tab-panel"
+                 id="logging-tab-panel-logging"
+                 role="tabpanel"
+                 {% if active_tab != 'logging' %}hidden{% endif %}>
+
+                <div class="logging-levels-editor">
+                    <textarea id="logging-config"
+                              placeholder="logger=LEVEL, one per line, e.g.:&#10;zato=DEBUG&#10;root=INFO"></textarea>
+                    <div class="logging-levels-results" id="logging-levels-results"></div>
+                </div>
+
+                <div class="logging-actions">
+                    <span class="logging-status" id="logging-status-logging"></span>
+                    <button type="button" class="secondary-button" id="logging-levels-test">Test</button>
+                    <button type="button" class="action-button" id="logging-levels-save">Save</button>
+                </div>
+
+            </div>
+
+            <!-- Splunk -->
+            <div class="dashboard-tab-panel"
+                 id="logging-tab-panel-splunk"
+                 role="tabpanel"
+                 {% if active_tab != 'splunk' %}hidden{% endif %}>
+
+                <div class="logging-destination-list" id="logging-list-splunk"></div>
+
+                <div class="logging-destination-form" id="logging-form-splunk" hidden>
+
+                    <div class="logging-form-row">
+                        <label for="logging-splunk-name">Name</label>
+                        <input type="text" id="logging-splunk-name" data-field="name">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-splunk-address">HEC endpoint URL</label>
+                        <input type="text" id="logging-splunk-address" data-field="address"
+                               placeholder="https://splunk.example.com:8088/services/collector/event">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-splunk-token">Token</label>
+                        <input type="password" id="logging-splunk-token" data-field="token">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-splunk-index">Index</label>
+                        <input type="text" id="logging-splunk-index" data-field="index" placeholder="zato">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-splunk-sourcetype">Sourcetype</label>
+                        <input type="text" id="logging-splunk-sourcetype" data-field="sourcetype" placeholder="zato:audit">
+                    </div>
+
+                    <div class="logging-form-row logging-form-row-toggle">
+                        <label for="logging-splunk-is-active">Active</label>
+                        <input type="checkbox" id="logging-splunk-is-active" data-field="is_active" checked>
+                    </div>
+
+                </div>
+
+                <div class="logging-actions">
+                    <span class="logging-status" id="logging-status-splunk"></span>
+                    <button type="button" class="secondary-button" id="logging-cancel-splunk" hidden>Cancel</button>
+                    <button type="button" class="action-button" id="logging-add-splunk">Add destination</button>
+                    <button type="button" class="action-button" id="logging-save-splunk" hidden>Save destination</button>
+                </div>
+
+            </div>
+
+            <!-- Datadog -->
+            <div class="dashboard-tab-panel"
+                 id="logging-tab-panel-datadog"
+                 role="tabpanel"
+                 {% if active_tab != 'datadog' %}hidden{% endif %}>
+
+                <div class="logging-destination-list" id="logging-list-datadog"></div>
+
+                <div class="logging-destination-form" id="logging-form-datadog" hidden>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-name">Name</label>
+                        <input type="text" id="logging-datadog-name" data-field="name">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-address">Intake URL</label>
+                        <input type="text" id="logging-datadog-address" data-field="address">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-api-key">API key</label>
+                        <input type="password" id="logging-datadog-api-key" data-field="api_key">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-service">Service</label>
+                        <input type="text" id="logging-datadog-service" data-field="service" placeholder="zato">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-source">Source</label>
+                        <input type="text" id="logging-datadog-source" data-field="source" placeholder="zato">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-datadog-tags">Tags</label>
+                        <input type="text" id="logging-datadog-tags" data-field="tags" placeholder="env:prod,team:api">
+                    </div>
+
+                    <div class="logging-form-row logging-form-row-toggle">
+                        <label for="logging-datadog-is-active">Active</label>
+                        <input type="checkbox" id="logging-datadog-is-active" data-field="is_active" checked>
+                    </div>
+
+                </div>
+
+                <div class="logging-actions">
+                    <span class="logging-status" id="logging-status-datadog"></span>
+                    <button type="button" class="secondary-button" id="logging-cancel-datadog" hidden>Cancel</button>
+                    <button type="button" class="action-button" id="logging-add-datadog">Add destination</button>
+                    <button type="button" class="action-button" id="logging-save-datadog" hidden>Save destination</button>
+                </div>
+
+            </div>
+
+            <!-- Grafana -->
+            <div class="dashboard-tab-panel"
+                 id="logging-tab-panel-grafana"
+                 role="tabpanel"
+                 {% if active_tab != 'grafana' %}hidden{% endif %}>
+
+                <div class="logging-destination-list" id="logging-list-grafana"></div>
+
+                <div class="logging-destination-form" id="logging-form-grafana" hidden>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-name">Name</label>
+                        <input type="text" id="logging-grafana-name" data-field="name">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-address">Loki push URL</label>
+                        <input type="text" id="logging-grafana-address" data-field="address"
+                               placeholder="https://loki.example.com/loki/api/v1/push">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-tenant-id">Tenant ID</label>
+                        <input type="text" id="logging-grafana-tenant-id" data-field="tenant_id">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-username">Username</label>
+                        <input type="text" id="logging-grafana-username" data-field="username">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-api-token">API token</label>
+                        <input type="password" id="logging-grafana-api-token" data-field="api_token">
+                    </div>
+
+                    <div class="logging-form-row">
+                        <label for="logging-grafana-stream-labels">Stream labels</label>
+                        <input type="text" id="logging-grafana-stream-labels" data-field="stream_labels"
+                               placeholder="app=zato,env=prod">
+                    </div>
+
+                    <div class="logging-form-row logging-form-row-toggle">
+                        <label for="logging-grafana-is-active">Active</label>
+                        <input type="checkbox" id="logging-grafana-is-active" data-field="is_active" checked>
+                    </div>
+
+                </div>
+
+                <div class="logging-actions">
+                    <span class="logging-status" id="logging-status-grafana"></span>
+                    <button type="button" class="secondary-button" id="logging-cancel-grafana" hidden>Cancel</button>
+                    <button type="button" class="action-button" id="logging-add-grafana">Add destination</button>
+                    <button type="button" class="action-button" id="logging-save-grafana" hidden>Save destination</button>
+                </div>
+
+            </div>
+
+        </div>
+
 {% endblock %}
