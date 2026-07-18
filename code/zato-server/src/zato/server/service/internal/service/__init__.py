@@ -17,7 +17,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import EMAIL, HTTP_SOAP, query_parameters
+from zato.common.api import EMAIL, HL7, HTTP_SOAP, query_parameters
 from zato.common.broker_message import SERVICE
 from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
@@ -490,6 +490,21 @@ class ServiceInvoker(Service):
 
 # ################################################################################################################################
 
+    def _parse_ide_hl7_payload(self, payload):
+        """ Parses ER7 text from the IDE into the same object shape an MLLP channel
+        callback receives, so a channel-style service can be developed with no channel.
+        """
+        from zato.common.hl7.mllp.preprocess import parse_with_channel_defaults
+
+        try:
+            out = parse_with_channel_defaults(payload)
+        except Exception as e:
+            raise BadRequest(self.cid, 'HL7 payload could not be parsed -> {}'.format(e))
+
+        return out
+
+# ################################################################################################################################
+
     def _check_gateway_allowed(self, service_name):
         """ Checks whether the service is allowed for the current channel's gateway allow list.
         If the allow list is empty, all services are allowed.
@@ -537,6 +552,13 @@ class ServiceInvoker(Service):
             else:
                 payload = self._extract_payload_from_request()
 
+            # The IDE's payload-format selector may ask for channel-equivalent input,
+            # e.g. ER7 text parsed into the same object an MLLP channel delivers.
+            ide_data_format = self.wsgi_environ.get('HTTP_X_ZATO_IDE_DATA_FORMAT', '')
+
+            if ide_data_format == HL7.Const.Version.v2.id:
+                payload = self._parse_ide_hl7_payload(payload)
+
             # A dictionary of headers that the target service may want to produce
             zato_response_headers_container = {}
 
@@ -560,6 +582,12 @@ class ServiceInvoker(Service):
                 wsgi_environ=target_wsgi_environ,
                 zato_response_headers_container=zato_response_headers_container
                 )
+
+            # A channel-style HL7 service may return a parsed message - it leaves as ER7 text
+            if ide_data_format == HL7.Const.Version.v2.id:
+                from zato.hl7v2 import HL7Message
+                if isinstance(response, HL7Message):
+                    response = response.to_er7()
 
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response

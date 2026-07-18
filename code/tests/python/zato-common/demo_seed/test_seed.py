@@ -8,13 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta
+from time import monotonic
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
 from zato.common.alerting.model import AlertState
-from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, AuditEvent, AuditLink, AuditLog, \
+from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, AuditEvent, AuditLink, \
     AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Actor_Admin, Actor_Operator, \
@@ -38,6 +39,11 @@ _server_name = 'test-demo-seed-server'
 # A fixed moment the assertions hinge on - a midday, so the day's curve has hours behind it
 _now = datetime(2026, 7, 15, 12, 30, 0)
 
+# How long one default-size run may take end to end - the writes land in one bulk
+# transaction, so nearly all of this budget covers content generation, with ample
+# headroom for slow CI machines
+_max_seed_seconds = 5.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,10 +60,9 @@ def _small_config() -> 'SeedConfig':
 # ################################################################################################################################
 
 def _run_seed() -> 'any_':
-    audit_log = AuditLog(_server_name, flush_max_size=1)
     engine = get_audit_engine()
 
-    out = seed_demo_data(audit_log, engine, now=_now, config=_small_config())
+    out = seed_demo_data(engine, server_name=_server_name, now=_now, config=_small_config())
     return out
 
 # ################################################################################################################################
@@ -376,6 +381,24 @@ class TestSeedBehaviour:
         assert events == []
         assert alerts == []
         assert dedups == []
+
+# ################################################################################################################################
+
+    def test_a_full_size_run_is_fast(self) -> 'None':
+        """ The default-size run - a whole week of traffic - lands in the database
+        in one bulk transaction, so the import stays fast enough to sit behind
+        a button in the UI.
+        """
+        engine = get_audit_engine()
+
+        start = monotonic()
+        result = seed_demo_data(engine, server_name=_server_name, now=_now)
+        elapsed = monotonic() - start
+
+        # The run really was the full-size one
+        assert result.event_count > result.message_count * 2
+
+        assert elapsed < _max_seed_seconds, f'Seed took {elapsed:.2f}s, expected under {_max_seed_seconds}s'
 
 # ################################################################################################################################
 # ################################################################################################################################

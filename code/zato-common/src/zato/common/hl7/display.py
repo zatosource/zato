@@ -300,3 +300,24 @@ def render_display_text(tree:'stranydict') -> 'str':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def parse_and_render(data:'str') -> 'str':
+    """ Parses ER7 text and renders its display tree as indented plain text -
+    a payload that does not parse renders as an empty string.
+    """
+
+    # Imported here because this convenience is the module's only parsing entry point -
+    # everything else works on messages already parsed by the caller.
+    from zato.hl7v2 import parse_hl7
+
+    try:
+        message = parse_hl7(data, validate=False)
+        tree = build_display_tree(message)
+    except Exception:
+        return ''
+
+    out = render_display_text(tree)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

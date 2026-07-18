@@ -113,14 +113,19 @@
 
                     <tr colspan="2" class="invoker-tr">
                         <td>
+                            <div id="request-view-toggle" class="invoker-view-toggle hidden">
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'raw')" id="request-view-raw" class="invoker-view-link current">Raw</a> |
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'parsed')" id="request-view-parsed" class="invoker-view-link">Parsed</a>
+                            </div>
                             <div class="invoker-area">
-                                <form id="invoke-service-request-form"><textarea id="data-request" name="data-request"
+                                <form id="invoke-service-request-form"><input type="hidden" id="data-format" name="data_format" value="auto"/><textarea id="data-request" name="data-request"
                                     placeholder="Enter parameters as key=value pairs, e.g.:
 key1=value1
 key2=value2
 
 Ctrl+↑/↓ to browse history
 Ctrl+K for full history"></textarea></form>
+                                <pre id="data-request-parsed" class="invoker-parsed-pane hidden"></pre>
                             </div>
                         </td>
                     </tr>
@@ -136,6 +141,17 @@ Ctrl+K for full history"></textarea></form>
                                     <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
                                 </div>
                                 <div style="text-align: right;">
+                                    <a href="javascript:void(0)" id="insert-sample-link" class="common hidden">Samples</a>
+                                    <select id="payload-format-select" class="default" title="How to treat the request and response payloads">
+                                        <option value="auto">Auto</option>
+                                        <option value="json">JSON</option>
+                                        <option value="key-value">Key=value</option>
+                                        <option value="hl7-v2">HL7 v2</option>
+                                        <option value="fhir">FHIR</option>
+                                    </select>
+                                    <select id="invoke-mode-select" class="default hidden" title="How to invoke the service">
+                                        <option value="service">As service</option>
+                                    </select>
                                     <input type="button" id="open-history-overlay" value="History" title="Open full history (Ctrl+K)" onclick="$.fn.zato.ide.open_history_overlay();"/><span style="user-select: none;"></span>
                                     <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
                                     <input
@@ -151,9 +167,14 @@ Ctrl+K for full history"></textarea></form>
                     <tr colspan="2" class="invoker-tr">
                         <td style="padding-top: 0;">
                             <form id="invoke-service-form" novalidate="" method="post"></form>
+                            <div id="response-view-toggle" class="invoker-view-toggle hidden">
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'raw')" id="response-view-raw" class="invoker-view-link current">Raw</a> |
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'parsed')" id="response-view-parsed" class="invoker-view-link">Parsed</a>
+                            </div>
                             <div id="response-panel" class="invoker-area">
                                 <textarea id="data-response" readonly
                                     placeholder="No response yet - invoke the service to see results here"></textarea>
+                                <pre id="data-response-parsed" class="invoker-parsed-pane hidden"></pre>
                             </div>
                             <div id="message-viewer-wrapper" style="display: none;"></div>
                             </form>

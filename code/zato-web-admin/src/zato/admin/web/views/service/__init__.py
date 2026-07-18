@@ -52,6 +52,17 @@ _prefixes_to_ignore = ('helpers.', 'pubsub.')
 
 # ################################################################################################################################
 
+# What the IDE sends when no explicit payload format is selected
+_default_payload_format = 'auto'
+
+# Formats whose payload travels to the server as raw text with a format header
+_header_payload_formats = ('hl7-v2', 'fhir', 'json')
+
+# The header the server-side invoker proxy reads the format from
+_ide_data_format_header = 'X-Zato-IDE-Data-Format'
+
+# ################################################################################################################################
+
 def _get_channels(client:'any_', cluster:'any_', id:'str', channel_type:'str') -> 'anylist':
     """ Returns a list of channels of a given type for the given service.
     """
@@ -244,12 +255,26 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
 
     try:
         payload = req.POST.get('data-request', '')
-        first_line = payload.strip().splitlines()[0] if payload else ''
+        data_format = req.POST.get('data_format', _default_payload_format)
 
-        if payload and '{' not in payload and '=' in first_line:
+        headers = {}
+
+        # An explicit choice - always key=value pairs, no heuristics
+        if data_format == 'key-value':
             payload = parse_extra_into_dict(payload, convert_bool=False)
 
-        response = req.zato.client.invoke(name, payload) # type: ignore
+        # The payload travels as-is and the server-side proxy interprets the format
+        elif data_format in _header_payload_formats:
+            headers[_ide_data_format_header] = data_format
+
+        # Auto - the historical heuristic, key=value pairs unless the payload looks like JSON
+        else:
+            first_line = payload.strip().splitlines()[0] if payload else ''
+
+            if payload and '{' not in payload and '=' in first_line:
+                payload = parse_extra_into_dict(payload, convert_bool=False)
+
+        response = req.zato.client.invoke(name, payload, headers=headers) # type: ignore
 
     except HeadersEnrichedException as enriched_exc:
         content['response_time_human'] = enriched_exc.headers.get('X-Zato-Response-Time-Human') # type: ignore
