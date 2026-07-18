@@ -374,6 +374,10 @@ class TestMLLPAudit:
 
         wait_for_port_open(mllp_port)
 
+        # The routes register asynchronously after the create calls return -
+        # give the last one a moment before the first message goes out.
+        time.sleep(1)
+
 # ################################################################################################################################
 
     def test_02_message_received_and_ack_sent(self, zato_server:'dict', mllp_port:'int') -> 'None':

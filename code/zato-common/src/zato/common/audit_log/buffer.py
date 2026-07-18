@@ -13,6 +13,9 @@ from logging import getLogger
 from threading import Lock, Thread
 from time import monotonic, sleep
 
+# gevent
+from gevent.monkey import is_module_patched
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,6 +50,13 @@ _min_check_interval_seconds = 0.05
 
 # .. and never more than this, so a shrinking max-wait is honored promptly.
 _max_check_interval_seconds = 1.0
+
+# Per-flush trace diagnostics - opt-in through the environment
+_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
+
+def _trace(message:'str', *args:'object') -> 'None':
+    if _is_trace_enabled:
+        logger.info('TRACE ' + message, *args)
 
 # ################################################################################################################################
 
@@ -153,6 +163,26 @@ class EventBuffer:
 
         # .. and write outside the lock so producers are never blocked by the database.
         if batch:
+
+            # Trace point 7: a full buffer flushes inline in the producer
+            _trace('inline flush of %d events begins', len(batch))
+            flush_start = monotonic()
+
+            self._write_batch_off_loop(batch)
+
+            _trace('inline flush of %d events done %.1fms', len(batch), (monotonic() - flush_start) * 1000)
+
+# ################################################################################################################################
+
+    def _write_batch_off_loop(self, batch:'pending_event_list') -> 'None':
+        """ Runs the blocking database write on a real OS thread when gevent has the process
+        monkey-patched - the database driver's C calls never yield to the event loop, so a slow
+        write executed inline would freeze every socket in the process for its whole duration.
+        """
+        if is_module_patched('threading'):
+            from gevent import get_hub
+            get_hub().threadpool.apply(self.write_batch, (batch,))
+        else:
             self.write_batch(batch)
 
 # ################################################################################################################################
@@ -207,10 +237,17 @@ class EventBuffer:
 
             # .. and write outside the lock.
             if batch:
+
+                # Trace point 8: the timed flusher writes a batch in the background
+                _trace('timed flush of %d events begins', len(batch))
+                flush_start = monotonic()
+
                 try:
-                    self.write_batch(batch)
+                    self._write_batch_off_loop(batch)
                 except Exception:
                     logger.warning('Audit log flush failed', exc_info=True)
+
+                _trace('timed flush of %d events done %.1fms', len(batch), (monotonic() - flush_start) * 1000)
 
 # ################################################################################################################################
 # ################################################################################################################################

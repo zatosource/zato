@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import socket
 import ssl
 from logging import getLogger
@@ -44,6 +45,14 @@ logger = getLogger(__name__)
 
 # How many milliseconds one second holds - used when converting callback durations
 _ms_per_second = 1000
+
+# Per-message trace diagnostics - opt-in through the environment because they log
+# multiple lines per message, which is noise everywhere except a diagnostic run.
+_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
+
+def _trace(message:'str', *args:'object') -> 'None':
+    if _is_trace_enabled:
+        logger.info('TRACE ' + message, *args)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -442,6 +451,10 @@ class HL7MLLPServer:
         connection_context.total_messages_received += 1
         self.state.on_message_received()
 
+        # Trace point 1: the message arrived and processing begins
+        message_start = monotonic()
+        _trace('message #%d in (%d bytes)', connection_context.total_messages_received, len(raw_message_bytes))
+
         if self.should_log_messages:
             logger.info('Received message #%d (%d bytes) from %s:%d',
                 connection_context.total_messages_received, len(raw_message_bytes),
@@ -558,8 +571,13 @@ class HL7MLLPServer:
 
                     # .. attempt to parse (and optionally validate) the message ..
                     try:
+                        # Trace point 2: how long the parse took
+                        parse_start = monotonic()
+
                         callback_data = parse_hl7(
                             message_text, validate=self.should_validate, tolerance=self.tolerance_config)
+
+                        _trace('parse done %.1fms (%s)', (monotonic() - parse_start) * _ms_per_second, audit_msg_id)
 
                         # .. a parsed message contributes richer searchable attributes,
                         # .. including the patient's medical record number ..
@@ -612,9 +630,16 @@ class HL7MLLPServer:
                 # .. the receipt is recorded before the service runs, so a message
                 # .. that crashes its service is still visibly received ..
                 if needs_audit:
+
+                    # Trace point 3: how long the received-event audit write took
+                    audit_received_start = monotonic()
+
                     _ = audit_message_received(
                         self.audit_log, matched_route.channel_name, message_text, # type: ignore[arg-type]
                         cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+
+                    _trace('audit received done %.1fms (%s)',
+                        (monotonic() - audit_received_start) * _ms_per_second, audit_msg_id)
 
                 # .. invoke the matched route's service callback ..
                 callback_start = monotonic()
@@ -633,6 +658,9 @@ class HL7MLLPServer:
 
                 callback_duration_ms = int((monotonic() - callback_start) * _ms_per_second)
 
+                # Trace point 4: how long the service callback ran
+                _trace('callback done %dms (%s)', callback_duration_ms, audit_msg_id)
+
             # .. suppress error details if configured to not return errors ..
             if not self.should_return_errors:
                 error_text = ''
@@ -650,9 +678,15 @@ class HL7MLLPServer:
 
             # .. the acknowledgment lands on the same cid as the receipt it answers ..
             if needs_audit:
+
+                # Trace point 5: how long the acknowledgment audit write took
+                audit_ack_start = monotonic()
+
                 _ = audit_ack_sent(
                     self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
                     cid=audit_cid, msg_id=audit_msg_id, duration_ms=callback_duration_ms)
+
+                _trace('audit ack done %.1fms (%s)', (monotonic() - audit_ack_start) * _ms_per_second, audit_msg_id)
 
             # .. send the framed ACK back.
             try:
@@ -660,6 +694,10 @@ class HL7MLLPServer:
             except (BrokenPipeError, ConnectionResetError):
                 logger.warning('Could not send ACK to %s:%d - connection lost',
                     connection_context.peer_ip, connection_context.peer_port)
+
+            # Trace point 6: the ACK left and the message is fully processed
+            _trace('message done %.1fms total (%s %s)',
+                (monotonic() - message_start) * _ms_per_second, ack_code, audit_msg_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
