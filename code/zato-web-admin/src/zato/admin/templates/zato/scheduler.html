@@ -133,7 +133,7 @@
                         <td>{{ job.name }}</td>
                         <td style="text-align:center"><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.toggle_active('{{ job.job_type }}', '{{ job.id }}', this)">{{ job.is_active|yesno:"Yes,No" }}</a></td>
                         <td>{% if job.job_type == 'interval_based' %}<a href="javascript:void(0)" onclick="$.fn.zato.scheduler.edit_interval('{{ job.id }}', this)">{{ job.definition_text|safe }}</a>{% else %}{{ job.definition_text|safe }}{% endif %}</td>
-                        <td class="zato-time-ago" data-time-utc="{{ job.last_run_utc }}"></td>
+                        <td class="zato-time-ago" data-time-utc="{{ job.last_run_utc }}" data-duration-ms="{{ job.last_duration_ms }}"></td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&range={{ default_time_range_minutes }}&outcomes=all">Audit log</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>

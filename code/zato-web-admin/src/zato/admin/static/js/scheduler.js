@@ -276,15 +276,20 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
         row += String.format('<td>{0}</td>', data.definition_text);
     }
 
-    // Carry over the existing last-run timestamp when a row is edited - a newly created job has not run yet.
+    // Carry over the existing last-run details when a row is edited - a newly created job has not run yet.
     var last_run_utc = '';
+    var last_duration_ms = '';
     if(!include_tr) {
         var existing_cell = $('#tr_' + job.id + ' td.zato-time-ago');
         if(existing_cell.length) {
             last_run_utc = existing_cell.attr('data-time-utc');
+            last_duration_ms = existing_cell.attr('data-duration-ms');
+            if(last_duration_ms === undefined) {
+                last_duration_ms = '';
+            }
         }
     }
-    row += String.format('<td class="zato-time-ago" data-time-utc="{0}"></td>', last_run_utc);
+    row += String.format('<td class="zato-time-ago" data-time-utc="{0}" data-duration-ms="{1}"></td>', last_run_utc, last_duration_ms);
 
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
     row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all&range={2}">Audit log</a></td>', job.id, cluster_id, $.fn.zato.scheduler.default_time_range_minutes);

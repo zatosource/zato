@@ -2089,6 +2089,9 @@ $.fn.zato.time_ago.config = {
     'just_now_label': 'Just now',
     'ago_label': 'ago',
     'ago_row_label': 'Ago',
+    'duration_row_label': 'Duration',
+    'duration_ms_label': 'ms',
+    'tooltip_title': 'Last run',
     'utc_label': 'UTC',
     'tippy_placement': 'top',
     'refresh_interval_ms': 5000,
@@ -2170,6 +2173,29 @@ $.fn.zato.time_ago.humanize_detailed = function(age_seconds) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// Turns a millisecond duration into readable text - "450 ms", "10.8 seconds"
+// or "1 minute 5 seconds" for anything longer.
+$.fn.zato.time_ago.humanize_duration = function(duration_ms) {
+    var config = $.fn.zato.time_ago.config;
+
+    if(duration_ms < 1000) {
+        return duration_ms + ' ' + config.duration_ms_label;
+    }
+
+    var seconds = duration_ms / 1000;
+
+    if(seconds < 60) {
+        var rounded = Math.round(seconds * 10) / 10;
+        var unit = rounded === 1 ? 'second' : 'seconds';
+        return rounded + ' ' + unit;
+    }
+
+    var out = $.fn.zato.time_ago.humanize_detailed(Math.floor(seconds));
+    return out;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.time_ago.format_timestamp = function(when, use_utc) {
 
     var pad_two = function(value) {
@@ -2204,7 +2230,7 @@ $.fn.zato.time_ago.format_timestamp = function(when, use_utc) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
+$.fn.zato.time_ago.build_tooltip_html = function(iso_utc, duration_ms) {
     var config = $.fn.zato.time_ago.config;
     var when = new Date(iso_utc);
 
@@ -2221,8 +2247,16 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
     }
     var ago_text = $.fn.zato.time_ago.humanize_detailed(age_seconds);
 
-    var out = '<table class="zato-time-ago-tooltip">';
+    var out = '<div class="zato-time-ago-tooltip-title">' + config.tooltip_title + '</div>';
+    out += '<table class="zato-time-ago-tooltip">';
     out += '<tr><th>' + config.ago_row_label + '</th><td>' + ago_text + '</td></tr>';
+
+    // The duration is only known once at least one run has completed.
+    if(duration_ms !== null) {
+        var duration_text = $.fn.zato.time_ago.humanize_duration(duration_ms);
+        out += '<tr><th>' + config.duration_row_label + '</th><td>' + duration_text + '</td></tr>';
+    }
+
     out += '<tr><th>' + browser_timezone + '</th><td>' + local_text + '</td></tr>';
     out += '<tr><th>' + config.utc_label + '</th><td>' + utc_text + '</td></tr>';
     out += '</table>';
@@ -2234,10 +2268,23 @@ $.fn.zato.time_ago.build_tooltip_html = function(iso_utc) {
 
 // Updates one cell in place - existing link and tippy instances are reused
 // so that periodic refreshes never make the cell flicker.
-$.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
+$.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
     var config = $.fn.zato.time_ago.config;
 
+    // The duration arrives as a number, a string from a data attribute or not at all -
+    // anything that is not a number means no run has completed yet.
+    duration_ms = parseInt(duration_ms);
+    if(isNaN(duration_ms)) {
+        duration_ms = null;
+    }
+
     cell.attr('data-time-utc', iso_utc);
+    if(duration_ms === null) {
+        cell.removeAttr('data-duration-ms');
+    }
+    else {
+        cell.attr('data-duration-ms', duration_ms);
+    }
 
     // Make sure the cell has its value element - the fade duration comes from the config
     // so that the CSS transition and the swap timer below always use the same number ..
@@ -2273,7 +2320,7 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
         cell.attr('data-sort-value', age_seconds);
 
         new_text = $.fn.zato.time_ago.humanize(age_seconds);
-        tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc);
+        tooltip_html = $.fn.zato.time_ago.build_tooltip_html(iso_utc, duration_ms);
     }
 
     // .. this is what actually writes the new content out ..
@@ -2350,7 +2397,7 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc) {
 // a manual trigger. The next refresh pass replaces it with the server-side timestamp.
 $.fn.zato.time_ago.mark_just_run = function(id) {
     var cell = $('#tr_' + id + ' td.zato-time-ago');
-    $.fn.zato.time_ago.update_cell(cell, new Date().toISOString());
+    $.fn.zato.time_ago.update_cell(cell, new Date().toISOString(), cell.attr('data-duration-ms'));
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -2384,7 +2431,7 @@ $.fn.zato.time_ago.init = function(container_selector) {
     var cells = $(container_selector).find('.zato-time-ago');
     cells.each(function() {
         var cell = $(this);
-        $.fn.zato.time_ago.update_cell(cell, cell.attr('data-time-utc'));
+        $.fn.zato.time_ago.update_cell(cell, cell.attr('data-time-utc'), cell.attr('data-duration-ms'));
     });
 }
 
@@ -2476,7 +2523,8 @@ $.fn.zato.time_ago.refresh = function(container_selector, url) {
                     var row_id = cell.closest('tr').attr('id');
                     var item_id = row_id.replace('tr_', '');
                     if(item_id in data) {
-                        $.fn.zato.time_ago.update_cell(cell, data[item_id]);
+                        var entry = data[item_id];
+                        $.fn.zato.time_ago.update_cell(cell, entry.last_run_utc, entry.last_duration_ms);
                     }
                 });
                 $.fn.zato.time_ago.hide_spinners(container_selector);

@@ -1224,6 +1224,13 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     border-collapse: collapse;
 }
 
+.zato-time-ago-tooltip-title {
+    margin: 2px 2px 4px 2px;
+    padding: 3px 6px;
+    font-weight: bold;
+    text-align: left;
+}
+
 .zato-time-ago-tooltip th,
 .zato-time-ago-tooltip td {
     padding: 3px 6px;
