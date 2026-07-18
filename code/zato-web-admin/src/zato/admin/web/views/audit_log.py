@@ -665,13 +665,7 @@ def _render_hl7_parsed(data:'str') -> 'str':
         if isinstance(wrapper, dict) and 'payload' in wrapper:
             data = wrapper['payload']
 
-    try:
-        message = parse_hl7(data, validate=False)
-        tree = build_display_tree(message)
-    except Exception:
-        return ''
-
-    out = render_display_text(tree)
+    out = parse_and_render(data)
     return out
 
 # ################################################################################################################################

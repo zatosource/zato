@@ -19,7 +19,7 @@ from time import sleep
 
 # Zato
 from zato.common.api import Audit_Config, HL7
-from zato.common.audit_log.api import get_audit_engine, AuditLog
+from zato.common.audit_log.api import get_audit_engine
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
     Channel_Main, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
@@ -246,11 +246,11 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     created_names = ensure_demo_connections(server)
     rule_names = store_demo_rules(server)
 
-    # The seeded history goes into the same audit database the server writes to
-    audit_log = AuditLog(server.name, flush_max_size=1)
+    # The seeded history goes into the same audit database the server writes to,
+    # collected in memory first and landing in one bulk transaction
     engine = get_audit_engine()
 
-    result = seed_demo_data(audit_log, engine, config=config)
+    result = seed_demo_data(engine, server_name=server.name, config=config)
 
     # The live burst fills the in-process counters
     burst_count = send_demo_burst()

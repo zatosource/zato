@@ -372,6 +372,36 @@ $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp.config = {
+    cluster_id: '1',
+    import_demo_url: '/zato/channel/hl7/mllp/import-demo-config'
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.import_demo_config = function() {
+    var config = $.fn.zato.channel.hl7.mllp.config;
+    var import_url = config.import_demo_url + '?cluster=' + config.cluster_id;
+
+    var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+    $('body').append(spinner_html);
+
+    $.ajax({
+        url: import_url,
+        method: 'GET',
+        success: function() {
+            $('#import-spinner').remove();
+            window.location.reload();
+        },
+        error: function() {
+            $('#import-spinner').remove();
+            alert('Import failed. Check server logs.');
+        }
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp._default_hl7_message = ''
     + 'MSH|^~\\&|WELLNESS_APP|MAIN_FAC|SCHEDULING|MAIN_FAC|20240315120000||ADT^A04^ADT_A01|MSG00001|P|2.9\r'
     + 'EVN|A04|20240315120000\r'

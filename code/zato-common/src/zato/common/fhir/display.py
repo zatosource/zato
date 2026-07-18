@@ -133,3 +133,68 @@ def build_display_tree(resource:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# How far each level of the rendered tree is indented
+_render_indent = '  '
+
+def _render_node(node:'stranydict', depth:'int', lines:'anylist') -> 'None':
+    """ Renders one display node as an indented line, descending into its children.
+    """
+    indent = _render_indent * depth
+
+    # A scalar carries its value on the same line, a container is a header for its children
+    if node['children']:
+        lines.append('{}{}:'.format(indent, node['label']))
+        for child in node['children']:
+            _render_node(child, depth + 1, lines)
+    else:
+        lines.append('{}{}: {}'.format(indent, node['label'], node['value']))
+
+# ################################################################################################################################
+
+def render_display_text(tree:'stranydict') -> 'str':
+    """ Renders a FHIR display tree as indented plain text - the same shape
+    the HL7 renderer produces, so both parsed views read alike.
+    """
+
+    lines:'anylist' = []
+
+    # The header line names the resource
+    lines.append(tree['label'])
+
+    # An OperationOutcome's issues come first - they are what an operator reads first
+    if 'issues' in tree:
+        lines.append('')
+        for issue in tree['issues']:
+            lines.append('{}{} ({}): {}'.format(_render_indent, issue['severity'], issue['code'], issue['text']))
+
+    lines.append('')
+
+    for node in tree['nodes']:
+        _render_node(node, 1, lines)
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def parse_and_render(data:'str') -> 'str':
+    """ Parses FHIR JSON text and renders its display tree as indented plain text -
+    a payload that is not a FHIR resource renders as an empty string.
+    """
+
+    # stdlib, imported here because this convenience is the module's only JSON entry point
+    import json
+
+    try:
+        resource = json.loads(data)
+        tree = build_display_tree(resource)
+    except Exception:
+        return ''
+
+    out = render_display_text(tree)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -54,7 +54,11 @@ let Copy_Tooltip_Timeout = 1000;
 $(document).ready(function() {
     $("#invoke-service").click($.fn.zato.invoker.on_invoke_submitted);
     $("#header-left-link-deploy").click($.fn.zato.invoker.on_deploy_submitted);
-    
+
+    $("#payload-format-select").on("change", $.fn.zato.ide.on_payload_format_changed);
+    $("#invoke-mode-select").on("change", $.fn.zato.ide.on_invoke_mode_changed);
+    $.fn.zato.ide.init_sample_menu();
+
     if (window.zato && window.zato.initializeMessageViewer) {
         window.zato.initializeMessageViewer();
     }
@@ -619,6 +623,302 @@ $.fn.zato.ide.populate_invoker_area = function(initial_header_status) {
             $.fn.zato.ide.postprocess_file_buttons();
         }
       });
+
+    // Offer the channels the current service can be invoked through
+    $.fn.zato.ide.refresh_invoke_mode_select();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Human-readable labels for each channel type the invoke mode selector can offer
+$.fn.zato.ide.invoke_mode_labels = {
+    "rest": "REST channel",
+    "hl7-mllp": "MLLP channel",
+};
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+// Payload format handling - defaults, endpoints and sample assets
+$.fn.zato.ide.config = {
+
+    // What the format selector falls back to when a service has no remembered choice
+    "default_payload_format": "auto",
+
+    // Formats whose request and response panes offer a parsed view
+    "parsed_payload_formats": ["hl7-v2", "fhir"],
+
+    // localStorage key prefix for the per-service payload format
+    "payload_format_key_prefix": "zato.ide.payload-format.",
+
+    // Where the parsed view of a payload is rendered
+    "parse_payload_url": "/zato/service/ide/parse-payload/",
+
+    // What the parsed pane shows when the payload does not parse
+    "parse_failed_text": "(payload does not parse)",
+
+    // Sample payloads offered per format
+    "samples": {
+        "hl7-v2": [
+            {"label": "ADT A01 - admit", "url": "/static/samples/hl7/adt_a01.hl7"},
+            {"label": "ORU R01 - lab result", "url": "/static/samples/hl7/oru_r01.hl7"},
+        ],
+        "fhir": [
+            {"label": "Patient", "url": "/static/samples/fhir/patient.json"},
+            {"label": "OperationOutcome", "url": "/static/samples/fhir/operation_outcome.json"},
+        ],
+    },
+};
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.get_payload_format = function() {
+    return $("#payload-format-select").val();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_payload_format_changed = function() {
+
+    let format = $.fn.zato.ide.get_payload_format();
+
+    // The format travels with the invoke form
+    $("#data-format").val(format);
+
+    // Remember the choice for this service
+    let service_name = $.fn.zato.ide.get_current_service_name();
+    if(service_name) {
+        localStorage.setItem($.fn.zato.ide.config.payload_format_key_prefix + service_name, format);
+    }
+
+    $.fn.zato.ide.update_parsed_toggles();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.restore_payload_format = function() {
+
+    let service_name = $.fn.zato.ide.get_current_service_name();
+
+    var format = null;
+    if(service_name) {
+        format = localStorage.getItem($.fn.zato.ide.config.payload_format_key_prefix + service_name);
+    }
+
+    // A service seen for the first time starts with the default
+    if(format === null) {
+        format = $.fn.zato.ide.config.default_payload_format;
+    }
+
+    $("#payload-format-select").val(format);
+    $("#data-format").val(format);
+
+    $.fn.zato.ide.update_parsed_toggles();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.on_invoke_mode_changed = function() {
+
+    let mode = $("#invoke-mode-select").val();
+
+    // Invoking through an MLLP channel implies the payload is HL7,
+    // so the format follows the mode instead of leaking a stale value.
+    if(mode.startsWith("hl7-mllp:")) {
+        $("#payload-format-select").val("hl7-v2");
+        $.fn.zato.ide.on_payload_format_changed();
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.update_parsed_toggles = function() {
+
+    let format = $.fn.zato.ide.get_payload_format();
+    let has_parsed_view = $.fn.zato.ide.config.parsed_payload_formats.includes(format);
+
+    if(has_parsed_view) {
+        $("#request-view-toggle").removeClass("hidden");
+        $("#response-view-toggle").removeClass("hidden");
+    }
+    else {
+        $("#request-view-toggle").addClass("hidden");
+        $("#response-view-toggle").addClass("hidden");
+
+        // Falling back to raw prevents a stale parsed view from lingering
+        $.fn.zato.ide.show_pane_view("request", "raw");
+        $.fn.zato.ide.show_pane_view("response", "raw");
+    }
+
+    // Samples exist only for some formats
+    let sample_list = $.fn.zato.ide.config.samples[format];
+
+    if(sample_list === undefined) {
+        $("#insert-sample-link").addClass("hidden");
+    }
+    else {
+        $("#insert-sample-link").removeClass("hidden");
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.show_pane_view = function(pane_name, view_name) {
+
+    let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
+    let parsed_elem = $(`#data-${pane_name}-parsed`);
+    let raw_link = $(`#${pane_name}-view-raw`);
+    let parsed_link = $(`#${pane_name}-view-parsed`);
+
+    if(view_name == "raw") {
+        parsed_elem.addClass("hidden");
+        text_elem.removeClass("hidden");
+        parsed_link.removeClass("current");
+        raw_link.addClass("current");
+        return;
+    }
+
+    // Parsed view - render the current pane content through the parse endpoint
+    let format = $.fn.zato.ide.get_payload_format();
+    let data = text_elem.val();
+
+    $.ajax({
+        type: "POST",
+        url: $.fn.zato.ide.config.parse_payload_url,
+        data: JSON.stringify({"data": data, "data_format": format}),
+        contentType: "application/json",
+        headers: {"X-CSRFToken": $.cookie("csrftoken")},
+        success: function(response) {
+
+            let parsed_text = response.parsed_text;
+            if(parsed_text === "") {
+                parsed_text = $.fn.zato.ide.config.parse_failed_text;
+            }
+
+            parsed_elem.text(parsed_text);
+            text_elem.addClass("hidden");
+            parsed_elem.removeClass("hidden");
+            raw_link.removeClass("current");
+            parsed_link.addClass("current");
+        }
+    });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.init_sample_menu = function() {
+
+    tippy("#insert-sample-link", {
+        content: "",
+        allowHTML: true,
+        theme: "light",
+        trigger: "click",
+        placement: "bottom",
+        arrow: true,
+        interactive: true,
+        onShow(instance) {
+
+            // The menu always reflects the current format's samples
+            let format = $.fn.zato.ide.get_payload_format();
+            let sample_list = $.fn.zato.ide.config.samples[format];
+
+            var html = "";
+            for(const [index, sample] of sample_list.entries()) {
+                html += `<input type="button" value="${sample.label}"
+                    onclick="$.fn.zato.ide.insert_sample('${format}', ${index})"/> `;
+            }
+
+            instance.setContent(html);
+        }
+    });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.insert_sample = function(format, index) {
+
+    let sample = $.fn.zato.ide.config.samples[format][index];
+
+    $.get(sample.url, function(data) {
+
+        $("#data-request").val(data);
+
+        // A sample becomes a fixture - it lands in the per-service request history
+        $.fn.zato.ide.save_request_to_history(data);
+
+        $.fn.zato.ide.show_pane_view("request", "raw");
+    }, "text");
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.populate_invoke_mode_select = function(binding_list) {
+
+    let select = $("#invoke-mode-select");
+    let previous_value = select.val();
+
+    // Rebuild the options from scratch - direct invocation is always available ..
+    select.empty();
+
+    let service_option = $("<option>");
+    service_option.attr("value", "service");
+    service_option.text("As service");
+    select.append(service_option);
+
+    // .. followed by one option per channel the service is exposed through ..
+    for(const binding of binding_list) {
+        let label = $.fn.zato.ide.invoke_mode_labels[binding.channel_type];
+        let option = $("<option>");
+        option.attr("value", `${binding.channel_type}:${binding.id}`);
+        option.text(`${label}: ${binding.name}`);
+        select.append(option);
+    }
+
+    // .. keep the previous mode if the new service still offers it, otherwise fall back to direct invocation ..
+    if(select.find(`option[value="${previous_value}"]`).length) {
+        select.val(previous_value);
+    }
+    else {
+        select.val("service");
+    }
+
+    // .. the selector appears only when there is an actual choice to make.
+    if(binding_list.length) {
+        select.removeClass("hidden");
+    }
+    else {
+        select.addClass("hidden");
+    }
+
+    // The payload format follows the service too
+    $.fn.zato.ide.restore_payload_format();
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------- */
+
+$.fn.zato.ide.refresh_invoke_mode_select = function() {
+
+    let service_name = $.fn.zato.ide.get_current_service_name();
+
+    // Without a service there are no channels to invoke through
+    if(!service_name) {
+        $.fn.zato.ide.populate_invoke_mode_select([]);
+        return;
+    }
+
+    let callback = function(data, _unused_status) {
+        let json = JSON.parse(data.responseText);
+
+        // The response is empty if the name does not point to a deployed service
+        let binding_list = json.current_service_binding_list;
+        if(binding_list === undefined) {
+            binding_list = [];
+        }
+
+        $.fn.zato.ide.populate_invoke_mode_select(binding_list);
+    }
+
+    let url = String.format("/zato/service/ide/get-service/{0}/", service_name);
+    $.fn.zato.post(url, callback);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1328,6 +1628,15 @@ $.fn.zato.ide.load_source_object = function(
             after_post_load_source_func,
             get_current_file_service_list_func
         );
+
+        // A service response carries its channel bindings directly, a file response does not,
+        // so for files the bindings of whichever service became selected are fetched anew.
+        if(object_type == "service") {
+            $.fn.zato.ide.populate_invoke_mode_select(json.current_service_binding_list);
+        }
+        else {
+            $.fn.zato.ide.refresh_invoke_mode_select();
+        }
     }
 
     var url = String.format("/zato/service/ide/get-{0}/{1}/?1=1&{2}", object_type, object_name,extra_qs);
@@ -1608,6 +1917,10 @@ $.fn.zato.ide.on_object_select_changed_current_file = function(option_selected) 
     let callback_function = null;
 
     window.zato_editor.scrollToLine(line_number, should_center, should_animate, callback_function);
+
+    // Selecting a service within the current file does not reload it,
+    // yet the newly selected service has its own channel bindings.
+    $.fn.zato.ide.refresh_invoke_mode_select();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */

@@ -12,6 +12,15 @@ import logging
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.hl7v2 import HL7Message
+    from zato.hl7v2_rs import ToleranceConfig
+    HL7Message = HL7Message
+    ToleranceConfig = ToleranceConfig
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -290,6 +299,54 @@ def preprocess_message(
         messages = normalized_messages
 
     return messages
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def build_channel_default_tolerance_config() -> 'ToleranceConfig':
+    """ Returns the parser tolerance configuration an MLLP channel applies unless
+    configured otherwise - the same values as channel_config_defaults in the channel wrapper.
+    """
+
+    # Imported here because the Rust module is only needed by callers that actually parse
+    from zato.hl7v2_rs import ToleranceConfig
+
+    out = ToleranceConfig()
+    out.normalize_obx2_value_type          = True
+    out.replace_invalid_obx2_value_type    = True
+    out.normalize_invalid_escape_sequences = True
+    out.normalize_obx8_abnormal_flags      = True
+    out.normalize_quadruple_quoted_empty   = True
+    out.allow_short_encoding_characters    = True
+    out.fix_off_by_one_field_index         = False
+
+    return out
+
+# ################################################################################################################################
+
+def parse_with_channel_defaults(data:'str') -> 'HL7Message | str':
+    """ Parses ER7 text into what an MLLP channel with default settings delivers to its
+    service - the full pre-processing pipeline followed by the tolerant parser, without
+    validation. A batch payload comes back as its raw text, exactly as a channel passes
+    batches through unparsed.
+    """
+
+    # Imported here because the Rust-backed model is only needed by callers that actually parse
+    from zato.hl7v2 import parse_hl7
+
+    # Run the same pre-processing pipeline a default channel runs ..
+    preprocessed = preprocess_message(data.encode('utf-8'))
+
+    # .. a channel hands batches to the service as raw text ..
+    if isinstance(preprocessed, BatchPayload):
+        return preprocessed.raw
+
+    # .. and regular payloads as parsed messages - one invocation carries one message,
+    # .. so the first message is the one that matters here.
+    tolerance_config = build_channel_default_tolerance_config()
+    out = parse_hl7(preprocessed[0], validate=False, tolerance=tolerance_config)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

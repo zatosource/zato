@@ -921,6 +921,8 @@ urlpatterns += [
         login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
     url(r'^zato/channel/hl7/mllp/invoke/(?P<id>.*)/$',
         login_required(channel_hl7_mllp.invoke_channel), name='channel-hl7-mllp-invoke'),
+    url(r'^zato/channel/hl7/mllp/import-demo-config$',
+        login_required(channel_hl7_mllp.import_demo_config), name='channel-hl7-mllp-import-demo-config'),
 
     # .. HL7 REST
 

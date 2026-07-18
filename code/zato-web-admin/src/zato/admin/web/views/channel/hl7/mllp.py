@@ -12,9 +12,10 @@ from logging import getLogger
 from socket import AF_INET, SOCK_STREAM, socket as socket_
 from time import time
 from traceback import format_exc
+from urllib.parse import urlparse
 
 # Django
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 
 # Zato
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
@@ -297,10 +298,6 @@ class Delete(_Delete):
 _MLLP_Start_Byte = b'\x0b'
 _MLLP_End_Bytes  = b'\x1c\x0d'
 
-# .. haproxy gateway address ..
-_Gateway_Host = '127.0.0.1'
-_Gateway_Port = 11223
-
 # .. TCP recv buffer size ..
 _Recv_Buffer_Size = 65536
 
@@ -310,25 +307,49 @@ _Socket_Timeout = 90
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _resolve_mllp_listener_address(req:'any_') -> 'tuple[str, int]':
+    """ Resolves where the shared MLLP listener accepts connections - the port lives
+    in the server process and the listener runs on the same host as the server itself.
+    """
+    response = req.zato.client.invoke('zato.server.invoker', {'func_name': 'get_hl7_mllp_port'})
+    port = int(response.data)
+
+    host = urlparse(req.zato.client.address).hostname
+
+    return host, port
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
-    """ Sends an MLLP-framed HL7 message to the haproxy gateway and returns the response.
+    """ Sends an MLLP-framed HL7 message to the server's MLLP listener and returns the response.
     """
     try:
         payload = req.POST['data-request']
         payload_bytes = payload.encode('utf-8')
+
+        # .. find the listener - a port of zero means no MLLP channel is running ..
+        listener_host, listener_port = _resolve_mllp_listener_address(req)
+
+        if not listener_port:
+            return JsonResponse({
+                'data': 'No HL7 MLLP listener is running - create an active MLLP channel first',
+                'response_time_human': '',
+                'content_type': 'text/plain',
+            }, status=HTTPStatus.BAD_REQUEST)
 
         # .. wrap in MLLP framing ..
         mllp_message = _MLLP_Start_Byte + payload_bytes + _MLLP_End_Bytes
 
         start = time()
 
-        # .. open a TCP connection to the haproxy gateway ..
+        # .. open a TCP connection to the listener ..
         sock = socket_(AF_INET, SOCK_STREAM)
         sock.settimeout(_Socket_Timeout)
 
         try:
-            sock.connect((_Gateway_Host, _Gateway_Port))
+            sock.connect((listener_host, listener_port))
             sock.sendall(mllp_message)
 
             # .. read the MLLP-framed response ..
@@ -371,6 +392,21 @@ def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
             'response_time_human': '',
             'content_type': 'text/plain',
         }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def import_demo_config(req:'any_') -> 'HttpResponse':
+    """ Runs the HL7 demo import on the server - the demo connections, the alert
+    rules, the seeded week of audit history and the live traffic burst.
+    """
+    response = req.zato.client.invoke('zato.server.invoker', {'func_name': 'import_demo_hl7'})
+
+    out = HttpResponse()
+    out.content = str(response.data)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

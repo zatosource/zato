@@ -85,6 +85,25 @@ $.fn.zato.invoker.get_sync_invoke_request_url = function() {
     let select = $('#object-select :selected');
     let service = select.attr('data-service-name');
 
+    // The mode selector decides whether the service is invoked directly or through one of its channels
+    let mode = $('#invoke-mode-select').val();
+
+    if (mode != 'service') {
+
+        // The channel type may itself contain a colon-free dash-separated name,
+        // the id is always the part after the last colon.
+        let separator_idx = mode.lastIndexOf(':');
+        let channel_type = mode.substring(0, separator_idx);
+        let channel_id = mode.substring(separator_idx + 1);
+
+        if (channel_type == 'hl7-mllp') {
+            return '/zato/channel/hl7/mllp/invoke/' + channel_id + '/';
+        }
+        else {
+            return '/zato/http-soap/invoke-channel/' + channel_id + '/';
+        }
+    }
+
     let out = '/zato/service/invoke/' + service + '/cluster/1/';
     return out
 };
@@ -191,6 +210,11 @@ $.fn.zato.invoker.on_form_ended_common_impl = function(
     let responseText = $('#data-response').val();
     if ($.fn.zato.ide && $.fn.zato.ide.save_request_to_history && options.is_invoke) {
         $.fn.zato.ide.save_request_to_history(requestText, responseText);
+    }
+
+    // A new response always lands in the raw view first
+    if ($.fn.zato.ide && $.fn.zato.ide.show_pane_view) {
+        $.fn.zato.ide.show_pane_view('response', 'raw');
     }
 
     if (window.zato && window.zato.updateMessageViewer) {

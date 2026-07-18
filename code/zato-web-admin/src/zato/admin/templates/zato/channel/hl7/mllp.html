@@ -110,7 +110,9 @@
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.hl7.mllp.create()">Create a new channel</a>
+            <a href="javascript:$.fn.zato.channel.hl7.mllp.create()">Create a new channel</a> |
+            <a href="javascript:$.fn.zato.channel.hl7.mllp.import_demo_config()" class="common">Import demo config</a> |
+            <a href="{% url "channel-hl7-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a>
         </div>
 
 

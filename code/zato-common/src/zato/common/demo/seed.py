@@ -13,6 +13,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and a config-change history. All content comes from the shipped fakers through
 # the sample feed - nothing is authored here. The seeder is a permanent asset,
 # the same run backs the dashboard's "Import demo data" action.
+#
+# Events are not written one at a time - the whole run is collected in memory
+# with its final timestamps and lands in the database in one bulk transaction,
+# which turns minutes of per-event commits into milliseconds.
 
 # stdlib
 from dataclasses import dataclass, field
@@ -21,18 +25,17 @@ from json import dumps
 from random import Random
 
 # SQLAlchemy
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select
 
 # Zato
-from zato.common.alerting.model import new_finding, AlertAction, AlertSeverity, FindingKind
+from zato.common.alerting.model import new_finding, AlertAction, AlertSeverity, AlertState, FindingKind
 from zato.common.alerting.engine import record_alert_event
-from zato.common.alerting.store import observe_alert, raise_alert, resolve_alert
 from zato.common.alerting.sweep import parse_rule
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    AuditEvent, AuditOutcome, AuditSource
+    AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.config_audit import record_config_change, record_view_event
-from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key
+from zato.common.audit_log.dedup import build_dedup_key
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
     audit_message_sent, get_audit_attrs, ACKStatus
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH10_Index
@@ -43,15 +46,22 @@ from zato.hl7v2 import parse_hl7
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
-    from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import anylist, dictlist, intnone
+    from sqlalchemy.engine import Connection, Engine
+    from zato.common.alerting.model import AlertRule, Finding
+    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.typing_ import anydict, anylist, anytuple, dictlist, intanydict, intnone
 
+    anydict = anydict
     anylist = anylist
-    AuditLog = AuditLog
+    anytuple = anytuple
+    AlertRule = AlertRule
+    Connection = Connection
     dictlist = dictlist
     Engine = Engine
+    Finding = Finding
+    intanydict = intanydict
     intnone = intnone
+    pending_event_list = pending_event_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,6 +189,145 @@ class _PlannedMessage:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class _RepairSource:
+    """ The failed lab message the repair story reprocesses - captured while
+    the week's traffic is written, so nothing needs to be read back later.
+    """
+
+    relative_received_id:'int' = 0
+    cid:'str' = ''
+    control_id:'str' = ''
+    text:'str' = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _BulkAuditLog(AuditLog):
+    """ An audit log that collects events in memory instead of writing each one
+    in its own transaction. Every insert returns a relative id - the event's
+    1-based position in the collection - and write_collected later lands
+    everything in the database in bulk, mapping the relative ids to real ones.
+    A settable clock stamps each event with its planned moment at collection
+    time, so no backdating pass is needed afterwards.
+    """
+
+    def __init__(self, server_name:'str') -> 'None':
+
+        # flush_max_size=1 routes every insert through _write_batch synchronously,
+        # which is where this class collects instead of writing
+        super().__init__(server_name, flush_max_size=1)
+
+        # Everything collected so far - an event's position here is its relative id
+        self.pending_events:'anylist' = []
+
+        # How many of the collected events write_collected has already written
+        self.written_count = 0
+
+        # What the collected events are stamped with instead of the wall clock
+        self.event_time_iso = ''
+
+# ################################################################################################################################
+
+    def set_event_time(self, when:'datetime') -> 'None':
+        """ Sets the moment the next collected events are stamped with.
+        """
+        self.event_time_iso = when.isoformat()
+
+# ################################################################################################################################
+
+    def _write_batch(self, batch:'pending_event_list') -> 'intnone':
+        """ Collects instead of writing - the returned relative id is the event's
+        1-based position in the collection.
+        """
+
+        # Our response to produce
+        out:'intnone' = None
+
+        for pending in batch:
+
+            # The planned moment replaces the wall-clock time assigned by insert
+            pending.values['event_time_iso'] = self.event_time_iso
+
+            self.pending_events.append(pending)
+            out = len(self.pending_events)
+
+        return out
+
+# ################################################################################################################################
+
+    def write_collected(self, connection:'Connection') -> 'intanydict':
+        """ Writes everything collected but not yet written, in bulk, on the given
+        connection - one executemany per table. Returns the relative-to-real id map
+        covering all collected events.
+        """
+
+        to_write = self.pending_events[self.written_count:]
+
+        # The event rows go first, so everything else can reference their ids
+        if to_write:
+            event_rows = [pending.values for pending in to_write]
+            _ = connection.execute(event_table.insert(), event_rows)
+
+        # The real ids come from one read-back - (cid, cid_sequence) is unique
+        # per event within one writer, so it keys the map exactly
+        statement = select(event_table.c.id, event_table.c.cid, event_table.c.cid_sequence)
+        statement = statement.where(event_table.c.cid.like(Cid_Prefix + '%'))
+
+        rows = connection.execute(statement).fetchall()
+        real_id_by_key = {(row[1], row[2]): row[0] for row in rows}
+
+        # Our response to produce
+        out:'intanydict' = {}
+
+        for index, pending in enumerate(self.pending_events):
+            key = (pending.values['cid'], pending.values['cid_sequence'])
+            out[index + 1] = real_id_by_key[key]
+
+        # The companion rows of the newly written events, with real ids filled in
+        attr_rows:'anylist' = []
+        body_rows:'anylist' = []
+        link_rows:'anylist' = []
+
+        for index, pending in enumerate(to_write, start=self.written_count):
+
+            event_id = out[index + 1]
+
+            if pending.attrs:
+                attr_rows.extend(self._build_attr_rows(event_id, pending.attrs))
+
+            for kind, body_data in pending.bodies.items():
+                body_rows.append({
+                    'event_id': event_id,
+                    'kind': kind,
+                    'event_time_iso': pending.values['event_time_iso'],
+                    'data': body_data,
+                })
+
+            # The collected parent references are relative ids - they map the same way
+            for parent_relative_id in pending.parents:
+                link_rows.append({
+                    'child_event_id': event_id,
+                    'parent_event_id': out[parent_relative_id],
+                    'link_type': pending.parent_link_type,
+                })
+
+        if attr_rows:
+            _ = connection.execute(event_attr_table.insert(), attr_rows)
+
+        if body_rows:
+            _ = connection.execute(event_body_table.insert(), body_rows)
+
+        if link_rows:
+            _ = connection.execute(event_link_table.insert(), link_rows)
+
+        self.written_count = len(self.pending_events)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_demo_rule_defs() -> 'dictlist':
     """ Returns the demo alert rules in the dict shape they are stored in -
     the same defs parse into AlertRule objects for the seeded alert history.
@@ -223,33 +372,33 @@ def get_demo_rule_defs() -> 'dictlist':
 
 # ################################################################################################################################
 
-def purge_demo_data(engine:'Engine') -> 'None':
-    """ Removes everything a previous seed run wrote - running the import twice
-    leaves one clean data set, not two stacked ones.
+def _delete_demo_rows(connection:'Connection') -> 'None':
+    """ Deletes everything a previous seed run wrote, on the given connection -
+    running the import twice leaves one clean data set, not two stacked ones.
     """
 
     # The demo events are found by their cid prefix ..
-    statement = select(event_table.c.id).where(event_table.c.cid.like(Cid_Prefix + '%'))
+    demo_event_ids = select(event_table.c.id).where(event_table.c.cid.like(Cid_Prefix + '%'))
 
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
+    # .. their dependent rows go first ..
+    _ = connection.execute(delete(event_body_table).where(event_body_table.c.event_id.in_(demo_event_ids)))
+    _ = connection.execute(delete(event_attr_table).where(event_attr_table.c.event_id.in_(demo_event_ids)))
+    _ = connection.execute(delete(event_link_table).where(event_link_table.c.child_event_id.in_(demo_event_ids)))
+    _ = connection.execute(delete(event_table).where(event_table.c.cid.like(Cid_Prefix + '%')))
 
-    event_ids = [row[0] for row in rows]
+    # .. the demo alerts are filed under demo rule names ..
+    _ = connection.execute(delete(alert_table).where(alert_table.c.rule_name.like(Rule_Name_Prefix + '%')))
 
+    # .. and the demo dedup entries share the event cid prefix.
+    _ = connection.execute(delete(event_dedup_table).where(event_dedup_table.c.cid.like(Cid_Prefix + '%')))
+
+# ################################################################################################################################
+
+def purge_demo_data(engine:'Engine') -> 'None':
+    """ Removes everything a previous seed run wrote, in one transaction.
+    """
     with engine.begin() as connection:
-
-        # .. their dependent rows go first ..
-        if event_ids:
-            _ = connection.execute(delete(event_body_table).where(event_body_table.c.event_id.in_(event_ids)))
-            _ = connection.execute(delete(event_attr_table).where(event_attr_table.c.event_id.in_(event_ids)))
-            _ = connection.execute(delete(event_link_table).where(event_link_table.c.child_event_id.in_(event_ids)))
-            _ = connection.execute(delete(event_table).where(event_table.c.id.in_(event_ids)))
-
-        # .. the demo alerts are filed under demo rule names ..
-        _ = connection.execute(delete(alert_table).where(alert_table.c.rule_name.like(Rule_Name_Prefix + '%')))
-
-        # .. and the demo dedup entries share the event cid prefix.
-        _ = connection.execute(delete(event_dedup_table).where(event_dedup_table.c.cid.like(Cid_Prefix + '%')))
+        _delete_demo_rows(connection)
 
 # ################################################################################################################################
 
@@ -359,29 +508,39 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
 # ################################################################################################################################
 
 def _write_messages(
-    audit_log:'AuditLog',
+    audit_log:'_BulkAuditLog',
     plan:'anylist',
     rng:'Random',
-    backdates:'anylist',
-    ) -> 'int':
+    ) -> 'anytuple':
     """ Writes the planned messages through the same producers the live wire uses -
     a received event and its acknowledgment per message, plus the forwarded pair
-    on the outgoing connection where the plan says so. Returns the message count.
+    on the outgoing connection where the plan says so. Returns the message count
+    and the first failed lab message, which the repair story reprocesses.
     """
+
+    # The repair story's source - the first lab message whose acknowledgment failed
+    repair_source:'_RepairSource | None' = None
 
     for index, planned in enumerate(plan):
 
         cid = f'{Cid_Prefix}{index + 1:08d}'
-        when_iso = planned.when.isoformat()
 
         message = parse_hl7(planned.text, validate=False)
         attrs = get_audit_attrs(message)
 
         # The receipt itself
+        audit_log.set_event_time(planned.when)
         received_id = audit_message_received(
             audit_log, planned.channel_name, planned.text,
             cid=cid, msg_id=planned.control_id, attrs=attrs, endpoint='mllp://demo')
-        backdates.append((received_id, when_iso))
+
+        # The first failed lab receipt is what the repair story reprocesses
+        if repair_source is None and planned.channel_name == Channel_Lab and planned.is_error:
+            repair_source = _RepairSource()
+            repair_source.relative_received_id = received_id
+            repair_source.cid = cid
+            repair_source.control_id = planned.control_id
+            repair_source.text = planned.text
 
         # The acknowledgment follows within the handling time
         if planned.is_error:
@@ -394,19 +553,20 @@ def _write_messages(
         ack_text = _build_ack_text(ack_code, planned.control_id)
         ack_when = planned.when + timedelta(milliseconds=duration_ms)
 
-        ack_id = audit_ack_sent(
+        audit_log.set_event_time(ack_when)
+        _ = audit_ack_sent(
             audit_log, planned.channel_name, ack_code, ack_text,
             cid=cid, msg_id=planned.control_id, duration_ms=duration_ms)
-        backdates.append((ack_id, ack_when.isoformat()))
 
         # The forwarded pair on the outgoing connection
         if planned.is_forwarded:
 
             sent_when = ack_when + timedelta(milliseconds=rng.randrange(50, 300))
-            sent_id = audit_message_sent(
+
+            audit_log.set_event_time(sent_when)
+            _ = audit_message_sent(
                 audit_log, Outconn_Forward, planned.text,
                 cid=cid, msg_id=planned.control_id, attrs=attrs, endpoint='mllp://demo-ehr')
-            backdates.append((sent_id, sent_when.isoformat()))
 
             # A small share of forwards never hears back
             if rng.random() < Forward_Timeout_Ratio:
@@ -417,21 +577,21 @@ def _write_messages(
                 forward_duration_ms = rng.randrange(20, 250)
 
             forward_ack_when = sent_when + timedelta(milliseconds=forward_duration_ms)
-            forward_ack_id = audit_ack_received(
+
+            audit_log.set_event_time(forward_ack_when)
+            _ = audit_ack_received(
                 audit_log, Outconn_Forward, forward_ack_code,
                 cid=cid, msg_id=planned.control_id, duration_ms=forward_duration_ms)
-            backdates.append((forward_ack_id, forward_ack_when.isoformat()))
 
-    return len(plan)
+    return len(plan), repair_source
 
 # ################################################################################################################################
 
 def _write_in_flight_sends(
-    audit_log:'AuditLog',
+    audit_log:'_BulkAuditLog',
     config:'SeedConfig',
     now:'datetime',
     rng:'Random',
-    backdates:'anylist',
     ) -> 'None':
     """ Writes a few very recent sends with no acknowledgment following them -
     what the outstanding filter surfaces as the open exchanges.
@@ -456,22 +616,21 @@ def _write_in_flight_sends(
         when = now - timedelta(minutes=rng.randrange(2, 30))
         cid = f'{Cid_Prefix}if-{index + 1:08d}'
 
-        sent_id = audit_message_sent(
+        audit_log.set_event_time(when)
+        _ = audit_message_sent(
             audit_log, Outconn_Forward, text,
             cid=cid, msg_id=control_id, attrs=attrs, endpoint='mllp://demo-ehr')
-        backdates.append((sent_id, when.isoformat()))
 
 # ################################################################################################################################
 
 def _write_batch(
-    audit_log:'AuditLog',
-    engine:'Engine',
+    audit_log:'_BulkAuditLog',
     config:'SeedConfig',
     now:'datetime',
-    backdates:'anylist',
     ) -> 'None':
     """ Writes one FHS/BHS batch with its parent row and per-message children -
-    the lineage view's demo case.
+    the lineage view's demo case. The parent and all its children share
+    one moment, set once on the collector's clock.
     """
 
     feed_config = FeedConfig()
@@ -483,142 +642,159 @@ def _write_batch(
     batch_text = 'BHS|^~\\&|DEMO_BATCH|GENERAL_HOSPITAL|ZATO|ZATO|20260101000000\r' + body + '\rBTS|3'
 
     batch_cid = f'{Cid_Prefix}batch-00000001'
-    _ = audit_batch_received(audit_log, Channel_Main, batch_text, cid=batch_cid, endpoint='mllp://demo')
-
-    # The parent and all its children share one cid, so they are backdated together
     batch_when = now.replace(hour=11, minute=0, second=0, microsecond=0) - timedelta(days=2)
-    batch_when_iso = batch_when.isoformat()
 
-    statement = select(event_table.c.id).where(event_table.c.cid == batch_cid)
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    for row in rows:
-        backdates.append((row[0], batch_when_iso))
+    audit_log.set_event_time(batch_when)
+    _ = audit_batch_received(audit_log, Channel_Main, batch_text, cid=batch_cid, endpoint='mllp://demo')
 
 # ################################################################################################################################
 
 def _write_resubmit_chain(
-    audit_log:'AuditLog',
-    engine:'Engine',
+    audit_log:'_BulkAuditLog',
+    repair_source:'_RepairSource | None',
     now:'datetime',
     rng:'Random',
-    backdates:'anylist',
-    ) -> 'intnone':
-    """ Writes the repair story - one of the burst's failed messages reprocessed
-    successfully, the new events linked to the original by the correlation id.
-    Returns the original event's id.
+    ) -> 'None':
+    """ Writes the repair story - the failed message captured during the week's
+    traffic reprocessed successfully, the new events linked to the original
+    by the correlation id and a resubmit link.
     """
 
-    # The original is the burst's first failed receipt
-    statement = select(event_table.c.id, event_table.c.cid, event_table.c.msg_id, event_table.c.object_name)
-    statement = statement.where(event_table.c.object_name == Channel_Lab)
-    statement = statement.where(event_table.c.event_type == AuditEvent.Message_Received)
-    statement = statement.order_by(event_table.c.id)
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    # The failed one is found through its error acknowledgment
-    original = None
-
-    for row in rows:
-        ack_statement = select(event_table.c.id).where(event_table.c.cid == row[1])
-        ack_statement = ack_statement.where(event_table.c.event_type == AuditEvent.Ack_Sent)
-        ack_statement = ack_statement.where(event_table.c.outcome == AuditOutcome.Error)
-
-        with engine.connect() as connection:
-            ack_rows = connection.execute(ack_statement).fetchall()
-
-        if ack_rows:
-            original = row
-            break
-
-    if not original:
-        return None
-
-    # The payload comes from the original's stored body
-    body_statement = select(event_body_table.c.data).where(event_body_table.c.event_id == original[0])
-
-    with engine.connect() as connection:
-        body_rows = connection.execute(body_statement).fetchall()
-
-    payload = body_rows[0][0]
+    # A run too small to have produced a lab failure has no repair story
+    if repair_source is None:
+        return
 
     # The repair happened this morning, two hours ago
     repair_when = now - timedelta(hours=2)
     repair_cid = f'{Cid_Prefix}rp-00000001'
 
-    message = parse_hl7(payload, validate=False)
+    message = parse_hl7(repair_source.text, validate=False)
     attrs = get_audit_attrs(message)
 
     # The reprocessed receipt mirrors what the reprocess handler writes
-    reprocess_id = audit_log.insert(
-        AuditSource.HL7, AuditEvent.Message_Received, original[3],
+    audit_log.set_event_time(repair_when)
+    _ = audit_log.insert(
+        AuditSource.HL7, AuditEvent.Message_Received, Channel_Lab,
         cid=repair_cid,
-        msg_id=original[2],
-        correl_id=original[1],
-        size=len(payload),
+        msg_id=repair_source.control_id,
+        correl_id=repair_source.cid,
+        size=len(repair_source.text),
         outcome=AuditOutcome.OK,
-        data=dumps({'payload': payload}),
+        data=dumps({'payload': repair_source.text}),
         attrs=attrs,
-        parents=[original[0]],
+        parents=[repair_source.relative_received_id],
     )
-    backdates.append((reprocess_id, repair_when.isoformat()))
 
     # This time the acknowledgment accepts
     duration_ms = rng.randrange(5, 120)
-    ack_text = _build_ack_text(ACKStatus.Application_Accept, original[2])
+    ack_text = _build_ack_text(ACKStatus.Application_Accept, repair_source.control_id)
     ack_when = repair_when + timedelta(milliseconds=duration_ms)
 
-    ack_id = audit_ack_sent(
-        audit_log, original[3], ACKStatus.Application_Accept, ack_text,
-        cid=repair_cid, msg_id=original[2], duration_ms=duration_ms)
-    backdates.append((ack_id, ack_when.isoformat()))
-
-    # The reprocess went through the dedup ledger too - one completed claim
-    dedup_key = build_dedup_key('reprocess', original[0], payload)
-    _ = acquire_dedup_key(engine, dedup_key, repair_cid, 'reprocess')
-    complete_dedup_key(engine, dedup_key, AuditOutcome.OK)
-
-    return original[0]
+    audit_log.set_event_time(ack_when)
+    _ = audit_ack_sent(
+        audit_log, Channel_Lab, ACKStatus.Application_Accept, ack_text,
+        cid=repair_cid, msg_id=repair_source.control_id, duration_ms=duration_ms)
 
 # ################################################################################################################################
 
-def _write_dedup_entries(engine:'Engine') -> 'int':
-    """ Writes the dedup ledger's remaining demo entries - one more completed claim
-    and one still in doubt, the ledger screen's demo cases. Returns how many
-    ledger rows the whole run owns.
+def _build_dedup_rows(
+    now:'datetime',
+    repair_source:'_RepairSource | None',
+    id_map:'intanydict',
+    ) -> 'dictlist':
+    """ Composes the dedup ledger's demo rows - the reprocess claim behind
+    the repair story, one more completed resend and one still in doubt,
+    the ledger screen's demo cases.
     """
 
+    now_iso = now.isoformat()
+
+    # Our response to produce
+    out:'dictlist' = []
+
+    # The repair went through the dedup ledger too - one completed claim,
+    # keyed by the original event's real id, the same key the reprocess
+    # handler would build for it
+    if repair_source is not None:
+
+        repair_when = now - timedelta(hours=2)
+        original_event_id = id_map[repair_source.relative_received_id]
+
+        out.append({
+            'dedup_key': build_dedup_key('reprocess', original_event_id, repair_source.text),
+            'cid': f'{Cid_Prefix}rp-00000001',
+            'action': 'reprocess',
+            'created_iso': repair_when.isoformat(),
+            'outcome': AuditOutcome.OK,
+            'completed_iso': repair_when.isoformat(),
+        })
+
     # A completed resend claim from earlier today
-    completed_key = build_dedup_key('resend', 2, 'demo-resend-payload')
-    _ = acquire_dedup_key(engine, completed_key, f'{Cid_Prefix}dd-00000001', 'resend')
-    complete_dedup_key(engine, completed_key, AuditOutcome.OK)
+    out.append({
+        'dedup_key': build_dedup_key('resend', 2, 'demo-resend-payload'),
+        'cid': f'{Cid_Prefix}dd-00000001',
+        'action': 'resend',
+        'created_iso': now_iso,
+        'outcome': AuditOutcome.OK,
+        'completed_iso': now_iso,
+    })
 
     # A claim that never completed - the in-doubt screen's demo case
-    in_doubt_key = build_dedup_key('resend', 3, 'demo-in-doubt-payload')
-    _ = acquire_dedup_key(engine, in_doubt_key, f'{Cid_Prefix}dd-00000002', 'resend')
+    out.append({
+        'dedup_key': build_dedup_key('resend', 3, 'demo-in-doubt-payload'),
+        'cid': f'{Cid_Prefix}dd-00000002',
+        'action': 'resend',
+        'created_iso': now_iso,
+        'outcome': '',
+        'completed_iso': '',
+    })
 
-    statement = select(event_dedup_table.c.id).where(event_dedup_table.c.cid.like(Cid_Prefix + '%'))
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    return len(rows)
+    return out
 
 # ################################################################################################################################
 
-def _write_alerts(
-    audit_log:'AuditLog',
-    engine:'Engine',
-    now:'datetime',
-    backdates:'anylist',
-    ) -> 'int':
-    """ Writes the alert history - one alert in each lifecycle state, each with
-    its audit trail, so the alerts screen shows all three colors. Returns
-    the alert count.
+def _build_alert_row(
+    rule:'AlertRule',
+    finding:'Finding',
+    *,
+    count:'int',
+    state:'str',
+    first_raised:'datetime',
+    last_raised:'datetime',
+    observed_by:'str' = '',
+    observed_iso:'str' = '',
+    resolved_by:'str' = '',
+    resolved_iso:'str' = '',
+    ) -> 'anydict':
+    """ Composes one alert row in its final lifecycle state - the same columns
+    the alert store's raise, observe and resolve sequence would have produced.
+    """
+    out = {
+        'rule_name': rule.name,
+        'source': finding.source,
+        'object_name': finding.object_name,
+        'kind': finding.kind,
+        'severity': finding.severity,
+        'message': finding.message,
+        'link': finding.link,
+        'count': count,
+        'state': state,
+        'first_raised_iso': first_raised.isoformat(),
+        'last_raised_iso': last_raised.isoformat(),
+        'observed_by': observed_by,
+        'observed_iso': observed_iso,
+        'resolved_by': resolved_by,
+        'resolved_iso': resolved_iso,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
+    """ Writes the alert history's audit events and composes the alert rows -
+    one alert in each lifecycle state, so the alerts screen shows all three
+    colors. Returns the alert rows for the bulk insert.
     """
 
     rules = {}
@@ -628,6 +804,9 @@ def _write_alerts(
 
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # Our response to produce
+    out:'dictlist' = []
+
     # The unobserved alert - the clinic feed fell silent this morning
     # and the finding repeated every half hour since
     silent_rule = rules[Rule_Feed_Silent]
@@ -636,18 +815,26 @@ def _write_alerts(
         f'Feed on {Channel_Clinic} has been silent since {Clinic_Silent_Hour:02d}:00 UTC',
         severity=AlertSeverity.Warning)
 
-    silent_when = today_start + timedelta(hours=Clinic_Silent_Hour, minutes=30)
-    silent_index = 0
+    silent_first = today_start + timedelta(hours=Clinic_Silent_Hour, minutes=30)
+    silent_when = silent_first
+    silent_count = 0
 
     while silent_when < now:
-        result = raise_alert(engine, silent_rule, silent_finding, silent_when)
-        silent_index += 1
+        silent_count += 1
 
-        event_cid = f'{Cid_Prefix}al-silent-{silent_index:04d}'
-        record_alert_event(audit_log, silent_rule, silent_finding, result.count, event_cid)
-        backdates.append((_get_latest_event_id(engine, event_cid), silent_when.isoformat()))
+        audit_log.set_event_time(silent_when)
+        record_alert_event(
+            audit_log, silent_rule, silent_finding, silent_count, f'{Cid_Prefix}al-silent-{silent_count:04d}')
 
         silent_when = silent_when + timedelta(minutes=30)
+
+    # A run whose moment is before the silence window has no repetitions to fold
+    if silent_count:
+        silent_last = silent_first + timedelta(minutes=30 * (silent_count - 1))
+        out.append(_build_alert_row(
+            silent_rule, silent_finding,
+            count=silent_count, state=AlertState.Unobserved,
+            first_raised=silent_first, last_raised=silent_last))
 
     # The observed alert - yesterday's error burst, acknowledged that evening
     error_rule = rules[Rule_Error_Rate]
@@ -657,19 +844,25 @@ def _write_alerts(
         severity=AlertSeverity.Critical)
 
     burst_day = today_start - timedelta(days=1)
-    error_alert_id = 0
+    error_offsets = (10, 40, 80)
+    error_count = 0
 
-    for minutes_offset in (10, 40, 80):
+    for minutes_offset in error_offsets:
         error_when = burst_day + timedelta(hours=Burst_Start_Hour, minutes=minutes_offset)
-        result = raise_alert(engine, error_rule, error_finding, error_when)
-        error_alert_id = result.alert_id
+        error_count += 1
 
-        event_cid = f'{Cid_Prefix}al-error-{minutes_offset:04d}'
-        record_alert_event(audit_log, error_rule, error_finding, result.count, event_cid)
-        backdates.append((_get_latest_event_id(engine, event_cid), error_when.isoformat()))
+        audit_log.set_event_time(error_when)
+        record_alert_event(
+            audit_log, error_rule, error_finding, error_count, f'{Cid_Prefix}al-error-{minutes_offset:04d}')
 
     observed_when = burst_day + timedelta(hours=Burst_End_Hour, minutes=5)
-    observe_alert(engine, error_alert_id, Actor_Admin, observed_when)
+
+    out.append(_build_alert_row(
+        error_rule, error_finding,
+        count=error_count, state=AlertState.Observed,
+        first_raised=burst_day + timedelta(hours=Burst_Start_Hour, minutes=error_offsets[0]),
+        last_raised=burst_day + timedelta(hours=Burst_Start_Hour, minutes=error_offsets[-1]),
+        observed_by=Actor_Admin, observed_iso=observed_when.isoformat()))
 
     # The resolved alert - a delivery stall from three days ago, repaired the same day
     missing_rule = rules[Rule_Missing_Ack]
@@ -679,42 +872,26 @@ def _write_alerts(
         severity=AlertSeverity.Warning)
 
     missing_when = today_start - timedelta(days=3) + timedelta(hours=9)
-    result = raise_alert(engine, missing_rule, missing_finding, missing_when)
 
-    event_cid = f'{Cid_Prefix}al-missing-0001'
-    record_alert_event(audit_log, missing_rule, missing_finding, result.count, event_cid)
-    backdates.append((_get_latest_event_id(engine, event_cid), missing_when.isoformat()))
+    audit_log.set_event_time(missing_when)
+    record_alert_event(audit_log, missing_rule, missing_finding, 1, f'{Cid_Prefix}al-missing-0001')
 
     resolved_when = missing_when + timedelta(hours=2, minutes=30)
-    resolve_alert(engine, result.alert_id, Actor_Operator, resolved_when)
 
-    # Three alerts exist - the increments folded into them
-    return 3
+    out.append(_build_alert_row(
+        missing_rule, missing_finding,
+        count=1, state=AlertState.Resolved,
+        first_raised=missing_when, last_raised=missing_when,
+        resolved_by=Actor_Operator, resolved_iso=resolved_when.isoformat()))
 
-# ################################################################################################################################
-
-def _get_latest_event_id(engine:'Engine', cid:'str') -> 'int':
-    """ Returns the newest event id under one cid - how a just-written
-    event is found for backdating when the producer does not return it.
-    """
-    statement = select(event_table.c.id).where(event_table.c.cid == cid)
-    statement = statement.order_by(event_table.c.id.desc()).limit(1)
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    return rows[0][0]
+    return out
 
 # ################################################################################################################################
 
-def _write_config_history(
-    audit_log:'AuditLog',
-    now:'datetime',
-    viewed_event_id:'intnone',
-    backdates:'anylist',
-    ) -> 'int':
-    """ Writes the config-change history - the demo objects created a week ago,
-    one edit later on and one view-access record. Returns the event count.
+def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime') -> 'int':
+    """ Writes the config-change history - the demo objects created a week ago
+    and one edit later on. The view-access record follows separately, once
+    the real id of the viewed event is known. Returns the event count.
     """
 
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -733,7 +910,8 @@ def _write_config_history(
             'is_audit_log_active': True,
         }
 
-        event_id = record_config_change(
+        audit_log.set_event_time(created_when + timedelta(minutes=index))
+        _ = record_config_change(
             audit_log,
             action=AuditEvent.Config_Created,
             object_type='generic-connection',
@@ -742,15 +920,13 @@ def _write_config_history(
             cid=f'{Cid_Prefix}cfg-{index + 1:04d}',
             after=after,
         )
-
-        change_when = created_when + timedelta(minutes=index)
-        backdates.append((event_id, change_when.isoformat()))
         count += 1
 
     # The lab channel's pool grew two days ago
     edited_when = today_start - timedelta(days=2) + timedelta(hours=15)
 
-    event_id = record_config_change(
+    audit_log.set_event_time(edited_when)
+    _ = record_config_change(
         audit_log,
         action=AuditEvent.Config_Edited,
         object_type='generic-connection',
@@ -760,34 +936,37 @@ def _write_config_history(
         before={'name': Channel_Lab, 'pool_size': 1},
         after={'name': Channel_Lab, 'pool_size': 2},
     )
-    backdates.append((event_id, edited_when.isoformat()))
     count += 1
-
-    # Somebody opened the failed message's body yesterday evening
-    if viewed_event_id:
-
-        viewed_when = today_start - timedelta(days=1) + timedelta(hours=16, minutes=10)
-
-        event_id = record_view_event(
-            audit_log,
-            actor=Actor_Admin,
-            viewed_event_id=viewed_event_id,
-            screen=Screen_Browser,
-            cid=f'{Cid_Prefix}cfg-0007',
-        )
-        backdates.append((event_id, viewed_when.isoformat()))
-        count += 1
 
     return count
 
 # ################################################################################################################################
 
+def _write_view_event(audit_log:'_BulkAuditLog', now:'datetime', viewed_event_id:'int') -> 'None':
+    """ Writes the view-access record - somebody opened the failed message's body
+    yesterday evening. This runs after the main commit because the record embeds
+    the viewed event's real database id.
+    """
+
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    viewed_when = today_start - timedelta(days=1) + timedelta(hours=16, minutes=10)
+
+    audit_log.set_event_time(viewed_when)
+    _ = record_view_event(
+        audit_log,
+        actor=Actor_Admin,
+        viewed_event_id=viewed_event_id,
+        screen=Screen_Browser,
+        cid=f'{Cid_Prefix}cfg-0007',
+    )
+
+# ################################################################################################################################
+
 def _write_fhir_traffic(
-    audit_log:'AuditLog',
+    audit_log:'_BulkAuditLog',
     config:'SeedConfig',
     now:'datetime',
     rng:'Random',
-    backdates:'anylist',
     ) -> 'int':
     """ Writes the FHIR side of the demo - request/response pairs on the FHIR
     outgoing connection, spread over the same span as the HL7 traffic.
@@ -819,7 +998,8 @@ def _write_fhir_traffic(
             'path': path,
         })
 
-        request_id = audit_log.insert(
+        audit_log.set_event_time(when)
+        _ = audit_log.insert(
             AuditSource.FHIR, AuditEvent.Request_Sent, Outconn_FHIR,
             cid=cid,
             endpoint=f'GET {path}',
@@ -827,52 +1007,34 @@ def _write_fhir_traffic(
             data=stored_data,
             attrs=attrs,
         )
-        backdates.append((request_id, when.isoformat()))
 
         duration_ms = rng.randrange(15, 350)
         response_when = when + timedelta(milliseconds=duration_ms)
 
-        response_id = audit_log.insert(
+        audit_log.set_event_time(response_when)
+        _ = audit_log.insert(
             AuditSource.FHIR, AuditEvent.Response_Received, Outconn_FHIR,
             cid=cid,
             outcome=AuditOutcome.OK,
             duration_ms=duration_ms,
             attrs=attrs,
         )
-        backdates.append((response_id, response_when.isoformat()))
 
     return config.fhir_pair_count
 
 # ################################################################################################################################
 
-def _apply_backdates(engine:'Engine', backdates:'anylist') -> 'None':
-    """ Moves every written event to its planned moment - the events and their
-    stored bodies alike, in one transaction.
-    """
-    with engine.begin() as connection:
-
-        for event_id, when_iso in backdates:
-
-            statement = update(event_table).where(event_table.c.id == event_id)
-            statement = statement.values(event_time_iso=when_iso)
-            _ = connection.execute(statement)
-
-            body_statement = update(event_body_table).where(event_body_table.c.event_id == event_id)
-            body_statement = body_statement.values(event_time_iso=when_iso)
-            _ = connection.execute(body_statement)
-
-# ################################################################################################################################
-
 def seed_demo_data(
-    audit_log:'AuditLog',
     engine:'Engine',
     *,
+    server_name:'str',
     now:'datetime | None' = None,
     config:'SeedConfig | None' = None,
     ) -> 'SeedResult':
-    """ Runs one full seed - a previous run's data is purged first, then the week
-    of traffic, the batch, the resubmit chain, the dedup entries, the alerts,
-    the config history and the FHIR side are written and backdated in place.
+    """ Runs one full seed - the week of traffic, the batch, the resubmit chain,
+    the dedup entries, the alerts, the config history and the FHIR side are all
+    collected in memory with their final timestamps first, then a previous run's
+    data is purged and everything lands in the database in one bulk transaction.
     The same seed always produces the same data set.
     """
 
@@ -882,54 +1044,70 @@ def seed_demo_data(
     if config is None:
         config = SeedConfig()
 
-    # A rerun replaces the previous data set instead of stacking on it
-    purge_demo_data(engine)
-
     rng = Random(config.seed)
 
-    # Every write records where it belongs in time, the move happens once at the end
-    backdates:'anylist' = []
+    # Everything is collected here first and written in bulk at the end
+    audit_log = _BulkAuditLog(server_name)
 
     # Our response to produce
     out = SeedResult()
     out.channel_names = [Channel_Main, Channel_Lab, Channel_Clinic]
     out.rule_names = [rule_def['name'] for rule_def in get_demo_rule_defs()]
 
-    # The week of wire traffic
+    # The week of wire traffic, which also yields the repair story's source
     plan = _build_plan(config, now)
-    out.message_count = _write_messages(audit_log, plan, rng, backdates)
+    out.message_count, repair_source = _write_messages(audit_log, plan, rng)
 
     # The open exchanges the outstanding filter surfaces
-    _write_in_flight_sends(audit_log, config, now, rng, backdates)
+    _write_in_flight_sends(audit_log, config, now, rng)
 
     # The batch with its lineage
-    _write_batch(audit_log, engine, config, now, backdates)
+    _write_batch(audit_log, config, now)
 
-    # The repair story - reprocess plus its dedup claim
-    repaired_event_id = _write_resubmit_chain(audit_log, engine, now, rng, backdates)
+    # The repair story - the failed message reprocessed successfully
+    _write_resubmit_chain(audit_log, repair_source, now, rng)
 
-    # The rest of the dedup ledger
-    out.dedup_count = _write_dedup_entries(engine)
+    # The three alert lifecycles - their audit events plus the composed alert rows
+    alert_rows = _write_alerts(audit_log, now)
+    out.alert_count = len(alert_rows)
 
-    # The three alert lifecycles
-    out.alert_count = _write_alerts(audit_log, engine, now, backdates)
-
-    # The config-change history, including who viewed the repaired message
-    out.config_event_count = _write_config_history(audit_log, now, repaired_event_id, backdates)
+    # The config-change history, without the view record yet
+    out.config_event_count = _write_config_history(audit_log, now)
 
     # The FHIR request/response pairs
-    out.fhir_pair_count = _write_fhir_traffic(audit_log, config, now, rng, backdates)
+    out.fhir_pair_count = _write_fhir_traffic(audit_log, config, now, rng)
 
-    # Everything moves to its planned moment at once
-    _apply_backdates(engine, backdates)
+    # Everything lands in the database at once - a rerun replaces the previous
+    # data set inside the same transaction, so a failed import changes nothing
+    with engine.begin() as connection:
+
+        _delete_demo_rows(connection)
+
+        id_map = audit_log.write_collected(connection)
+
+        dedup_rows = _build_dedup_rows(now, repair_source, id_map)
+        _ = connection.execute(event_dedup_table.insert(), dedup_rows)
+        out.dedup_count = len(dedup_rows)
+
+        if alert_rows:
+            _ = connection.execute(alert_table.insert(), alert_rows)
+
+    # The view-access record embeds the viewed event's real database id,
+    # which exists only after the main commit - it follows in a small write of its own
+    if repair_source is not None:
+
+        _write_view_event(audit_log, now, id_map[repair_source.relative_received_id])
+
+        with engine.begin() as connection:
+            _ = audit_log.write_collected(connection)
+
+        out.config_event_count += 1
 
     # The final count is what the database actually holds
-    statement = select(event_table.c.id).where(event_table.c.cid.like(Cid_Prefix + '%'))
+    statement = select(func.count()).select_from(event_table).where(event_table.c.cid.like(Cid_Prefix + '%'))
 
     with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    out.event_count = len(rows)
+        out.event_count = connection.execute(statement).scalar()
 
     return out
 
