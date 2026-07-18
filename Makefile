@@ -647,6 +647,7 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
 		$(CURDIR)/code/tests/python/zato-common/hl7_audit/ \
+		$(CURDIR)/code/tests/python/zato-common/channel_state/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
@@ -733,8 +734,13 @@ test-ibm-mq: ## IBM MQ queue bridge tests against a live queue manager, plain an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ibm_mq \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
+test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/audit_log/
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/redis_/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/redis_/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_redis \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \

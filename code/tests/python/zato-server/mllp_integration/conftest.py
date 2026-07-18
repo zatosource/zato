@@ -258,6 +258,11 @@ def zato_server() -> 'strobj_dict_gen':
     main_config = config['main']
     main_config['port'] = str(port)
 
+    # The pre-start config check reads the bind address, not the port,
+    # so the default 0.0.0.0:17010 must not linger in there - another
+    # environment on this machine may hold that port.
+    main_config['bind'] = f'0.0.0.0:{port}'
+
     update_config_file(config, repository_location, 'server.conf')
 
     after_patch = time.monotonic()

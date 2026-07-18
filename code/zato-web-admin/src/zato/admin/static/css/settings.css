@@ -104,7 +104,9 @@
     height: 17px;
 }
 
-.info-value input[type="text"] {
+.info-value input[type="text"],
+.info-value input[type="password"],
+.info-value select {
     font-family: monospace;
     font-size: 14px;
     font-weight: 500;
@@ -116,7 +118,9 @@
     width: 100%;
 }
 
-.info-value input[type="text"]:focus {
+.info-value input[type="text"]:focus,
+.info-value input[type="password"]:focus,
+.info-value select:focus {
     outline: none;
     border-color: var(--primary-dark);
     background: var(--background-light);

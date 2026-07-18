@@ -215,6 +215,46 @@ env_variables_page_config['textarea_label'] = 'Variables'
 env_variables_page_config['textarea_placeholder'] = 'KEY=value, one per line, e.g.:\nMY_API_KEY=abc123\nDEBUG=1'
 env_variables_page_config['content_rows'] = []
 
+config_db_sql_page_config = {}
+config_db_sql_page_config['title'] = 'Config DB - SQL'
+config_db_sql_page_config['api_prefix'] = '/zato/config-db/sql/'
+config_db_sql_page_config['step1_label'] = 'Saving'
+config_db_sql_page_config['step2_label'] = ''
+config_db_sql_page_config['check_button_label'] = 'Test'
+config_db_sql_page_config['action_button_label'] = 'Save'
+config_db_sql_page_config['version_section_title'] = 'Config DB - SQL'
+config_db_sql_page_config['config_section_title'] = ''
+config_db_sql_page_config['logs_section_title'] = ''
+config_db_sql_page_config['save_button_label'] = 'Save'
+config_db_sql_page_config['download_logs_label'] = ''
+config_db_sql_page_config['show_sidebar'] = False
+config_db_sql_page_config['show_restart_steps'] = False
+config_db_sql_page_config['show_allow_delete'] = False
+config_db_sql_page_config['panel_width'] = '55%'
+config_db_sql_page_config['restart_step_id'] = ''
+config_db_sql_page_config['restart_step_label'] = ''
+config_db_sql_page_config['content_rows'] = []
+
+config_db_redis_page_config = {}
+config_db_redis_page_config['title'] = 'Config DB - Redis'
+config_db_redis_page_config['api_prefix'] = '/zato/config-db/redis/'
+config_db_redis_page_config['step1_label'] = 'Saving'
+config_db_redis_page_config['step2_label'] = ''
+config_db_redis_page_config['check_button_label'] = 'Test'
+config_db_redis_page_config['action_button_label'] = 'Save'
+config_db_redis_page_config['version_section_title'] = 'Config DB - Redis'
+config_db_redis_page_config['config_section_title'] = ''
+config_db_redis_page_config['logs_section_title'] = ''
+config_db_redis_page_config['save_button_label'] = 'Save'
+config_db_redis_page_config['download_logs_label'] = ''
+config_db_redis_page_config['show_sidebar'] = False
+config_db_redis_page_config['show_restart_steps'] = False
+config_db_redis_page_config['show_allow_delete'] = False
+config_db_redis_page_config['panel_width'] = '55%'
+config_db_redis_page_config['restart_step_id'] = ''
+config_db_redis_page_config['restart_step_label'] = ''
+config_db_redis_page_config['content_rows'] = []
+
 logging_page_config = {}
 logging_page_config['title'] = 'Logging'
 logging_page_config['api_prefix'] = '/zato/logging/'

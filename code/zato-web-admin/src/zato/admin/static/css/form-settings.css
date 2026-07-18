@@ -1,0 +1,27 @@
+/* ------------------------------------------------------------ */
+/* Form settings - layout of form-based settings pages           */
+/* ------------------------------------------------------------ */
+
+.form-settings-container .info-row {
+    align-items: center;
+}
+
+.form-settings-container .info-value.form-value {
+    min-width: 320px;
+    height: auto;
+    line-height: normal;
+}
+
+.form-settings-container .form-value input.form-value-short {
+    width: 90px;
+}
+
+.form-settings-container .form-value-checkbox {
+    text-align: right;
+}
+
+.form-settings-container .form-value-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-dark);
+}

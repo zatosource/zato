@@ -13,6 +13,13 @@ from zato.hl7v2 import parse_hl7
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import stranydict
+    stranydict = stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # An admission with a repeating PID-3, a composite PID-5 and a Z-segment the structure does not know
 _adt_a01 = (
     'MSH|^~\\&|HIS|GENERAL_HOSPITAL|LAB_SYSTEM|CENTRAL_LAB|20260115103000||ADT^A01^ADT_A01|MSG000001|P|2.9\r'
@@ -34,7 +41,7 @@ _oru_r01 = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_segment(tree:'dict', segment_id:'str') -> 'dict':
+def _get_segment(tree:'stranydict', segment_id:'str') -> 'stranydict':
     for segment in tree['segments']:
         if segment['segment_id'] == segment_id:
             return segment
@@ -42,7 +49,7 @@ def _get_segment(tree:'dict', segment_id:'str') -> 'dict':
 
 # ################################################################################################################################
 
-def _get_field(segment:'dict', position:'int') -> 'dict':
+def _get_field(segment:'stranydict', position:'int') -> 'stranydict':
     for field in segment['fields']:
         if field['position'] == position:
             return field

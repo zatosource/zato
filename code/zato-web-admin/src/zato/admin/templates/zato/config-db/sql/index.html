@@ -1,0 +1,101 @@
+{% extends "zato/settings/form-page.html" %}
+
+{% block form_rows %}
+<div class="info-row">
+    <div class="info-label">Database</div>
+    <div class="info-value form-value">
+        <select id="id_database">
+            <option value="audit-log">Audit log</option>
+            <option value="analytics">Analytics</option>
+        </select>
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Name</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_display_name" placeholder="A short name for this connection">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Description</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_description" placeholder="What this connection is used for">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Type</div>
+    <div class="info-value form-value">
+        <select id="id_type">
+            <option value="sqlite">SQLite</option>
+            <option value="mysql">MySQL</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="oracle">Oracle DB</option>
+        </select>
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Host</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_host" placeholder="e.g. localhost">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Port</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_port" class="form-value-short" placeholder="e.g. 5432">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Database name</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_name" placeholder="Database name or SQLite file path">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Username</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_username">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Password</div>
+    <div class="info-value form-value">
+        <input type="password" id="id_password">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Use SSL/TLS</div>
+    <div class="info-value form-value form-value-checkbox">
+        <input type="checkbox" id="id_ssl">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">SSL CA file</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_ssl_ca_file" placeholder="Path to the CA certificate file">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">SSL certificate file</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_ssl_cert_file" placeholder="Path to the client certificate file">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">SSL key file</div>
+    <div class="info-value form-value">
+        <input type="text" id="id_ssl_key_file" placeholder="Path to the client key file">
+    </div>
+</div>
+<div class="info-row">
+    <div class="info-label">Verify SSL certificate</div>
+    <div class="info-value form-value form-value-checkbox">
+        <input type="checkbox" id="id_ssl_verify" checked>
+    </div>
+</div>
+{% endblock %}
+
+{% block form_page_js %}
+{{ sql_values|json_script:"sql-values" }}
+<script type="text/javascript" src="/static/js/config-db/sql.js" nonce="{{ CSP_NONCE }}"></script>
+{% endblock %}
