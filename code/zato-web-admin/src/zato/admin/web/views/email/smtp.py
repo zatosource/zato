@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -35,13 +36,15 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
-    output_optional = 'username',
+    output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address'
     output_repeated = True
 
     def handle(self):
         return {
             'show_search_form': True,
-            'default_ping_address': EMAIL.DEFAULT.PING_ADDRESS,
+            'default_timeout': EMAIL.DEFAULT.TIMEOUT,
+            'smtp_providers': dumps(EMAIL.SMTP.ProviderList),
+            'smtp_mode_port': dumps(EMAIL.SMTP.ModePort),
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
@@ -50,7 +53,8 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
+    input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode'
+    input_optional = 'ping_address', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address'
     output_required = 'id', 'name'
 
     def success_message(self, item):
