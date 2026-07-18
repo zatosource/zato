@@ -654,6 +654,7 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against downloaded fixtures.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/hl7_fhir/ \
+		$(CURDIR)/code/tests/python/zato-common/fhir_display/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
