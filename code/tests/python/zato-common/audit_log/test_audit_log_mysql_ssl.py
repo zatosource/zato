@@ -14,6 +14,7 @@ from sqlalchemy.exc import OperationalError
 
 # Zato
 from common import assert_mysql_connection_encrypted, audit_log_env, run_audit_log_scenario
+from resubmit_core import run_resubmit_core_scenario
 from retention_tiers import run_retention_tiers_scenario
 from structured import run_structured_events_scenario
 from zato.common.audit_log.api import AuditLog
@@ -36,6 +37,7 @@ def test_audit_log_mysql_ssl(mysql_ssl_server:'DatabaseServer') -> 'None':
         run_audit_log_scenario()
         run_structured_events_scenario()
         run_retention_tiers_scenario()
+        run_resubmit_core_scenario()
         assert_mysql_connection_encrypted()
 
 # ################################################################################################################################

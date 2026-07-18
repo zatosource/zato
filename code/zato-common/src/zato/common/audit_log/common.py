@@ -91,6 +91,7 @@ class AuditEvent:
     MCP_Tools_Call       = 'mcp-tools-call'
     MCP_Session_Delete   = 'mcp-session-delete'
     MCP_Batch            = 'mcp-batch'
+    Bulk_Repair          = 'bulk-repair'
 
 # ################################################################################################################################
 
@@ -206,6 +207,23 @@ event_link_table = Table('event_link', metadata,
     Column('link_type', String(_short_column_len)),
     Index('idx_event_link_child', 'child_event_id'),
     Index('idx_event_link_parent', 'parent_event_id'),
+)
+
+# ################################################################################################################################
+
+# The resubmit dedup ledger - every resubmit acquires its key here before dispatch,
+# so a double-click or two overlapping bulk operations cannot double-apply one message.
+# A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
+event_dedup_table = Table('event_dedup', metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('dedup_key', String(_short_column_len)),
+    Column('cid', String(_short_column_len)),
+    Column('action', String(_short_column_len)),
+    Column('created_iso', String(_short_column_len)),
+    Column('outcome', String(_short_column_len)),
+    Column('completed_iso', String(_short_column_len)),
+    Index('idx_event_dedup_key', 'dedup_key', unique=True),
+    Index('idx_event_dedup_outcome', 'outcome'),
 )
 
 # ################################################################################################################################

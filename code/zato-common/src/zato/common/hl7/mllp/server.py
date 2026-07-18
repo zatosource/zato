@@ -19,6 +19,7 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
 from zato.common.hl7.mllp.router import HL7MessageRouter
+from zato.common.hl7.mllp.state import ChannelState
 
 from zato.hl7v2 import HL7ValidationError, parse_hl7
 
@@ -148,6 +149,9 @@ class HL7MLLPServer:
         self._keep_running    = True
         self._server_socket:'socket.socket | None' = None
 
+        # The live per-channel state the channel dashboard reads - counters and listener condition
+        self.state = ChannelState(address)
+
 # ################################################################################################################################
 
     def start(self) -> 'None':
@@ -164,6 +168,7 @@ class HL7MLLPServer:
         server_socket.listen(128)
 
         self._server_socket = server_socket
+        self.state.on_listener_up()
 
         logger.info('HL7 MLLP server listening on %s', self.address)
 
@@ -196,12 +201,16 @@ class HL7MLLPServer:
             except Exception:
                 logger.warning('Error handling connection from %s:%s; e:`%s`', peer_address[0], peer_address[1], format_exc())
 
+        # The accept loop is over, so nothing is listening anymore
+        self.state.on_listener_down()
+
 # ################################################################################################################################
 
     def stop(self) -> 'None':
         """ Signals the server to stop accepting new connections and closes the listener.
         """
         self._keep_running = False
+        self.state.on_listener_down()
 
         if self._server_socket:
             self._server_socket.close()
@@ -257,6 +266,7 @@ class HL7MLLPServer:
                     try:
                         message_bytes = decoder.next_message()
                     except HL7Exception as exception:
+                        self.state.on_error()
                         logger.warning('Frame error from %s:%d - %s',
                             connection_context.peer_ip, connection_context.peer_port, exception)
                         break
@@ -314,6 +324,7 @@ class HL7MLLPServer:
 
         # .. if the batch contains no MSH at all, there is nothing to route or ACK ..
         if not msh_line:
+            self.state.on_error()
             logger.warning('Batch payload from %s:%d contains no MSH segment',
                 connection_context.peer_ip, connection_context.peer_port)
             return
@@ -355,6 +366,12 @@ class HL7MLLPServer:
         if not self.should_return_errors:
             error_text = ''
 
+        # .. the batch's acknowledgment outcome feeds the channel's live state ..
+        if ack_code == 'AA':
+            self.state.on_ack_sent()
+        else:
+            self.state.on_nack_sent()
+
         # .. build the ACK using the first MSH from the batch ..
         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
 
@@ -381,6 +398,7 @@ class HL7MLLPServer:
         """
 
         connection_context.total_messages_received += 1
+        self.state.on_message_received()
 
         if self.should_log_messages:
             logger.info('Received message #%d (%d bytes) from %s:%d',
@@ -432,6 +450,9 @@ class HL7MLLPServer:
                         if self.should_log_messages:
                             logger.info('Duplicate message (MSH-10: %s) from %s:%d, skipping',
                                 control_id, connection_context.peer_ip, connection_context.peer_port)
+
+                        # .. a duplicate is acknowledged positively, so it counts as one ..
+                        self.state.on_ack_sent()
 
                         # .. build an AA ACK so the sender knows we received it ..
                         ack_string = build_ack(msh_line, 'AA')
@@ -491,6 +512,9 @@ class HL7MLLPServer:
                         if not self.should_return_errors:
                             error_text = ''
 
+                        # .. a reject is a negative acknowledgment in the channel's live state ..
+                        self.state.on_nack_sent()
+
                         # .. build, frame and send the reject ACK ..
                         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
                         ack_bytes = ack_string.encode(self.default_character_encoding)
@@ -524,6 +548,12 @@ class HL7MLLPServer:
             # .. suppress error details if configured to not return errors ..
             if not self.should_return_errors:
                 error_text = ''
+
+            # .. the acknowledgment outcome feeds the channel's live state ..
+            if ack_code == 'AA':
+                self.state.on_ack_sent()
+            else:
+                self.state.on_nack_sent()
 
             # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)

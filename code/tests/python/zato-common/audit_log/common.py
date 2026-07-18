@@ -18,6 +18,7 @@ from live_sql.asserts import assert_mysql_connection_encrypted as assert_mysql_e
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_dedup_table
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -68,6 +69,7 @@ def delete_all_events() -> 'None':
         _ = connection.execute(event_attr_table.delete())
         _ = connection.execute(event_body_table.delete())
         _ = connection.execute(event_link_table.delete())
+        _ = connection.execute(event_dedup_table.delete())
         _ = connection.execute(event_table.delete())
 
 # ################################################################################################################################

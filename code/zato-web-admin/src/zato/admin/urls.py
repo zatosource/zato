@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, \
+from zato.admin.web.views import account, config_db, datadog, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -1511,6 +1511,26 @@ urlpatterns += [
         login_required(env_variables.test), name='settings-env-variables-test'),
     url(r'^zato/env-variables/save$',
         login_required(env_variables.save), name='settings-env-variables-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - Config DB
+
+    url(r'^zato/config-db/sql/$',
+        login_required(config_db.sql_index), name='config-db-sql'),
+    url(r'^zato/config-db/sql/test$',
+        login_required(config_db.sql_test), name='config-db-sql-test'),
+    url(r'^zato/config-db/sql/save$',
+        login_required(config_db.sql_save), name='config-db-sql-save'),
+    url(r'^zato/config-db/redis/$',
+        login_required(config_db.redis_index), name='config-db-redis'),
+    url(r'^zato/config-db/redis/test$',
+        login_required(config_db.redis_test), name='config-db-redis-test'),
+    url(r'^zato/config-db/redis/save$',
+        login_required(config_db.redis_save), name='config-db-redis-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

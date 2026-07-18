@@ -132,20 +132,15 @@ def _set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'N
 
 # ################################################################################################################################
 
-def _build_ssl_context(config:'EnvDBConfig') -> 'SSLContext':
-    """ Builds an SSL context out of this database's SSL environment variables.
+def build_ssl_context_from_values(values:'stranydict') -> 'SSLContext':
+    """ Builds an SSL context out of a dict of connection values.
     """
-    ca_file   = os.environ.get(config.env_ssl_ca_file, '')
-    cert_file = os.environ.get(config.env_ssl_cert_file, '')
-    key_file  = os.environ.get(config.env_ssl_key_file, '')
+    ca_file      = values['ssl_ca_file']
+    cert_file    = values['ssl_cert_file']
+    key_file     = values['ssl_key_file']
+    needs_verify = values['ssl_verify']
 
-    # The server certificate is verified by default when SSL is on ..
-    if verify := os.environ.get(config.env_ssl_verify, ''):
-        needs_verify = as_bool(verify)
-    else:
-        needs_verify = Default_SSL_Verify
-
-    # .. verify against the given CA or, if none was given, against the system store ..
+    # Verify against the given CA or, if none was given, against the system store ..
     if ca_file:
         out = ssl.create_default_context(cafile=ca_file)
     else:
@@ -164,8 +159,9 @@ def _build_ssl_context(config:'EnvDBConfig') -> 'SSLContext':
 
 # ################################################################################################################################
 
-def _get_connect_args(config:'EnvDBConfig', db_type:'str') -> 'stranydict':
-    """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled.
+def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stranydict':
+    """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled,
+    all built out of a dict of connection values.
     """
 
     # Our response to produce
@@ -176,16 +172,11 @@ def _get_connect_args(config:'EnvDBConfig', db_type:'str') -> 'stranydict':
         return out
 
     # .. it is off unless requested explicitly ..
-    if ssl_enabled := os.environ.get(config.env_ssl, ''):
-        needs_ssl = as_bool(ssl_enabled)
-    else:
-        needs_ssl = Default_SSL
-
-    if not needs_ssl:
+    if not values['ssl']:
         return out
 
     # .. each driver receives the same SSL context under its own keyword ..
-    ssl_context = _build_ssl_context(config)
+    ssl_context = build_ssl_context_from_values(values)
 
     # .. PyMySQL accepts an SSL context directly ..
     if db_type == Type_MySQL:
@@ -204,34 +195,78 @@ def _get_connect_args(config:'EnvDBConfig', db_type:'str') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _get_engine_url(config:'EnvDBConfig', db_type:'str') -> 'str':
-    """ Builds the SQLAlchemy URL for this database out of environment variables.
+def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str':
+    """ Builds the SQLAlchemy URL for a database out of a dict of connection values.
     """
 
-    # SQLite needs a file path only, defaulting to this store's shared file ..
+    # SQLite needs a file path only ..
     if db_type == Type_SQLite:
-
-        if db_path := os.environ.get(config.env_name, ''):
-            pass
-        else:
-            db_path = config.get_sqlite_path()
-
+        db_path = values['name']
         out = f'sqlite:///{db_path}'
         return out
 
     # .. everything else is a network database with full credentials.
     dialect  = _dialects[db_type]
-    host     = os.environ[config.env_host]
-    username = os.environ[config.env_username]
-    password = os.environ[config.env_password]
-    db_name  = os.environ[config.env_name]
+    host     = values['host']
+    username = values['username']
+    password = values['password']
+    db_name  = values['name']
 
-    if port := os.environ.get(config.env_port, ''):
+    if port := values['port']:
         port = int(port)
     else:
         port = _default_ports[db_type]
 
     out = f'{dialect}://{username}:{password}@{host}:{port}/{db_name}'
+    return out
+
+# ################################################################################################################################
+
+def get_env_values(config:'EnvDBConfig') -> 'stranydict':
+    """ Reads this database's environment variables into a dict of connection values,
+    filling in the defaults for anything that is not set.
+    """
+
+    # Our response to produce
+    out:'stranydict' = {}
+
+    # The type has a well-known default ..
+    if db_type := os.environ.get(config.env_type, ''):
+        out['type'] = db_type
+    else:
+        out['type'] = Default_Type
+
+    # .. the SQLite file path defaults to this store's shared file ..
+    if name := os.environ.get(config.env_name, ''):
+        out['name'] = name
+    elif out['type'] == Type_SQLite:
+        out['name'] = config.get_sqlite_path()
+    else:
+        out['name'] = ''
+
+    # .. the network location and credentials are empty unless given ..
+    out['host']     = os.environ.get(config.env_host, '')
+    out['port']     = os.environ.get(config.env_port, '')
+    out['username'] = os.environ.get(config.env_username, '')
+    out['password'] = os.environ.get(config.env_password, '')
+
+    # .. SSL is off unless requested explicitly ..
+    if ssl_enabled := os.environ.get(config.env_ssl, ''):
+        out['ssl'] = as_bool(ssl_enabled)
+    else:
+        out['ssl'] = Default_SSL
+
+    # .. the server certificate is verified by default when SSL is on ..
+    if verify := os.environ.get(config.env_ssl_verify, ''):
+        out['ssl_verify'] = as_bool(verify)
+    else:
+        out['ssl_verify'] = Default_SSL_Verify
+
+    # .. and the certificate paths are empty unless given.
+    out['ssl_ca_file']   = os.environ.get(config.env_ssl_ca_file, '')
+    out['ssl_cert_file'] = os.environ.get(config.env_ssl_cert_file, '')
+    out['ssl_key_file']  = os.environ.get(config.env_ssl_key_file, '')
+
     return out
 
 # ################################################################################################################################
@@ -340,19 +375,17 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         out = engine
         return out
 
-    # .. find out which database type we are to use ..
-    if db_type := os.environ.get(config.env_type, ''):
-        pass
-    else:
-        db_type = Default_Type
+    # .. read the connection values out of the environment ..
+    values  = get_env_values(config)
+    db_type = values['type']
 
     # .. the environment directory may not exist yet, e.g. in freshly created environments ..
     if db_type == Type_SQLite:
         os.makedirs(default_env_base_dir, exist_ok=True)
 
     # .. build the engine itself ..
-    engine_url   = _get_engine_url(config, db_type)
-    connect_args = _get_connect_args(config, db_type)
+    engine_url   = build_engine_url_from_values(values, db_type)
+    connect_args = build_connect_args_from_values(values, db_type)
     out          = create_engine(engine_url, connect_args=connect_args)
 
     # .. SQLite needs its pragmas applied to every new connection in the pool ..

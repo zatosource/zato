@@ -11,6 +11,7 @@ import os
 
 # Zato
 from common import audit_log_env, run_audit_log_scenario
+from resubmit_core import run_resubmit_core_scenario
 from retention_tiers import run_retention_tiers_scenario
 from structured import run_structured_events_scenario
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
@@ -32,6 +33,7 @@ def test_audit_log_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_audit_log_scenario()
         run_structured_events_scenario()
         run_retention_tiers_scenario()
+        run_resubmit_core_scenario()
 
     # The database file was created under the path the environment pointed at
     assert os.path.exists(db_path)

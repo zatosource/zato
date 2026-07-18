@@ -18,15 +18,13 @@ from __future__ import annotations
 # stdlib
 from dataclasses import dataclass
 
-# SQLAlchemy
-from sqlalchemy import select
-
 # Zato
 from zato.common.as2.audit import record_message_received, record_send_result
 from zato.common.as2.common import AS2Exception
 from zato.common.as2.partnership import match_partnership
-from zato.common.audit_log.api import AuditEvent, event_table, get_audit_engine
-from zato.common.json_internal import loads
+from zato.common.audit_log.api import AuditEvent, AuditSource
+from zato.common.audit_log.resubmit import get_stored_payload, load_event as load_event_core, register_resubmit_handler, \
+    Action_Reprocess, Action_Resend, ResubmitException, StoredEvent
 from zato.common.typing_ import dict_field
 from zato.edi.envelope import read_envelope
 
@@ -57,23 +55,6 @@ Target_Topic   = 'topic'
 # ################################################################################################################################
 
 @dataclass(init=False)
-class StoredEvent:
-    """ One audit event read back for resubmission, with its JSON data already parsed.
-    """
-    id: int = 0
-    cid: str = ''
-    source: str = ''
-    event_type: str = ''
-    object_name: str = ''
-    msg_id: str = ''
-
-    # What the event recorded - for AS2 events this is where the clear payload lives.
-    details: 'stranydict' = dict_field()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
 class ReprocessResult:
     """ What one reprocess did - the message that was routed and where it went.
     """
@@ -86,43 +67,13 @@ class ReprocessResult:
 
 def load_event(event_id:'int') -> 'StoredEvent':
     """ Reads one audit event by its id, along with its parsed JSON data.
+    The loading itself lives in the shared resubmit core - this wrapper only keeps
+    the AS2 error contract, where everything AS2-related raises AS2Exception.
     """
-    statement = select(
-        event_table.c.id,
-        event_table.c.cid,
-        event_table.c.source,
-        event_table.c.event_type,
-        event_table.c.object_name,
-        event_table.c.msg_id,
-        event_table.c.data,
-    ).where(event_table.c.id == event_id)
-
-    engine = get_audit_engine()
-
-    with engine.connect() as connection:
-        result = connection.execute(statement)
-        row = result.first()
-
-    # There is nothing to resubmit if the event does not exist, e.g. retention already deleted it.
-    if row is None:
-        raise AS2Exception(f'Audit event `{event_id}` was not found')
-
-    event_id, cid, source, event_type, object_name, msg_id, data = row
-
-    # The data of a resubmittable event is always a JSON document with the payload inside.
     try:
-        details = loads(data)
-    except ValueError:
-        raise AS2Exception(f'Audit event `{event_id}` does not carry JSON data')
-
-    out = StoredEvent()
-    out.id = event_id
-    out.cid = cid
-    out.source = source
-    out.event_type = event_type
-    out.object_name = object_name
-    out.msg_id = msg_id
-    out.details = details
+        out = load_event_core(event_id)
+    except ResubmitException as e:
+        raise AS2Exception(e.args[0])
 
     return out
 
@@ -132,10 +83,10 @@ def _get_stored_payload(event:'StoredEvent') -> 'str':
     """ Returns the clear payload stored with an event - an event recorded without one,
     e.g. a reconciliation-only entry, cannot be resubmitted.
     """
-    if payload := event.details.get('payload'):
-        out = payload
-    else:
-        raise AS2Exception(f'Audit event `{event.id}` does not carry a payload to resubmit')
+    try:
+        out = get_stored_payload(event)
+    except ResubmitException as e:
+        raise AS2Exception(e.args[0])
 
     return out
 
@@ -307,6 +258,14 @@ def reprocess(
     )
 
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The AS2 handlers are found through the shared registry - the service layer
+# supplies the callables when it wires the real connections in.
+register_resubmit_handler(AuditSource.AS2, Action_Resend, resend)
+register_resubmit_handler(AuditSource.AS2, Action_Reprocess, reprocess)
 
 # ################################################################################################################################
 # ################################################################################################################################
