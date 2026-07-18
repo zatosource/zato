@@ -14,15 +14,18 @@
 }
 
 .invoker-draw-attention {
+    /* The color the flash starts from and fades back to - elements sitting
+       on a non-white background override this variable */
+    --invoker-draw-attention-base: #fff;
     animation: invoker-draw-attention 0.6s  linear;
 }
 
 @keyframes invoker-draw-attention {
-    0%   { background: #fff; }
+    0%   { background: var(--invoker-draw-attention-base); }
     25%  { background: #ebf4fa; }
     50%  { background: #deedf8; }
     75%  { background: #ebf4fa; }
-    100% { background: #fff; }
+    100% { background: var(--invoker-draw-attention-base); }
 }
 
 /* ******************************************** */

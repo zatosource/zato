@@ -335,7 +335,12 @@ class _IDEBase(Service):
         while now < until:
             self.logger.info('Waiting for %s', fs_location)
             for item in self.get_deployment_info_list():
-                if item['fs_location'] == fs_location:
+
+                # Deployment info points to the hot-deploy work directory while the input location
+                # is the pickup one, so the former needs to be converted before the comparison.
+                item_fs_location = self._convert_work_to_pickup_dir(item['fs_location'])
+
+                if item_fs_location == fs_location:
                     return
 
             now = utcnow()

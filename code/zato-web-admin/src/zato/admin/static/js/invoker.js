@@ -255,8 +255,16 @@ $.fn.zato.invoker.on_sync_invoke_ended_success = function(options, data) {
 
     let status = '200 OK';
     let onPostSuccessFunc = options['on_post_success_func'];
+    let onSuccessFlashFunc = options['on_success_flash_func'];
 
-    $.fn.zato.invoker.on_form_ended_common(options, status, data);
+    // A deploy confirms its success with a flash next to the Deploy button,
+    // everything else keeps reporting through the result header and the response area
+    if (onSuccessFlashFunc) {
+        onSuccessFlashFunc(options);
+    }
+    else {
+        $.fn.zato.invoker.on_form_ended_common(options, status, data);
+    }
 
     if(onPostSuccessFunc) {
         onPostSuccessFunc();
@@ -281,11 +289,15 @@ $.fn.zato.invoker.run_sync_form_submitter = function(options) {
         $.fn.zato.toggle_css_class($(element), 'hidden', 'invoker-blinking');
     });
 
-    // Disable all the elements that previously might have needed attention
-    onEndedDrawAttention.each(function(element) {
-        let wrappedElement = $(element);
-        wrappedElement.addClass('hidden');
-    });
+    // Disable all the elements that previously might have needed attention,
+    // except when success reports through a flash - then the result header
+    // stays as it is, otherwise it would flicker for the duration of the call
+    if(!options['on_success_flash_func']) {
+        onEndedDrawAttention.each(function(element) {
+            let wrappedElement = $(element);
+            wrappedElement.addClass('hidden');
+        });
+    }
 
     // Submit the form, if we have one on input
     if(requestFormId) {
