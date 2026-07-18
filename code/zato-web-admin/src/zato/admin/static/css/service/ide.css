@@ -548,6 +548,8 @@ input[type="button"]:focus:not(:active) {
 
 /* The detail panel - an action list on the left, a live information pane
    on the right describing the action under the cursor */
+/* No overflow clipping here - the nested flyouts may reach
+   beyond the menu's own box */
 #grid-panel-menu {
     position: absolute;
     z-index: 1000;
@@ -560,7 +562,6 @@ input[type="button"]:focus:not(:active) {
     font-size: 12px;
     color: #000;
     user-select: none;
-    overflow: hidden;
 }
 
 .grid-panel-list {
@@ -568,6 +569,14 @@ input[type="button"]:focus:not(:active) {
     padding: 5px 0;
     background: #faf9f5;
     border-right: 1px solid #e4e1d8;
+    border-radius: 6px 0 0 6px;
+}
+
+/* The line between groups of actions */
+.grid-panel-separator {
+    height: 1px;
+    margin: 4px 10px;
+    background: #e2dfd6;
 }
 
 .grid-panel-item {

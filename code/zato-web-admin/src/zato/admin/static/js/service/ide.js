@@ -982,9 +982,12 @@ $.fn.zato.ide.show_grid_view_menu = function(x, y) {
 // The detail panel - an action list on the left and a live information pane
 // on the right that describes whatever action is under the cursor,
 // so choosing is informed rather than hopeful. The hotkeys follow
-// the left-hand home rows - Q W E R, A S D F, Z X C V - in list order.
-// Items with children open a submenu next to the list.
+// the left-hand home rows - Q W E R, A S D F, Z X C V - in list order,
+// null entries are separators between groups. Items with children open
+// a submenu next to the list and submenus nest to any depth.
 $.fn.zato.ide.grid_panel_menu_items = [
+
+    // The value under the cursor
     {"key": "Q", "label": "Edit value", "is_destructive": false, "children": null,
         "description": "Change the value in place, the document underneath is re-serialized as you type.",
         "details": [
@@ -1013,17 +1016,59 @@ $.fn.zato.ide.grid_panel_menu_items = [
             ["Distinct values", "2"],
             ["Last change", "3 days ago"],
         ]},
-    {"key": "A", "label": "Copy path", "is_destructive": false, "children": null,
-        "description": "Copy this node's address in the document's own notation.",
+
+    null,
+
+    // Working with the document
+    {"key": "A", "label": "Copy", "is_destructive": false,
+        "description": "Copy this node to the clipboard, in one of a few shapes.",
         "details": [
-            ["Path", "Patient.active"],
-            ["Notation", "document native"],
+            ["Node", "Patient.active"],
+        ],
+        "children": [
+            {"key": "1", "label": "Path", "children": null,
+                "description": "The node's address in the document's own notation.",
+                "details": [
+                    ["Copies", "Patient.active"],
+                ]},
+            {"key": "2", "label": "Value", "children": null,
+                "description": "The value exactly as it appears on the wire.",
+                "details": [
+                    ["Copies", "true"],
+                    ["Length", "4 characters"],
+                ]},
+            {"key": "3", "label": "Subtree", "children": null,
+                "description": "The node and everything below it, serialized whole.",
+                "details": [
+                    ["Copies", "1 node"],
+                ]},
         ]},
-    {"key": "S", "label": "Copy value", "is_destructive": false, "children": null,
-        "description": "Copy the value exactly as it appears on the wire.",
+    {"key": "S", "label": "Structure", "is_destructive": false,
+        "description": "Reshape the document around this node.",
         "details": [
-            ["Value", "true"],
-            ["Length", "4 characters"],
+            ["Node", "Patient.active"],
+        ],
+        "children": [
+            {"key": "1", "label": "Add child", "children": null,
+                "description": "A new node nested under this one.",
+                "details": [
+                    ["Position", "last child"],
+                ]},
+            {"key": "2", "label": "Add sibling", "children": null,
+                "description": "A new node next to this one, at the same depth.",
+                "details": [
+                    ["Position", "after this node"],
+                ]},
+            {"key": "3", "label": "Rename", "children": null,
+                "description": "Change the node's name, the value stays as it is.",
+                "details": [
+                    ["Current name", "active"],
+                ]},
+            {"key": "4", "label": "Duplicate", "children": null,
+                "description": "An exact copy of this node, placed right after it.",
+                "details": [
+                    ["Copies", "1 node"],
+                ]},
         ]},
     {"key": "D", "label": "Convert to", "is_destructive": false,
         "description": "Re-express this document in another standard, structure first, names mapped where the standards overlap.",
@@ -1032,25 +1077,25 @@ $.fn.zato.ide.grid_panel_menu_items = [
             ["Scope", "whole document"],
         ],
         "children": [
-            {"key": "1", "label": "JSON",
+            {"key": "1", "label": "JSON", "children": null,
                 "description": "A plain JSON document, names and nesting preserved as they are.",
                 "details": [
                     ["Output", "application/json"],
                     ["Lossless", "yes"],
                 ]},
-            {"key": "2", "label": "XML",
+            {"key": "2", "label": "XML", "children": null,
                 "description": "An XML document, attributes become elements where needed.",
                 "details": [
                     ["Output", "application/xml"],
                     ["Lossless", "yes"],
                 ]},
-            {"key": "3", "label": "HL7 v2",
+            {"key": "3", "label": "HL7 v2", "children": null,
                 "description": "An HL7 v2 message, fields mapped to their segment counterparts.",
                 "details": [
                     ["Output", "ER7"],
                     ["Mapped fields", "14 of 16"],
                 ]},
-            {"key": "4", "label": "EDIFACT",
+            {"key": "4", "label": "EDIFACT", "children": null,
                 "description": "An EDIFACT interchange, segments built from the mapped fields.",
                 "details": [
                     ["Output", "UN/EDIFACT"],
@@ -1064,12 +1109,12 @@ $.fn.zato.ide.grid_panel_menu_items = [
             ["Opens", "the invoker"],
         ],
         "children": [
-            {"key": "1", "label": "To this service",
+            {"key": "1", "label": "To this service", "children": null,
                 "description": "Invoke the service currently open in the editor.",
                 "details": [
                     ["Service", "demo.get-patient"],
                 ]},
-            {"key": "2", "label": "To another service",
+            {"key": "2", "label": "To another service", "children": null,
                 "description": "Pick any deployed service to receive this document.",
                 "details": [
                     ["Services", "247 deployed"],
@@ -1077,9 +1122,56 @@ $.fn.zato.ide.grid_panel_menu_items = [
             {"key": "3", "label": "To a channel",
                 "description": "Send through a channel, with its security and encoding applied.",
                 "details": [
-                    ["Channels", "12 available"],
+                    ["Channels", "4 available"],
+                ],
+                "children": [
+                    {"key": "1", "label": "hl7.mllp.intake", "children": null,
+                        "description": "The MLLP listener that admissions flow through.",
+                        "details": [
+                            ["Type", "HL7 MLLP"],
+                            ["Address", "0.0.0.0:30901"],
+                            ["Security", "TLS"],
+                        ]},
+                    {"key": "2", "label": "rest.emr.patient", "children": null,
+                        "description": "The REST channel the EMR system calls.",
+                        "details": [
+                            ["Type", "REST"],
+                            ["Path", "/emr/patient"],
+                            ["Security", "Bearer token"],
+                        ]},
+                    {"key": "3", "label": "soap.legacy.adt", "children": null,
+                        "description": "The SOAP endpoint kept for the legacy ADT feed.",
+                        "details": [
+                            ["Type", "SOAP"],
+                            ["Path", "/legacy/adt"],
+                            ["Security", "Basic Auth"],
+                        ]},
+                    {"key": "4", "label": "file.batch.drop", "children": null,
+                        "description": "The directory listener that picks up batch files.",
+                        "details": [
+                            ["Type", "File listener"],
+                            ["Directory", "/data/incoming"],
+                            ["Security", "none"],
+                        ]},
                 ]},
         ]},
+
+    null,
+
+    // The view itself
+    {"key": "X", "label": "Expand all", "is_destructive": false, "children": null,
+        "description": "Open every container below this node.",
+        "details": [
+            ["Containers", "5"],
+        ]},
+    {"key": "C", "label": "Collapse all", "is_destructive": false, "children": null,
+        "description": "Fold every container below this node.",
+        "details": [
+            ["Containers", "5"],
+        ]},
+
+    null,
+
     {"key": "Z", "label": "Delete", "is_destructive": true, "children": null,
         "description": "Remove this node from the document.",
         "details": [
@@ -1111,48 +1203,22 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
         }
     }
 
-    // Opens a submenu next to the list, aligned with its parent entry -
-    // the entries share the look of the main list and drive
-    // the information pane the same way
-    // Whose submenu is on display, if any - the digit hotkeys go to it
-    let submenu_parent = null;
+    // The chain of open submenus, outermost first - each entry holds
+    // the parent item and the flyout element built for it, so both
+    // the mouse and the hotkeys know where they are
+    let submenu_stack = [];
 
-    let open_submenu = function(entry, item) {
-
-        submenu_parent = item;
-        menu.find(".grid-panel-submenu").remove();
-
-        let submenu = $("<div>").addClass("grid-panel-submenu");
-
-        for(const child of item.children) {
-
-            let child_entry = $("<div>").addClass("grid-panel-item");
-            child_entry.append($("<span>").addClass("grid-panel-item-key").text(child.key));
-            child_entry.append($("<span>").addClass("grid-panel-item-label").text(child.label));
-
-            child_entry.on("mouseenter", function() {
-                submenu.find(".grid-panel-item").removeClass("current");
-                child_entry.addClass("current");
-                show_info(child);
-            });
-
-            child_entry.on("click", function() {
-                $.fn.zato.ide.close_grid_menus();
-            });
-
-            submenu.append(child_entry);
+    // Removes flyouts at the given depth and deeper
+    let close_submenus_from = function(level) {
+        for(const opened of submenu_stack.slice(level)) {
+            opened.elem.remove();
         }
-
-        // The flyout starts at the list's right edge, level with its parent
-        submenu.css({
-            "left": list.outerWidth() + "px",
-            "top": entry.position().top + "px",
-        });
-
-        menu.append(submenu);
+        submenu_stack = submenu_stack.slice(0, level);
     }
 
-    for(const item of $.fn.zato.ide.grid_panel_menu_items) {
+    // Builds one row of any list - the hotkey cap, the label and,
+    // for items with children, the arrow
+    let build_entry = function(item) {
 
         let entry = $("<div>").addClass("grid-panel-item");
         entry.append($("<span>").addClass("grid-panel-item-key").text(item.key));
@@ -1162,34 +1228,102 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
             entry.addClass("grid-panel-item-destructive");
         }
 
-        // Items with children carry an arrow and open their submenu on hover ..
         if(item.children) {
-
             entry.append($("<span>").addClass("grid-panel-item-more").text("\u203a"));
-
-            entry.on("mouseenter", function() {
-                list.find(".grid-panel-item").removeClass("current");
-                entry.addClass("current");
-                show_info(item);
-                open_submenu(entry, item);
-            });
         }
 
-        // .. while plain items close whatever submenu is on display.
+        return entry;
+    }
+
+    // Opens a flyout for an item's children, next to whatever holds
+    // the parent entry - the main list or a deeper flyout. Submenus nest
+    // to any depth, each new one starts at its parent's right edge.
+    let open_submenu = function(entry, item, level) {
+
+        close_submenus_from(level);
+
+        let submenu = $("<div>").addClass("grid-panel-submenu");
+
+        // Where the parent entry lives - the flyout starts at its right edge,
+        // level with the entry itself
+        if(level == 0) {
+            var left = list.outerWidth();
+            var top = entry.position().top;
+        }
         else {
-            entry.on("mouseenter", function() {
-                list.find(".grid-panel-item").removeClass("current");
-                entry.addClass("current");
-                show_info(item);
-                submenu_parent = null;
-                menu.find(".grid-panel-submenu").remove();
+            let holder = submenu_stack[level - 1].elem;
+            var left = holder.position().left + holder.outerWidth();
+            var top = holder.position().top + entry.position().top;
+        }
+
+        for(const child of item.children) {
+
+            let child_entry = build_entry(child);
+
+            child_entry.on("mouseenter", function() {
+                submenu.find(".grid-panel-item").removeClass("current");
+                child_entry.addClass("current");
+                show_info(child);
+
+                if(child.children) {
+                    open_submenu(child_entry, child, level + 1);
+                }
+                else {
+                    close_submenus_from(level + 1);
+                }
             });
 
+            if(!child.children) {
+                child_entry.on("click", function() {
+                    $.fn.zato.ide.close_grid_menus();
+                });
+            }
+
+            submenu.append(child_entry);
+        }
+
+        submenu.css({"left": left + "px", "top": top + "px"});
+        menu.append(submenu);
+
+        submenu_stack.push({"item": item, "elem": submenu});
+    }
+
+    // The main list's items and entries, side by side, with the separators
+    // left out so the hotkeys can find their entries by index
+    let main_items = [];
+    let main_entries = [];
+
+    for(const item of $.fn.zato.ide.grid_panel_menu_items) {
+
+        // Separators split the groups
+        if(item === null) {
+            list.append($("<div>").addClass("grid-panel-separator"));
+            continue;
+        }
+
+        let entry = build_entry(item);
+
+        entry.on("mouseenter", function() {
+            list.find(".grid-panel-item").removeClass("current");
+            entry.addClass("current");
+            show_info(item);
+
+            if(item.children) {
+                open_submenu(entry, item, 0);
+            }
+            else {
+                close_submenus_from(0);
+            }
+        });
+
+        if(!item.children) {
             entry.on("click", function() {
                 $.fn.zato.ide.close_grid_menus();
             });
         }
 
+        main_items.push(item);
+        main_entries.push(entry);
         list.append(entry);
     }
 
@@ -1197,8 +1331,8 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
     menu.append(info);
 
     // The first action's story is on display from the start
-    list.find(".grid-panel-item").first().addClass("current");
-    show_info($.fn.zato.ide.grid_panel_menu_items[0]);
+    main_entries[0].addClass("current");
+    show_info(main_items[0]);
 
     menu.css({"left": x + "px", "top": y + "px"});
     $("body").append(menu);
@@ -1206,36 +1340,53 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, x, y) {
     $.fn.zato.ide.install_grid_menu_dismiss("#grid-panel-menu");
 
     // The hotkeys work for as long as the panel is open - a plain item's key
-    // triggers it, a parent's key brings up its submenu instead
+    // triggers it, a parent's key brings up its submenu, and the digit keys
+    // go to the deepest flyout on display
     $(document).on("keydown.grid-view-menu", function(e) {
 
-        // The digit keys go to the submenu on display
-        if(submenu_parent) {
-            for(const child of submenu_parent.children) {
-                if(e.key == child.key) {
-                    $.fn.zato.ide.close_grid_menus();
-                    return;
+        if(submenu_stack.length) {
+
+            let deepest = submenu_stack[submenu_stack.length - 1];
+
+            for(let idx=0; idx < deepest.item.children.length; idx++) {
+
+                let child = deepest.item.children[idx];
+
+                if(e.key != child.key) {
+                    continue;
                 }
+
+                let child_entry = deepest.elem.find(".grid-panel-item").eq(idx);
+                deepest.elem.find(".grid-panel-item").removeClass("current");
+                child_entry.addClass("current");
+                show_info(child);
+
+                if(child.children) {
+                    open_submenu(child_entry, child, submenu_stack.length);
+                }
+                else {
+                    $.fn.zato.ide.close_grid_menus();
+                }
+
+                return;
             }
         }
 
-        let items = $.fn.zato.ide.grid_panel_menu_items;
+        for(let idx=0; idx < main_items.length; idx++) {
 
-        for(let idx=0; idx < items.length; idx++) {
-
-            let item = items[idx];
+            let item = main_items[idx];
 
             if(e.key.toUpperCase() != item.key) {
                 continue;
             }
 
-            let entry = list.find(".grid-panel-item").eq(idx);
+            let entry = main_entries[idx];
             list.find(".grid-panel-item").removeClass("current");
             entry.addClass("current");
             show_info(item);
 
             if(item.children) {
-                open_submenu(entry, item);
+                open_submenu(entry, item, 0);
             }
             else {
                 $.fn.zato.ide.close_grid_menus();
