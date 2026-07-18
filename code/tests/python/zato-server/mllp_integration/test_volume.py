@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import socket
 import time
+from time import monotonic
 
 # pytest
 import pytest
@@ -38,6 +39,9 @@ if 0:
 # The volume proof is opt-in - it runs for minutes under sustained load,
 # so it only starts when the environment asks for it, like test-as2-live does.
 _is_volume_enabled = bool(os.environ.get('Zato_Test_HL7_Volume'))
+
+# Per-message trace diagnostics - opt-in through the environment
+_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
 
 # How hard and how long to push, overridable from the environment -
 # the defaults prove the property in minutes, a full-hour run is one variable away.
@@ -85,6 +89,13 @@ class _PersistentMLLPSender:
     def send(self, item:'FeedItem') -> 'bytes':
         """ Sends one feed item and returns the raw ACK bytes.
         """
+        # Trace diagnostics - each send is announced before the socket write so a stall
+        # is attributable to the exact control id that never came back.
+        send_start = monotonic()
+
+        if _is_trace_enabled:
+            print(f'[CLIENT] sending {item.control_id}', flush=True)
+
         framed_message = frame_encode(item.text.encode('utf-8'), _start_sequence, _end_sequence)
         self.socket.sendall(framed_message)
 
@@ -98,6 +109,9 @@ class _PersistentMLLPSender:
             message = self.decoder.next_message()
 
             if message is not None:
+                if _is_trace_enabled:
+                    round_trip_ms = (monotonic() - send_start) * 1000
+                    print(f'[CLIENT] ack for {item.control_id} after {round_trip_ms:.1f}ms', flush=True)
                 out = message
                 return out
 
@@ -105,6 +119,17 @@ class _PersistentMLLPSender:
         self.socket.close()
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _ensure_schema(audit_db_path:'str') -> 'None':
+    """ Creates the audit schema if it is not there yet - in a standalone volume run
+    the baseline is read before the server ever wrote an event, and creating
+    from the same metadata is exactly what the server itself would do.
+    """
+    engine = create_engine(f'sqlite:///{audit_db_path}')
+    event_table.metadata.create_all(engine)
+    engine.dispose()
+
 # ################################################################################################################################
 
 def _median(values:'anylist') -> 'float':
@@ -266,6 +291,9 @@ class TestHL7Volume:
 
         # How many messages the configured rate and duration amount to
         count = int(_rate_per_minute * _duration_seconds / 60)
+
+        # The schema must exist before the baseline can be read
+        _ensure_schema(audit_db_path)
 
         # The baseline the growth assertions measure against - the audit tests
         # that ran earlier in this session left their own rows behind.

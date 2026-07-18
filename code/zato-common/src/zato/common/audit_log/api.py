@@ -7,7 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from collections import OrderedDict
+from logging import getLogger
+from time import monotonic
 
 # Zato
 from zato.common.audit_log.buffer import get_flush_max_size, get_flush_max_wait_ms, Env_Flush_Max_Size, \
@@ -101,6 +104,15 @@ class ModuleCtx:
 
 # Retention runs after every that many inserts
 _retention_check_interval = 1000
+
+logger = getLogger(__name__)
+
+# Per-write trace diagnostics - opt-in through the environment
+_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
+
+def _trace(message:'str', *args:'object') -> 'None':
+    if _is_trace_enabled:
+        logger.info('TRACE ' + message, *args)
 
 # How many distinct cids have their sequence counters kept in memory at a time
 _max_tracked_cids = 100_000
@@ -373,6 +385,9 @@ class AuditLog:
         # Our response to produce
         out:'intnone' = None
 
+        # Trace point 9: every database transaction with its size and duration
+        write_start = monotonic()
+
         with self.engine.begin() as connection:
 
             for pending in batch:
@@ -419,13 +434,22 @@ class AuditLog:
 
                     _ = connection.execute(event_link_table.insert(), link_rows)
 
+        _trace('db write of %d events done %.1fms', len(batch), (monotonic() - write_start) * 1000)
+
         # Periodically delete rows older than the retention window
         self._insert_count += len(batch)
 
         if self._insert_count >= _retention_check_interval:
             self._insert_count = 0
             now = utcnow()
+
+            # Trace point 10: the inline retention run, a suspect for long stalls
+            _trace('retention run begins')
+            retention_start = monotonic()
+
             self._run_retention(now)
+
+            _trace('retention run done %.1fms', (monotonic() - retention_start) * 1000)
 
         return out
 

@@ -62,13 +62,18 @@ _password = 'test.invoke.' + _password_suffix
 
 _server_ready_timeout    = 60
 _backend_ready_timeout   = 10
-_hot_deploy_wait_seconds = 5
+_hot_deploy_timeout      = 30
 _listener_settle_seconds = 2
 _port_wait_timeout       = 10
 
 _server_process   = None
 _listener_process = None
 _temp_directory   = None
+
+# Every path the listener reported as deployed, filled by the listener output thread -
+# the hot-deploy fixture waits on the condition until all its files show up here.
+_listener_deployed_paths:'set[str]' = set()
+_listener_deployed_condition = threading.Condition()
 
 # Type aliases for generator-based fixtures
 strobj_dict     = dict[str, object]
@@ -346,6 +351,27 @@ def zato_server() -> 'strobj_dict_gen':
         stderr=subprocess.STDOUT,
     )
 
+    # .. stream the listener's output too - it reports each file it picks up and deploys,
+    # and with nothing draining the pipe it would block once the buffer fills up ..
+    listener_process = cast_('any_', _listener_process)
+
+    def _stream_listener_output() -> 'None':
+        for line in iter(listener_process.stdout.readline, b''):
+            text = line.decode('utf-8', errors='replace').rstrip()
+            elapsed = time.monotonic() - after_popen
+            print(f'[LISTENER {elapsed:6.1f}s] {text}')
+
+            # The listener prints this once the server confirmed a file's deployment,
+            # which is what the hot-deploy fixture waits for.
+            if 'Deployed -> ' in text:
+                deployed_path = text.split('Deployed -> ')[1]
+                with _listener_deployed_condition:
+                    _listener_deployed_paths.add(deployed_path)
+                    _listener_deployed_condition.notify_all()
+
+    listener_output_thread = threading.Thread(target=_stream_listener_output, daemon=True)
+    listener_output_thread.start()
+
     # .. give the listener a moment to initialize its directory watch ..
     time.sleep(_listener_settle_seconds)
 
@@ -509,9 +535,19 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
         deployed_paths.append(file_path)
         print(f'[DEPLOY] Wrote {file_path}')
 
-    # .. wait for Zato to pick up the services ..
-    print(f'[DEPLOY] Waiting {_hot_deploy_wait_seconds}s for pickup ...')
-    time.sleep(_hot_deploy_wait_seconds)
+    # .. wait until the listener confirms every file reached the server - it deploys
+    # through inotify the moment a file is closed, so this returns almost immediately ..
+    print('[DEPLOY] Waiting for the listener to deploy all files ...')
+
+    with _listener_deployed_condition:
+        is_all_deployed = _listener_deployed_condition.wait_for(
+            lambda: set(deployed_paths) <= _listener_deployed_paths, timeout=_hot_deploy_timeout)
+
+    if not is_all_deployed:
+        missing = set(deployed_paths) - _listener_deployed_paths
+        raise Exception(f'Listener did not deploy all files within {_hot_deploy_timeout}s, missing: {sorted(missing)}')
+
+    print('[DEPLOY] All files deployed')
 
     yield None
 

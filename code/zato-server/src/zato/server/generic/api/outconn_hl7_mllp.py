@@ -116,15 +116,26 @@ class _HL7MLLPConnection:
             ssl_context=ssl_context,
         )
 
-    def invoke(self, data:'str | bytes') -> 'object':
-        """ Sends data and returns an AckResult.
+    def invoke(self, data:'object') -> 'object':
+        """ Sends data and returns an AckResult. The input may be ER7 text, raw bytes
+        or a parsed message object, e.g. when a service forwards the parsed input
+        its channel gave it.
         """
-        if isinstance(data, str):
-            data = data.encode('utf-8')
+
+        # Everything is normalized to text first - it is what the audit trail stores
+        # and what the control id is extracted from ..
+        if isinstance(data, bytes):
+            message_text = data.decode('utf-8', errors='replace')
+        elif isinstance(data, str):
+            message_text = data
+        else:
+            message_text = data.to_er7() # type: ignore[attr-defined]
+
+        # .. and the wire itself carries bytes.
+        data = message_text.encode('utf-8')
 
         # The control id correlates the ACK with the message - it also lets the client
         # validate that the ACK actually acknowledges what was sent.
-        message_text = data.decode('utf-8', errors='replace')
         msh_line = message_text.split('\r', 1)[0]
         control_id = extract_control_id(msh_line)
 
