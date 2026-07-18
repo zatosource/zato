@@ -116,10 +116,11 @@ class _HL7MLLPConnection:
             ssl_context=ssl_context,
         )
 
-    def invoke(self, data:'object') -> 'object':
+    def invoke(self, data:'object', *, needs_audit:'bool'=True) -> 'object':
         """ Sends data and returns an AckResult. The input may be ER7 text, raw bytes
         or a parsed message object, e.g. when a service forwards the parsed input
-        its channel gave it.
+        its channel gave it. A resubmit turns needs_audit off because it records
+        its own events, linked to the original by the correlation id.
         """
 
         # Everything is normalized to text first - it is what the audit trail stores
@@ -140,7 +141,7 @@ class _HL7MLLPConnection:
         control_id = extract_control_id(msh_line)
 
         # The sent event and its acknowledgment share one correlation id
-        if self.audit_log:
+        if self.audit_log and needs_audit:
             audit_cid = new_cid_server()
             _ = audit_message_sent(
                 self.audit_log, self.name, message_text,
@@ -155,7 +156,7 @@ class _HL7MLLPConnection:
         try:
             out = self.impl.send(data, control_id)
         except Exception:
-            if self.audit_log:
+            if self.audit_log and needs_audit:
                 duration_ms = int((monotonic() - send_start) * _ms_per_second)
                 _ = audit_ack_received(
                     self.audit_log, self.name, ACKStatus.Timeout,
@@ -163,7 +164,7 @@ class _HL7MLLPConnection:
             raise
 
         # The acknowledgment arrived - its code decides the outcome on its own row
-        if self.audit_log:
+        if self.audit_log and needs_audit:
             duration_ms = int((monotonic() - send_start) * _ms_per_second)
             _ = audit_ack_received(
                 self.audit_log, self.name, out.ack_code,

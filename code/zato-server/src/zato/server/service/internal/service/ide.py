@@ -67,6 +67,10 @@ class IDEResponse(Model):
     # A list of files that may potentially have a service of the given name.
     current_service_file_list: 'anylist' = list_field()
 
+    # A list of channels the current service is exposed through - REST and HL7 MLLP alike -
+    # what the IDE's mode selector invokes the service by.
+    current_service_binding_list: 'anylist' = list_field()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -564,11 +568,55 @@ class GetService(_GetBase):
                 # Build a response ..
                 response = self._build_get_response(deployment_info_list, fs_location)
 
+                # .. include the channels the service is exposed through ..
+                response.current_service_binding_list = self._get_binding_list(self.request.input.service_name)
+
                 # .. this is what we return to our caller ..
                 self.response.payload = response
 
                 # .. no need to iterate further.
                 break
+
+# ################################################################################################################################
+
+    def _get_binding_list(self, service_name:'str') -> 'anylist':
+        """ Returns every channel the service is exposed through - REST channels
+        from the ODB and HL7 MLLP ones from the config manager, each entry carrying
+        the channel type the IDE's mode selector switches between.
+        """
+
+        # Imported here because the ODB models are needed by this one method only
+        from contextlib import closing
+        from zato.common.odb.model import HTTPSOAP, Service as ODBService
+
+        out:'anylist' = []
+
+        # REST channels point to services through the ODB
+        with closing(self.odb.session()) as session:
+            rest_channels = session.query(HTTPSOAP.id, HTTPSOAP.name).\
+                filter(HTTPSOAP.service_id == ODBService.id).\
+                filter(ODBService.name == service_name).\
+                filter(HTTPSOAP.connection == 'channel').\
+                filter(HTTPSOAP.soap_version == None).\
+                all() # noqa: E711
+
+        for channel_id, channel_name in rest_channels:
+            out.append({
+                'channel_type': 'rest',
+                'id': channel_id,
+                'name': channel_name,
+            })
+
+        # HL7 MLLP channels are generic connections held by the config manager
+        for config in self.server.config_manager.channel_hl7_mllp.values():
+            if config['service'] == service_name:
+                out.append({
+                    'channel_type': 'hl7-mllp',
+                    'id': config['id'],
+                    'name': config['name'],
+                })
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

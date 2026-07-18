@@ -34,7 +34,7 @@ from zato.common.util.config import get_config_object, update_config_file
 
 # Zato - test services deployed to the server under test
 from _services import accept_service_source, echo_service_source, error_service_source, fhir_invoke_service_source, \
-    forward_service_source, inspect_service_source
+    fhir_save_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -534,6 +534,7 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
         '_test_hl7_mllp_inspect.py': inspect_service_source,
         '_test_hl7_mllp_accept.py':  accept_service_source,
         '_test_hl7_fhir_invoke.py':  fhir_invoke_service_source,
+        '_test_hl7_fhir_save.py':    fhir_save_service_source,
     }
 
     deployed_paths:'strlist' = []

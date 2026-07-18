@@ -15,8 +15,10 @@ from zato.common.as2.config import build_partnerships
 from zato.common.as2.outbound import describe_send_result, new_send_report
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resubmit import find_connection_name, load_event, reprocess, resend
-from zato.common.audit_log.api import AuditLog
-from zato.common.json_internal import dumps
+from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.audit_log.resubmit import resend_hop
+from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
+from zato.common.json_internal import dumps, loads
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
@@ -25,7 +27,9 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from zato.common.as2.outbound import SendResult
-    from zato.common.typing_ import dictlist, stranydict, strnone
+    from zato.common.typing_ import any_, callable_, dictlist, stranydict, strnone
+    any_ = any_
+    callable_ = callable_
     SendResult = SendResult
     stranydict = stranydict
     strnone = strnone
@@ -149,6 +153,208 @@ class ReprocessAS2Message(AdminService):
         report['cid'] = self.cid
 
         self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResendHL7Message(AdminService):
+    """ Sends the payload stored with an outbound HL7 audit event through the same MLLP
+    outgoing connection again - for when the receiving system was down and the messages
+    are to flow once more. An edited payload may be supplied in place of the stored one.
+    The new attempt lands as its own audit event linked to the original
+    by the correlation id, with its acknowledgment recorded alongside.
+    """
+    name = 'zato.audit-log.hl7.resend'
+    input = Int('event_id'), '-payload'
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # An edited payload replaces the stored one - the empty string means none was given
+        edited_payload = self.request.input.payload
+        if edited_payload == '':
+            edited_payload = None
+
+        # A failed resend comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        report:'stranydict' = {
+            'is_ok': False,
+            'event_id': None,
+            'control_id': '',
+            'ack_status': '',
+            'ack_outcome': '',
+            'error': '',
+        }
+
+        try:
+            event = load_event(event_id)
+
+            # The original event names the connection the payload goes back through -
+            # the connection's own recording is off because the resend records the events
+            # itself, linking them to the original by the correlation id.
+            invoker = self.mllp[event.object_name]
+
+            def send(payload:'str') -> 'strnone':
+                ack_result = invoker.send(payload, needs_audit=False)
+                return ack_result.ack_text # type: ignore[union-attr]
+
+            audit_log = AuditLog(self.server.name)
+            result = hl7_resend(event, send, audit_log, self.cid, payload=edited_payload)
+
+            report['is_ok'] = True
+            report['event_id'] = result.event_id
+            report['control_id'] = result.control_id
+            report['ack_status'] = result.ack_status
+            report['ack_outcome'] = result.ack_outcome
+
+        except Exception:
+            report['error'] = format_exc()
+
+        report['action'] = _action_resend
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReprocessHL7Message(AdminService):
+    """ Re-routes the payload stored with an inbound HL7 audit event to the channel's
+    service - for when the recipient system was down and the already-received messages
+    are to flow through again. An edited payload may be supplied in place of the stored one.
+    The new attempt lands as its own audit event linked to the original by the correlation id.
+    """
+    name = 'zato.audit-log.hl7.reprocess'
+    input = Int('event_id'), '-payload'
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # An edited payload replaces the stored one - the empty string means none was given
+        edited_payload = self.request.input.payload
+        if edited_payload == '':
+            edited_payload = None
+
+        # A failed reprocess comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        report:'stranydict' = {
+            'is_ok': False,
+            'event_id': None,
+            'control_id': '',
+            'service_name': '',
+            'error': '',
+        }
+
+        def invoke_service(service_name:'str', payload:'str') -> 'None':
+            _ = self.server.invoke(service_name, payload)
+
+        try:
+            event = load_event(event_id)
+
+            # The original event names the channel - its configuration names the service
+            # the message is re-routed to, the same one a live delivery would run.
+            service_name = _find_channel_service(self.server.config_manager.channel_hl7_mllp, event.object_name)
+
+            audit_log = AuditLog(self.server.name)
+            result = hl7_reprocess(event, service_name, invoke_service, audit_log, self.cid, payload=edited_payload)
+
+            report['is_ok'] = True
+            report['event_id'] = result.event_id
+            report['control_id'] = result.control_id
+            report['service_name'] = result.service_name
+
+        except Exception:
+            report['error'] = format_exc()
+
+        report['action'] = _action_reprocess
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _find_channel_service(channel_configs:'stranydict', channel_name:'str') -> 'str':
+    """ Returns the name of the service one HL7 MLLP channel routes to.
+    """
+    for config in channel_configs.values():
+        if config['name'] == channel_name:
+            out = config['service']
+            break
+    else:
+        raise Exception(f'No HL7 MLLP channel matches the name `{channel_name}`')
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResendHop(AdminService):
+    """ Repeats a single recorded delivery to one destination - the exact payload stored
+    with an outgoing event goes through the same connection again, without re-running
+    the service that produced it and without involving any other destination.
+    The attempt lands as its own audit event linked to the original by the correlation id.
+    """
+    name = 'zato.audit-log.resend-hop'
+    input = Int('event_id')
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # A failed resend comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        report:'stranydict' = {
+            'is_ok': False,
+            'event_id': None,
+            'error': '',
+        }
+
+        try:
+            event = load_event(event_id)
+
+            # Each source contributes its own way of repeating a delivery
+            # through the connection the original event names.
+            if event.source == AuditSource.FHIR:
+                send = self._build_fhir_send(event)
+            else:
+                raise Exception(f'Per-hop resend does not cover source `{event.source}` (event `{event_id}`)')
+
+            audit_log = AuditLog(self.server.name)
+            result = resend_hop(event, send, audit_log, self.cid)
+
+            report['is_ok'] = True
+            report['event_id'] = result.event_id
+
+        except Exception:
+            report['error'] = format_exc()
+
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+
+    def _build_fhir_send(self, event:'any_') -> 'callable_':
+        """ Returns a callable repeating one FHIR call - the stored event carries the method
+        and path alongside the payload, and the connection's own recording is off because
+        the per-hop resend records the attempt itself.
+        """
+        client = self.fhir[event.object_name]
+
+        method = event.details['method']
+        path = event.details['path']
+
+        def send(payload:'str') -> 'object':
+            out = client._do_request(method, path, data=loads(payload), needs_audit=False)
+            return out
+
+        return send
 
 # ################################################################################################################################
 # ################################################################################################################################

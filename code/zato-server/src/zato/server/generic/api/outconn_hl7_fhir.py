@@ -94,13 +94,15 @@ class _HL7FHIRConnection(SyncFHIRClient):
 
 # ################################################################################################################################
 
-    def _do_request(self, method, path, data=None, params=None, extra_headers=None, *, returning_status=False): # type: ignore[override]
+    def _do_request(self, method, path, data=None, params=None, extra_headers=None, *, returning_status=False, needs_audit=True): # type: ignore[override]
         """ Every fhirpy operation funnels through here - reads, saves, deletes and raw
         execute calls alike - which makes it the one place the audit pair is written from.
+        A resubmit turns needs_audit off because it records its own events,
+        linked to the original by the correlation id.
         """
 
         # An unaudited connection goes straight through
-        if not self.zato_audit_log:
+        if not (self.zato_audit_log and needs_audit):
             out = super()._do_request(
                 method, path, data, params, extra_headers, returning_status=returning_status)
             return out
@@ -123,6 +125,14 @@ class _HL7FHIRConnection(SyncFHIRClient):
         else:
             request_body = dumps(data)
 
+        # The stored document is the resubmit convention - payload plus the method
+        # and path a per-hop resend needs to repeat the exact same call.
+        stored_data = dumps({
+            'payload': request_body,
+            'method': method,
+            'path': path,
+        })
+
         _ = self.zato_audit_log.insert(
             AuditSource.FHIR,
             AuditEvent.Request_Sent,
@@ -131,7 +141,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
             endpoint=f'{method.upper()} {path}',
             size=len(request_body),
             outcome=AuditOutcome.OK,
-            data=request_body,
+            data=stored_data,
             attrs=attrs,
         )
 

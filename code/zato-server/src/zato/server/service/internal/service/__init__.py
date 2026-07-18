@@ -287,6 +287,13 @@ class GetChannelList(AdminService):
     output = 'id', 'name'
 
     def handle(self):
+
+        # HL7 MLLP channels are generic connections - they live in the config manager,
+        # not in a dedicated ODB table the way REST and AMQP channels do.
+        if self.request.input.channel_type == 'hl7-mllp':
+            self.response.payload[:] = self._get_hl7_mllp_channels()
+            return
+
         channel_type_class = {
             'plain_http': HTTPSOAP,
             'amqp': ChannelAMQP,
@@ -305,6 +312,26 @@ class GetChannelList(AdminService):
                 q = q.filter(class_.soap_version == None) # noqa
 
             self.response.payload[:] = q.all()
+
+# ################################################################################################################################
+
+    def _get_hl7_mllp_channels(self):
+        """ Returns the id and name of every HL7 MLLP channel routing to the service.
+        """
+
+        # The input carries the service's id, the channel configs carry its name
+        with closing(self.odb.session()) as session:
+            service_name = session.query(ODBService.name).\
+                filter(ODBService.id == self.request.input.id).\
+                one()[0]
+
+        out = []
+
+        for config in self.server.config_manager.channel_hl7_mllp.values():
+            if config['service'] == service_name:
+                out.append({'id': config['id'], 'name': config['name']})
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
