@@ -130,7 +130,7 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
         window.location.href = wizard.state.listUrl;
     });
 
-    // .. the Next button follows the current step's validity as the user types ..
+    // .. the Next button follows the name as the user types ..
     $('#id_name').on('input', wizard.updateNextState);
     $('#id_service').on('change', wizard.updateNextState);
 

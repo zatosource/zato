@@ -89,23 +89,15 @@ $(document).ready(function() {
                         <div class="mllp-wizard-section-title">Transport</div>
 
                         <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-transport">
-                            <label class="mllp-wizard-toggle">
-                                <input type="checkbox" id="mllp-wizard-toggle-mllp" checked>
-                                <span class="mllp-wizard-toggle-slider"></span>
-                            </label>
-                            <span class="mllp-wizard-toggle-label">MLLP over TCP</span>
-                            <a href="javascript:void(0)" class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport"></a>
-                            <span class="zato-soft-hint mllp-wizard-toggle-hint">Click to edit</span>
+                            <input type="checkbox" id="mllp-wizard-toggle-mllp" checked>
+                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-toggle-mllp">MLLP</label>
+                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-transport"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
                         <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-rest">
-                            <label class="mllp-wizard-toggle">
-                                <input type="checkbox" id="mllp-wizard-toggle-rest">
-                                <span class="mllp-wizard-toggle-slider"></span>
-                            </label>
-                            <span class="mllp-wizard-toggle-label">REST</span>
-                            <a href="javascript:void(0)" class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest"></a>
-                            <span class="zato-soft-hint mllp-wizard-toggle-hint">Click to edit</span>
+                            <input type="checkbox" id="mllp-wizard-toggle-rest">
+                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-toggle-rest">REST</label>
+                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-rest"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
 

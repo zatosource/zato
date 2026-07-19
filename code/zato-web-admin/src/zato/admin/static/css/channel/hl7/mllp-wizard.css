@@ -39,6 +39,17 @@
     --wizard-text: #1a1a2e;
     --wizard-text-muted: #71717a;
     --wizard-text-faint: #9ca3af;
+
+    /* Every checkbox on this page - the card, the step bodies and all
+       the popover micro-forms - renders as the smaller slider, in the
+       wizard accent, through the site-wide checkbox slider tokens */
+    --toggle-width: 34px;
+    --toggle-height: 19px;
+    --toggle-knob-size: 15px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 15px;
+    --toggle-off-background: var(--wizard-border-strong);
+    --toggle-on-background: var(--wizard-accent);
 }
 
 .mllp-wizard-card {
@@ -265,72 +276,28 @@
     padding: 7px 0;
 }
 
-.mllp-wizard-toggle {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 19px;
-    flex-shrink: 0;
-    cursor: pointer;
-}
-
-.mllp-wizard-toggle input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.mllp-wizard-toggle-slider {
-    position: absolute;
-    inset: 0;
-    border-radius: 19px;
-    background: var(--wizard-border-strong);
-    transition: background 150ms ease;
-}
-
-.mllp-wizard-toggle-slider::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-    transition: transform 150ms ease;
-}
-
-.mllp-wizard-toggle input:checked + .mllp-wizard-toggle-slider {
-    background: var(--wizard-accent);
-}
-
-.mllp-wizard-toggle input:checked + .mllp-wizard-toggle-slider::before {
-    transform: translateX(15px);
-}
-
+/* Clicking the transport name flips its slider */
 .mllp-wizard-toggle-label {
     font-size: 13px;
     font-weight: 600;
     color: var(--wizard-text);
+    cursor: pointer;
 }
 
-/* A non-empty summary is the way into the protocol options popup -
-   the link itself wears the site-wide dashed-underline anchor look */
+/* One link is the way into the protocol options popup - inside it the
+   summary wears the site-wide dashed-underline link face while the hint
+   stays a dimmed note, and everything in between is clickable too */
+a.mllp-wizard-toggle-edit {
+    background-image: none;
+    padding-bottom: 0;
+}
+
 .mllp-wizard-toggle-summary {
     font-size: 12px;
 }
 
-/* The row's own flex gap already spaces the hint out */
-.mllp-wizard-toggle-hint {
-    margin-left: 0;
-}
-
-/* Nothing to edit while a transport is off, so neither
-   the summary nor its hint takes any space */
-.mllp-wizard-toggle-summary:empty,
-.mllp-wizard-toggle-summary:empty + .mllp-wizard-toggle-hint {
+/* Nothing to edit while a transport is off, so the whole link goes away */
+.mllp-wizard-toggle-edit:has(.mllp-wizard-toggle-summary:empty) {
     display: none;
 }
 

@@ -574,8 +574,8 @@ input[type="button"]:focus:not(:active) {
 .grid-panel-list {
     min-width: 155px;
     padding: 5px 0;
-    background: #faf9f5;
-    border-right: 1px solid #e4e1d8;
+    background: var(--zato-popup-sand);
+    border-right: 1px solid var(--zato-popup-sand-line);
     border-radius: 0 0 0 6px;
 }
 
@@ -583,7 +583,7 @@ input[type="button"]:focus:not(:active) {
 .grid-panel-separator {
     height: 1px;
     margin: 4px 10px;
-    background: #e2dfd6;
+    background: var(--zato-popup-sand-separator);
 }
 
 .grid-panel-item {
@@ -623,16 +623,16 @@ input[type="button"]:focus:not(:active) {
     position: absolute;
     min-width: 140px;
     padding: 5px 0;
-    background: #faf9f5;
-    border: 1px solid #d5d2c8;
+    background: var(--zato-popup-sand);
+    border: 1px solid var(--zato-popup-border);
     border-radius: 0 6px 6px 0;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    box-shadow: var(--zato-popup-shadow);
 }
 
 /* The highlight is a background change only - a heavier face would widen
    the label and make the whole menu shift around */
 .grid-panel-item.current {
-    background: #ece9de;
+    background: var(--zato-popup-sand-highlight);
 }
 
 .grid-panel-item-destructive {
@@ -660,7 +660,7 @@ input[type="button"]:focus:not(:active) {
     justify-content: space-between;
     gap: 14px;
     padding: 3px 0;
-    border-top: 1px dashed #e2dfd6;
+    border-top: 1px dashed var(--zato-popup-sand-separator);
 }
 
 .grid-panel-detail-name {

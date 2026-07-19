@@ -591,12 +591,12 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.initCards = function() {
         wizard.review.refreshSummaries();
     });
 
-    // .. clicking a summary opens the matching options popover ..
-    $('#mllp-wizard-summary-transport').on('click', function() {
+    // .. clicking a summary link opens the matching options popover ..
+    $('#mllp-wizard-edit-transport').on('click', function() {
         forms.open('transport', this);
     });
 
-    $('#mllp-wizard-summary-rest').on('click', function() {
+    $('#mllp-wizard-edit-rest').on('click', function() {
         forms.open('rest', this);
     });
 
