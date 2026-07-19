@@ -111,7 +111,7 @@ $(document).ready(function() {
                         </div>
 
                         <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-routing">
-                            <span class="mllp-wizard-toggle-label">Match</span>
+                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-edit-routing">Match</label>
                             <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-routing"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
@@ -194,12 +194,17 @@ $(document).ready(function() {
                     <div class="mllp-wizard-review" id="mllp-wizard-review"></div>
                 </div>
 
+                <!-- Help on the left, Back and Next in the middle, Cancel on the right -->
                 <div class="mllp-wizard-footer">
-                    <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
-                    <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
                     <span class="how-it-works-badge" id="mllp-wizard-how-it-works">How does it work?</span>
-                    <span class="mllp-wizard-status" id="mllp-wizard-status"></span>
-                    <button type="button" class="secondary-button mllp-wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
+                    <div class="mllp-wizard-footer-center">
+                        <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
+                        <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
+                    </div>
+                    <div class="mllp-wizard-footer-right">
+                        <span class="mllp-wizard-status" id="mllp-wizard-status"></span>
+                        <button type="button" class="secondary-button mllp-wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
+                    </div>
                 </div>
 
                 <!-- Fields edited through the popover micro-forms - never shown directly -->

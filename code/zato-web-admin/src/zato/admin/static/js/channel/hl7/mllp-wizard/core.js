@@ -98,9 +98,10 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
         }
     }
 
-    // The step 1 transport toggles ..
+    // The step 1 transport toggles and the routing link ..
     out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP<br>are received over plain TCP.<br>When off, messages arrive over REST only.';
     out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
+    out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel accepts.<br>With no matchers, every message is accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
 
     // .. and the step 2 destination controls.
     out['mllp-wizard-respond-from'] = shared['destinations-respond-from-create'];
@@ -161,6 +162,11 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
     // .. security groups for the REST bridge arrive asynchronously ..
     $.fn.zato.post(config.securityGroupsUrl, wizard._onSecurityGroupsLoaded, '', '', true);
 
+    // .. the tabs jump straight to their step ..
+    $('#mllp-wizard-steps .mllp-wizard-step').on('click', function() {
+        wizard.goToStep(parseInt($(this).attr('data-step')));
+    });
+
     // .. the footer buttons ..
     $('#mllp-wizard-back').on('click', function() {
         wizard.goToStep(wizard.state.currentStep - 1);
@@ -180,13 +186,11 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
         window.location.href = wizard.state.listUrl;
     });
 
-    // .. the Next button and the name badge follow the name as the user types ..
+    // .. the name badge follows the name as the user types ..
     $('#id_name').on('input', function() {
         wizard.state.isNameTaken = false;
         wizard.updateNameBadge();
-        wizard.updateNextState();
     });
-    $('#id_service').on('change', wizard.updateNextState);
 
     // .. show the first step ..
     wizard.review.refreshSummaries();
@@ -206,37 +210,6 @@ $.fn.zato.channel.hl7.mllp.wizard._onSecurityGroupsLoaded = function(data, statu
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     wizard.state.securityGroupList = $.parseJSON(data.responseText);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Whether the given step's own answers are complete - step 1 needs a name,
-// step 2 needs a service, the review step is always complete.
-$.fn.zato.channel.hl7.mllp.wizard.isStepComplete = function(stepIndex) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var out = true;
-
-    if(stepIndex === 0) {
-        var name = wizard.field('name').val().trim();
-        out = name !== '';
-    }
-    else if(stepIndex === 1) {
-        var service = wizard.field('service').val();
-        out = service !== '';
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.channel.hl7.mllp.wizard.updateNextState = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var isComplete = wizard.isStepComplete(wizard.state.currentStep);
-
-    $('#mllp-wizard-next').prop('disabled', !isComplete);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -356,12 +329,10 @@ $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
         wizard.review.render();
     }
 
-    // .. and the footer follows the position.
-    // Hide Back on the first step so Next sits where Back would be
-    $('#mllp-wizard-back').toggle(stepIndex !== 0);
+    // .. and the footer follows the position - there is nothing
+    // to go back to from the first step.
+    $('#mllp-wizard-back').prop('disabled', stepIndex === 0);
     $('#mllp-wizard-next').text(isLastStep ? config.finishLabel : config.nextLabel);
-
-    wizard.updateNextState();
 };
 
 // ////////////////////////////////////////////////////////////////////////
