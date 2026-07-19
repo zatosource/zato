@@ -345,8 +345,12 @@ a.mllp-wizard-toggle-edit {
     border-top: 1px solid var(--wizard-border);
 }
 
+/* A touch larger than the shared badge - this one sits next to the
+   full-size footer buttons. The popover badges keep the shared size. */
 .mllp-wizard-footer .how-it-works-badge {
     justify-self: start;
+    padding: 2px 9px;
+    font-size: 9.75px;
 }
 
 .mllp-wizard-footer-center {
