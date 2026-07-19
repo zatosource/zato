@@ -118,7 +118,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'stranydict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
@@ -132,7 +132,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def pre_process_item(self, name, value):
+    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
         if name == 'recv_timeout':
             return int(value)
         else:
@@ -140,7 +140,7 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def success_message(self, item):
+    def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} HL7 MLLP channel `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################

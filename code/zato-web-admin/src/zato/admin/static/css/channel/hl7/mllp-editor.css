@@ -1,45 +1,150 @@
 /*
  * HL7 MLLP channel editor - the full-page create and edit forms.
  *
- * The page reuses the popup dialogs' styling by carrying the data-popup
- * class on its container, so the shared form-tabs and destinations rules
- * apply as they are. This file only shapes the container into a page card
- * and styles the actions row at the bottom.
+ * The page has the same shape as the security posture page - a single
+ * dashboard card with a tab strip in its header, the hero and chart
+ * sections of the dashboard base template hidden.
  */
 
 /* ------------------------------------------------------------ */
-/* MLLP editor - variables                                       */
+/* MLLP editor - layout overrides                                */
 /* ------------------------------------------------------------ */
 
-#mllp-editor {
-    --mllp-editor-max-width: 60em;
-    --mllp-editor-border-color: #d0d0d0;
-    --mllp-editor-background: #ffffff;
-    --mllp-editor-shadow: #00000022;
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: 62em;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
 }
 
 /* ------------------------------------------------------------ */
-/* MLLP editor - the page card                                   */
+/* MLLP editor - card                                            */
 /* ------------------------------------------------------------ */
 
-#mllp-editor {
-    max-width: var(--mllp-editor-max-width);
-    margin-top: 10px;
-    border: 1px solid var(--mllp-editor-border-color);
-    background: var(--mllp-editor-background);
-    box-shadow: 0 2px 8px var(--mllp-editor-shadow);
+.mllp-editor-card {
+    display: flex;
+    flex-direction: column;
+
+    /* Small toggle sliders, the same size the dialog forms use */
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+}
+
+.mllp-editor-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.mllp-editor-card .dashboard-tabs {
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 /* ------------------------------------------------------------ */
-/* MLLP editor - the actions row                                 */
+/* MLLP editor - form rows                                       */
 /* ------------------------------------------------------------ */
 
-#mllp-editor .mllp-editor-actions td {
-    padding-top: 10px;
-    padding-bottom: 8px;
-    border-top: 1px solid var(--mllp-editor-border-color);
+.mllp-editor-card .form-data {
+    width: 100%;
+    border: none;
+    border-collapse: collapse;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    padding: 0;
+    margin: 8px 0;
 }
 
-#mllp-editor .status-message {
-    margin-right: 10px;
+.mllp-editor-card .form-data tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    transition: background 120ms ease;
+}
+
+.mllp-editor-card .form-data tr:last-child {
+    border-bottom: none;
+}
+
+.mllp-editor-card .form-data tr:hover {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.mllp-editor-card .form-data td {
+    border: none;
+    padding: 11px 10px;
+    vertical-align: middle;
+}
+
+.mllp-editor-card .form-data td:first-child {
+    width: 220px;
+    white-space: nowrap;
+}
+
+.mllp-editor-card .form-data label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.mllp-editor-card .form-data .form_hint {
+    font-size: 12px;
+    color: #71717a;
+}
+
+/* Read-only inputs in the routing tab when "Default" is active */
+.mllp-editor-card input.routing-disabled,
+.mllp-editor-card select.routing-disabled {
+    background-color: #e8e8e8;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP editor - action bar                                      */
+/* ------------------------------------------------------------ */
+
+.mllp-editor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 16px 10px 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mllp-editor-actions .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.mllp-editor-actions .how-it-works-badge {
+    margin-right: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP editor - status message                                  */
+/* ------------------------------------------------------------ */
+
+.mllp-editor-status {
+    font-size: 12px;
+    color: #71717a;
+    transition: opacity 300ms ease;
+}
+
+.mllp-editor-status-saved {
+    color: #28a745;
+}
+
+.mllp-editor-status-error {
+    color: #dc3545;
 }
