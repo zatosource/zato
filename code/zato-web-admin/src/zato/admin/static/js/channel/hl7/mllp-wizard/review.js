@@ -12,7 +12,7 @@
 $.fn.zato.channel.hl7.mllp.wizard.review.config = {
 
     // The routing summary when no matcher is filled in
-    anyMessageLabel: 'Accept all messages',
+    anyMessageLabel: 'All messages',
 
     // What the review says when no destination is configured
     noDestinationsLabel: 'None - the service handles everything',
