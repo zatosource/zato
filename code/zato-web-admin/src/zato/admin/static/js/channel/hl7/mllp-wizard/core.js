@@ -232,7 +232,8 @@ $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
     }
 
     // .. and the footer follows the position.
-    $('#mllp-wizard-back').css('visibility', stepIndex === 0 ? 'hidden' : 'visible');
+    // Hide Back on the first step so Next sits where Back would be
+    $('#mllp-wizard-back').toggle(stepIndex !== 0);
     $('#mllp-wizard-next').text(isLastStep ? config.finishLabel : config.nextLabel);
 
     wizard.updateNextState();

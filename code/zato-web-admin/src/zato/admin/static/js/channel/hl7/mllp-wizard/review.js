@@ -266,15 +266,20 @@ $.fn.zato.channel.hl7.mllp.wizard.review.refreshSummaries = function() {
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     var review = wizard.review;
 
-    review._setSummary('mllp-wizard-summary-transport', review._transportSummary());
+    // A summary shows only while its transport is on - it doubles
+    // as the link that opens the protocol options popover
+    var isMllpOn = !wizard.field('rest_only').prop('checked');
+    var useRest = wizard.field('use_rest').prop('checked');
+
+    review._setSummary('mllp-wizard-summary-transport', isMllpOn ? review._transportSummary() : '');
     review._setSummary('mllp-wizard-summary-rest', review._restSummary());
     review._setSummary('mllp-wizard-summary-tolerance', review._toleranceSummary());
     review._setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
     review._setSummary('mllp-wizard-summary-logging', review._loggingSummary());
 
-    // The REST card wears the selected border while the bridge is on ..
-    var useRest = wizard.field('use_rest').prop('checked');
-    $('#mllp-wizard-card-rest').toggleClass('mllp-wizard-radio-card-selected', useRest);
+    // The transport toggles mirror the hidden form flags ..
+    $('#mllp-wizard-toggle-mllp').prop('checked', isMllpOn);
+    $('#mllp-wizard-toggle-rest').prop('checked', useRest);
 
     // .. and the routing cards act as one radio group.
     var isDefault = wizard.field('is_default').prop('checked');
@@ -329,8 +334,9 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
     ];
 
     // Transport
+    var isRestOnly = wizard.field('rest_only').prop('checked');
     var transportRows = [
-        ['MLLP', review._transportSummary()]
+        ['MLLP', isRestOnly ? 'Off - REST only' : review._transportSummary()]
     ];
 
     var restSummary = review._restSummary();

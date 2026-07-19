@@ -17,15 +17,18 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.config = {
     theme: 'mllp-wizard',
 
     // How wide a popover may grow
-    maxWidth: 380,
+    maxWidth: 480,
 
     // Button labels inside the popovers
     backLabel: 'Back',
     nextLabel: 'Next',
     doneLabel: 'Done',
 
-    // The label of the link that turns the REST bridge off again
-    restOffLabel: 'Turn off REST'
+    // The grip icon shown in every popover title - the drag handle
+    gripIcon: '<svg class="mllp-wizard-tippy-grip" width="9" height="13" viewBox="0 0 10 16" fill="currentColor">' +
+        '<circle cx="3" cy="3" r="1.4"/><circle cx="7" cy="3" r="1.4"/>' +
+        '<circle cx="3" cy="8" r="1.4"/><circle cx="7" cy="8" r="1.4"/>' +
+        '<circle cx="3" cy="13" r="1.4"/><circle cx="7" cy="13" r="1.4"/></svg>'
 };
 
 // The currently open popover, if any
@@ -33,54 +36,68 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._instance = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A page is a list of entries. An entry is either one field spec, shown on
+// its own line, or a list of field specs, shown side by side in one row.
+// A spec's optional width pins a field down to that many pixels.
 $.fn.zato.channel.hl7.mllp.wizard.forms.descriptors = {
 
     'transport': {
         title: 'Protocol options',
+        width: '430px',
         pages: [[
-            {field: 'start_seq',  label: 'Start separator', kind: 'text'},
-            {field: 'end_seq',    label: 'End separator',   kind: 'text'},
-            {field: 'recv_timeout', label: 'Receive timeout (ms)', kind: 'text'},
-            {field: 'max_msg_size', label: 'Max message size', kind: 'text', unitField: 'max_msg_size_unit'},
-            {field: 'default_character_encoding', label: 'Encoding', kind: 'select'},
+            [
+                {field: 'start_seq',  label: 'Start separator', kind: 'text'},
+                {field: 'end_seq',    label: 'End separator',   kind: 'text'},
+                {field: 'recv_timeout', label: 'Receive timeout (ms)', kind: 'text'}
+            ],
+            [
+                {field: 'max_msg_size', label: 'Max message size', kind: 'text', unitField: 'max_msg_size_unit'},
+                {field: 'default_character_encoding', label: 'Encoding', kind: 'select'}
+            ],
             {field: 'use_msh18_encoding', label: 'Read encoding from MSH-18', kind: 'checkbox'}
         ]]
     },
 
     'rest': {
-        title: 'REST bridge',
-        hasRestOff: true,
+        title: 'REST options',
+        width: '430px',
         pages: [[
-            {field: 'rest_url_path', label: 'URL path', kind: 'text', placeholder: 'e.g. /api/hl7/v2'},
-            {field: 'rest_security_id', label: 'Security', kind: 'select'},
-            {field: 'rest_only', label: 'REST only - no MLLP listener', kind: 'checkbox'},
+            [
+                {field: 'rest_url_path', label: 'URL path', kind: 'text', placeholder: 'e.g. /api/hl7/v2'},
+                {field: 'rest_security_id', label: 'Security', kind: 'select', width: '150px'}
+            ],
             {kind: 'groupList', label: 'Security groups'}
         ]]
     },
 
     'routing': {
         title: 'Message matchers',
-        pages: [
+        width: '430px',
+        pages: [[
             [
                 {field: 'msh3_sending_app',        label: 'Sending application (MSH-3)',  kind: 'text'},
-                {field: 'msh4_sending_facility',   label: 'Sending facility (MSH-4)',     kind: 'text'},
+                {field: 'msh4_sending_facility',   label: 'Sending facility (MSH-4)',     kind: 'text'}
+            ],
+            [
                 {field: 'msh5_receiving_app',      label: 'Receiving application (MSH-5)', kind: 'text'},
                 {field: 'msh6_receiving_facility', label: 'Receiving facility (MSH-6)',   kind: 'text'}
             ],
             [
                 {field: 'msh9_message_type',   label: 'Message type (MSH-9.1)',  kind: 'text', placeholder: 'e.g. ORU'},
-                {field: 'msh9_trigger_event',  label: 'Trigger event (MSH-9.2)', kind: 'text', placeholder: 'e.g. R01'},
+                {field: 'msh9_trigger_event',  label: 'Trigger event (MSH-9.2)', kind: 'text', placeholder: 'e.g. R01'}
+            ],
+            [
                 {field: 'msh11_processing_id', label: 'Processing ID (MSH-11)',  kind: 'text', placeholder: 'e.g. P'},
                 {field: 'msh12_version_id',    label: 'Version (MSH-12)',        kind: 'text', placeholder: 'e.g. 2.5'}
             ]
-        ]
+        ]]
     },
 
     'dedup': {
         title: 'Deduplication',
         pages: [[
             {field: 'dedup_ttl_value', label: 'Remember control IDs for', kind: 'text', unitField: 'dedup_ttl_unit',
-                hint: 'Zero turns deduplication off'}
+                width: '210px', hint: 'Zero turns deduplication off'}
         ]]
     },
 
@@ -89,7 +106,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.descriptors = {
         pages: [[
             {field: 'should_return_errors', label: 'Return error details in NAK responses', kind: 'checkbox'},
             {field: 'should_log_messages',  label: 'Log each message to the server log',    kind: 'checkbox'},
-            {field: 'logging_level', label: 'Log level', kind: 'select'}
+            {field: 'logging_level', label: 'Log level', kind: 'select', width: '150px'}
         ]]
     }
 };
@@ -111,7 +128,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.showTippy = function(targetElement, cont
         allowHTML: true,
         trigger: 'manual',
         interactive: true,
-        arrow: true,
+        arrow: false,
         animation: 'fade',
         duration: [150, 150],
         placement: 'bottom-start',
@@ -154,6 +171,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.showTippy = function(targetElement, cont
 
         onShown: function(tippyInstance) {
 
+            // The title is the drag handle - the whole popover follows it
+            forms._makeDraggable(tippyInstance);
+
             // The first input is ready for typing right away
             var firstInput = tippyInstance.popper.querySelector('input[type="text"], select');
             if(firstInput) {
@@ -180,6 +200,66 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.close = function() {
         forms._instance = null;
         instance.destroy();
     }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Builds a popover title - the grip icon plus the text, acting as the
+// drag handle every micro-form shares.
+$.fn.zato.channel.hl7.mllp.wizard.forms.buildTitle = function(text) {
+
+    var config = $.fn.zato.channel.hl7.mllp.wizard.forms.config;
+
+    var title = document.createElement('div');
+    title.className = 'mllp-wizard-tippy-title';
+    title.innerHTML = config.gripIcon;
+    title.appendChild(document.createTextNode(text));
+
+    var out = title;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Lets the popover be dragged around by its title. The offset is applied
+// to the tippy box itself, so tippy's own positioning stays untouched.
+$.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance) {
+
+    var handle = tippyInstance.popper.querySelector('.mllp-wizard-tippy-title');
+    if(!handle) {
+        return;
+    }
+
+    var box = tippyInstance.popper.querySelector('.tippy-box');
+    var offsetX = 0;
+    var offsetY = 0;
+
+    handle.addEventListener('mousedown', function(event) {
+        event.preventDefault();
+
+        // The stock tippy CSS animates transform changes - the box must
+        // follow the pointer instantly instead
+        box.style.transitionProperty = 'visibility, opacity';
+
+        var originX = event.clientX - offsetX;
+        var originY = event.clientY - offsetY;
+
+        var handleMove = function(moveEvent) {
+            offsetX = moveEvent.clientX - originX;
+            offsetY = moveEvent.clientY - originY;
+            box.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
+        };
+
+        var handleUp = function() {
+            handle.classList.remove('mllp-wizard-tippy-dragging');
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleUp);
+        };
+
+        handle.classList.add('mllp-wizard-tippy-dragging');
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleUp);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -323,10 +403,33 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The flat list of field specs on a page - row entries contribute
+// each of their fields.
+$.fn.zato.channel.hl7.mllp.wizard.forms._pageFieldList = function(page) {
+
+    var out = [];
+
+    for(var entryIdx = 0; entryIdx < page.length; entryIdx++) {
+        var entry = page[entryIdx];
+
+        if(Array.isArray(entry)) {
+            out = out.concat(entry);
+        }
+        else {
+            out.push(entry);
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Writes the answers of one rendered page back into the Django form.
-$.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, pageFields) {
+$.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, page) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var pageFields = $.fn.zato.channel.hl7.mllp.wizard.forms._pageFieldList(page);
 
     for(var fieldIdx = 0; fieldIdx < pageFields.length; fieldIdx++) {
         var fieldSpec = pageFields[fieldIdx];
@@ -375,10 +478,11 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
     var container = document.createElement('div');
     container.className = 'mllp-wizard-tippy-form';
 
-    var title = document.createElement('div');
-    title.className = 'mllp-wizard-tippy-title';
-    title.textContent = descriptor.title;
-    container.appendChild(title);
+    if(descriptor.width) {
+        container.style.width = descriptor.width;
+    }
+
+    container.appendChild(forms.buildTitle(descriptor.title));
 
     var pageContainer = document.createElement('div');
     container.appendChild(pageContainer);
@@ -388,31 +492,40 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
     var renderPage = function() {
 
         pageContainer.innerHTML = '';
-        var pageFields = descriptor.pages[pageIndex];
+        var page = descriptor.pages[pageIndex];
 
-        for(var fieldIdx = 0; fieldIdx < pageFields.length; fieldIdx++) {
-            var fieldRow = forms._buildFieldRow(pageFields[fieldIdx]);
-            pageContainer.appendChild(fieldRow);
+        for(var entryIdx = 0; entryIdx < page.length; entryIdx++) {
+            var entry = page[entryIdx];
+
+            // A list entry is several fields sharing one row ..
+            if(Array.isArray(entry)) {
+                var rowContainer = document.createElement('div');
+                rowContainer.className = 'mllp-wizard-tippy-row';
+
+                for(var fieldIdx = 0; fieldIdx < entry.length; fieldIdx++) {
+                    var rowField = forms._buildFieldRow(entry[fieldIdx]);
+                    if(entry[fieldIdx].width) {
+                        rowField.style.flex = '0 0 ' + entry[fieldIdx].width;
+                    }
+                    rowContainer.appendChild(rowField);
+                }
+                pageContainer.appendChild(rowContainer);
+            }
+
+            // .. everything else takes a line of its own.
+            else {
+                var fieldRow = forms._buildFieldRow(entry);
+                if(entry.width) {
+                    fieldRow.style.width = entry.width;
+                }
+                pageContainer.appendChild(fieldRow);
+            }
         }
 
         var buttons = document.createElement('div');
         buttons.className = 'mllp-wizard-tippy-buttons';
 
-        // The REST micro-form can switch the whole bridge off again ..
-        if(descriptor.hasRestOff) {
-            var offLink = document.createElement('span');
-            offLink.className = 'mllp-wizard-tippy-off';
-            offLink.textContent = config.restOffLabel;
-
-            offLink.addEventListener('click', function() {
-                wizard.field('use_rest').prop('checked', false);
-                forms.close();
-                wizard.review.refreshSummaries();
-            });
-            buttons.appendChild(offLink);
-        }
-
-        // .. multi-page micro-forms navigate with Back and Next ..
+        // Multi-page micro-forms navigate with Back and Next ..
         if(pageIndex > 0) {
             var backButton = document.createElement('button');
             backButton.type = 'button';
@@ -460,21 +573,42 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Wires up the step 1 cards - transport, the REST bridge and routing.
+// Wires up the step 1 controls - the transport toggles and the routing cards.
 $.fn.zato.channel.hl7.mllp.wizard.forms.initCards = function() {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     var forms = wizard.forms;
 
-    // The MLLP transport card opens the protocol options ..
-    $('#mllp-wizard-card-transport').on('click', function() {
+    // The MLLP toggle is the inverse of the REST-only flag ..
+    $('#mllp-wizard-toggle-mllp').on('change', function() {
+        var isMllpOn = this.checked;
+        wizard.field('rest_only').prop('checked', !isMllpOn);
+
+        // .. without the MLLP listener the messages have to arrive over REST.
+        if(!isMllpOn) {
+            wizard.field('use_rest').prop('checked', true);
+        }
+        wizard.review.refreshSummaries();
+    });
+
+    // .. the REST toggle drives the bridge flag ..
+    $('#mllp-wizard-toggle-rest').on('change', function() {
+        var isRestOn = this.checked;
+        wizard.field('use_rest').prop('checked', isRestOn);
+
+        // .. and with REST gone the MLLP listener has to stay on.
+        if(!isRestOn) {
+            wizard.field('rest_only').prop('checked', false);
+        }
+        wizard.review.refreshSummaries();
+    });
+
+    // .. clicking a summary opens the matching options popover ..
+    $('#mllp-wizard-summary-transport').on('click', function() {
         forms.open('transport', this);
     });
 
-    // .. the REST card switches the bridge on and opens its options ..
-    $('#mllp-wizard-card-rest').on('click', function() {
-        wizard.field('use_rest').prop('checked', true);
-        wizard.review.refreshSummaries();
+    $('#mllp-wizard-summary-rest').on('click', function() {
         forms.open('rest', this);
     });
 

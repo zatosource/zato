@@ -86,20 +86,22 @@ $(document).ready(function() {
                     <div class="mllp-wizard-section">
                         <div class="mllp-wizard-section-title">Transport</div>
 
-                        <div class="mllp-wizard-radio-card mllp-wizard-radio-card-selected" id="mllp-wizard-card-transport">
-                            <div class="mllp-wizard-radio-card-body">
-                                <div class="mllp-wizard-radio-card-label">Plain MLLP over TCP</div>
-                                <div class="mllp-wizard-radio-card-desc">HL7 v2 messages framed with MLLP, received over TCP</div>
-                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-transport"></div>
-                            </div>
+                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-transport">
+                            <label class="mllp-wizard-toggle">
+                                <input type="checkbox" id="mllp-wizard-toggle-mllp" checked>
+                                <span class="mllp-wizard-toggle-slider"></span>
+                            </label>
+                            <span class="mllp-wizard-toggle-label">MLLP over TCP</span>
+                            <span class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport" title="Protocol options"></span>
                         </div>
 
-                        <div class="mllp-wizard-radio-card" id="mllp-wizard-card-rest">
-                            <div class="mllp-wizard-radio-card-body">
-                                <div class="mllp-wizard-radio-card-label">Also expose over REST</div>
-                                <div class="mllp-wizard-radio-card-desc">The same messages can be pushed to a REST endpoint too</div>
-                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-rest"></div>
-                            </div>
+                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-rest">
+                            <label class="mllp-wizard-toggle">
+                                <input type="checkbox" id="mllp-wizard-toggle-rest">
+                                <span class="mllp-wizard-toggle-slider"></span>
+                            </label>
+                            <span class="mllp-wizard-toggle-label">REST</span>
+                            <span class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest" title="REST options"></span>
                         </div>
                     </div>
 

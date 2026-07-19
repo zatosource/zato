@@ -188,8 +188,12 @@
     padding: 12px 14px;
 }
 
-.tippy-box[data-theme~='mllp-wizard'] .tippy-arrow {
-    color: var(--wizard-popover-bg);
+.tippy-box[data-theme~='mllp-wizard'] input:focus,
+.tippy-box[data-theme~='mllp-wizard'] select:focus,
+.tippy-box[data-theme~='mllp-wizard'] textarea:focus,
+.tippy-box[data-theme~='mllp-wizard'] button:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 .mllp-wizard-tippy-form {
@@ -199,13 +203,39 @@
     min-width: 260px;
 }
 
+/* The title doubles as the drag handle of the popover */
 .mllp-wizard-tippy-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     margin-bottom: 8px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--wizard-accent);
+    cursor: grab;
+    user-select: none;
+}
+
+.mllp-wizard-tippy-title.mllp-wizard-tippy-dragging {
+    cursor: grabbing;
+}
+
+.mllp-wizard-tippy-grip {
+    flex-shrink: 0;
+    color: var(--wizard-text-faint);
+}
+
+/* Several short fields share one row instead of stacking full-width */
+.mllp-wizard-tippy-row {
+    display: flex;
+    gap: 10px;
+}
+
+.mllp-wizard-tippy-row .mllp-wizard-tippy-field {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .mllp-wizard-tippy-field {
@@ -224,6 +254,7 @@
 .mllp-wizard-tippy-field input[type="text"],
 .mllp-wizard-tippy-field select {
     width: 100%;
+    box-sizing: border-box;
     padding: 5px 8px;
     border: 1px solid var(--wizard-border-strong);
     border-radius: 3px;
@@ -234,6 +265,7 @@
 .mllp-wizard-tippy-field select:focus {
     border-color: var(--wizard-accent);
     outline: none;
+    box-shadow: none;
 }
 
 .mllp-wizard-tippy-input-row {
@@ -271,16 +303,4 @@
 .mllp-wizard-tippy-buttons .secondary-button {
     box-shadow: none !important;
     text-shadow: none !important;
-}
-
-.mllp-wizard-tippy-off {
-    margin-right: auto;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-error);
-    cursor: pointer;
-}
-
-.mllp-wizard-tippy-off:hover {
-    text-decoration: underline;
 }
