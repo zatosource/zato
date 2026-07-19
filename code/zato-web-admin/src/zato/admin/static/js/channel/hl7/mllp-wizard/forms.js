@@ -3,7 +3,7 @@
 // Each micro-form is described by a descriptor - a list of pages, each page
 // a list of fields. A field points at one of the hidden Django form inputs
 // by name, so opening a micro-form seeds its inputs from the form and
-// pressing Done writes the answers back. Selects clone their choices from
+// pressing OK writes the answers back. Selects clone their choices from
 // the underlying Django select, which keeps the wizard and the full-page
 // editor on the same single list of options.
 
@@ -22,7 +22,13 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.config = {
     // Button labels inside the popovers
     backLabel: 'Back',
     nextLabel: 'Next',
-    doneLabel: 'Done'
+    doneLabel: 'OK',
+
+    // The per-field help of the popovers - the badge is rebuilt with every
+    // page render, so one id can serve every micro-form
+    helpBadgeId: 'mllp-wizard-popup-how-it-works',
+    helpBadgeLabel: 'How does it work?',
+    popupId: 'mllp-wizard-popup'
 };
 
 // The currently open popover, if any
@@ -192,6 +198,14 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.close = function() {
     if(forms._instance) {
         var instance = forms._instance;
         forms._instance = null;
+
+        // Help mode dies with the popover it explains - otherwise its
+        // state would keep pointing at elements about to leave the page
+        var helpState = $.fn.zato.how_it_works._state;
+        if(helpState && instance.popper.contains(helpState.container)) {
+            $.fn.zato.how_it_works._deactivate();
+        }
+
         instance.destroy();
     }
 };
@@ -210,6 +224,56 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.buildTitle = function(text) {
 
     var out = title;
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The "How does it work?" badge every popover shows next to its buttons.
+// Only one popover is open at a time, so a single id serves them all.
+$.fn.zato.channel.hl7.mllp.wizard.forms.buildHelpBadge = function() {
+
+    var config = $.fn.zato.channel.hl7.mllp.wizard.forms.config;
+
+    var badge = document.createElement('span');
+    badge.className = 'how-it-works-badge';
+    badge.id = config.helpBadgeId;
+    badge.textContent = config.helpBadgeLabel;
+
+    var out = badge;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Wires up the help badge of one popover. Tippy attaches the popover to
+// the document only when it shows, so this runs after showTippy and again
+// whenever an open popover re-renders its fields.
+$.fn.zato.channel.hl7.mllp.wizard.forms.initHelp = function(container) {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var config = wizard.forms.config;
+
+    if(!container.isConnected) {
+        return;
+    }
+
+    // A help session left over from the page or from an earlier render
+    // of this popover points at elements that just went away
+    if($.fn.zato.how_it_works._state) {
+        $.fn.zato.how_it_works._deactivate();
+    }
+
+    $.fn.zato.how_it_works.init({
+        badgeId: config.helpBadgeId,
+        divId: '#' + config.popupId,
+        containerSelector: '.mllp-wizard-tippy-form',
+        fieldSelector: '.mllp-wizard-tippy-field',
+
+        // Several fields share one row, so a tooltip on the left would
+        // cover the neighbor - above the field nothing is in the way
+        placement: 'top',
+        descriptions: wizard.helpDescriptions()
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -303,6 +367,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
     if(fieldSpec.kind === 'checkbox') {
         var checkboxLabel = document.createElement('label');
         checkboxLabel.className = 'mllp-wizard-tippy-checkbox';
+        checkboxLabel.setAttribute('for', inputId);
 
         var checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -464,6 +529,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
 
     var container = document.createElement('div');
     container.className = 'mllp-wizard-tippy-form zato-popup';
+    container.id = config.popupId;
 
     if(descriptor.width) {
         container.style.width = descriptor.width;
@@ -513,7 +579,10 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
         var buttons = document.createElement('div');
         buttons.className = 'mllp-wizard-tippy-buttons';
 
-        // Multi-page micro-forms navigate with Back and Next ..
+        // The per-field help sits to the left of the buttons ..
+        buttons.appendChild(forms.buildHelpBadge());
+
+        // .. multi-page micro-forms navigate with Back and Next ..
         if(pageIndex > 0) {
             var backButton = document.createElement('button');
             backButton.type = 'button';
@@ -543,7 +612,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
                 renderPage();
             }
 
-            // .. and Done writes everything back and closes the popover.
+            // .. and OK writes everything back and closes the popover.
             else {
                 forms.close();
                 wizard.review.refreshSummaries();
@@ -552,11 +621,17 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
         buttons.appendChild(forwardButton);
 
         pageContainer.appendChild(buttons);
+
+        // Each render brings a fresh badge, so its help needs rewiring -
+        // before the first show the popover is not attached yet and the
+        // wiring happens right after showTippy instead
+        forms.initHelp(container);
     };
 
     renderPage();
 
     forms.showTippy(targetElement, container);
+    forms.initHelp(container);
 };
 
 // ////////////////////////////////////////////////////////////////////////

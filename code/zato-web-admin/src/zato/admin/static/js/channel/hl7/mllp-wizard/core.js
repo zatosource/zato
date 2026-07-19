@@ -32,6 +32,10 @@ $.fn.zato.channel.hl7.mllp.wizard.config = {
     // Where the security groups for the REST bridge come from
     securityGroupsUrl: '/zato/http-soap/get-security-groups/zato-api-creds/',
 
+    // The rows the "How does it work?" badge walks through - anything
+    // on a step body holding a labeled field
+    helpRowSelector: '.mllp-wizard-name-row, .mllp-wizard-toggle-row, .mllp-wizard-section-title, .mllp-wizard-respond-from-row, .mllp-wizard-tolerance-grid',
+
     // Fields that must not be empty on submit - the same list the editor uses
     requiredFields: [
         'name',
@@ -76,6 +80,36 @@ $.fn.zato.channel.hl7.mllp.wizard.field = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The help texts behind every "How does it work?" badge on the page -
+// the map the full-page editor uses, re-keyed for the popover inputs,
+// plus entries for the controls only the wizard has.
+$.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
+
+    var shared = $.fn.zato.channel.hl7.mllp.field_descriptions;
+    var out = $.extend({}, shared);
+
+    // The popover micro-forms name their inputs mllp-wizard-tippy-<field>
+    for(var key in shared) {
+        if(key.indexOf('id_') === 0) {
+            out['mllp-wizard-tippy-' + key.substring(3)] = shared[key];
+        }
+    }
+
+    // The step 1 transport toggles ..
+    out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP<br>are received over plain TCP.<br>When off, messages arrive over REST only.';
+    out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
+
+    // .. and the step 2 destination controls.
+    out['mllp-wizard-respond-from'] = shared['destinations-respond-from-create'];
+    out['mllp-wizard-destination-type'] = 'The kind of the outgoing connection<br>this destination delivers to.';
+    out['mllp-wizard-destination-connection'] = 'The connection each message is delivered to<br>after the service runs.';
+    out['mllp-wizard-destination-active'] = 'Whether this destination receives messages.<br>Inactive destinations are skipped.';
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
@@ -101,6 +135,15 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
     // .. live uniqueness indicators for the name and the REST URL path ..
     $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name');
     $.fn.zato.validate_unique('#id_rest_url_path', 'channel_rest', 'url_path');
+
+    // .. the per-field help badge in the footer - each popover micro-form
+    // additionally wires a badge of its own when it opens ..
+    $.fn.zato.how_it_works.init({
+        badgeId: 'mllp-wizard-how-it-works',
+        divId: '#mllp-wizard',
+        fieldSelector: config.helpRowSelector,
+        descriptions: wizard.helpDescriptions()
+    });
 
     // .. keep the service select fresh while the page is open ..
     $.fn.zato.live_form_updates.register('create', [

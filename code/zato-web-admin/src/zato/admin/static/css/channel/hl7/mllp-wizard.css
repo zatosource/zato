@@ -296,13 +296,26 @@ a.mllp-wizard-toggle-edit {
     font-size: 12px;
 }
 
+/* The hint waits for a hover over the link - opacity keeps its space
+   reserved, so nothing around it moves when it fades in */
+.mllp-wizard-toggle-edit .zato-soft-hint {
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+.mllp-wizard-toggle-edit:hover .zato-soft-hint {
+    opacity: 1;
+}
+
 /* Nothing to edit while a transport is off, so the whole link goes away */
 .mllp-wizard-toggle-edit:has(.mllp-wizard-toggle-summary:empty) {
     display: none;
 }
 
+/* A soft pulse rather than a blink - the text never disappears fully,
+   it just dims for a moment while the new value settles in */
 @keyframes mllp-wizard-summary-fade-in {
-    from { opacity: 0; }
+    from { opacity: 0.35; }
     to   { opacity: 1; }
 }
 
