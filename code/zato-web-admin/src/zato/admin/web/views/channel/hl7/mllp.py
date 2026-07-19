@@ -46,6 +46,9 @@ _REST_Channel_Name_Prefix = 'hl7.rest.'
 # .. the full-page editor template shared by the create and edit pages ..
 _Editor_Template = 'zato/channel/hl7/mllp-editor.html'
 
+# .. the multi-step wizard template used when creating a new channel ..
+_Wizard_Template = 'zato/channel/hl7/mllp-wizard.html'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -318,6 +321,23 @@ def editor_create(req:'any_') -> 'TemplateResponse':
     }
 
     out = TemplateResponse(req, _Editor_Template, return_data)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def wizard_create(req:'any_') -> 'TemplateResponse':
+    """ A multi-step wizard for a new HL7 MLLP channel.
+    """
+    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'form': CreateForm(req=req, security_list=security_list),
+    }
+
+    out = TemplateResponse(req, _Wizard_Template, return_data)
     return out
 
 # ################################################################################################################################
