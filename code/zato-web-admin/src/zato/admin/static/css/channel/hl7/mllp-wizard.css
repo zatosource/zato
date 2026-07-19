@@ -62,29 +62,44 @@
     flex-direction: column;
 }
 
-/* The name badge in the header - it mirrors the name field as the user
-   types, turns red when the name is already taken and opens the inline
-   edit form when clicked */
-.mllp-wizard-name-badge {
-    margin-left: 12px;
+/* The badge chrome shared across the wizard - the header name badge and
+   the security DISABLED badges all wear it. Green by default, the alert
+   variant turns it red and the blink variant makes it pulse. */
+.mllp-wizard-badge {
     padding: 2px 9px;
-    max-width: 24em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-size: 11px;
     font-weight: 600;
     color: #2e7d32;
     background: rgba(46, 125, 50, 0.12);
     border: 1px solid rgba(46, 125, 50, 0.3);
     border-radius: 3px;
-    cursor: pointer;
 }
 
-.mllp-wizard-name-badge-taken {
+.mllp-wizard-badge-alert {
     color: #b71c1c;
     background: rgba(220, 53, 69, 0.15);
     border-color: rgba(220, 53, 69, 0.35);
+}
+
+.mllp-wizard-badge-blink {
+    animation: mllp-wizard-badge-blink 1.1s ease-in-out infinite;
+}
+
+@keyframes mllp-wizard-badge-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
+/* The name badge in the header - it mirrors the name field as the user
+   types, turns red when the name is already taken and opens the inline
+   edit form when clicked */
+.mllp-wizard-name-badge {
+    margin-left: 12px;
+    max-width: 24em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
 /* A hidden badge still takes part in layout, only invisibly - the header
