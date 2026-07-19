@@ -10,6 +10,8 @@
     --highlight-quiet-color: #6d6d6d;
     --highlight-separator-color: #c00000;
     --highlight-dimmed-color: #8a8a8a;
+    --highlight-attribute-color: #7a3e9d;
+    --highlight-comment-color: #567a56;
     --highlight-caret-color: #000;
     --highlight-placeholder-color: #666;
 }
@@ -18,11 +20,20 @@
 /* Syntax highlighting - token colors                            */
 /* ------------------------------------------------------------ */
 
-/* Keys, field labels and segment ids all name things */
+/* Keys, field labels, segment ids and tag names all name things */
 .highlight-key,
 .highlight-label,
-.highlight-segment {
+.highlight-segment,
+.highlight-tag {
     color: var(--highlight-name-color);
+}
+
+.highlight-attribute {
+    color: var(--highlight-attribute-color);
+}
+
+.highlight-comment {
+    color: var(--highlight-comment-color);
 }
 
 .highlight-string {
@@ -104,11 +115,11 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Syntax highlighting - the parsed view                         */
+/* Syntax highlighting - the pretty view                         */
 /* ------------------------------------------------------------ */
 
-/* Segment ids anchor the parsed view, where bolding
+/* Segment ids anchor the pretty view, where bolding
    cannot knock anything out of alignment */
-.invoker-parsed-pane .highlight-segment {
+.invoker-pretty-pane .highlight-segment {
     font-weight: 600;
 }
