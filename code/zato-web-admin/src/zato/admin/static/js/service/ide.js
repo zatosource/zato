@@ -238,17 +238,34 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             dataRequest.style.height = savedHeight;
         }
 
+        // The indicator lives in the pane's container, not next to the textarea -
+        // the raw view's overlay wrapper hides together with the textarea and
+        // would take the indicator with it in the tree and pretty views
+        let invokerArea = dataRequest.closest('.invoker-area');
+
         let resizeIndicator = document.createElement('div');
         resizeIndicator.id = 'data-request-resize-indicator';
         resizeIndicator.textContent = '⋯';
         resizeIndicator.style.cssText = 'position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #999; pointer-events: none; padding: 0 5px; z-index: 10; line-height: 1;';
-        dataRequest.parentElement.style.position = 'relative';
-        dataRequest.parentElement.appendChild(resizeIndicator);
+        invokerArea.style.position = 'relative';
+        invokerArea.appendChild(resizeIndicator);
+
+        let dataRequestPretty = document.getElementById('data-request-pretty');
+
+        // The textarea owns the pane's bottom edge in the raw view, the rendered
+        // pane owns it in the tree and pretty ones - the drag follows whichever
+        // of the two is on screen, so every view resizes the same way
+        function getVisiblePaneElement() {
+            if (dataRequest.offsetParent !== null) {
+                return dataRequest;
+            }
+            return dataRequestPretty;
+        }
 
         function updateIndicatorPosition() {
-            let rect = dataRequest.getBoundingClientRect();
-            let parentRect = dataRequest.parentElement.getBoundingClientRect();
-            let top = rect.bottom - parentRect.top + 2;
+            let rect = getVisiblePaneElement().getBoundingClientRect();
+            let areaRect = invokerArea.getBoundingClientRect();
+            let top = rect.bottom - areaRect.top + 2;
             resizeIndicator.style.top = top + 'px';
         }
         updateIndicatorPosition();
@@ -257,12 +274,10 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         let startY = 0;
         let startHeight = 0;
 
-        let invokerArea = dataRequest.closest('.invoker-area');
-
         invokerArea.addEventListener('mousemove', function(e) {
             if (isResizingTextarea) return;
 
-            let rect = dataRequest.getBoundingClientRect();
+            let rect = getVisiblePaneElement().getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
 
@@ -283,14 +298,14 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
         });
 
         invokerArea.addEventListener('mousedown', function(e) {
-            let rect = dataRequest.getBoundingClientRect();
+            let rect = getVisiblePaneElement().getBoundingClientRect();
             let bottomEdge = rect.bottom;
             let mouseY = e.clientY;
 
             if (mouseY >= bottomEdge - 6 && mouseY <= bottomEdge + 10) {
                 isResizingTextarea = true;
                 startY = e.clientY;
-                startHeight = dataRequest.offsetHeight;
+                startHeight = getVisiblePaneElement().offsetHeight;
                 e.preventDefault();
             }
         });
@@ -303,7 +318,17 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
             let maxHeight = parseInt(dataRequest.style.maxHeight);
 
             if (newHeight >= 40 && newHeight <= maxHeight) {
+
+                // Both views share the height, so switching between them
+                // never moves the pane's bottom edge
                 dataRequest.style.height = newHeight + 'px';
+                dataRequestPretty.style.height = newHeight + 'px';
+
+                // The observer below only sees the textarea and only while it is
+                // on screen, so the drag persists and reflows on its own
+                store.set('zato.data-request-height', newHeight + 'px');
+                resizeDataResponse();
+
                 updateIndicatorPosition();
             }
         });

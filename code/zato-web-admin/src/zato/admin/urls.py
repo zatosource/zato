@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, config_db, datadog, env_variables, grafana_cloud, \
+from zato.admin.web.views import account, config_db, datadog, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -373,6 +373,11 @@ urlpatterns += [
         login_required(audit_log.details), name='audit-log-details'),
     url(r'^zato/audit-log/resubmit/$',
         login_required(audit_log.resubmit), name='audit-log-resubmit'),
+
+    # Channel destinations
+
+    url(r'^zato/destinations/get-connection-list/$',
+        login_required(destinations.get_connection_list), name='destinations-get-connection-list'),
 
     # AS2 keystore
 
@@ -921,6 +926,10 @@ urlpatterns += [
         login_required(channel_hl7_mllp.Create()), name=channel_hl7_mllp.Create.url_name),
     url(r'^zato/channel/hl7/mllp/edit/$',
         login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
+    url(r'^zato/channel/hl7/mllp/editor/$',
+        login_required(channel_hl7_mllp.editor_create), name='channel-hl7-mllp-editor-create'),
+    url(r'^zato/channel/hl7/mllp/editor/(?P<id>.*)/$',
+        login_required(channel_hl7_mllp.EditorEdit()), name=channel_hl7_mllp.EditorEdit.url_name),
     url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
     url(r'^zato/channel/hl7/mllp/invoke/(?P<id>.*)/$',

@@ -1,0 +1,143 @@
+/*
+ * Destinations tab - reusable editor for a channel's destination list.
+ *
+ * Works together with /static/js/shared/destinations.js and the
+ * zato/include/destinations-tab.html template include. All colors
+ * and dimensions are CSS custom properties scoped to .data-popup
+ * so pages can adjust them without editing this file.
+ */
+
+/* ------------------------------------------------------------ */
+/* Destinations - variables                                      */
+/* ------------------------------------------------------------ */
+
+.data-popup {
+    --destinations-header-color: #444444;
+    --destinations-border-color: #d0d0d0;
+    --destinations-remove-border: #b0b0b0;
+    --destinations-remove-text: #333333;
+    --destinations-option-label-color: #555555;
+}
+
+/* ------------------------------------------------------------ */
+/* Destinations - rows table                                     */
+/* ------------------------------------------------------------ */
+
+.destinations-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+/* The header appears only once there is at least one row */
+.destinations-table thead {
+    display: none;
+}
+
+.destinations-table:has(tbody tr) thead {
+    display: table-header-group;
+}
+
+.destinations-table:has(tbody tr) {
+    margin-bottom: 6px;
+}
+
+.destinations-table th {
+    font-weight: 500;
+    font-size: 85%;
+    color: var(--destinations-header-color);
+    text-align: left;
+    padding: 3px 4px;
+    border-bottom: 1px solid var(--destinations-border-color);
+}
+
+.destinations-table td {
+    padding: 4px;
+    vertical-align: middle;
+    background: transparent !important;
+}
+
+.destinations-table td.destinations-active-cell,
+.destinations-table th:first-child {
+    width: 1%;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.destinations-table td.destinations-type-cell {
+    width: 14%;
+    white-space: nowrap;
+}
+
+.destinations-table td.destinations-connection-cell {
+    width: 30%;
+}
+
+.destinations-table td.destinations-remove-cell {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.destinations-table select.destinations-type,
+.destinations-table select.destinations-connection {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------ */
+/* Destinations - per-type options inside a row                  */
+/* ------------------------------------------------------------ */
+
+.destinations-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.destinations-option-label {
+    font-size: 85%;
+    color: var(--destinations-option-label-color);
+}
+
+.destinations-option input.destinations-option-input {
+    width: 11em;
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------ */
+/* Destinations - remove badge, same look as OK/Cancel buttons   */
+/* ------------------------------------------------------------ */
+
+a.destinations-remove,
+a.destinations-remove:hover,
+a.destinations-remove:active {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--destinations-remove-border);
+    border-radius: 3px;
+    color: var(--destinations-remove-text);
+    font-weight: 600;
+    text-decoration: none;
+    background-image: linear-gradient(#ffffff, #f5f5f5 1px, #dddddd);
+}
+
+a.destinations-remove:hover {
+    background-image: linear-gradient(#ffffff, #eeeeee 1px, #cccccc);
+}
+
+/* ------------------------------------------------------------ */
+/* Destinations - respond-from row                               */
+/* ------------------------------------------------------------ */
+
+.destinations-respond-from-row td {
+    padding-top: 10px;
+    border-top: 1px solid var(--destinations-border-color);
+}
+
+select.destinations-respond-from {
+    width: 60%;
+}
