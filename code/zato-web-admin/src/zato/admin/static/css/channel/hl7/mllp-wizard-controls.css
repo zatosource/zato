@@ -293,6 +293,11 @@
     margin-top: 6px;
 }
 
+/* The help badge keeps to the left, away from the OK button */
+.mllp-wizard-tippy-buttons .how-it-works-badge {
+    margin-right: auto;
+}
+
 .mllp-wizard-tippy-buttons .secondary-button {
     box-shadow: none !important;
     text-shadow: none !important;

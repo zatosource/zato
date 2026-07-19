@@ -17,6 +17,7 @@ so the resulting channel is identical to one created through the editor.
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
@@ -24,6 +25,8 @@ so the resulting channel is identical to one created through the editor.
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destinations.js"></script>
@@ -126,7 +129,7 @@ $(document).ready(function() {
                 <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-1" hidden>
 
                     <div class="mllp-wizard-section" id="mllp-wizard-service-section">
-                        <div class="mllp-wizard-section-title">Service</div>
+                        <div class="mllp-wizard-section-title"><label for="id_service">Service</label></div>
                         <div class="mllp-wizard-service-row" id="mllp-wizard-service-row">
                             {{ form.service }}
                         </div>
@@ -158,21 +161,21 @@ $(document).ready(function() {
 
                                 <div class="mllp-wizard-tolerance-group-title">Wire-level fixups</div>
                                 <div class="mllp-wizard-tolerance-grid">
-                                    <label>{{ form.normalize_line_endings }} Normalize line endings</label>
-                                    <label>{{ form.force_standard_delimiters }} Force standard delimiters</label>
-                                    <label>{{ form.repair_truncated_msh }} Repair truncated MSH</label>
-                                    <label>{{ form.split_concatenated_messages }} Split concatenated messages</label>
+                                    <label for="id_normalize_line_endings">{{ form.normalize_line_endings }} Normalize line endings</label>
+                                    <label for="id_force_standard_delimiters">{{ form.force_standard_delimiters }} Force standard delimiters</label>
+                                    <label for="id_repair_truncated_msh">{{ form.repair_truncated_msh }} Repair truncated MSH</label>
+                                    <label for="id_split_concatenated_messages">{{ form.split_concatenated_messages }} Split concatenated messages</label>
                                 </div>
 
                                 <div class="mllp-wizard-tolerance-group-title">Content-level fixups</div>
                                 <div class="mllp-wizard-tolerance-grid">
-                                    <label>{{ form.normalize_obx2_value_type }} Fill empty OBX-2 value type</label>
-                                    <label>{{ form.replace_invalid_obx2_value_type }} Replace invalid OBX-2 value type</label>
-                                    <label>{{ form.normalize_invalid_escape_sequences }} Strip orphan escape characters</label>
-                                    <label>{{ form.normalize_obx8_abnormal_flags }} Clear OBX-8 literal null</label>
-                                    <label>{{ form.normalize_quadruple_quoted_empty }} Strip multi-quote sequences</label>
-                                    <label>{{ form.allow_short_encoding_characters }} Pad short encoding characters</label>
-                                    <label>{{ form.fix_off_by_one_field_index }} Fix off-by-one field index</label>
+                                    <label for="id_normalize_obx2_value_type">{{ form.normalize_obx2_value_type }} Fill empty OBX-2 value type</label>
+                                    <label for="id_replace_invalid_obx2_value_type">{{ form.replace_invalid_obx2_value_type }} Replace invalid OBX-2 value type</label>
+                                    <label for="id_normalize_invalid_escape_sequences">{{ form.normalize_invalid_escape_sequences }} Strip orphan escape characters</label>
+                                    <label for="id_normalize_obx8_abnormal_flags">{{ form.normalize_obx8_abnormal_flags }} Clear OBX-8 literal null</label>
+                                    <label for="id_normalize_quadruple_quoted_empty">{{ form.normalize_quadruple_quoted_empty }} Strip multi-quote sequences</label>
+                                    <label for="id_allow_short_encoding_characters">{{ form.allow_short_encoding_characters }} Pad short encoding characters</label>
+                                    <label for="id_fix_off_by_one_field_index">{{ form.fix_off_by_one_field_index }} Fix off-by-one field index</label>
                                 </div>
 
                             </div>
@@ -204,6 +207,7 @@ $(document).ready(function() {
                 <div class="mllp-wizard-footer">
                     <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
                     <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
+                    <span class="how-it-works-badge" id="mllp-wizard-how-it-works">How does it work?</span>
                     <span class="mllp-wizard-status" id="mllp-wizard-status"></span>
                     <button type="button" class="secondary-button mllp-wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
                 </div>

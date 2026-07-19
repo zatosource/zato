@@ -20,7 +20,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.config = {
     inactiveLabel: 'inactive',
 
     // The label of the popover's confirm button
-    doneLabel: 'Done'
+    doneLabel: 'OK'
 };
 
 // Connections grouped by destination type, loaded once per page
@@ -264,6 +264,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
 
     var container = document.createElement('div');
     container.className = 'mllp-wizard-tippy-form zato-popup';
+    container.id = wizard.forms.config.popupId;
 
     container.appendChild(wizard.forms.buildTitle('Destination'));
 
@@ -308,6 +309,9 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
         destination.connection = '';
         destination.options = {};
         destinations._renderTypeFields(typeFields, destination);
+
+        // The re-rendered fields need their help hooked up again
+        wizard.forms.initHelp(container);
     });
 
     // .. whether the destination receives messages at all ..
@@ -316,9 +320,11 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
 
     var activeLabel = document.createElement('label');
     activeLabel.className = 'mllp-wizard-tippy-checkbox';
+    activeLabel.setAttribute('for', 'mllp-wizard-destination-active');
 
     var activeCheckbox = document.createElement('input');
     activeCheckbox.type = 'checkbox';
+    activeCheckbox.id = 'mllp-wizard-destination-active';
     activeCheckbox.checked = destination.isActive;
 
     activeLabel.appendChild(activeCheckbox);
@@ -326,9 +332,10 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     activeRow.appendChild(activeLabel);
     body.appendChild(activeRow);
 
-    // .. and the confirm button.
+    // .. and the confirm button, with the per-field help to its left.
     var buttons = document.createElement('div');
     buttons.className = 'mllp-wizard-tippy-buttons';
+    buttons.appendChild(wizard.forms.buildHelpBadge());
 
     var doneButton = document.createElement('button');
     doneButton.type = 'button';
@@ -369,6 +376,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     };
 
     wizard.forms.showTippy(anchorElement, container, onHidden);
+    wizard.forms.initHelp(container);
 };
 
 // ////////////////////////////////////////////////////////////////////////
