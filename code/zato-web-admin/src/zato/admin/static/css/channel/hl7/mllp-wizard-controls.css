@@ -204,9 +204,12 @@
     box-sizing: border-box;
 }
 
-/* The fields under the popup header */
+/* The fields under the popup header, on the same sandy panel
+   the IDE's right-click menus use for their action lists */
 .mllp-wizard-tippy-body {
     padding: 12px 14px 10px;
+    background: var(--zato-popup-sand);
+    border-radius: 0 0 5px 5px;
 }
 
 /* Several short fields share one row instead of stacking full-width */

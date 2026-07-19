@@ -3667,6 +3667,7 @@ $.fn.zato.get_unique_check_value = function(field, is_edit) {
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Attaches live uniqueness validation to a field.
 $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
     var field = $(field_id);
     if(!field.length) {

@@ -516,7 +516,11 @@ div.prompt form {
     padding-top: 4px
 }
 
-a:not(.menu-link) {
+/* The standard link face - also available as .zato-link-face for a span
+   inside a larger anchor, when only part of the anchor's text is meant
+   to carry the link look */
+a:not(.menu-link),
+.zato-link-face {
     color: rgb(17, 17, 17);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
     text-decoration: none;
@@ -534,7 +538,8 @@ a:not(.menu-link) {
     padding-bottom: 2px;
 }
 
-a:not(.menu-link):not(.chosen-single):not(.status-badge):hover {
+a:not(.menu-link):not(.chosen-single):not(.status-badge):hover,
+a:not(.menu-link):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;

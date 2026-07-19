@@ -6,10 +6,20 @@
  */
 
 .zato-popup {
+
+    /* The popup palette - the warm border and the sandy panel colors,
+       one set of tokens for every surface inside a popup */
+    --zato-popup-border: #d5d2c8;
+    --zato-popup-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    --zato-popup-sand: #faf9f5;
+    --zato-popup-sand-line: #e4e1d8;
+    --zato-popup-sand-separator: #e2dfd6;
+    --zato-popup-sand-highlight: #ece9de;
+
     background: #fff;
-    border: 1px solid #d5d2c8;
+    border: 1px solid var(--zato-popup-border);
     border-radius: 6px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    box-shadow: var(--zato-popup-shadow);
     font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
     font-size: 12px;
     color: #000;
