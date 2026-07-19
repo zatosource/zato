@@ -3,15 +3,16 @@
  *
  * Works together with /static/js/shared/destinations.js and the
  * zato/include/destinations-tab.html template include. All colors
- * and dimensions are CSS custom properties scoped to .data-popup
- * so pages can adjust them without editing this file.
+ * and dimensions are CSS custom properties defined on :root so both
+ * dialog forms and full-page editors can adjust them without
+ * editing this file.
  */
 
 /* ------------------------------------------------------------ */
 /* Destinations - variables                                      */
 /* ------------------------------------------------------------ */
 
-.data-popup {
+:root {
     --destinations-header-color: #444444;
     --destinations-border-color: #d0d0d0;
     --destinations-remove-border: #b0b0b0;

@@ -18,6 +18,9 @@ $.fn.zato.channel.hl7.mllp.editor.config = {
     // How long the success message stays on screen before the redirect
     redirect_delay_ms: 750,
 
+    // The tab shown when the URL does not name one
+    default_tab: 'main',
+
     // Where the security groups for the REST bridge come from
     security_groups_url: '/zato/http-soap/get-security-groups/zato-api-creds/',
     security_groups_page_url: '/zato/groups/group/zato-api-creds/?cluster=1',
@@ -35,24 +38,14 @@ $.fn.zato.channel.hl7.mllp.editor.config = {
         'start_seq',
         'end_seq',
         'default_character_encoding'
-    ],
-
-    // The tab strip, in display order
-    tab_labels: {
-        main:         'Main',
-        destinations: 'Destinations',
-        routing:      'Routing',
-        protocol:     'Protocol',
-        tolerance:    'Tolerance',
-        dedup:        'Deduplication',
-        logging:      'Logging'
-    }
+    ]
 };
 
 // Filled in by init() - which action this page serves and where its list page is
 $.fn.zato.channel.hl7.mllp.editor.state = {
     action: '',
-    list_url: ''
+    list_url: '',
+    tab_handle: null
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -226,6 +219,7 @@ $.fn.zato.channel.hl7.mllp.editor._populate_groups_callback = function(data, sta
 $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
 
     var editor = $.fn.zato.channel.hl7.mllp.editor;
+    var kit = $.fn.zato.dashboard_kit;
     var action = options.action;
 
     editor.state.action = action;
@@ -234,12 +228,27 @@ $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
     var prefix = action === 'edit' ? 'id_edit-' : 'id_';
     var form = $('#' + action + '-form');
 
-    // The tab strip - the same engine the popup dialogs used, pointed at the page container ..
-    $.fn.zato.form_tabs.reset({
-        div_id: '#mllp-editor',
+    // The tab strip - the same engine the posture page uses, with the tab kept in the URL ..
+    var defaultTab = kit.url_state.get('tab');
+    if(!defaultTab) {
+        defaultTab = editor.config.default_tab;
+    }
+
+    editor.state.tab_handle = kit.tabs.init({
+        tab_selector: '.mllp-editor-card .dashboard-tab',
         panel_prefix: 'mllp-editor-tab-panel-',
-        default_tab: 'main',
-        tab_labels: editor.config.tab_labels
+        default_tab: defaultTab,
+        on_change: function(tabName) {
+            kit.url_state.set({tab: tabName});
+        }
+    });
+
+    // .. handle browser back/forward ..
+    kit.url_state.on_pop(function(params) {
+        var popTab = params.get('tab');
+        if(popTab) {
+            editor.state.tab_handle.set_tab(popTab, true);
+        }
     });
 
     // .. mark the fields that must not be empty ..
@@ -291,7 +300,7 @@ $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
     ]);
     $.fn.zato.live_form_updates.start(action);
 
-    // .. and finally the submit and cancel actions.
+    // .. the submit and cancel actions ..
     form.submit(function() {
         editor.save();
         return false;
@@ -300,6 +309,9 @@ $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
     $('#mllp-editor-cancel').on('click', function() {
         window.location.href = editor.state.list_url;
     });
+
+    // .. and fade the page in.
+    kit.reveal();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -324,13 +336,13 @@ $.fn.zato.channel.hl7.mllp.editor.save = function() {
     }
 
     var statusElem = $('#mllp-editor-status');
-    statusElem.removeClass('show fade status-message-success status-message-error');
+    statusElem.text('').removeClass('mllp-editor-status-saved mllp-editor-status-error');
 
     var callback = function(data, status) {
 
         if(status === 'success') {
             var response = JSON.parse(data.responseText);
-            statusElem.text(editor.config.saved_message).addClass('show status-message-success');
+            statusElem.text(editor.config.saved_message).addClass('mllp-editor-status-saved');
             $('#user-message-div').hide();
 
             // Back to the list page, with the saved channel highlighted
@@ -339,7 +351,7 @@ $.fn.zato.channel.hl7.mllp.editor.save = function() {
             }, editor.config.redirect_delay_ms);
         }
         else {
-            statusElem.text(editor.config.save_error_message).addClass('show status-message-error');
+            statusElem.text(editor.config.save_error_message).addClass('mllp-editor-status-error');
             $.fn.zato.user_message(false, data.responseText);
         }
     };
