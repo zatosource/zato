@@ -33,6 +33,13 @@ $(document).ready(function() {
         $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.groups.badge_picker_config);
         return true;
     };
+
+    // Links from other pages, e.g. the HL7 MLLP wizard, land here with
+    // ?create=1 when the whole point of the visit is to make a new group -
+    // the create form opens by itself then.
+    if(new URLSearchParams(window.location.search).get('create')) {
+        $.fn.zato.groups.create();
+    }
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -28,7 +28,13 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.config = {
     // page render, so one id can serve every micro-form
     helpBadgeId: 'mllp-wizard-popup-how-it-works',
     helpBadgeLabel: 'How does it work?',
-    popupId: 'mllp-wizard-popup'
+    popupId: 'mllp-wizard-popup',
+
+    // The list of security rows in the REST popover
+    securityListId: 'mllp-wizard-security-list',
+
+    // The value a security select carries when nothing is picked
+    noSecurityValue: 'ZATO_NONE'
 };
 
 // The currently open popover, if any
@@ -62,11 +68,8 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.descriptors = {
         title: 'REST options',
         width: '430px',
         pages: [[
-            [
-                {field: 'rest_url_path', label: 'URL path', kind: 'text', placeholder: 'e.g. /api/hl7/v2'},
-                {field: 'rest_security_id', label: 'Security', kind: 'select', width: '150px'}
-            ],
-            {kind: 'groupList', label: 'Security groups'}
+            {field: 'rest_url_path', label: 'Path', kind: 'text', placeholder: 'e.g. /api/hl7/v2'},
+            {kind: 'securityList', label: 'Security'}
         ]]
     },
 
@@ -315,6 +318,100 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance)
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Clones the options of the Django security select into the given select,
+// keeping the requested value picked if it still exists.
+$.fn.zato.channel.hl7.mllp.wizard.forms._fillSecuritySelect = function(select, value) {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+
+    select.textContent = '';
+
+    wizard.field('rest_security_id').find('option').each(function() {
+        var option = document.createElement('option');
+        option.value = this.value;
+        option.textContent = this.textContent;
+        select.appendChild(option);
+    });
+
+    select.value = value;
+    if(select.value !== value) {
+        select.selectedIndex = 0;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Appends one security row - a select plus the delete link to its right -
+// to the list of security rows in the REST popover.
+$.fn.zato.channel.hl7.mllp.wizard.forms._addSecurityRow = function(list, value) {
+
+    var forms = $.fn.zato.channel.hl7.mllp.wizard.forms;
+
+    var row = document.createElement('div');
+    row.className = 'mllp-wizard-security-row';
+
+    var select = document.createElement('select');
+    forms._fillSecuritySelect(select, value);
+    row.appendChild(select);
+
+    // The icon itself is drawn by the stylesheet, from the shared close.svg
+    var deleteLink = document.createElement('a');
+    deleteLink.href = 'javascript:void(0)';
+    deleteLink.className = 'mllp-wizard-security-delete';
+    deleteLink.title = 'Remove';
+    deleteLink.setAttribute('aria-label', 'Remove');
+
+    deleteLink.addEventListener('click', function() {
+        list.removeChild(row);
+
+        // The list never goes fully empty - a blank row takes over
+        if(!list.children.length) {
+            forms._addSecurityRow(list, '');
+        }
+        forms._renumberSecurityRows(list);
+    });
+
+    row.appendChild(deleteLink);
+    list.appendChild(row);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The first select in the list carries the id that the Security label and
+// its help tooltip point at - after every add or delete it moves as needed.
+$.fn.zato.channel.hl7.mllp.wizard.forms._renumberSecurityRows = function(list) {
+
+    var selects = list.querySelectorAll('select');
+
+    for(var selectIdx = 0; selectIdx < selects.length; selectIdx++) {
+        selects[selectIdx].removeAttribute('id');
+    }
+
+    if(selects.length) {
+        selects[0].id = 'mllp-wizard-tippy-rest_security_id';
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Refreshes every security row of an open REST popover from the Django
+// form select after a live update changed the latter's options.
+$.fn.zato.channel.hl7.mllp.wizard.forms.refreshSecuritySelect = function() {
+
+    var forms = $.fn.zato.channel.hl7.mllp.wizard.forms;
+
+    var list = document.getElementById(forms.config.securityListId);
+    if(!list) {
+        return;
+    }
+
+    $(list).find('select').each(function() {
+        forms._fillSecuritySelect(this, this.value);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Builds one input row of a micro-form page, seeded from the Django form.
 $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
 
@@ -323,38 +420,47 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
     var row = document.createElement('div');
     row.className = 'mllp-wizard-tippy-field';
 
-    // A list of security group checkboxes rather than a single input ..
-    if(fieldSpec.kind === 'groupList') {
+    // The security rows of the REST popover - one select per definition,
+    // with as many rows as needed ..
+    if(fieldSpec.kind === 'securityList') {
+        var forms = wizard.forms;
+
         var listLabel = document.createElement('label');
         listLabel.className = 'mllp-wizard-tippy-label';
+        listLabel.setAttribute('for', 'mllp-wizard-tippy-rest_security_id');
+        listLabel.setAttribute('data-help-placement', 'left');
         listLabel.textContent = fieldSpec.label;
         row.appendChild(listLabel);
 
-        var groupList = wizard.state.securityGroupList;
+        var list = document.createElement('div');
+        list.className = 'mllp-wizard-security-list';
+        list.id = forms.config.securityListId;
+        row.appendChild(list);
 
-        if(!groupList.length) {
-            var emptyNote = document.createElement('div');
-            emptyNote.className = 'mllp-wizard-tippy-hint';
-            emptyNote.textContent = 'No security groups exist yet';
-            row.appendChild(emptyNote);
+        // .. the rows come from the wizard state, seeded from the Django
+        // select the first time around ..
+        var keyList = wizard.state.securityKeyList.slice();
+        if(!keyList.length) {
+            keyList = [wizard.field('rest_security_id').val() || ''];
         }
 
-        for(var groupIdx = 0; groupIdx < groupList.length; groupIdx++) {
-            var group = groupList[groupIdx];
-
-            var groupLabel = document.createElement('label');
-            groupLabel.className = 'mllp-wizard-tippy-checkbox';
-
-            var groupInput = document.createElement('input');
-            groupInput.type = 'checkbox';
-            groupInput.className = 'mllp-wizard-tippy-group';
-            groupInput.setAttribute('data-group-id', group.id);
-            groupInput.checked = Boolean(wizard.state.selectedGroups[group.id]);
-
-            groupLabel.appendChild(document.createTextNode(group.name + ' '));
-            groupLabel.appendChild(groupInput);
-            row.appendChild(groupLabel);
+        for(var keyIdx = 0; keyIdx < keyList.length; keyIdx++) {
+            forms._addSecurityRow(list, keyList[keyIdx]);
         }
+        forms._renumberSecurityRows(list);
+
+        // .. and the add link under the list grows it one row at a time.
+        var addLink = document.createElement('a');
+        addLink.href = 'javascript:void(0)';
+        addLink.className = 'mllp-wizard-security-add';
+        addLink.textContent = 'Add security';
+
+        addLink.addEventListener('click', function() {
+            forms._addSecurityRow(list, '');
+            forms._renumberSecurityRows(list);
+        });
+
+        row.appendChild(addLink);
 
         var out = row;
         return out;
@@ -486,16 +592,31 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, page) {
     for(var fieldIdx = 0; fieldIdx < pageFields.length; fieldIdx++) {
         var fieldSpec = pageFields[fieldIdx];
 
-        // The group list writes into the wizard state instead of the form ..
-        if(fieldSpec.kind === 'groupList') {
-            var selectedGroups = {};
+        // The security rows write into the wizard state, with the first
+        // pick also landing in the Django select - a single security posts
+        // exactly the way the full-page editor posts it ..
+        if(fieldSpec.kind === 'securityList') {
+            var config = $.fn.zato.channel.hl7.mllp.wizard.forms.config;
+            var keyList = [];
 
-            $(popper).find('.mllp-wizard-tippy-group').each(function() {
-                if(this.checked) {
-                    selectedGroups[this.getAttribute('data-group-id')] = true;
+            $(popper).find('.mllp-wizard-security-row select').each(function() {
+                var value = this.value;
+                var isEmpty = !value || value === config.noSecurityValue;
+
+                if(!isEmpty && keyList.indexOf(value) === -1) {
+                    keyList.push(value);
                 }
             });
-            wizard.state.selectedGroups = selectedGroups;
+
+            wizard.state.securityKeyList = keyList;
+
+            var securityField = wizard.field('rest_security_id');
+            if(keyList.length) {
+                securityField.val(keyList[0]);
+            }
+            else {
+                securityField.val(config.noSecurityValue);
+            }
             continue;
         }
 

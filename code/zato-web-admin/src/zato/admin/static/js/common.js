@@ -3900,6 +3900,9 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             else if(config.handler === 'multi_checkbox') {
                 items = $.fn.zato.live_form_updates._snapshot_multi_checkbox(config.container || '');
             }
+            else if(config.handler === 'callback') {
+                items = config.snapshot_func();
+            }
             else {
                 var selector = config.target_select || '';
                 if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
@@ -4042,6 +4045,12 @@ $.fn.zato.validate_unique_on_submit = function(form) {
             }
             else if(config.handler === 'multi_checkbox') {
                 $.fn.zato.live_form_updates._apply_multi_checkbox_diff(action, config, diff, skip_puff);
+            }
+            else if(config.handler === 'callback') {
+
+                // Pages that keep their list in JS state rather than in the DOM
+                // apply the diff themselves through the callback they registered
+                config.on_diff(diff, skip_puff);
             }
             else {
                 $.fn.zato.live_form_updates._apply_select_diff(action, config, diff, skip_puff);
