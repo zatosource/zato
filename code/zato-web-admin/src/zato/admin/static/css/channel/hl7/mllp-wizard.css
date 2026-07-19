@@ -201,7 +201,7 @@
 }
 
 .mllp-wizard-summary-fresh {
-    animation: mllp-wizard-summary-fade-in 300ms ease-out;
+    animation: mllp-wizard-summary-fade-in 450ms ease-out;
 }
 
 /* ------------------------------------------------------------ */
@@ -256,10 +256,10 @@ a.mllp-wizard-toggle-edit {
     display: none;
 }
 
-/* A soft pulse rather than a blink - the text never disappears fully,
-   it just dims for a moment while the new value settles in */
+/* Barely there - the text softens for a moment while the new value
+   settles in, never enough to read as a flicker */
 @keyframes mllp-wizard-summary-fade-in {
-    from { opacity: 0.35; }
+    from { opacity: 0.75; }
     to   { opacity: 1; }
 }
 
