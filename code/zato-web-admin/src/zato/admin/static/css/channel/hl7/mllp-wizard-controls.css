@@ -223,6 +223,14 @@
     min-width: 0;
 }
 
+/* A checkbox sharing a row with labeled inputs takes only the room it
+   needs and drops to their baseline, level with the inputs themselves */
+.mllp-wizard-tippy-row .mllp-wizard-tippy-field:has(.mllp-wizard-tippy-checkbox) {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    padding-bottom: 5px;
+}
+
 .mllp-wizard-tippy-field {
     display: flex;
     flex-direction: column;

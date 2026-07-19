@@ -22,11 +22,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.config = {
     // Button labels inside the popovers
     backLabel: 'Back',
     nextLabel: 'Next',
-    doneLabel: 'Done',
-
-    // The value of a select option that stands for a boolean companion
-    // field rather than for a value of the select's own field
-    flagOptionValue: 'zato-flag-option'
+    doneLabel: 'Done'
 };
 
 // The currently open popover, if any
@@ -49,12 +45,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.descriptors = {
                 {field: 'recv_timeout', label: 'Receive timeout (ms)', kind: 'text'}
             ],
             [
-                {field: 'max_msg_size', label: 'Max message size', kind: 'text', unitField: 'max_msg_size_unit'},
-
-                // The first option stands for the MSH-18 flag - the select then
-                // doubles as the flag and the slider is gone
-                {field: 'default_character_encoding', label: 'Encoding', kind: 'select',
-                    flagField: 'use_msh18_encoding', flagLabel: 'Read from MSH-18'}
+                {field: 'max_msg_size', label: 'Max message size', kind: 'text', unitField: 'max_msg_size_unit', width: '110px'},
+                {field: 'default_character_encoding', label: 'Encoding', kind: 'select'},
+                {field: 'use_msh18_encoding', label: 'Use MSH-18 too', kind: 'checkbox'}
             ]
         ]]
     },
@@ -339,28 +332,13 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
         input = document.createElement('select');
         input.id = inputId;
 
-        // An optional flag option comes first - choosing it means the boolean
-        // companion field is on, e.g. the encoding is read from MSH-18
-        if(fieldSpec.flagField) {
-            var flagOption = document.createElement('option');
-            flagOption.value = wizard.forms.config.flagOptionValue;
-            flagOption.textContent = fieldSpec.flagLabel;
-            input.appendChild(flagOption);
-        }
-
         formField.find('option').each(function() {
             var option = document.createElement('option');
             option.value = this.value;
             option.textContent = this.textContent;
             input.appendChild(option);
         });
-
-        if(fieldSpec.flagField && wizard.field(fieldSpec.flagField).prop('checked')) {
-            input.value = wizard.forms.config.flagOptionValue;
-        }
-        else {
-            input.value = formField.val();
-        }
+        input.value = formField.val();
     }
     else {
         input = document.createElement('input');
@@ -462,18 +440,6 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, page) {
 
         if(fieldSpec.kind === 'checkbox') {
             formField.prop('checked', input.checked);
-        }
-
-        // A select with a flag option drives its companion boolean too - the
-        // flag option leaves the field itself untouched, so its value stays
-        // available as the fallback
-        else if(fieldSpec.flagField) {
-            var isFlagChosen = input.value === wizard.forms.config.flagOptionValue;
-            wizard.field(fieldSpec.flagField).prop('checked', isFlagChosen);
-
-            if(!isFlagChosen) {
-                formField.val(input.value);
-            }
         }
         else {
             formField.val(input.value);
