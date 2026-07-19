@@ -97,7 +97,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.descriptors = {
         title: 'Deduplication',
         pages: [[
             {field: 'dedup_ttl_value', label: 'Remember control IDs for', kind: 'text', unitField: 'dedup_ttl_unit',
-                width: '210px', hint: 'Zero turns deduplication off'}
+                width: '210px'}
         ]]
     },
 
@@ -351,8 +351,8 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
             groupInput.setAttribute('data-group-id', group.id);
             groupInput.checked = Boolean(wizard.state.selectedGroups[group.id]);
 
+            groupLabel.appendChild(document.createTextNode(group.name + ' '));
             groupLabel.appendChild(groupInput);
-            groupLabel.appendChild(document.createTextNode(' ' + group.name));
             row.appendChild(groupLabel);
         }
 
@@ -363,7 +363,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
     var formField = wizard.field(fieldSpec.field);
     var inputId = 'mllp-wizard-tippy-' + fieldSpec.field;
 
-    // A checkbox carries its label to the right of the box ..
+    // A checkbox carries its slider after the label it acts on ..
     if(fieldSpec.kind === 'checkbox') {
         var checkboxLabel = document.createElement('label');
         checkboxLabel.className = 'mllp-wizard-tippy-checkbox';
@@ -374,8 +374,8 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
         checkbox.id = inputId;
         checkbox.checked = formField.prop('checked');
 
+        checkboxLabel.appendChild(document.createTextNode(fieldSpec.label + ' '));
         checkboxLabel.appendChild(checkbox);
-        checkboxLabel.appendChild(document.createTextNode(' ' + fieldSpec.label));
         row.appendChild(checkboxLabel);
 
         var out = row;
@@ -675,18 +675,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.initCards = function() {
         forms.open('rest', this);
     });
 
-    // .. the matching card switches the default flag off and opens the matchers ..
-    $('#mllp-wizard-card-routing-match').on('click', function() {
-        wizard.field('is_default').prop('checked', false);
-        wizard.review.refreshSummaries();
+    // .. and the routing summary link opens the MSH matchers.
+    $('#mllp-wizard-edit-routing').on('click', function() {
         forms.open('routing', this);
-    });
-
-    // .. and the default card claims everything, so there is nothing to configure.
-    $('#mllp-wizard-card-routing-default').on('click', function() {
-        wizard.field('is_default').prop('checked', true);
-        forms.close();
-        wizard.review.refreshSummaries();
     });
 };
 

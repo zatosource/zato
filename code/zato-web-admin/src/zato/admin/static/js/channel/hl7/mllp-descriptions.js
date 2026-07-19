@@ -58,7 +58,7 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_fix_off_by_one_field_index': 'Removes a spurious empty first field from<br>non-MSH segments. Fixes messages where a<br>leading separator shifts all field indices.',
 
     // Deduplication tab
-    'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.',
+    'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.<br>Zero turns deduplication off.',
     'id_dedup_ttl_unit': 'Time unit for the dedup window<br>(minutes, hours, or days).',
 
     // Logging tab

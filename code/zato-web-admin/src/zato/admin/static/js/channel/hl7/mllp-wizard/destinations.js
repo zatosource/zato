@@ -327,8 +327,8 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     activeCheckbox.id = 'mllp-wizard-destination-active';
     activeCheckbox.checked = destination.isActive;
 
+    activeLabel.appendChild(document.createTextNode('Active '));
     activeLabel.appendChild(activeCheckbox);
-    activeLabel.appendChild(document.createTextNode(' Active'));
     activeRow.appendChild(activeLabel);
     body.appendChild(activeRow);
 

@@ -4,7 +4,8 @@
 // On click, enters help mode: walks through form fields one by one,
 // showing a descriptive tooltip for each. Arrow keys navigate,
 // Esc deactivates help mode (does not close the form).
-// Clicking a label switches to that field's tooltip.
+// Clicking a label switches to that field's tooltip - for toggles without
+// flipping them, and their tooltips sit above so the slider stays visible.
 // Clicking outside the form deactivates help mode.
 
 (function($) {
@@ -64,6 +65,13 @@ $.fn.zato.how_it_works.init = function(config) {
 
         var fieldId = $(this).attr('for');
         var howItWorks = $.fn.zato.how_it_works;
+
+        // .. a label click on a toggle is for reading, not for flipping it -
+        // .. the slider itself stays the one place that toggles ..
+        var control = document.getElementById(fieldId);
+        if (control && control.type === 'checkbox') {
+            event.preventDefault();
+        }
 
         // .. if help mode is active for another dialog, leave it first ..
         if (howItWorks._state && howItWorks._state.container !== container) {
@@ -823,21 +831,28 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
 
             // .. when the label wraps its own control, anchor at the control itself
             // .. so the tooltip centers on the input, not on the label plus input box ..
+            var control = document.getElementById(fieldId);
             if (targetElement === label) {
-                var control = document.getElementById(fieldId);
                 if (control && label.contains(control)) {
                     targetElement = control;
                 }
+            }
+
+            // .. with several fields in one row the tooltip goes above the field,
+            // .. otherwise it would cover the neighboring fields to the left ..
+            var placement = labels.length > 1 ? 'top' : null;
+
+            // .. a tooltip beside a toggle would sit right on top of it,
+            // .. so it always goes above, leaving the slider free to click ..
+            if (control && control.type === 'checkbox') {
+                placement = 'top';
             }
 
             fields.push({
                 element: targetElement,
                 fieldId: fieldId,
                 description: description,
-
-                // .. with several fields in one row the tooltip goes above the field,
-                // .. otherwise it would cover the neighboring fields to the left ..
-                placement: labels.length > 1 ? 'top' : null,
+                placement: placement,
             });
         }
     }

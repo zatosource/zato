@@ -78,10 +78,6 @@
     color: var(--wizard-text);
 }
 
-.mllp-wizard-respond-from-row .mllp-wizard-section-hint {
-    margin-bottom: 0;
-}
-
 /* ------------------------------------------------------------ */
 /* MLLP wizard - option cards                                    */
 /* ------------------------------------------------------------ */
@@ -185,7 +181,9 @@
     color: var(--wizard-text);
 }
 
-.tippy-box[data-theme~='mllp-wizard'] .tippy-content {
+/* Only the popover's own content box - the help tooltips nested inside
+   the popover bring tippy boxes of their own and keep their padding */
+.tippy-box[data-theme~='mllp-wizard'] > .tippy-content {
     padding: 0;
 }
 
@@ -195,6 +193,14 @@
 .tippy-box[data-theme~='mllp-wizard'] button:focus {
     outline: none;
     box-shadow: none;
+}
+
+/* The per-field help tooltips live inside the popover they explain, so
+   clicking them does not close it - and in there the stock tippy 14px
+   towers over the popover's own 11-13px text, so they match it instead */
+.mllp-wizard-tippy-form .tippy-box {
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .mllp-wizard-tippy-form {

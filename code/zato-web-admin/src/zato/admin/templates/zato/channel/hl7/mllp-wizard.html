@@ -61,15 +61,15 @@ $(document).ready(function() {
 
                 <div class="mllp-wizard-steps" id="mllp-wizard-steps">
                     <div class="mllp-wizard-step mllp-wizard-step-active" data-step="0">
-                        <span class="mllp-wizard-step-number">1</span>
+                        <span class="mllp-wizard-step-num">01</span>
                         <span class="mllp-wizard-step-label">How do messages arrive?</span>
                     </div>
                     <div class="mllp-wizard-step" data-step="1">
-                        <span class="mllp-wizard-step-number">2</span>
+                        <span class="mllp-wizard-step-num">02</span>
                         <span class="mllp-wizard-step-label">What happens next?</span>
                     </div>
                     <div class="mllp-wizard-step" data-step="2">
-                        <span class="mllp-wizard-step-number">3</span>
+                        <span class="mllp-wizard-step-num">03</span>
                         <span class="mllp-wizard-step-label">Review and go</span>
                     </div>
                 </div>
@@ -83,8 +83,12 @@ $(document).ready(function() {
                             {{ form.name }}
                         </div>
                         <label class="mllp-wizard-active-field" for="id_is_active">
-                            {{ form.is_active }}
                             Active
+                            {{ form.is_active }}
+                        </label>
+                        <label class="mllp-wizard-active-field" for="id_is_default">
+                            Default
+                            {{ form.is_default }}
                         </label>
                     </div>
 
@@ -107,19 +111,8 @@ $(document).ready(function() {
                     <div class="mllp-wizard-section">
                         <div class="mllp-wizard-section-title">Routing</div>
 
-                        <div class="mllp-wizard-radio-card mllp-wizard-radio-card-selected" id="mllp-wizard-card-routing-match">
-                            <div class="mllp-wizard-radio-card-body">
-                                <div class="mllp-wizard-radio-card-label">Match specific messages</div>
-                                <div class="mllp-wizard-radio-card-desc">Accept only messages whose MSH fields match, empty means any</div>
-                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-routing"></div>
-                            </div>
-                        </div>
-
-                        <div class="mllp-wizard-radio-card" id="mllp-wizard-card-routing-default">
-                            <div class="mllp-wizard-radio-card-body">
-                                <div class="mllp-wizard-radio-card-label">Default channel</div>
-                                <div class="mllp-wizard-radio-card-desc">Receives every message that no other channel claimed</div>
-                            </div>
+                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-routing">
+                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-routing"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
 
@@ -133,18 +126,15 @@ $(document).ready(function() {
                         <div class="mllp-wizard-service-row" id="mllp-wizard-service-row">
                             {{ form.service }}
                         </div>
-                        <div class="mllp-wizard-section-hint">The service invoked for each incoming message</div>
                     </div>
 
                     <div class="mllp-wizard-section">
                         <div class="mllp-wizard-section-title">Destinations</div>
-                        <div class="mllp-wizard-section-hint">Outgoing connections each message is delivered to after the service runs</div>
                         <div class="mllp-wizard-conn-list" id="mllp-wizard-destination-rows"></div>
                         <span class="mllp-wizard-conn-add" id="mllp-wizard-destination-add">+ Add a destination</span>
                         <div class="mllp-wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
                             <label for="mllp-wizard-respond-from">Respond from</label>
                             <select id="mllp-wizard-respond-from"></select>
-                            <span class="mllp-wizard-section-hint">What the caller receives - the service's response or one destination's</span>
                         </div>
                     </div>
 
@@ -161,21 +151,21 @@ $(document).ready(function() {
 
                                 <div class="mllp-wizard-tolerance-group-title">Wire-level fixups</div>
                                 <div class="mllp-wizard-tolerance-grid">
-                                    <label for="id_normalize_line_endings">{{ form.normalize_line_endings }} Normalize line endings</label>
-                                    <label for="id_force_standard_delimiters">{{ form.force_standard_delimiters }} Force standard delimiters</label>
-                                    <label for="id_repair_truncated_msh">{{ form.repair_truncated_msh }} Repair truncated MSH</label>
-                                    <label for="id_split_concatenated_messages">{{ form.split_concatenated_messages }} Split concatenated messages</label>
+                                    <label for="id_normalize_line_endings">Normalize line endings {{ form.normalize_line_endings }}</label>
+                                    <label for="id_force_standard_delimiters">Force standard delimiters {{ form.force_standard_delimiters }}</label>
+                                    <label for="id_repair_truncated_msh">Repair truncated MSH {{ form.repair_truncated_msh }}</label>
+                                    <label for="id_split_concatenated_messages">Split concatenated messages {{ form.split_concatenated_messages }}</label>
                                 </div>
 
                                 <div class="mllp-wizard-tolerance-group-title">Content-level fixups</div>
                                 <div class="mllp-wizard-tolerance-grid">
-                                    <label for="id_normalize_obx2_value_type">{{ form.normalize_obx2_value_type }} Fill empty OBX-2 value type</label>
-                                    <label for="id_replace_invalid_obx2_value_type">{{ form.replace_invalid_obx2_value_type }} Replace invalid OBX-2 value type</label>
-                                    <label for="id_normalize_invalid_escape_sequences">{{ form.normalize_invalid_escape_sequences }} Strip orphan escape characters</label>
-                                    <label for="id_normalize_obx8_abnormal_flags">{{ form.normalize_obx8_abnormal_flags }} Clear OBX-8 literal null</label>
-                                    <label for="id_normalize_quadruple_quoted_empty">{{ form.normalize_quadruple_quoted_empty }} Strip multi-quote sequences</label>
-                                    <label for="id_allow_short_encoding_characters">{{ form.allow_short_encoding_characters }} Pad short encoding characters</label>
-                                    <label for="id_fix_off_by_one_field_index">{{ form.fix_off_by_one_field_index }} Fix off-by-one field index</label>
+                                    <label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type {{ form.normalize_obx2_value_type }}</label>
+                                    <label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type {{ form.replace_invalid_obx2_value_type }}</label>
+                                    <label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters {{ form.normalize_invalid_escape_sequences }}</label>
+                                    <label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null {{ form.normalize_obx8_abnormal_flags }}</label>
+                                    <label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences {{ form.normalize_quadruple_quoted_empty }}</label>
+                                    <label for="id_allow_short_encoding_characters">Pad short encoding characters {{ form.allow_short_encoding_characters }}</label>
+                                    <label for="id_fix_off_by_one_field_index">Fix off-by-one field index {{ form.fix_off_by_one_field_index }}</label>
                                 </div>
 
                             </div>
@@ -220,7 +210,6 @@ $(document).ready(function() {
                     {{ form.rest_url_path }}
                     {{ form.rest_security_id }}
 
-                    {{ form.is_default }}
                     {{ form.msh3_sending_app }}
                     {{ form.msh4_sending_facility }}
                     {{ form.msh5_receiving_app }}
