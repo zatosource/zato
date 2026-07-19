@@ -319,14 +319,23 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance)
 // ////////////////////////////////////////////////////////////////////////
 
 // Clones the options of the Django security select into the given select,
-// keeping the requested value picked if it still exists.
-$.fn.zato.channel.hl7.mllp.wizard.forms._fillSecuritySelect = function(select, value) {
+// leaving out the values picked by the other rows so no definition can be
+// assigned twice. The requested value stays picked if it still exists -
+// when it does not, e.g. after a broadcast said the definition is gone,
+// the select falls to its default choice instead.
+$.fn.zato.channel.hl7.mllp.wizard.forms._fillSecuritySelect = function(select, value, excludeValues) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    excludeValues = excludeValues || [];
 
     select.textContent = '';
 
     wizard.field('rest_security_id').find('option').each(function() {
+
+        if(excludeValues.indexOf(this.value) !== -1) {
+            return;
+        }
+
         var option = document.createElement('option');
         option.value = this.value;
         option.textContent = this.textContent;
@@ -337,6 +346,39 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._fillSecuritySelect = function(select, v
     if(select.value !== value) {
         select.selectedIndex = 0;
     }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Rebuilds the options of every security row so each select offers only
+// what the other rows have not taken. This runs after any change to the
+// rows - a pick, a new row, a deleted row - and after a broadcast changed
+// the underlying Django select.
+$.fn.zato.channel.hl7.mllp.wizard.forms._refreshSecurityRows = function(list) {
+
+    var forms = $.fn.zato.channel.hl7.mllp.wizard.forms;
+    var config = forms.config;
+
+    var selects = list.querySelectorAll('select');
+
+    var pickedValues = [];
+    selects.forEach(function(select) {
+        pickedValues.push(select.value);
+    });
+
+    selects.forEach(function(select, selectIdx) {
+
+        var excludeValues = [];
+
+        pickedValues.forEach(function(value, valueIdx) {
+            var isMeaningful = value && value !== config.noSecurityValue;
+            if(valueIdx !== selectIdx && isMeaningful) {
+                excludeValues.push(value);
+            }
+        });
+
+        forms._fillSecuritySelect(select, pickedValues[selectIdx], excludeValues);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -354,6 +396,12 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._addSecurityRow = function(list, value) 
     forms._fillSecuritySelect(select, value);
     row.appendChild(select);
 
+    // A new pick here frees the old value for the other rows
+    // and takes the new one away from them
+    select.addEventListener('change', function() {
+        forms._refreshSecurityRows(list);
+    });
+
     // The icon itself is drawn by the stylesheet, from the shared close.svg
     var deleteLink = document.createElement('a');
     deleteLink.href = 'javascript:void(0)';
@@ -369,6 +417,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._addSecurityRow = function(list, value) 
             forms._addSecurityRow(list, '');
         }
         forms._renumberSecurityRows(list);
+
+        // The removed pick is up for grabs again in the remaining rows
+        forms._refreshSecurityRows(list);
     });
 
     row.appendChild(deleteLink);
@@ -395,7 +446,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._renumberSecurityRows = function(list) {
 // ////////////////////////////////////////////////////////////////////////
 
 // Refreshes every security row of an open REST popover from the Django
-// form select after a live update changed the latter's options.
+// form select after a live update changed the latter's options. A row
+// whose pick was deleted elsewhere falls to the default choice - the row
+// itself stays where it is.
 $.fn.zato.channel.hl7.mllp.wizard.forms.refreshSecuritySelect = function() {
 
     var forms = $.fn.zato.channel.hl7.mllp.wizard.forms;
@@ -405,9 +458,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.refreshSecuritySelect = function() {
         return;
     }
 
-    $(list).find('select').each(function() {
-        forms._fillSecuritySelect(this, this.value);
-    });
+    forms._refreshSecurityRows(list);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -448,6 +499,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
             forms._addSecurityRow(list, keyList[keyIdx]);
         }
         forms._renumberSecurityRows(list);
+        forms._refreshSecurityRows(list);
 
         // .. and the add link under the list grows it one row at a time.
         var addLink = document.createElement('a');
@@ -458,6 +510,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
         addLink.addEventListener('click', function() {
             forms._addSecurityRow(list, '');
             forms._renumberSecurityRows(list);
+            forms._refreshSecurityRows(list);
         });
 
         row.appendChild(addLink);

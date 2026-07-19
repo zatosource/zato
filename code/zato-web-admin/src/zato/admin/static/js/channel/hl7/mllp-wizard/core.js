@@ -339,7 +339,18 @@ $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
 $.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var keyList = wizard.state.securityKeyList;
+
+    // A definition deleted after the picks were made - and reported by
+    // a broadcast since - must not travel to the backend, so only the
+    // picks the Django select still knows about go out.
+    var knownValues = {};
+    wizard.field('rest_security_id').find('option').each(function() {
+        knownValues[this.value] = true;
+    });
+
+    var keyList = wizard.state.securityKeyList.filter(function(key) {
+        return knownValues[key];
+    });
 
     form.find('.mllp-wizard-security-input').remove();
 
