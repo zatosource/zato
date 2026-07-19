@@ -250,14 +250,29 @@
     color: var(--wizard-text-muted);
 }
 
+/* One explicit height keeps rows mixing inputs and selects even */
 .mllp-wizard-tippy-field input[type="text"],
 .mllp-wizard-tippy-field select {
     width: 100%;
     box-sizing: border-box;
+    height: 24px;
     padding: 5px 8px;
     border: 1px solid var(--wizard-border-strong);
     border-radius: 3px;
     font-size: 13px;
+}
+
+/* The picked values read as data, not as headings - a notch smaller than
+   the free-text inputs next to them, in the same face the inputs wear.
+   The formalize height of 1.8em squeezed the select's line box out through
+   the bottom edge, sitting the text low - the explicit height above plus
+   paddings sized to the line box recenter it. */
+.mllp-wizard-tippy-field select {
+    font-size: 12px;
+    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
+    line-height: normal;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
 .mllp-wizard-tippy-field input[type="text"]:focus,
@@ -286,17 +301,92 @@
     cursor: pointer;
 }
 
+/* The site-wide tippy link colors are meant for dark tooltips - this
+   popover is light, so its links wear the standard link face. The theme
+   attribute keeps the selector ahead of the .tippy-box .tippy-content
+   rule in style.css, which would otherwise paint the links light. */
+.tippy-box[data-theme~='mllp-wizard'] .tippy-content a:not(.menu-link) {
+    color: rgb(17, 17, 17);
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
+.tippy-box[data-theme~='mllp-wizard'] .tippy-content a:not(.menu-link):hover {
+    color: var(--zato-link-hover) !important;
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
 .mllp-wizard-tippy-hint {
     font-size: 11px;
     color: var(--wizard-text-faint);
 }
 
+/* The security rows - one select per definition, a delete link to the
+   right of each row and the add link under the whole list */
+.mllp-wizard-security-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mllp-wizard-security-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mllp-wizard-security-row select {
+    flex: 1;
+}
+
+/* The delete icon is the shared close.svg drawn through a mask, so it
+   renders the same everywhere instead of depending on how a font shapes
+   the multiplication sign. The row centers its children, which keeps
+   the icon in the middle of the select next to it. */
+.tippy-box[data-theme~='mllp-wizard'] .tippy-content a.mllp-wizard-security-delete {
+    background-image: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 4px;
+}
+
+a.mllp-wizard-security-delete::before {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--wizard-text-muted);
+    -webkit-mask-image: url('/static/gfx/close.svg');
+    mask-image: url('/static/gfx/close.svg');
+    -webkit-mask-size: 8px 8px;
+    mask-size: 8px 8px;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    transition: background-color 120ms ease;
+}
+
+a.mllp-wizard-security-delete:hover::before {
+    background-color: var(--wizard-error);
+}
+
+a.mllp-wizard-security-add {
+    align-self: flex-start;
+    margin-top: 7px;
+    font-size: 12px;
+}
+
+/* The rule above the buttons mirrors the one the wizard footer draws */
 .mllp-wizard-tippy-buttons {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--wizard-border);
 }
 
 /* The help badge keeps to the left, away from the OK button */

@@ -56,10 +56,11 @@ $.fn.zato.how_it_works.init = function(config) {
     $(container).off('click.how_it_works_label').on('click.how_it_works_label', 'label.how-it-works-label', function(event) {
         event.stopPropagation();
 
-        // .. controls nested inside a wrapping label bubble their clicks here,
-        // .. only clicks on the label text itself should activate help mode,
-        // .. closest also covers clicks landing on option elements inside a select ..
-        if (event.target.closest('input, select, textarea')) {
+        // .. controls and links nested inside a wrapping label bubble their
+        // .. clicks here, only clicks on the label text itself should activate
+        // .. help mode - closest also covers clicks landing on option elements
+        // .. inside a select ..
+        if (event.target.closest('input, select, textarea, a')) {
             return;
         }
 
@@ -838,11 +839,15 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
                 }
             }
 
+            // .. a label can pin its tooltip to one side itself, which wins
+            // .. over both the page config and the heuristics below ..
+            var labelPlacement = label.getAttribute('data-help-placement');
+
             // .. an explicit placement in the config rules every field -
             // .. the heuristics below only run when nothing was configured ..
             var placement = null;
 
-            if (!config.placement) {
+            if (!labelPlacement && !config.placement) {
 
                 // .. with several fields in one row the tooltip goes above the field,
                 // .. otherwise it would cover the neighboring fields to the left ..
@@ -859,7 +864,7 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
                 element: targetElement,
                 fieldId: fieldId,
                 description: description,
-                placement: placement,
+                placement: labelPlacement || placement,
             });
         }
     }

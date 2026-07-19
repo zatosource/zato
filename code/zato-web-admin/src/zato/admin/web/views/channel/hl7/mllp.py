@@ -23,7 +23,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
-from zato.common.api import GENERIC, generic_attrs, HL7, SEC_DEF_TYPE
+from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.model.hl7 import HL7MLLPConfigObject
 
@@ -148,6 +148,35 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
+    def _create_security_group(self, mllp_name:'str', security_id_list:'list') -> 'int':
+        """ Wraps the security definitions picked in the wizard in one group,
+        created transparently for the backing REST channel. The input values
+        come from the security select, i.e. they look like basic_auth/123.
+        """
+
+        # .. the group members are keyed the way the groups page keys them ..
+        member_id_list = [item.replace('/', '-') for item in security_id_list]
+
+        # .. the group carries the same name as the backing REST channel,
+        # which the wizard has already checked for uniqueness ..
+        group_name = _REST_Channel_Name_Prefix + mllp_name
+
+        response = self.req.zato.client.invoke('zato.groups.create', {
+            'group_type': Groups.Type.API_Clients,
+            'name': group_name,
+            'member_id_list': member_id_list,
+        })
+
+        if response.ok:
+            group_id = response.data.id
+            logger.info('Created security group id=%s `%s` for MLLP channel `%s`', group_id, group_name, mllp_name)
+            return group_id
+        else:
+            logger.error('Could not create security group `%s` for `%s`: %s', group_name, mllp_name, response.details)
+            return 0
+
+# ################################################################################################################################
+
     def _build_rest_channel_message(self, mllp_name:'str') -> 'dict':
         """ Builds the input dict for zato.http-soap.create or edit,
         .. reading REST-specific fields from POST data.
@@ -157,9 +186,21 @@ class _CreateEdit(CreateEdit):
         security_id = get_security_id_from_select(
             self.req.POST, self.form_prefix or '', field_name='rest_security_id')
 
-        # .. extract security groups from the checkbox list ..
+        # .. extract security groups from the full-page editor's checkbox list ..
         security_groups = get_security_groups_from_checkbox_list(
             self.req.POST, self.form_prefix or '', field_name_prefix='mllp_security_group_checkbox_')
+
+        # .. with two or more security definitions picked in the wizard,
+        # all of them arrive in this list and a security group is created
+        # for them on the fly - the group secures the channel and no single
+        # definition is assigned to it directly ..
+        security_id_list = self.req.POST.getlist('mllp_security_id_list')
+
+        if len(security_id_list) > 1:
+            group_id = self._create_security_group(mllp_name, security_id_list)
+            if group_id:
+                security_groups.append(group_id)
+                security_id = ZATO_NONE
 
         prefix = self.form_prefix or ''
 

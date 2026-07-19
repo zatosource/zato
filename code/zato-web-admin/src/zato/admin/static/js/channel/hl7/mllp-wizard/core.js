@@ -29,9 +29,6 @@ $.fn.zato.channel.hl7.mllp.wizard.config = {
     finishLabel: 'Finish',
     nextLabel: 'Next',
 
-    // Where the security groups for the REST bridge come from
-    securityGroupsUrl: '/zato/http-soap/get-security-groups/zato-api-creds/',
-
     // The rows the "How does it work?" badge walks through - anything
     // on a step body holding a labeled field
     helpRowSelector: '.mllp-wizard-name-row, .mllp-wizard-toggle-row, .mllp-wizard-section-title, .mllp-wizard-respond-from-row, .mllp-wizard-tolerance-grid',
@@ -64,11 +61,9 @@ $.fn.zato.channel.hl7.mllp.wizard.state = {
     // Destination rows - {type, connection, isActive, options}
     destinationList: [],
 
-    // Security groups for the REST bridge - [{id, name}]
-    securityGroupList: [],
-
-    // Which group IDs are selected - id -> true
-    selectedGroups: {},
+    // The security definitions picked for the REST bridge, in row order -
+    // each entry is a sec_type/id value of the Django security select
+    securityKeyList: [],
 
     // Whether the last uniqueness check found the name already taken
     isNameTaken: false
@@ -97,6 +92,9 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
             out['mllp-wizard-tippy-' + key.substring(3)] = shared[key];
         }
     }
+
+    // The security rows of the REST popover allow more than one pick
+    out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.';
 
     // The step 1 transport toggles and the routing link ..
     out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP<br>are received over plain TCP.<br>When off, messages arrive over REST only.';
@@ -157,14 +155,19 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
         descriptions: wizard.helpDescriptions()
     });
 
-    // .. keep the service select fresh while the page is open ..
+    // .. keep the services and the security definitions fresh while
+    // the page is open - no reloading to pick up new ones ..
     $.fn.zato.live_form_updates.register('create', [
-        {object_type: 'service', target_select: '#id_service'}
+        {object_type: 'service', target_select: '#id_service'},
+        {object_type: 'security', target_select: '#id_rest_security_id'}
     ]);
     $.fn.zato.live_form_updates.start('create');
 
-    // .. security groups for the REST bridge arrive asynchronously ..
-    $.fn.zato.post(config.securityGroupsUrl, wizard._onSecurityGroupsLoaded, '', '', true);
+    // .. an open REST popover clones the security select into its rows,
+    // so a live update to the underlying form select re-clones them ..
+    $('#id_rest_security_id').on('chosen:updated', function() {
+        wizard.forms.refreshSecuritySelect();
+    });
 
     // .. the tabs jump straight to their step ..
     $('#mllp-wizard-steps .mllp-wizard-step').on('click', function() {
@@ -202,18 +205,6 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
 
     // .. and fade the page in.
     $.fn.zato.dashboard_kit.reveal();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.channel.hl7.mllp.wizard._onSecurityGroupsLoaded = function(data, status) {
-
-    if(status != 'success') {
-        return;
-    }
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    wizard.state.securityGroupList = $.parseJSON(data.responseText);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -341,20 +332,27 @@ $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Security groups travel as one form input per selected group,
-// named the way the create endpoint expects them.
-$.fn.zato.channel.hl7.mllp.wizard._writeSecurityGroupInputs = function(form) {
+// With two or more security definitions picked, all of them travel as
+// repeated hidden inputs and the backend wraps them in a security group
+// it creates on its own. A single pick stays in the rest_security_id
+// select alone, exactly the way the full-page editor posts it.
+$.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var keyList = wizard.state.securityKeyList;
 
-    form.find('.mllp-wizard-group-input').remove();
+    form.find('.mllp-wizard-security-input').remove();
 
-    for(var groupId in wizard.state.selectedGroups) {
+    if(keyList.length < 2) {
+        return;
+    }
+
+    for(var keyIdx = 0; keyIdx < keyList.length; keyIdx++) {
         var input = document.createElement('input');
         input.type = 'hidden';
-        input.className = 'mllp-wizard-group-input';
-        input.name = 'mllp_security_group_checkbox_' + groupId;
-        input.value = 'on';
+        input.className = 'mllp-wizard-security-input';
+        input.name = 'mllp_security_id_list';
+        input.value = keyList[keyIdx];
         form.append(input);
     }
 };
@@ -370,8 +368,8 @@ $.fn.zato.channel.hl7.mllp.wizard.save = function() {
     // The destination rows travel in hidden JSON fields the backend reads ..
     wizard.destinations.serialize();
 
-    // .. so do the security groups selected for the REST bridge ..
-    wizard._writeSecurityGroupInputs(form);
+    // .. so do the security definitions picked for the REST bridge ..
+    wizard._writeSecurityIdInputs(form);
 
     // .. client-side validation first ..
     if(!$.fn.zato.is_form_valid(form)) {

@@ -167,11 +167,10 @@ $.fn.zato.channel.hl7.mllp.wizard.review._restSummary = function() {
         parts.push('REST only');
     }
 
-    var groupCount = Object.keys(wizard.state.selectedGroups).length;
+    var securityCount = wizard.state.securityKeyList.length;
 
-    if(groupCount) {
-        var groupSuffix = groupCount === 1 ? 'group' : 'groups';
-        parts.push(groupCount + ' security ' + groupSuffix);
+    if(securityCount > 1) {
+        parts.push(securityCount + ' security definitions');
     }
 
     var out = parts.join(', ');
