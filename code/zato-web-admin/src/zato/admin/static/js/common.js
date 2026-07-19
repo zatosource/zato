@@ -3858,7 +3858,6 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 };
             }
         });
-        console.log('[live_form_updates] _snapshot_badge_picker: action=' + action + ', captured ' + Object.keys(items).length + ' badges, sample_ids=' + JSON.stringify(Object.keys(items).slice(0, 5)));
         return items;
     };
 
@@ -3887,19 +3886,15 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         var configs = _registry[action] || [];
         var object_types = {};
 
-        console.log('[live_form_updates] _build_request: action=' + action + ', configs count=' + configs.length);
-
         for(var i = 0; i < configs.length; i++) {
             var config = configs[i];
             var items = {};
 
             if(config.handler === 'badge_picker') {
                 items = $.fn.zato.live_form_updates._snapshot_badge_picker(action);
-                console.log('[live_form_updates] _build_request: badge_picker snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
             }
             else if(config.handler === 'multi_checkbox') {
                 items = $.fn.zato.live_form_updates._snapshot_multi_checkbox(config.container || '');
-                console.log('[live_form_updates] _build_request: multi_checkbox snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
             }
             else {
                 var selector = config.target_select || '';
@@ -3907,7 +3902,6 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                     selector = selector.replace('#id_', '#id_edit-');
                 }
                 items = $.fn.zato.live_form_updates._snapshot_select(selector);
-                console.log('[live_form_updates] _build_request: select snapshot for ' + config.object_type + ', selector=' + selector + ', item count=' + Object.keys(items).length);
             }
 
             object_types[config.object_type] = {
