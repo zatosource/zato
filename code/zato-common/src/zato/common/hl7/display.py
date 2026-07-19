@@ -413,14 +413,12 @@ def render_segments_text(tree:'stranydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def parse_and_render(data:'str') -> 'str':
-    """ Parses ER7 text and renders its display tree as indented plain text.
-    Text that does not parse as a complete message renders segment by segment instead,
-    so fragments and in-progress edits display too - only text with no segment lines
-    at all renders as an empty string.
+def parse_display_tree(data:'str') -> 'tuple[stranydict, bool]':
+    """ Builds the display tree of ER7 text plus a flag - True means a complete message
+    went through the full parser, False means a fragment built segment by segment.
     """
 
-    # Imported here because this convenience is the module's only parsing entry point -
+    # Imported here because this is the module's only parsing entry point -
     # everything else works on messages already parsed by the caller.
     from zato.hl7v2 import parse_hl7
 
@@ -429,21 +427,35 @@ def parse_and_render(data:'str') -> 'str':
     stripped = data.lstrip()
 
     if not stripped.startswith('MSH|'):
-        tree = build_segment_display_tree(data)
-        out = render_segments_text(tree)
-        return out
+        out = build_segment_display_tree(data)
+        return out, False
 
     try:
         message = parse_hl7(data, validate=False)
-        tree = build_display_tree(message)
     except Exception:
 
         # A header that still does not parse renders segment by segment too
-        tree = build_segment_display_tree(data)
-        out = render_segments_text(tree)
-        return out
+        out = build_segment_display_tree(data)
+        return out, False
 
-    out = render_display_text(tree)
+    out = build_display_tree(message)
+    return out, True
+
+# ################################################################################################################################
+
+def parse_and_render(data:'str') -> 'str':
+    """ Parses ER7 text and renders its display tree as indented plain text.
+    Text that does not parse as a complete message renders segment by segment instead,
+    so fragments and in-progress edits display too - only text with no segment lines
+    at all renders as an empty string.
+    """
+    tree, is_complete = parse_display_tree(data)
+
+    if is_complete:
+        out = render_display_text(tree)
+    else:
+        out = render_segments_text(tree)
+
     return out
 
 # ################################################################################################################################

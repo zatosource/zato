@@ -16,10 +16,12 @@
 <script type="text/javascript" src="/static/js/invoker.js"></script>
 <script type="text/javascript" src="/static/js/log_streaming.js"></script>
 <script type="module" src="/static/message-viewer-src/message-viewer-init.js"></script>
+<script type="text/javascript" src="/static/js/service/ide_highlight.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
 <link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <link rel="stylesheet" media="screen" href="/static/css/service/ide.css" />
+<link rel="stylesheet" media="screen" href="/static/css/service/ide_highlight.css" />
 <link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
 <link rel="stylesheet" media="screen" href="/static/message-viewer-src/message-viewer.css" />
 
@@ -114,8 +116,8 @@
                     <tr colspan="2" class="invoker-tr">
                         <td>
                             <div id="request-view-toggle" class="invoker-view-toggle">
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'raw')" id="request-view-raw" class="invoker-view-link current">Raw</a> |
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'parsed')" id="request-view-parsed" class="invoker-view-link">Parsed</a>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'tree')" id="request-view-tree" class="invoker-view-link">Tree</a> |
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'raw')" id="request-view-raw" class="invoker-view-link current">Raw</a><span id="request-view-parsed-separator" class="hidden"> | </span><a href="javascript:$.fn.zato.ide.show_pane_view('request', 'parsed')" id="request-view-parsed" class="invoker-view-link hidden">Parsed</a>
                             </div>
                             <div class="invoker-area">
                                 <form id="invoke-service-request-form"><input type="hidden" id="data-format" name="data_format" value="auto"/><textarea id="data-request" name="data-request"
@@ -168,8 +170,8 @@ Ctrl+K for full history"></textarea></form>
                         <td style="padding-top: 0;">
                             <form id="invoke-service-form" novalidate="" method="post"></form>
                             <div id="response-view-toggle" class="invoker-view-toggle">
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'raw')" id="response-view-raw" class="invoker-view-link current">Raw</a> |
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'parsed')" id="response-view-parsed" class="invoker-view-link">Parsed</a>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'tree')" id="response-view-tree" class="invoker-view-link">Tree</a> |
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'raw')" id="response-view-raw" class="invoker-view-link current">Raw</a><span id="response-view-parsed-separator" class="hidden"> | </span><a href="javascript:$.fn.zato.ide.show_pane_view('response', 'parsed')" id="response-view-parsed" class="invoker-view-link hidden">Parsed</a>
                             </div>
                             <div id="response-panel" class="invoker-area">
                                 <textarea id="data-response" readonly

@@ -1,0 +1,114 @@
+/* ------------------------------------------------------------ */
+/* Syntax highlighting - shared palette                          */
+/* ------------------------------------------------------------ */
+
+.invoker-area {
+    --highlight-name-color: #0b63a5;
+    --highlight-string-color: #a31515;
+    --highlight-number-color: #098658;
+    --highlight-keyword-color: #7a3e9d;
+    --highlight-quiet-color: #6d6d6d;
+    --highlight-separator-color: #c00000;
+    --highlight-dimmed-color: #8a8a8a;
+    --highlight-caret-color: #000;
+    --highlight-placeholder-color: #666;
+}
+
+/* ------------------------------------------------------------ */
+/* Syntax highlighting - token colors                            */
+/* ------------------------------------------------------------ */
+
+/* Keys, field labels and segment ids all name things */
+.highlight-key,
+.highlight-label,
+.highlight-segment {
+    color: var(--highlight-name-color);
+}
+
+.highlight-string {
+    color: var(--highlight-string-color);
+}
+
+.highlight-number {
+    color: var(--highlight-number-color);
+}
+
+.highlight-keyword {
+    color: var(--highlight-keyword-color);
+}
+
+/* Punctuation and field references stay in the background */
+.highlight-punctuation,
+.highlight-reference {
+    color: var(--highlight-quiet-color);
+}
+
+/* The ER7 separators and the encoding characters that declare them */
+.highlight-separator,
+.highlight-encoding {
+    color: var(--highlight-separator-color);
+}
+
+.highlight-dimmed {
+    color: var(--highlight-dimmed-color);
+}
+
+/* ------------------------------------------------------------ */
+/* Syntax highlighting - the raw view overlay                    */
+/* ------------------------------------------------------------ */
+
+/* The wrapper keeps the overlay and the textarea aligned,
+   and it disappears together with its textarea */
+.highlight-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.highlight-wrapper:has(textarea.hidden) {
+    display: none;
+}
+
+/* The overlay paints the colors behind the transparent text
+   and never catches the mouse */
+.highlight-backdrop {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 2px;
+    border: none;
+    border-radius: 4px;
+    font-family: Zato_IDE_Font, monospace;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    background: #fff;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+/* The textarea stays on top - its glyphs go transparent,
+   its caret and placeholder do not */
+.invoker-area textarea.highlight-source {
+    position: relative;
+    z-index: 1;
+    padding: 2px;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--highlight-caret-color);
+}
+
+.invoker-area textarea.highlight-source::placeholder {
+    color: var(--highlight-placeholder-color);
+}
+
+/* ------------------------------------------------------------ */
+/* Syntax highlighting - the parsed view                         */
+/* ------------------------------------------------------------ */
+
+/* Segment ids anchor the parsed view, where bolding
+   cannot knock anything out of alignment */
+.invoker-parsed-pane .highlight-segment {
+    font-weight: 600;
+}
