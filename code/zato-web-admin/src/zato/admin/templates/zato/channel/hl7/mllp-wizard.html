@@ -16,11 +16,13 @@ so the resulting channel is identical to one created through the editor.
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
 
 {% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/forms.js"></script>
@@ -92,7 +94,8 @@ $(document).ready(function() {
                                 <span class="mllp-wizard-toggle-slider"></span>
                             </label>
                             <span class="mllp-wizard-toggle-label">MLLP over TCP</span>
-                            <span class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport" title="Protocol options"></span>
+                            <a href="javascript:void(0)" class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport"></a>
+                            <span class="zato-soft-hint mllp-wizard-toggle-hint">Click to edit</span>
                         </div>
 
                         <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-rest">
@@ -101,7 +104,8 @@ $(document).ready(function() {
                                 <span class="mllp-wizard-toggle-slider"></span>
                             </label>
                             <span class="mllp-wizard-toggle-label">REST</span>
-                            <span class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest" title="REST options"></span>
+                            <a href="javascript:void(0)" class="mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest"></a>
+                            <span class="zato-soft-hint mllp-wizard-toggle-hint">Click to edit</span>
                         </div>
                     </div>
 

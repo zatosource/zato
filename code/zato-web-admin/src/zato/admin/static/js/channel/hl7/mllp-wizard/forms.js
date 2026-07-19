@@ -22,13 +22,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.config = {
     // Button labels inside the popovers
     backLabel: 'Back',
     nextLabel: 'Next',
-    doneLabel: 'Done',
-
-    // The grip icon shown in every popover title - the drag handle
-    gripIcon: '<svg class="mllp-wizard-tippy-grip" width="9" height="13" viewBox="0 0 10 16" fill="currentColor">' +
-        '<circle cx="3" cy="3" r="1.4"/><circle cx="7" cy="3" r="1.4"/>' +
-        '<circle cx="3" cy="8" r="1.4"/><circle cx="7" cy="8" r="1.4"/>' +
-        '<circle cx="3" cy="13" r="1.4"/><circle cx="7" cy="13" r="1.4"/></svg>'
+    doneLabel: 'Done'
 };
 
 // The currently open popover, if any
@@ -204,15 +198,14 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.close = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Builds a popover title - the grip icon plus the text, acting as the
-// drag handle every micro-form shares.
+// Builds a popover header - the shared grip glyph plus the text, acting
+// as the drag handle every micro-form shares. Both the look and the grip
+// come from the shared popup chrome the IDE menus use as well.
 $.fn.zato.channel.hl7.mllp.wizard.forms.buildTitle = function(text) {
 
-    var config = $.fn.zato.channel.hl7.mllp.wizard.forms.config;
-
     var title = document.createElement('div');
-    title.className = 'mllp-wizard-tippy-title';
-    title.innerHTML = config.gripIcon;
+    title.className = 'zato-popup-header';
+    title.appendChild($.fn.zato.popup.build_grip());
     title.appendChild(document.createTextNode(text));
 
     var out = title;
@@ -221,11 +214,12 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.buildTitle = function(text) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Lets the popover be dragged around by its title. The offset is applied
-// to the tippy box itself, so tippy's own positioning stays untouched.
+// Lets the popover be dragged around by its header, through the shared
+// popup drag machinery. The offset is applied to the tippy box itself,
+// so tippy's own positioning stays untouched.
 $.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance) {
 
-    var handle = tippyInstance.popper.querySelector('.mllp-wizard-tippy-title');
+    var handle = tippyInstance.popper.querySelector('.zato-popup-header');
     if(!handle) {
         return;
     }
@@ -234,31 +228,24 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance)
     var offsetX = 0;
     var offsetY = 0;
 
-    handle.addEventListener('mousedown', function(event) {
-        event.preventDefault();
+    $.fn.zato.popup.install_drag(handle, {
 
-        // The stock tippy CSS animates transform changes - the box must
-        // follow the pointer instantly instead
-        box.style.transitionProperty = 'visibility, opacity';
+        dragging_elem: tippyInstance.popper.querySelector('.zato-popup'),
 
-        var originX = event.clientX - offsetX;
-        var originY = event.clientY - offsetY;
+        on_start: function() {
 
-        var handleMove = function(moveEvent) {
-            offsetX = moveEvent.clientX - originX;
-            offsetY = moveEvent.clientY - originY;
-            box.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
-        };
+            // The stock tippy CSS animates transform changes - the box must
+            // follow the pointer instantly instead
+            box.style.transitionProperty = 'visibility, opacity';
 
-        var handleUp = function() {
-            handle.classList.remove('mllp-wizard-tippy-dragging');
-            document.removeEventListener('mousemove', handleMove);
-            document.removeEventListener('mouseup', handleUp);
-        };
+            return {'x': offsetX, 'y': offsetY};
+        },
 
-        handle.classList.add('mllp-wizard-tippy-dragging');
-        document.addEventListener('mousemove', handleMove);
-        document.addEventListener('mouseup', handleUp);
+        on_move: function(x, y) {
+            offsetX = x;
+            offsetY = y;
+            box.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        }
     });
 };
 
@@ -476,7 +463,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
     var descriptor = forms.descriptors[descriptorName];
 
     var container = document.createElement('div');
-    container.className = 'mllp-wizard-tippy-form';
+    container.className = 'mllp-wizard-tippy-form zato-popup';
 
     if(descriptor.width) {
         container.style.width = descriptor.width;
@@ -485,6 +472,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms.open = function(descriptorName, targetEl
     container.appendChild(forms.buildTitle(descriptor.title));
 
     var pageContainer = document.createElement('div');
+    pageContainer.className = 'mllp-wizard-tippy-body';
     container.appendChild(pageContainer);
 
     var pageIndex = 0;

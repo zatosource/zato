@@ -1378,19 +1378,25 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     margin: -1.5px 0 0 0;
 }
 
-/* The countdown to the next refresh - a tiny muted "Refreshes in 5s" next to the column name.
-   It keeps a fixed minimum width and only its opacity toggles while the spinner is shown,
-   so it never shifts the layout around it. */
-.zato-time-ago-countdown {
-    --zato-time-ago-countdown-fade-ms: 350ms;
+/* A gentle hint - the tiny muted text that sits next to whatever it explains,
+   like the "Refreshes in 5s" countdown next to a column name or the
+   "Click to edit" note after a summary link. */
+.zato-soft-hint {
     display: inline-block;
-    min-width: 2.2ch;
     margin-left: 8px;
     font-size: 10px;
     font-weight: normal;
     text-transform: none;
     letter-spacing: 0;
     color: #999;
+}
+
+/* The countdown to the next refresh - a soft hint that additionally keeps
+   a fixed minimum width and only toggles its opacity while the spinner is
+   shown, so it never shifts the layout around it. */
+.zato-time-ago-countdown {
+    --zato-time-ago-countdown-fade-ms: 350ms;
+    min-width: 2.2ch;
     opacity: 0;
     vertical-align: middle;
     transition: opacity var(--zato-time-ago-countdown-fade-ms) ease;

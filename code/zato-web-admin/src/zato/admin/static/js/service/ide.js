@@ -909,8 +909,8 @@ $.fn.zato.ide.close_grid_menus = function() {
     $("#grid-panel-menu").remove();
     $(document).off("mousedown.grid-view-menu");
     $(document).off("keydown.grid-view-menu");
-    $(document).off("mousemove.grid-panel-drag");
-    $(document).off("mouseup.grid-panel-drag");
+    $(document).off("mousemove.zato-popup-drag");
+    $(document).off("mouseup.zato-popup-drag");
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1320,12 +1320,12 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, node_elem, x, y, full_path) 
 
     $.fn.zato.ide.close_grid_menus();
 
-    let menu = $("<div>").attr("id", "grid-panel-menu");
+    let menu = $("<div>").attr("id", "grid-panel-menu").addClass("zato-popup");
 
     // The header names the node the menu is about, by its full path,
     // with a drag grip in front of it and the copy badges on its right
-    let header = $("<div>").addClass("grid-panel-header");
-    header.append($("<span>").addClass("grid-panel-header-grip").text("\u2261"));
+    let header = $("<div>").addClass("zato-popup-header");
+    header.append($.fn.zato.popup.build_grip());
     header.append($("<span>").addClass("grid-panel-header-path").text(full_path));
 
     let header_actions = $("<span>").addClass("grid-panel-header-actions");
@@ -1564,39 +1564,26 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, node_elem, x, y, full_path) 
 
     // Any of the menu's own surface drags it around the screen -
     // the actions, the badges and the flyouts keep their own behaviour
-    menu.on("mousedown", function(e) {
+    $.fn.zato.popup.install_drag(menu[0], {
 
-        if($(e.target).closest(".grid-panel-item, .grid-panel-header-badge, .grid-panel-submenu").length) {
-            return;
-        }
+        should_ignore: function(target) {
+            return Boolean($(target).closest(".grid-panel-item, .grid-panel-header-badge, .grid-panel-submenu").length);
+        },
 
-        e.preventDefault();
-        menu.addClass("grid-panel-dragging");
+        on_start: function() {
+            let offset = menu.offset();
+            return {"x": offset.left, "y": offset.top};
+        },
 
-        // How far into the menu the grab landed - the menu keeps
-        // this offset under the cursor for the whole drag
-        let grab_offset = menu.offset();
-        let grab_x = e.pageX - grab_offset.left;
-        let grab_y = e.pageY - grab_offset.top;
+        on_move: function(x, y) {
+            menu.css({"left": x + "px", "top": y + "px"});
+        },
 
-        $(document).on("mousemove.grid-panel-drag", function(move) {
-            menu.css({
-                "left": (move.pageX - grab_x) + "px",
-                "top": (move.pageY - grab_y) + "px",
-            });
-        });
-
-        $(document).on("mouseup.grid-panel-drag", function() {
-
-            menu.removeClass("grid-panel-dragging");
-            $(document).off("mousemove.grid-panel-drag");
-            $(document).off("mouseup.grid-panel-drag");
-
-            // Where the menu ended up is where it opens the next time
-            let position = menu.offset();
-            let stored = JSON.stringify({"x": position.left, "y": position.top});
+        // Where the menu ended up is where it opens the next time
+        on_end: function(x, y) {
+            let stored = JSON.stringify({"x": x, "y": y});
             localStorage.setItem(window.zato_local_storage_key.zato_grid_menu_position, stored);
-        });
+        }
     });
 
     // On the page first, invisible, so its size is measurable
