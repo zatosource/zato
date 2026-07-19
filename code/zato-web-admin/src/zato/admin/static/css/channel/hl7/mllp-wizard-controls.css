@@ -1,0 +1,286 @@
+/*
+ * HL7 MLLP channel wizard - destination rows, option cards and the
+ * popover micro-forms, shared by all three steps of the wizard page.
+ */
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - destination rows                                */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-conn-list {
+    max-width: 560px;
+}
+
+.mllp-wizard-conn-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    border: 1px solid var(--wizard-border);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 150ms ease;
+}
+
+.mllp-wizard-conn-row:hover {
+    border-color: var(--wizard-accent);
+}
+
+.mllp-wizard-conn-row-text {
+    flex: 1;
+    color: var(--wizard-done);
+    font-weight: 500;
+    animation: mllp-wizard-summary-fade-in 300ms ease-out;
+}
+
+.mllp-wizard-conn-row-inactive {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+    font-style: italic;
+}
+
+.mllp-wizard-conn-row-remove {
+    padding: 2px 5px;
+    color: var(--wizard-text-faint);
+    font-size: 11px;
+}
+
+.mllp-wizard-conn-row-remove:hover {
+    color: var(--wizard-error);
+}
+
+.mllp-wizard-conn-add {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-accent);
+    cursor: pointer;
+}
+
+.mllp-wizard-conn-add:hover {
+    text-decoration: underline;
+}
+
+.mllp-wizard-respond-from-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+.mllp-wizard-respond-from-row label {
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-respond-from-row .mllp-wizard-section-hint {
+    margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - option cards                                    */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-option-card {
+    max-width: 560px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--wizard-border);
+    border-radius: 5px;
+    transition: border-color 150ms ease;
+}
+
+.mllp-wizard-option-card:hover {
+    border-color: var(--wizard-border-strong);
+}
+
+.mllp-wizard-option-card-clickable {
+    cursor: pointer;
+}
+
+.mllp-wizard-option-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mllp-wizard-option-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-option-summary {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-done);
+}
+
+.mllp-wizard-chevron {
+    flex-shrink: 0;
+    color: var(--wizard-text-muted);
+    transition: transform 150ms ease;
+}
+
+.mllp-wizard-chevron-open {
+    transform: rotate(90deg);
+}
+
+.mllp-wizard-option-body {
+    max-height: 0;
+    margin-top: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 200ms ease, opacity 150ms ease, margin 150ms ease;
+}
+
+.mllp-wizard-option-body-open {
+    max-height: 800px;
+    margin-top: 10px;
+    opacity: 1;
+}
+
+.mllp-wizard-tolerance-group-title {
+    margin: 8px 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-tolerance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 16px;
+}
+
+.mllp-wizard-tolerance-grid label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - popover micro-forms                             */
+/* ------------------------------------------------------------ */
+
+.tippy-box[data-theme~='mllp-wizard'] {
+    background-color: var(--wizard-popover-bg);
+    border: 1px solid var(--wizard-accent);
+    border-radius: 6px;
+    color: var(--wizard-text);
+    box-shadow: 0 6px 24px var(--wizard-popover-shadow);
+}
+
+.tippy-box[data-theme~='mllp-wizard'] .tippy-content {
+    padding: 12px 14px;
+}
+
+.tippy-box[data-theme~='mllp-wizard'] .tippy-arrow {
+    color: var(--wizard-popover-bg);
+}
+
+.mllp-wizard-tippy-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 260px;
+}
+
+.mllp-wizard-tippy-title {
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wizard-accent);
+}
+
+.mllp-wizard-tippy-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+}
+
+.mllp-wizard-tippy-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-tippy-field input[type="text"],
+.mllp-wizard-tippy-field select {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.mllp-wizard-tippy-field input[type="text"]:focus,
+.mllp-wizard-tippy-field select:focus {
+    border-color: var(--wizard-accent);
+    outline: none;
+}
+
+.mllp-wizard-tippy-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.mllp-wizard-tippy-input-row .mllp-wizard-tippy-unit {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.mllp-wizard-tippy-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+.mllp-wizard-tippy-hint {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+}
+
+.mllp-wizard-tippy-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.mllp-wizard-tippy-buttons .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.mllp-wizard-tippy-off {
+    margin-right: auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-error);
+    cursor: pointer;
+}
+
+.mllp-wizard-tippy-off:hover {
+    text-decoration: underline;
+}

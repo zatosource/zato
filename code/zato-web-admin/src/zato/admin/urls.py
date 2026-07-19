@@ -928,6 +928,8 @@ urlpatterns += [
         login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
     url(r'^zato/channel/hl7/mllp/editor/$',
         login_required(channel_hl7_mllp.editor_create), name='channel-hl7-mllp-editor-create'),
+    url(r'^zato/channel/hl7/mllp/wizard/$',
+        login_required(channel_hl7_mllp.wizard_create), name='channel-hl7-mllp-wizard-create'),
     url(r'^zato/channel/hl7/mllp/editor/(?P<id>.*)/$',
         login_required(channel_hl7_mllp.EditorEdit()), name=channel_hl7_mllp.EditorEdit.url_name),
     url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',

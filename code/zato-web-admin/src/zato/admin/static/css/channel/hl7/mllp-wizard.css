@@ -1,0 +1,348 @@
+/*
+ * HL7 MLLP channel wizard - the multi-step create page.
+ *
+ * The page is one dashboard card holding the step strip, the step bodies
+ * with their answer cards, the review and the footer. The destination rows,
+ * the option cards and the popover micro-forms live in
+ * mllp-wizard-controls.css, which shares the tokens defined here.
+ */
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - layout overrides                                */
+/* ------------------------------------------------------------ */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: 54em;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - card and shared tokens                          */
+/* ------------------------------------------------------------ */
+
+:root {
+    --wizard-accent: var(--zato-seablue-light2);
+    --wizard-done: #28a745;
+    --wizard-error: #dc3545;
+    --wizard-border: #d9dee3;
+    --wizard-border-strong: #b8c0c7;
+    --wizard-text: #1a1a2e;
+    --wizard-text-muted: #71717a;
+    --wizard-text-faint: #9ca3af;
+    --wizard-popover-bg: #ffffff;
+    --wizard-popover-shadow: rgba(0, 0, 0, 0.18);
+}
+
+.mllp-wizard-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.mllp-wizard-card form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - step strip                                      */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-steps {
+    display: flex;
+    margin: 6px 0 22px;
+    border-bottom: 2px solid var(--wizard-border);
+}
+
+.mllp-wizard-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 12px;
+    margin-bottom: -2px;
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+    color: var(--wizard-text-faint);
+    cursor: default;
+    transition: color 150ms ease;
+}
+
+.mllp-wizard-step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--wizard-border);
+    color: var(--wizard-text-muted);
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.mllp-wizard-step-active {
+    color: var(--wizard-text);
+    font-weight: 600;
+    border-bottom-color: var(--wizard-accent);
+}
+
+.mllp-wizard-step-active .mllp-wizard-step-number {
+    background: var(--wizard-accent);
+    color: #fff;
+}
+
+.mllp-wizard-step-done {
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-step-done .mllp-wizard-step-number {
+    background: var(--wizard-done);
+    color: #fff;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - step bodies and sections                        */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-step-body {
+    min-height: 300px;
+}
+
+.mllp-wizard-section {
+    margin-bottom: 22px;
+}
+
+.mllp-wizard-section-title {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-section-hint {
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--wizard-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - name row                                        */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-name-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 22px;
+    max-width: 560px;
+}
+
+.mllp-wizard-name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.mllp-wizard-name-field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-name-field input {
+    padding: 6px 10px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.mllp-wizard-active-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 7px;
+    font-size: 13px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - answer cards                                    */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-radio-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 560px;
+    padding: 11px 14px;
+    margin-bottom: 8px;
+    border: 2px solid var(--wizard-border);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.mllp-wizard-radio-card:hover {
+    border-color: var(--wizard-border-strong);
+}
+
+.mllp-wizard-radio-card-selected,
+.mllp-wizard-radio-card-selected:hover {
+    border-color: var(--wizard-accent);
+}
+
+.mllp-wizard-radio-card-body {
+    width: 100%;
+}
+
+.mllp-wizard-radio-card-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-radio-card-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-radio-card-summary {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-done);
+}
+
+.mllp-wizard-radio-card-summary:not(:empty) {
+    margin-top: 5px;
+}
+
+.mllp-wizard-summary-fresh {
+    animation: mllp-wizard-summary-fade-in 300ms ease-out;
+}
+
+@keyframes mllp-wizard-summary-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - service select                                  */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-service-row {
+    max-width: 560px;
+    margin-bottom: 6px;
+}
+
+.mllp-wizard-service-row .chosen-container {
+    width: 100% !important;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - review step                                     */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-review-group {
+    max-width: 640px;
+    margin-bottom: 16px;
+}
+
+.mllp-wizard-review-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 5px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--wizard-border);
+}
+
+.mllp-wizard-review-group-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-review-edit {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-accent);
+    cursor: pointer;
+}
+
+.mllp-wizard-review-edit:hover {
+    text-decoration: underline;
+}
+
+.mllp-wizard-review-row {
+    display: flex;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.mllp-wizard-review-key {
+    width: 220px;
+    flex-shrink: 0;
+    color: var(--wizard-text-muted);
+}
+
+.mllp-wizard-review-value {
+    color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - footer                                          */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 16px 0 4px;
+    border-top: 1px solid var(--wizard-border);
+}
+
+.mllp-wizard-footer .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.mllp-wizard-footer .action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mllp-wizard-cancel {
+    margin-left: auto;
+}
+
+.mllp-wizard-status {
+    font-size: 12px;
+    color: var(--wizard-text-muted);
+    transition: opacity 300ms ease;
+}
+
+.mllp-wizard-status-saved {
+    color: var(--wizard-done);
+}
+
+.mllp-wizard-status-error {
+    color: var(--wizard-error);
+}
+

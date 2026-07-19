@@ -320,11 +320,15 @@ class Generic(ConfigManagerImpl):
             if config.get(key) is None:
                 config[key] = default
 
-        # .. and make sure numeric fields are integers.
+        # .. and make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies.
         for key in channel_int_config_keys:
             value = config[key]
             if isinstance(value, str):
-                config[key] = int(value)
+                if value:
+                    config[key] = int(value)
+                else:
+                    config[key] = channel_config_defaults[key]
 
 # ################################################################################################################################
 

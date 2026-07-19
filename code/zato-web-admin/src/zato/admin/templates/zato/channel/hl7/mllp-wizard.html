@@ -1,0 +1,256 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% comment %}
+Multi-step wizard for creating a new HL7 MLLP channel - three steps with
+progressive disclosure. Basic answers live directly on the steps while
+everything advanced opens in small popover micro-forms. The view provides:
+
+* cluster_id   - the current cluster
+* form         - CreateForm, its fields carry all the defaults
+
+The wizard posts to the same create endpoint the full-page editor uses,
+so the resulting channel is identical to one created through the editor.
+{% endcomment %}
+
+{% block html_title %}HL7 MLLP channel - Create a new channel{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destinations.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/review.js"></script>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.channel.hl7.mllp.wizard.init({
+        list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp'
+    });
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
+
+        <div class="dashboard-card mllp-wizard-card" id="mllp-wizard">
+
+            <div class="dashboard-card-header">
+                <h3>New HL7 MLLP channel</h3>
+            </div>
+
+            <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
+
+                <div class="mllp-wizard-steps" id="mllp-wizard-steps">
+                    <div class="mllp-wizard-step mllp-wizard-step-active" data-step="0">
+                        <span class="mllp-wizard-step-number">1</span>
+                        <span class="mllp-wizard-step-label">How do messages arrive?</span>
+                    </div>
+                    <div class="mllp-wizard-step" data-step="1">
+                        <span class="mllp-wizard-step-number">2</span>
+                        <span class="mllp-wizard-step-label">What happens next?</span>
+                    </div>
+                    <div class="mllp-wizard-step" data-step="2">
+                        <span class="mllp-wizard-step-number">3</span>
+                        <span class="mllp-wizard-step-label">Review and go</span>
+                    </div>
+                </div>
+
+                <!-- Step 1 - name, transport and routing -->
+                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-0">
+
+                    <div class="mllp-wizard-name-row">
+                        <div class="mllp-wizard-name-field">
+                            <label for="id_name">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <label class="mllp-wizard-active-field" for="id_is_active">
+                            {{ form.is_active }}
+                            Active
+                        </label>
+                    </div>
+
+                    <div class="mllp-wizard-section">
+                        <div class="mllp-wizard-section-title">Transport</div>
+
+                        <div class="mllp-wizard-radio-card mllp-wizard-radio-card-selected" id="mllp-wizard-card-transport">
+                            <div class="mllp-wizard-radio-card-body">
+                                <div class="mllp-wizard-radio-card-label">Plain MLLP over TCP</div>
+                                <div class="mllp-wizard-radio-card-desc">HL7 v2 messages framed with MLLP, received over TCP</div>
+                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-transport"></div>
+                            </div>
+                        </div>
+
+                        <div class="mllp-wizard-radio-card" id="mllp-wizard-card-rest">
+                            <div class="mllp-wizard-radio-card-body">
+                                <div class="mllp-wizard-radio-card-label">Also expose over REST</div>
+                                <div class="mllp-wizard-radio-card-desc">The same messages can be pushed to a REST endpoint too</div>
+                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-rest"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mllp-wizard-section">
+                        <div class="mllp-wizard-section-title">Routing</div>
+
+                        <div class="mllp-wizard-radio-card mllp-wizard-radio-card-selected" id="mllp-wizard-card-routing-match">
+                            <div class="mllp-wizard-radio-card-body">
+                                <div class="mllp-wizard-radio-card-label">Match specific messages</div>
+                                <div class="mllp-wizard-radio-card-desc">Accept only messages whose MSH fields match, empty means any</div>
+                                <div class="mllp-wizard-radio-card-summary" id="mllp-wizard-summary-routing"></div>
+                            </div>
+                        </div>
+
+                        <div class="mllp-wizard-radio-card" id="mllp-wizard-card-routing-default">
+                            <div class="mllp-wizard-radio-card-body">
+                                <div class="mllp-wizard-radio-card-label">Default channel</div>
+                                <div class="mllp-wizard-radio-card-desc">Receives every message that no other channel claimed</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Step 2 - service, destinations and options -->
+                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-1" hidden>
+
+                    <div class="mllp-wizard-section" id="mllp-wizard-service-section">
+                        <div class="mllp-wizard-section-title">Service</div>
+                        <div class="mllp-wizard-service-row" id="mllp-wizard-service-row">
+                            {{ form.service }}
+                        </div>
+                        <div class="mllp-wizard-section-hint">The service invoked for each incoming message</div>
+                    </div>
+
+                    <div class="mllp-wizard-section">
+                        <div class="mllp-wizard-section-title">Destinations</div>
+                        <div class="mllp-wizard-section-hint">Outgoing connections each message is delivered to after the service runs</div>
+                        <div class="mllp-wizard-conn-list" id="mllp-wizard-destination-rows"></div>
+                        <span class="mllp-wizard-conn-add" id="mllp-wizard-destination-add">+ Add a destination</span>
+                        <div class="mllp-wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
+                            <label for="mllp-wizard-respond-from">Respond from</label>
+                            <select id="mllp-wizard-respond-from"></select>
+                            <span class="mllp-wizard-section-hint">What the caller receives - the service's response or one destination's</span>
+                        </div>
+                    </div>
+
+                    <div class="mllp-wizard-section">
+                        <div class="mllp-wizard-section-title">Options</div>
+
+                        <div class="mllp-wizard-option-card" id="mllp-wizard-card-tolerance">
+                            <div class="mllp-wizard-option-header" id="mllp-wizard-tolerance-header">
+                                <svg class="mllp-wizard-chevron" id="mllp-wizard-tolerance-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <span class="mllp-wizard-option-label">Tolerance and message fixups</span>
+                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-tolerance"></span>
+                            </div>
+                            <div class="mllp-wizard-option-body" id="mllp-wizard-tolerance-body">
+
+                                <div class="mllp-wizard-tolerance-group-title">Wire-level fixups</div>
+                                <div class="mllp-wizard-tolerance-grid">
+                                    <label>{{ form.normalize_line_endings }} Normalize line endings</label>
+                                    <label>{{ form.force_standard_delimiters }} Force standard delimiters</label>
+                                    <label>{{ form.repair_truncated_msh }} Repair truncated MSH</label>
+                                    <label>{{ form.split_concatenated_messages }} Split concatenated messages</label>
+                                </div>
+
+                                <div class="mllp-wizard-tolerance-group-title">Content-level fixups</div>
+                                <div class="mllp-wizard-tolerance-grid">
+                                    <label>{{ form.normalize_obx2_value_type }} Fill empty OBX-2 value type</label>
+                                    <label>{{ form.replace_invalid_obx2_value_type }} Replace invalid OBX-2 value type</label>
+                                    <label>{{ form.normalize_invalid_escape_sequences }} Strip orphan escape characters</label>
+                                    <label>{{ form.normalize_obx8_abnormal_flags }} Clear OBX-8 literal null</label>
+                                    <label>{{ form.normalize_quadruple_quoted_empty }} Strip multi-quote sequences</label>
+                                    <label>{{ form.allow_short_encoding_characters }} Pad short encoding characters</label>
+                                    <label>{{ form.fix_off_by_one_field_index }} Fix off-by-one field index</label>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="mllp-wizard-option-card mllp-wizard-option-card-clickable" id="mllp-wizard-card-dedup">
+                            <div class="mllp-wizard-option-header">
+                                <span class="mllp-wizard-option-label">Deduplication</span>
+                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-dedup"></span>
+                            </div>
+                        </div>
+
+                        <div class="mllp-wizard-option-card mllp-wizard-option-card-clickable" id="mllp-wizard-card-logging">
+                            <div class="mllp-wizard-option-header">
+                                <span class="mllp-wizard-option-label">Logging and errors</span>
+                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-logging"></span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Step 3 - review -->
+                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-2" hidden>
+                    <div class="mllp-wizard-review" id="mllp-wizard-review"></div>
+                </div>
+
+                <div class="mllp-wizard-footer">
+                    <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
+                    <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
+                    <span class="mllp-wizard-status" id="mllp-wizard-status"></span>
+                    <button type="button" class="secondary-button mllp-wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
+                </div>
+
+                <!-- Fields edited through the popover micro-forms - never shown directly -->
+                <div class="mllp-wizard-hidden-fields" hidden>
+
+                    {{ form.use_rest }}
+                    {{ form.rest_only }}
+                    {{ form.rest_url_path }}
+                    {{ form.rest_security_id }}
+
+                    {{ form.is_default }}
+                    {{ form.msh3_sending_app }}
+                    {{ form.msh4_sending_facility }}
+                    {{ form.msh5_receiving_app }}
+                    {{ form.msh6_receiving_facility }}
+                    {{ form.msh9_message_type }}
+                    {{ form.msh9_trigger_event }}
+                    {{ form.msh11_processing_id }}
+                    {{ form.msh12_version_id }}
+
+                    {{ form.use_msh18_encoding }}
+                    {{ form.default_character_encoding }}
+                    {{ form.recv_timeout }}
+                    {{ form.max_msg_size }}
+                    {{ form.max_msg_size_unit }}
+                    {{ form.start_seq }}
+                    {{ form.end_seq }}
+
+                    {{ form.dedup_ttl_value }}
+                    {{ form.dedup_ttl_unit }}
+
+                    {{ form.should_return_errors }}
+                    {{ form.should_log_messages }}
+                    {{ form.logging_level }}
+
+                    {{ form.destinations }}
+                    {{ form.respond_from }}
+
+                </div>
+
+                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+            </form>
+
+        </div>
+
+{% endblock %}
