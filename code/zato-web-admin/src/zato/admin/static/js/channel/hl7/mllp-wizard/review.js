@@ -169,7 +169,10 @@ $.fn.zato.channel.hl7.mllp.wizard.review._restSummary = function() {
 
     var securityCount = wizard.state.securityKeyList.length;
 
-    if(securityCount > 1) {
+    if(!wizard.state.isSecurityEnabled) {
+        parts.push('no security');
+    }
+    else if(securityCount > 1) {
         parts.push(securityCount + ' security definitions');
     }
 
@@ -344,6 +347,14 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
     var restSummary = review._restSummary();
     transportRows.push(['REST bridge', restSummary ? restSummary : 'Off']);
 
+    // A REST bridge anyone can call deserves a loud reminder
+    if(restSummary && !wizard.state.isSecurityEnabled) {
+        var securityBadge = document.createElement('span');
+        securityBadge.className = 'mllp-wizard-badge mllp-wizard-badge-alert mllp-wizard-badge-blink';
+        securityBadge.textContent = 'DISABLED';
+        transportRows.push(['REST security', securityBadge]);
+    }
+
     // Routing - the default flag and the matchers live side by side,
     // just like on the full-page editor's routing tab
     var routingRows = [];
@@ -439,7 +450,15 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
 
             var value = document.createElement('span');
             value.className = 'mllp-wizard-review-value';
-            value.textContent = row[1];
+
+            // A value is usually text, but rows like the security badge
+            // bring a ready element of their own
+            if(row[1] instanceof Node) {
+                value.appendChild(row[1]);
+            }
+            else {
+                value.textContent = row[1];
+            }
             rowElement.appendChild(value);
 
             groupElement.appendChild(rowElement);

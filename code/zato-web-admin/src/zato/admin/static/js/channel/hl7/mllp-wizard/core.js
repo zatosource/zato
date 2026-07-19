@@ -65,6 +65,10 @@ $.fn.zato.channel.hl7.mllp.wizard.state = {
     // each entry is a sec_type/id value of the Django security select
     securityKeyList: [],
 
+    // Whether the REST bridge requires callers to authenticate at all -
+    // with this off the picks above are kept but not applied
+    isSecurityEnabled: true,
+
     // Whether the last uniqueness check found the name already taken
     isNameTaken: false
 };
@@ -94,12 +98,12 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
     }
 
     // The security rows of the REST popover allow more than one pick
-    out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.';
+    out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.<br>When the slider is off, with security disabled,<br>the channel will accept requests from anyone<br>who knows its address.';
 
     // The step 1 transport toggles and the routing link ..
     out['mllp-wizard-toggle-mllp'] = 'When on, HL7 v2 messages framed with MLLP<br>are received over plain TCP.<br>When off, messages arrive over REST only.';
     out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
-    out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel accepts.<br>With no matchers, every message is accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
+    out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel will accept.<br>With no matchers, every message will be accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
 
     // .. and the step 2 destination controls.
     out['mllp-wizard-respond-from'] = shared['destinations-respond-from-create'];
@@ -220,7 +224,7 @@ $.fn.zato.channel.hl7.mllp.wizard.updateNameBadge = function() {
 
     badge.prop('hidden', !name);
     badge.text(name);
-    badge.toggleClass('mllp-wizard-name-badge-taken', wizard.state.isNameTaken);
+    badge.toggleClass('mllp-wizard-badge-alert', wizard.state.isNameTaken);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -340,6 +344,14 @@ $.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
 
+    form.find('.mllp-wizard-security-input').remove();
+
+    // With security off the picks stay in the wizard state only -
+    // the channel goes out with no security at all
+    if(!wizard.state.isSecurityEnabled) {
+        return;
+    }
+
     // A definition deleted after the picks were made - and reported by
     // a broadcast since - must not travel to the backend, so only the
     // picks the Django select still knows about go out.
@@ -351,8 +363,6 @@ $.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
     var keyList = wizard.state.securityKeyList.filter(function(key) {
         return knownValues[key];
     });
-
-    form.find('.mllp-wizard-security-input').remove();
 
     if(keyList.length < 2) {
         return;

@@ -11,7 +11,7 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
 
     // Main tab
     'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
-    'id_is_active': 'Whether this channel accepts connections.<br>Inactive channels do not route messages.',
+    'id_is_active': 'Whether this channel will accept connections.<br>Inactive channels do not route messages.',
     'id_service': 'The service invoked for each<br>incoming HL7 message.',
     'id_use_rest': 'When on, HL7 messages can also be received<br>over REST in addition to MLLP.',
     'id_rest_only': 'When on, messages are received only over REST.<br>When off, messages are received over both<br>MLLP and REST.',

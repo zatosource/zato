@@ -326,11 +326,18 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._makeDraggable = function(tippyInstance)
 $.fn.zato.channel.hl7.mllp.wizard.forms._fillSecuritySelect = function(select, value, excludeValues) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var config = wizard.forms.config;
     excludeValues = excludeValues || [];
 
     select.textContent = '';
 
     wizard.field('rest_security_id').find('option').each(function() {
+
+        // Turning security off altogether is what the slider above
+        // the rows is for - the rows only ever pick real definitions
+        if(this.value === config.noSecurityValue) {
+            return;
+        }
 
         if(excludeValues.indexOf(this.value) !== -1) {
             return;
@@ -472,21 +479,63 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
     row.className = 'mllp-wizard-tippy-field';
 
     // The security rows of the REST popover - one select per definition,
-    // with as many rows as needed ..
+    // with as many rows as needed, behind an on/off slider ..
     if(fieldSpec.kind === 'securityList') {
         var forms = wizard.forms;
+
+        // .. the head is the label plus the tiny slider next to it ..
+        var head = document.createElement('div');
+        head.className = 'mllp-wizard-security-head';
 
         var listLabel = document.createElement('label');
         listLabel.className = 'mllp-wizard-tippy-label';
         listLabel.setAttribute('for', 'mllp-wizard-tippy-rest_security_id');
         listLabel.setAttribute('data-help-placement', 'left');
         listLabel.textContent = fieldSpec.label;
-        row.appendChild(listLabel);
+        head.appendChild(listLabel);
+
+        var enabledToggle = document.createElement('input');
+        enabledToggle.type = 'checkbox';
+        enabledToggle.id = 'mllp-wizard-tippy-rest_security_enabled';
+        enabledToggle.checked = wizard.state.isSecurityEnabled;
+        head.appendChild(enabledToggle);
+
+        row.appendChild(head);
 
         var list = document.createElement('div');
         list.className = 'mllp-wizard-security-list';
         list.id = forms.config.securityListId;
         row.appendChild(list);
+
+        // .. sliding the slider off swaps the rows for this badge - the rows
+        // themselves stay as they are, in case the slide was an accident ..
+        var disabledBadge = document.createElement('span');
+        disabledBadge.className = 'mllp-wizard-badge mllp-wizard-badge-alert mllp-wizard-badge-blink mllp-wizard-security-disabled';
+        disabledBadge.textContent = 'SECURITY DISABLED';
+        row.appendChild(disabledBadge);
+
+        // .. clicking the badge explains the situation - and any tooltip
+        // already open in this popover leaves first, one at a time is enough ..
+        tippy(disabledBadge, {
+            content: 'Security is disabled - the channel will accept requests<br>' +
+                'from anyone who knows its address.<br>' +
+                'Slide security back on to require authentication.',
+            allowHTML: true,
+            theme: 'dark',
+            arrow: true,
+            trigger: 'click',
+            placement: 'left',
+            zIndex: 100002,
+            appendTo: function() {
+                return disabledBadge.closest('.mllp-wizard-tippy-form') || document.body;
+            },
+            onShow: function() {
+                var helpState = $.fn.zato.how_it_works._state;
+                if(helpState && helpState.container.contains(disabledBadge)) {
+                    $.fn.zato.how_it_works._deactivate();
+                }
+            }
+        });
 
         // .. the rows come from the wizard state, seeded from the Django
         // select the first time around ..
@@ -501,7 +550,7 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
         forms._renumberSecurityRows(list);
         forms._refreshSecurityRows(list);
 
-        // .. and the add link under the list grows it one row at a time.
+        // .. the add link under the list grows it one row at a time ..
         var addLink = document.createElement('a');
         addLink.href = 'javascript:void(0)';
         addLink.className = 'mllp-wizard-security-add';
@@ -514,6 +563,22 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._buildFieldRow = function(fieldSpec) {
         });
 
         row.appendChild(addLink);
+
+        // .. and the slider decides which of the two faces is on screen.
+        var applyEnabledState = function() {
+            var isOn = enabledToggle.checked;
+            list.hidden = !isOn;
+            addLink.hidden = !isOn;
+            disabledBadge.hidden = isOn;
+
+            // A tooltip must not outlive the badge it explains
+            if(isOn && disabledBadge._tippy) {
+                disabledBadge._tippy.hide();
+            }
+        };
+
+        enabledToggle.addEventListener('change', applyEnabledState);
+        applyEnabledState();
 
         var out = row;
         return out;
@@ -647,7 +712,9 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, page) {
 
         // The security rows write into the wizard state, with the first
         // pick also landing in the Django select - a single security posts
-        // exactly the way the full-page editor posts it ..
+        // exactly the way the full-page editor posts it. The rows survive
+        // even with the slider off - only the Django select and the submit
+        // treat the channel as having no security then ..
         if(fieldSpec.kind === 'securityList') {
             var config = $.fn.zato.channel.hl7.mllp.wizard.forms.config;
             var keyList = [];
@@ -661,10 +728,14 @@ $.fn.zato.channel.hl7.mllp.wizard.forms._savePage = function(popper, page) {
                 }
             });
 
+            var enabledToggle = popper.querySelector('#mllp-wizard-tippy-rest_security_enabled');
+            var isEnabled = enabledToggle ? enabledToggle.checked : true;
+
+            wizard.state.isSecurityEnabled = isEnabled;
             wizard.state.securityKeyList = keyList;
 
             var securityField = wizard.field('rest_security_id');
-            if(keyList.length) {
+            if(isEnabled && keyList.length) {
                 securityField.val(keyList[0]);
             }
             else {

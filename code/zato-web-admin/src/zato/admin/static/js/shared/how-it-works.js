@@ -468,7 +468,12 @@ $.fn.zato.how_it_works._activate = function(badge) {
         if ($(target).closest('.how-it-works-group-label').length) {
             return;
         }
-        if ($(target).closest('.tippy-box').length) {
+
+        // .. clicks inside a tooltip keep it - but when the dialog itself
+        // .. is a tippy popover, its own box must not count as a tooltip,
+        // .. otherwise no click inside the popover could ever dismiss ..
+        var tippyBox = $(target).closest('.tippy-box')[0];
+        if (tippyBox && !tippyBox.contains(dialog)) {
             return;
         }
         $.fn.zato.how_it_works._deactivate();

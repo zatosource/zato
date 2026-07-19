@@ -320,12 +320,48 @@
     color: var(--wizard-text-faint);
 }
 
+/* The head above the security rows - the label plus the on/off slider,
+   which is tinier than even the small sliders the wizard uses */
+.mllp-wizard-security-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.mllp-wizard-security-head input[type="checkbox"] {
+    --toggle-width: 22px;
+    --toggle-height: 13px;
+    --toggle-knob-size: 9px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 9px;
+}
+
+/* The label caps sit optically low against the small pill */
+.mllp-wizard-security-head .mllp-wizard-tippy-label {
+    position: relative;
+    top: -1.5px;
+}
+
+/* Sliding security off swaps the rows for the badge - in the flex column
+   it keeps to its own width instead of stretching, and clicking it opens
+   a tooltip explaining what being off means */
+.mllp-wizard-security-disabled {
+    align-self: flex-start;
+    cursor: pointer;
+}
+
 /* The security rows - one select per definition, a delete link to the
    right of each row and the add link under the whole list */
 .mllp-wizard-security-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+/* The flex display would otherwise trump the hidden attribute */
+.mllp-wizard-security-list[hidden] {
+    display: none;
 }
 
 .mllp-wizard-security-row {
