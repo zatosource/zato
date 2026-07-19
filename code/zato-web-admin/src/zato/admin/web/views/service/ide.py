@@ -18,14 +18,16 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import BaseCallView, invoke_action_handler, method_allowed
 from zato.common.fhir.display import parse_and_render as fhir_parse_and_render
-from zato.common.hl7.display import parse_and_render as hl7_parse_and_render
+from zato.common.hl7.grid import parse_and_build as hl7_parse_and_build
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from django.http import HttpRequest, HttpResponse
-    from zato.common.typing_ import any_, strlist
+    from zato.common.typing_ import any_, anylist, stranydict, strlist
+    anylist = anylist
+    stranydict = stranydict
     strlist = strlist
 
 # ################################################################################################################################
@@ -178,8 +180,62 @@ def _key_value_parse_and_render(data:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _auto_parse_and_render(data:'str') -> 'str':
-    """ Renders a payload the same way the direct invoke's auto mode treats it -
+def _key_value_build_tree(data:'str') -> 'anylist':
+    """ Builds grid view nodes out of key=value lines - one leaf per line.
+    """
+    out:'anylist' = []
+
+    for line in data.splitlines():
+
+        if '=' not in line:
+            continue
+
+        name, _, value = line.partition('=')
+        name = name.strip()
+        value = value.strip()
+
+        node = {'name': name, 'value': value, 'kind': 'element', 'children': []}
+        out.append(node)
+
+    return out
+
+# ################################################################################################################################
+
+def _build_json_views(data:'str') -> 'stranydict':
+    """ JSON renders as pretty-printed text only - its grid view
+    is built in the browser without a round trip.
+    """
+    parsed_text = _json_parse_and_render(data)
+
+    out = {'parsed_text': parsed_text, 'parsed_tree': []}
+    return out
+
+# ################################################################################################################################
+
+def _build_key_value_views(data:'str') -> 'stranydict':
+    """ Builds both views of key=value lines.
+    """
+    parsed_text = _key_value_parse_and_render(data)
+    parsed_tree = _key_value_build_tree(data)
+
+    out = {'parsed_text': parsed_text, 'parsed_tree': parsed_tree}
+    return out
+
+# ################################################################################################################################
+
+def _build_fhir_views(data:'str') -> 'stranydict':
+    """ FHIR renders as text only - its payloads are JSON,
+    so the browser builds the grid view on its own.
+    """
+    parsed_text = fhir_parse_and_render(data)
+
+    out = {'parsed_text': parsed_text, 'parsed_tree': []}
+    return out
+
+# ################################################################################################################################
+
+def _build_auto_views(data:'str') -> 'stranydict':
+    """ Builds the views of a payload the same way the direct invoke's auto mode treats it -
     a payload opening with an ER7 segment line means HL7 v2, a first line with =
     means key=value, anything else is tried as JSON.
     """
@@ -188,33 +244,33 @@ def _auto_parse_and_render(data:'str') -> 'str':
     stripped = data.lstrip()
 
     if _er7_segment_prefix.match(stripped):
-        out = hl7_parse_and_render(data)
+        out = hl7_parse_and_build(data)
         return out
 
     parts = data.split('\n', 1)
     first_line = parts[0]
 
     if '=' in first_line:
-        out = _key_value_parse_and_render(data)
+        out = _build_key_value_views(data)
     else:
-        out = _json_parse_and_render(data)
+        out = _build_json_views(data)
 
     return out
 
 # ################################################################################################################################
 
-# Per-format parsed-view renderers - each returns an empty string when the payload does not parse
-_payload_parsers = {
-    'auto': _auto_parse_and_render,
-    'json': _json_parse_and_render,
-    'key-value': _key_value_parse_and_render,
-    'hl7-v2': hl7_parse_and_render,
-    'fhir': fhir_parse_and_render,
+# Per-format view builders - each returns an empty parsed_text when the payload does not parse
+_payload_view_builders = {
+    'auto': _build_auto_views,
+    'json': _build_json_views,
+    'key-value': _build_key_value_views,
+    'hl7-v2': hl7_parse_and_build,
+    'fhir': _build_fhir_views,
 }
 
 @method_allowed('POST')
 def parse_payload(req:'HttpRequest') -> 'JsonResponse':
-    """ Renders the parsed view of a payload for the IDE's request and response panes -
+    """ Renders the parsed views of a payload for the IDE's request and response panes -
     parsing happens right here in the Django process, the same way the audit-log browser does it.
     """
     body = json.loads(req.body)
@@ -222,10 +278,11 @@ def parse_payload(req:'HttpRequest') -> 'JsonResponse':
     data = body['data']
     data_format = body['data_format']
 
-    parser = _payload_parsers[data_format]
-    parsed_text = parser(data)
+    builder = _payload_view_builders[data_format]
+    views = builder(data)
 
-    return JsonResponse({'parsed_text': parsed_text})
+    out = JsonResponse(views)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

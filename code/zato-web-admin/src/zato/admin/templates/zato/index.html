@@ -267,7 +267,7 @@
                     <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>
-                    <a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>
+                    {% if 0 %}<a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>{% endif %}
                     <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">00:00:00</span> (log out)</a>
                 </span>
             {% endif %}
@@ -551,7 +551,10 @@
                             </li>
 
                             <li class="first-level">
-                                <a class="menu-link" href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}">Analytics</a>
+                                <a class="menu-link">Analytics &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}">REST channels</a></li>
+                                </ul>
                             </li>
 
                             {% if 0 %}

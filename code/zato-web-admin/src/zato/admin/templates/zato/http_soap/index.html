@@ -259,6 +259,10 @@
             |
             <a href="javascript:void(0)" id="openapi-import-link" class="common">Import OpenAPI</a>
             {% endif %}
+            {% if connection == 'channel' and transport == 'plain_http' %}
+            |
+            <a href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}" class="common">Go to analytics</a>
+            {% endif %}
         </div>
 
             <table class="zato-table" id="data-table">
