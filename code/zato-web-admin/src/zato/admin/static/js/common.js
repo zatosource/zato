@@ -2451,7 +2451,7 @@ $.fn.zato.time_ago.init = function(container_selector) {
             var indicator = $('<span class="zato-time-ago-indicator"></span>');
 
             if(config.countdown_enabled) {
-                var countdown = $('<span class="zato-time-ago-countdown is-visible"></span>');
+                var countdown = $('<span class="zato-soft-hint zato-time-ago-countdown is-visible"></span>');
 
                 // A click on the countdown pauses the auto-refresh and another click resumes it.
                 // Both events stop here so the table sorter bound to the header never sees them.

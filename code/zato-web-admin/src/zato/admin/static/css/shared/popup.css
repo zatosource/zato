@@ -1,0 +1,47 @@
+/*
+ * The shared popup chrome - the surface, the dark header that doubles as
+ * a drag handle with its grip glyph, and the grabbing cursor shown
+ * mid-drag. Used by the IDE's right-click document menus and by the
+ * wizard popover micro-forms, so both wear the exact same look.
+ */
+
+.zato-popup {
+    background: #fff;
+    border: 1px solid #d5d2c8;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+    font-family: "Segoe UI", "DejaVu Sans", "Liberation Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    color: #000;
+    user-select: none;
+}
+
+/* The header - what the popup is about, on a dark slate,
+   draggable wherever it appears */
+.zato-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 12px;
+    background: #2e333c;
+    color: #e8ebf0;
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    border-radius: 5px 5px 0 0;
+    cursor: grab;
+    user-select: none;
+}
+
+/* The drag grip in front of the header text */
+.zato-popup-header-grip {
+    font-size: 13px;
+    line-height: 1;
+    color: #8fa3c0;
+}
+
+/* Mid-drag the closed fist stays on, whatever is under the cursor */
+.zato-popup-dragging,
+.zato-popup-dragging * {
+    cursor: grabbing;
+}

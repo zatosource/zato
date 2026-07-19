@@ -176,16 +176,17 @@
 /* MLLP wizard - popover micro-forms                             */
 /* ------------------------------------------------------------ */
 
+/* The chrome - the surface, the dark draggable header and the drag
+   cursors - comes from the shared popup look in shared/popup.css,
+   the same one the IDE's right-click menus wear. The tippy box only
+   positions the popup, so it paints nothing of its own. */
 .tippy-box[data-theme~='mllp-wizard'] {
-    background-color: var(--wizard-popover-bg);
-    border: 1px solid var(--wizard-accent);
-    border-radius: 6px;
+    background-color: transparent;
     color: var(--wizard-text);
-    box-shadow: 0 6px 24px var(--wizard-popover-shadow);
 }
 
 .tippy-box[data-theme~='mllp-wizard'] .tippy-content {
-    padding: 12px 14px;
+    padding: 0;
 }
 
 .tippy-box[data-theme~='mllp-wizard'] input:focus,
@@ -199,32 +200,13 @@
 .mllp-wizard-tippy-form {
     display: flex;
     flex-direction: column;
-    gap: 2px;
     min-width: 260px;
+    box-sizing: border-box;
 }
 
-/* The title doubles as the drag handle of the popover */
-.mllp-wizard-tippy-title {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--wizard-accent);
-    cursor: grab;
-    user-select: none;
-}
-
-.mllp-wizard-tippy-title.mllp-wizard-tippy-dragging {
-    cursor: grabbing;
-}
-
-.mllp-wizard-tippy-grip {
-    flex-shrink: 0;
-    color: var(--wizard-text-faint);
+/* The fields under the popup header */
+.mllp-wizard-tippy-body {
+    padding: 12px 14px 10px;
 }
 
 /* Several short fields share one row instead of stacking full-width */

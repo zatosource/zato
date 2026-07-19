@@ -39,8 +39,6 @@
     --wizard-text: #1a1a2e;
     --wizard-text-muted: #71717a;
     --wizard-text-faint: #9ca3af;
-    --wizard-popover-bg: #ffffff;
-    --wizard-popover-shadow: rgba(0, 0, 0, 0.18);
 }
 
 .mllp-wizard-card {
@@ -318,20 +316,22 @@
     color: var(--wizard-text);
 }
 
+/* A non-empty summary is the way into the protocol options popup -
+   the link itself wears the site-wide dashed-underline anchor look */
 .mllp-wizard-toggle-summary {
     font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-done);
 }
 
-/* A non-empty summary is the way into the protocol options popup */
-.mllp-wizard-toggle-summary:not(:empty) {
-    cursor: pointer;
-    border-bottom: 1px dotted currentColor;
+/* The row's own flex gap already spaces the hint out */
+.mllp-wizard-toggle-hint {
+    margin-left: 0;
 }
 
-.mllp-wizard-toggle-summary:not(:empty):hover {
-    filter: brightness(0.8);
+/* Nothing to edit while a transport is off, so neither
+   the summary nor its hint takes any space */
+.mllp-wizard-toggle-summary:empty,
+.mllp-wizard-toggle-summary:empty + .mllp-wizard-toggle-hint {
+    display: none;
 }
 
 @keyframes mllp-wizard-summary-fade-in {

@@ -263,9 +263,14 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     var destination = wizard.state.destinationList[destinationIndex];
 
     var container = document.createElement('div');
-    container.className = 'mllp-wizard-tippy-form';
+    container.className = 'mllp-wizard-tippy-form zato-popup';
 
     container.appendChild(wizard.forms.buildTitle('Destination'));
+
+    // The fields live under the header, in the popup body
+    var body = document.createElement('div');
+    body.className = 'mllp-wizard-tippy-body';
+    container.appendChild(body);
 
     // The type select drives what the rest of the form shows ..
     var typeRow = document.createElement('div');
@@ -291,11 +296,11 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     typeSelect.value = destination.type;
 
     typeRow.appendChild(typeSelect);
-    container.appendChild(typeRow);
+    body.appendChild(typeRow);
 
     // .. the type-dependent fields live in their own block ..
     var typeFields = document.createElement('div');
-    container.appendChild(typeFields);
+    body.appendChild(typeFields);
     destinations._renderTypeFields(typeFields, destination);
 
     typeSelect.addEventListener('change', function() {
@@ -319,7 +324,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     activeLabel.appendChild(activeCheckbox);
     activeLabel.appendChild(document.createTextNode(' Active'));
     activeRow.appendChild(activeLabel);
-    container.appendChild(activeRow);
+    body.appendChild(activeRow);
 
     // .. and the confirm button.
     var buttons = document.createElement('div');
@@ -348,7 +353,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     });
 
     buttons.appendChild(doneButton);
-    container.appendChild(buttons);
+    body.appendChild(buttons);
 
     // Closing without a connection means the row never really existed
     var onHidden = function() {
