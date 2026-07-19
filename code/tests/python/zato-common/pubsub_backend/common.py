@@ -92,7 +92,7 @@ def get_delivery_rows(sub_key:'str') -> 'anylist':
 # ################################################################################################################################
 
 def assert_mysql_connection_encrypted() -> 'None':
-    """ Confirms the current MySQL session really is encrypted.
+    """ Confirms that the current MySQL session is encrypted.
     """
     engine = get_pubsub_engine()
     assert_mysql_engine_encrypted(engine)
@@ -100,7 +100,7 @@ def assert_mysql_connection_encrypted() -> 'None':
 # ################################################################################################################################
 
 def assert_postgresql_connection_encrypted() -> 'None':
-    """ Confirms the current PostgreSQL session really is encrypted.
+    """ Confirms that the current PostgreSQL session is encrypted.
     """
     engine = get_pubsub_engine()
     assert_postgresql_engine_encrypted(engine)

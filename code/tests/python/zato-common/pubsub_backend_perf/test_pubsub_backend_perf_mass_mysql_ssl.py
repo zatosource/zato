@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from common import pubsub_backend_env, Mass_Drain_Backlog_Mass, Mass_Drain_Deadline_Mass, Mass_Drain_Publish_Floor_Mass
 from mass_drain import run_mass_drain_scenario
+from operations import run_operations_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +26,11 @@ def test_pubsub_backend_perf_mass_mysql_ssl(mysql_ssl_server:'DatabaseServer') -
     """
     with pubsub_backend_env(mysql_ssl_server.details):
         run_mass_drain_scenario(
+            backlog_per_subscriber=Mass_Drain_Backlog_Mass,
+            deadline_seconds=Mass_Drain_Deadline_Mass,
+            min_publish_rate=Mass_Drain_Publish_Floor_Mass,
+        )
+        run_operations_scenario(
             backlog_per_subscriber=Mass_Drain_Backlog_Mass,
             deadline_seconds=Mass_Drain_Deadline_Mass,
             min_publish_rate=Mass_Drain_Publish_Floor_Mass,
