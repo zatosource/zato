@@ -62,86 +62,79 @@
     flex-direction: column;
 }
 
+/* The name badge in the header - it mirrors the name field as the user
+   types, turns red when the name is already taken and opens the inline
+   edit form when clicked */
+.mllp-wizard-name-badge {
+    margin-left: 12px;
+    padding: 2px 9px;
+    max-width: 24em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 600;
+    color: #2e7d32;
+    background: rgba(46, 125, 50, 0.12);
+    border: 1px solid rgba(46, 125, 50, 0.3);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.mllp-wizard-name-badge-taken {
+    color: #b71c1c;
+    background: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.35);
+}
+
+/* A hidden badge still takes part in layout, only invisibly - the header
+   keeps one height whether or not a name has been typed in yet. The
+   zero-width space gives the empty badge a text line of full height,
+   without it the badge would be only as tall as its padding and border. */
+.mllp-wizard-name-badge[hidden] {
+    display: block;
+    visibility: hidden;
+}
+
+.mllp-wizard-name-badge[hidden]::before {
+    content: "\200b";
+}
+
 /* ------------------------------------------------------------ */
 /* MLLP wizard - step strip                                      */
 /* ------------------------------------------------------------ */
 
+/* The chrome itself comes from the shared dashboard tabs the posture
+   page uses - here it is only recolored with the wizard accent */
 .mllp-wizard-steps {
-    display: flex;
+    --tab-active-color: var(--wizard-accent);
+    --tab-active-border-color: var(--wizard-accent);
     margin: 6px 0 22px;
-    border-bottom: 2px solid var(--wizard-border);
 }
 
-.mllp-wizard-step {
-    display: flex;
+/* The tabs show progress rather than navigate, so no pointer
+   and no hover invitation on the inactive ones - the number keycap
+   sits inline before the label, hence the flex layout */
+.mllp-wizard-steps > .dashboard-tab {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px 12px;
-    margin-bottom: -2px;
-    border-bottom: 2px solid transparent;
-    font-size: 13px;
-    color: var(--wizard-text-faint);
     cursor: default;
-    transition: color 150ms ease;
 }
 
-/* The strip lines up with the content below it - the first number sits
-   on the same left edge as the Name field and the section titles */
-.mllp-wizard-step:first-child {
-    padding-left: 0;
+.mllp-wizard-steps > .dashboard-tab:not(.dashboard-tab-active):hover {
+    color: var(--tab-color, rgba(0, 0, 0, 0.36));
+    background: transparent;
 }
 
-.mllp-wizard-step-active {
-    color: var(--wizard-text);
-    font-weight: 600;
-}
-
-.mllp-wizard-step-done {
-    color: var(--wizard-text-muted);
-}
-
-/* The monospace step numbers - outlined keycaps on a sandy panel,
-   like keys on a keyboard. The active one washes the panel with
-   the pale accent blue, done ones turn green. */
+/* The step numbers are just part of the tab name, only in monospace */
 .mllp-wizard-step-num {
     font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    line-height: 1;
-    padding: 4px 7px;
-    flex-shrink: 0;
-    border-radius: 4px;
-    background: #faf9f5;
-    border: 1px solid var(--wizard-border-strong);
-    box-shadow: inset 0 -1px 0 var(--wizard-border);
-    color: var(--wizard-text-muted);
-    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
-.mllp-wizard-step-done .mllp-wizard-step-num {
-    border-color: var(--wizard-done);
-    color: var(--wizard-done);
-}
-
-/* The active number is an accent badge with a gentle sheen - a barely-there
-   vertical gradient, a light top edge and a soft drop shadow */
-.mllp-wizard-step-active .mllp-wizard-step-num {
-    background: linear-gradient(to bottom,
-        color-mix(in srgb, var(--wizard-accent) 91%, white),
-        var(--wizard-accent));
-    border-color: color-mix(in srgb, var(--wizard-accent) 88%, black);
-    color: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* ------------------------------------------------------------ */
 /* MLLP wizard - step bodies and sections                        */
 /* ------------------------------------------------------------ */
-
-.mllp-wizard-step-body {
-    min-height: 300px;
-}
 
 .mllp-wizard-section {
     margin-bottom: 22px;

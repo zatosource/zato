@@ -3667,8 +3667,9 @@ $.fn.zato.get_unique_check_value = function(field, is_edit) {
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Attaches live uniqueness validation to a field.
-$.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
+// Attaches live uniqueness validation to a field. The optional on_result
+// callback is invoked with the outcome of each completed check.
+$.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, on_result) {
     var field = $(field_id);
     if(!field.length) {
         return;
@@ -3714,6 +3715,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter) {
                         return;
                     }
                     $.fn.zato.render_unique_indicator(field, value, data.exists);
+                    if(on_result) {
+                        on_result(data.exists);
+                    }
                 },
                 error: function(xhr, status, err) {
                     console.log('[validate_unique] Error: status=' + JSON.stringify(status) + ', err=' + JSON.stringify(err));
