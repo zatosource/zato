@@ -11,7 +11,7 @@ import os
 
 # Zato
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
-    Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
+    get_env_values, Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
 
 # ################################################################################################################################
@@ -19,6 +19,9 @@ from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
 
 if 0:
     from sqlalchemy.engine import Engine
+    from zato.common.typing_ import stranydict
+
+    # Dummy assignments to satisfy type checkers
     Engine = Engine
 
 # ################################################################################################################################
@@ -80,11 +83,14 @@ _default_batch_size = 5_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How the pub/sub database is selected and configured through the environment
+# How the pub/sub database is selected and configured through the environment -
+# the pool matters because pub/sub runs many small transactions and an unpooled
+# SQLite connection pays a WAL checkpoint on every single close
 _env_config = EnvDBConfig(
     env_prefix='Zato_PubSub_DB_',
     sqlite_file_name=pubsub_db_file_name,
     metadata=metadata,
+    needs_pool=True,
 )
 
 # ################################################################################################################################
@@ -103,6 +109,15 @@ def get_pubsub_engine() -> 'Engine':
     defaulting to a shared SQLite file.
     """
     out = get_env_engine(_env_config)
+    return out
+
+# ################################################################################################################################
+
+def get_pubsub_env_values() -> 'stranydict':
+    """ Returns the pub/sub database connection values as read from the environment -
+    for callers that talk to the database through its native driver, e.g. bulk loaders.
+    """
+    out = get_env_values(_env_config)
     return out
 
 # ################################################################################################################################

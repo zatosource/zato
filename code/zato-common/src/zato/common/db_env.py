@@ -21,6 +21,7 @@ from logging import getLogger
 from sqlalchemy import create_engine, inspect
 from sqlalchemy import event as sa_event
 from sqlalchemy import text as sa_text
+from sqlalchemy.pool import QueuePool
 
 # Zato
 from zato.common.defaults import default_env_base_dir
@@ -89,11 +90,17 @@ class EnvDBConfig:
     selecting it, its default SQLite file name and the schema it needs.
     """
 
-    def __init__(self, *, env_prefix:'str', sqlite_file_name:'str', metadata:'MetaData') -> 'None':
+    def __init__(self, *, env_prefix:'str', sqlite_file_name:'str', metadata:'MetaData', needs_pool:'bool'=False) -> 'None':
 
         self.env_prefix = env_prefix
         self.sqlite_file_name = sqlite_file_name
         self.metadata = metadata
+
+        # Whether SQLite connections are pooled - SQLAlchemy's default for file-based SQLite
+        # is no pooling at all, which makes every transaction open and close the database file,
+        # and each close checkpoints the WAL, costing more than ten milliseconds. Stores with
+        # many small transactions, such as pub/sub, need a real pool instead.
+        self.needs_pool = needs_pool
 
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'
@@ -386,7 +393,17 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     # .. build the engine itself ..
     engine_url   = build_engine_url_from_values(values, db_type)
     connect_args = build_connect_args_from_values(values, db_type)
-    out          = create_engine(engine_url, connect_args=connect_args)
+
+    # .. network databases are pooled by default but file-based SQLite is not,
+    # .. so stores that asked for a pool receive one - the pool hands each connection
+    # .. to one user at a time, which is what the same-thread check is relaxed for ..
+    engine_kwargs:'stranydict' = {}
+
+    if db_type == Type_SQLite and config.needs_pool:
+        engine_kwargs['poolclass'] = QueuePool
+        connect_args['check_same_thread'] = False
+
+    out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
     # .. SQLite needs its pragmas applied to every new connection in the pool ..
     if db_type == Type_SQLite:
