@@ -7,7 +7,7 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-enmasse \
+	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
@@ -406,6 +406,7 @@ test-pubsub: ## All pub/sub tests.
 	$(MAKE) _test-pubsub 2>&1 | tee /tmp/logs-test-pubsub.txt
 
 _test-pubsub:
+	$(MAKE) test-pubsub-backend 2>&1 | $(TS)
 	ruff check \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -509,6 +510,18 @@ _test-pubsub:
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		2>&1 | $(TS)
 	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
+
+test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed - grows together with the backend work.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/
+	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-enmasse: ## Enmasse round-trip tests.
 	$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_*.py' -v
