@@ -14,6 +14,7 @@ from drain import run_drain_scenario
 from fanout import run_fanout_scenario
 from laggard import run_laggard_scenario
 from mass_drain import run_mass_drain_scenario
+from operations import run_operations_scenario
 from subscriptions import run_subscriptions_scenario
 from throughput import run_delivery_throughput_scenario, run_publish_throughput_scenario
 
@@ -39,6 +40,11 @@ def test_pubsub_backend_perf_postgresql_ssl(postgresql_ssl_server:'DatabaseServe
         run_laggard_scenario()
         run_drain_scenario()
         run_mass_drain_scenario(
+            backlog_per_subscriber=Mass_Drain_Backlog_Main,
+            deadline_seconds=Mass_Drain_Deadline_Main,
+            min_publish_rate=Mass_Drain_Publish_Floor_Main,
+        )
+        run_operations_scenario(
             backlog_per_subscriber=Mass_Drain_Backlog_Main,
             deadline_seconds=Mass_Drain_Deadline_Main,
             min_publish_rate=Mass_Drain_Publish_Floor_Main,

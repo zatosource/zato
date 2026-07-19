@@ -33,7 +33,7 @@ if 0:
 
 def test_pubsub_backend_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -> 'None':
     """ The complete pub/sub backend scenario against a PostgreSQL server that requires TLS,
-    confirming the session really is encrypted.
+    confirming that the session is encrypted.
     """
     with pubsub_backend_env(postgresql_ssl_server.details):
         run_lifecycle_scenario()

@@ -33,7 +33,7 @@ if 0:
 
 def test_pubsub_backend_mysql_ssl(mysql_ssl_server:'DatabaseServer') -> 'None':
     """ The complete pub/sub backend scenario against a MySQL server that requires TLS,
-    confirming the session really is encrypted.
+    confirming that the session is encrypted.
     """
     with pubsub_backend_env(mysql_ssl_server.details):
         run_lifecycle_scenario()

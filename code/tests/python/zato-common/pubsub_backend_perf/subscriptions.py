@@ -81,7 +81,7 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
         else:
             payload = _single_record_payload
 
-        # .. and off it goes.
+        # .. and the message is published with the payload selected above.
         _ = backend.publish(topic_name, payload)
 
 # ################################################################################################################################

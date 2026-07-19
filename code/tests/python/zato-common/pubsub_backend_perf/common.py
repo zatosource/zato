@@ -49,9 +49,10 @@ Mass_Drain_Deadline_Main = 600
 Mass_Drain_Deadline_Mass = 3600
 
 # The concurrent-publish floors of the two scales. The main scale holds the standard
-# floor. At the mass scale publishes contend with a hundred full-tilt drains for one
-# serialized database - there the binding guarantee is the per-operation time bound,
-# and the floor is what that bound implies for strictly serialized publishing.
+# floor. At the mass scale publishes contend with a hundred continuously draining
+# consumers for one serialized database - there the binding guarantee is the
+# per-operation time bound, and the floor is what that bound implies
+# for strictly serialized publishing.
 Mass_Drain_Publish_Floor_Main = Min_Publish_Rate_Per_Second
 Mass_Drain_Publish_Floor_Mass = int(1 / Max_Operation_Seconds)
 
