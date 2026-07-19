@@ -227,12 +227,19 @@
     padding: 7px 0;
 }
 
-/* Clicking the transport name flips its slider */
+/* Clicking the transport name flips its slider. All the row labels share
+   one width so the summary links line up in a column. */
 .mllp-wizard-toggle-label {
+    flex: 0 0 auto;
+    width: 4em;
     font-size: 13px;
     font-weight: 600;
     color: var(--wizard-text);
     cursor: pointer;
+}
+
+#mllp-wizard-row-routing .mllp-wizard-toggle-label {
+    cursor: default;
 }
 
 /* One link is the way into the protocol options popup - inside it the
