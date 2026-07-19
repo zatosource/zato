@@ -7,7 +7,7 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-enmasse \
+	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
@@ -511,7 +511,7 @@ _test-pubsub:
 		2>&1 | $(TS)
 	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
 
-test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed - grows together with the backend work.
+test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/
@@ -521,6 +521,26 @@ test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed - g
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server needed - throughput, traffic shapes, the million-message backlog and deep clear-queue.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_sqlite.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full scale - ten million enqueued messages, standalone because of its runtime.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_mass_sqlite.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-enmasse: ## Enmasse round-trip tests.
