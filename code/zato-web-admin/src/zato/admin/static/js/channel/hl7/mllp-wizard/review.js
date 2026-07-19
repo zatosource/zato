@@ -285,16 +285,11 @@ $.fn.zato.channel.hl7.mllp.wizard.review.refreshSummaries = function() {
     review._setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
     review._setSummary('mllp-wizard-summary-logging', review._loggingSummary());
 
-    // The transport toggles mirror the hidden form flags ..
+    // .. and the transport toggles mirror the hidden form flags.
     $('#mllp-wizard-toggle-mllp').prop('checked', isMllpOn);
     $('#mllp-wizard-toggle-rest').prop('checked', useRest);
 
-    // .. and the routing cards act as one radio group.
-    var isDefault = wizard.field('is_default').prop('checked');
-    $('#mllp-wizard-card-routing-match').toggleClass('mllp-wizard-radio-card-selected', !isDefault);
-    $('#mllp-wizard-card-routing-default').toggleClass('mllp-wizard-radio-card-selected', isDefault);
-
-    review._setSummary('mllp-wizard-summary-routing', isDefault ? '' : review._routingSummary());
+    review._setSummary('mllp-wizard-summary-routing', review._routingSummary());
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -350,24 +345,24 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
     var restSummary = review._restSummary();
     transportRows.push(['REST bridge', restSummary ? restSummary : 'Off']);
 
-    // Routing
+    // Routing - the default flag and the matchers live side by side,
+    // just like on the full-page editor's routing tab
     var routingRows = [];
-    var isDefault = wizard.field('is_default').prop('checked');
 
-    if(isDefault) {
+    if(wizard.field('is_default').prop('checked')) {
         routingRows.push(['Default channel', 'Receives everything no other channel claimed']);
     }
-    else {
-        for(var matcherIdx = 0; matcherIdx < config.matcherFields.length; matcherIdx++) {
-            var matcher = config.matcherFields[matcherIdx];
-            var matcherValue = wizard.field(matcher.field).val().trim();
-            if(matcherValue) {
-                routingRows.push([matcher.label, matcherValue]);
-            }
+
+    for(var matcherIdx = 0; matcherIdx < config.matcherFields.length; matcherIdx++) {
+        var matcher = config.matcherFields[matcherIdx];
+        var matcherValue = wizard.field(matcher.field).val().trim();
+        if(matcherValue) {
+            routingRows.push([matcher.label, matcherValue]);
         }
-        if(!routingRows.length) {
-            routingRows.push([config.anyMessageLabel, '']);
-        }
+    }
+
+    if(!routingRows.length) {
+        routingRows.push([config.anyMessageLabel, '']);
     }
 
     // Service and destinations

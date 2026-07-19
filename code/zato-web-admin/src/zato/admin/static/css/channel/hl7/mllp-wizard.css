@@ -85,39 +85,54 @@
     transition: color 150ms ease;
 }
 
-.mllp-wizard-step-number {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    font-size: 11px;
-    font-weight: 700;
-    background: var(--wizard-border);
-    color: var(--wizard-text-muted);
-    transition: background 150ms ease, color 150ms ease;
+/* The strip lines up with the content below it - the first number sits
+   on the same left edge as the Name field and the section titles */
+.mllp-wizard-step:first-child {
+    padding-left: 0;
 }
 
 .mllp-wizard-step-active {
     color: var(--wizard-text);
     font-weight: 600;
-    border-bottom-color: var(--wizard-accent);
-}
-
-.mllp-wizard-step-active .mllp-wizard-step-number {
-    background: var(--wizard-accent);
-    color: #fff;
 }
 
 .mllp-wizard-step-done {
     color: var(--wizard-text-muted);
 }
 
-.mllp-wizard-step-done .mllp-wizard-step-number {
-    background: var(--wizard-done);
+/* The monospace step numbers - outlined keycaps on a sandy panel,
+   like keys on a keyboard. The active one washes the panel with
+   the pale accent blue, done ones turn green. */
+.mllp-wizard-step-num {
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 4px 7px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: #faf9f5;
+    border: 1px solid var(--wizard-border-strong);
+    box-shadow: inset 0 -1px 0 var(--wizard-border);
+    color: var(--wizard-text-muted);
+    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.mllp-wizard-step-done .mllp-wizard-step-num {
+    border-color: var(--wizard-done);
+    color: var(--wizard-done);
+}
+
+/* The active number is an accent badge with a gentle sheen - a barely-there
+   vertical gradient, a light top edge and a soft drop shadow */
+.mllp-wizard-step-active .mllp-wizard-step-num {
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--wizard-accent) 91%, white),
+        var(--wizard-accent));
+    border-color: color-mix(in srgb, var(--wizard-accent) 88%, black);
     color: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* ------------------------------------------------------------ */
@@ -139,11 +154,6 @@
     color: var(--wizard-text);
 }
 
-.mllp-wizard-section-hint {
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: var(--wizard-text-muted);
-}
 
 /* ------------------------------------------------------------ */
 /* MLLP wizard - name row                                        */
@@ -206,58 +216,6 @@
 .mllp-wizard-card .chosen-container-active .chosen-choices {
     outline: none;
     box-shadow: none;
-}
-
-/* ------------------------------------------------------------ */
-/* MLLP wizard - answer cards                                    */
-/* ------------------------------------------------------------ */
-
-.mllp-wizard-radio-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 560px;
-    padding: 11px 14px;
-    margin-bottom: 8px;
-    border: 2px solid var(--wizard-border);
-    border-radius: 5px;
-    cursor: pointer;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.mllp-wizard-radio-card:hover {
-    border-color: var(--wizard-border-strong);
-}
-
-.mllp-wizard-radio-card-selected,
-.mllp-wizard-radio-card-selected:hover {
-    border-color: var(--wizard-accent);
-}
-
-.mllp-wizard-radio-card-body {
-    width: 100%;
-}
-
-.mllp-wizard-radio-card-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--wizard-text);
-}
-
-.mllp-wizard-radio-card-desc {
-    margin-top: 2px;
-    font-size: 12px;
-    color: var(--wizard-text-muted);
-}
-
-.mllp-wizard-radio-card-summary {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-done);
-}
-
-.mllp-wizard-radio-card-summary:not(:empty) {
-    margin-top: 5px;
 }
 
 .mllp-wizard-summary-fresh {
