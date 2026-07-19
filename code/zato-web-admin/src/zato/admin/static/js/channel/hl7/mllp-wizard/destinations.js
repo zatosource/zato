@@ -265,10 +265,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
     var container = document.createElement('div');
     container.className = 'mllp-wizard-tippy-form';
 
-    var title = document.createElement('div');
-    title.className = 'mllp-wizard-tippy-title';
-    title.textContent = 'Destination';
-    container.appendChild(title);
+    container.appendChild(wizard.forms.buildTitle('Destination'));
 
     // The type select drives what the rest of the form shows ..
     var typeRow = document.createElement('div');

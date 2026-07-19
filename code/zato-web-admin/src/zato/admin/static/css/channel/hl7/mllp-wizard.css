@@ -162,6 +162,8 @@
 }
 
 .mllp-wizard-name-field input {
+    box-sizing: border-box;
+    height: 32px;
     padding: 6px 10px;
     border: 1px solid var(--wizard-border-strong);
     border-radius: 3px;
@@ -172,10 +174,29 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding-bottom: 7px;
+    height: 32px;
     font-size: 13px;
     color: var(--wizard-text);
     cursor: pointer;
+}
+
+/* The uniqueness indicator centers against the whole wrapper, which here
+   also holds the label above the input - anchor it to the input instead */
+.mllp-wizard-name-field .zato-unique-indicator {
+    top: auto;
+    bottom: 16px;
+    transform: translateY(50%);
+}
+
+/* formalize.css paints a grey glow on every focused control - kill it here */
+.mllp-wizard-card input:focus,
+.mllp-wizard-card select:focus,
+.mllp-wizard-card textarea:focus,
+.mllp-wizard-card button:focus,
+.mllp-wizard-card .chosen-container-active .chosen-single,
+.mllp-wizard-card .chosen-container-active .chosen-choices {
+    outline: none;
+    box-shadow: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -232,6 +253,85 @@
 
 .mllp-wizard-summary-fresh {
     animation: mllp-wizard-summary-fade-in 300ms ease-out;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP wizard - transport toggle rows                           */
+/* ------------------------------------------------------------ */
+
+.mllp-wizard-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 560px;
+    padding: 7px 0;
+}
+
+.mllp-wizard-toggle {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 19px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.mllp-wizard-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.mllp-wizard-toggle-slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 19px;
+    background: var(--wizard-border-strong);
+    transition: background 150ms ease;
+}
+
+.mllp-wizard-toggle-slider::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 150ms ease;
+}
+
+.mllp-wizard-toggle input:checked + .mllp-wizard-toggle-slider {
+    background: var(--wizard-accent);
+}
+
+.mllp-wizard-toggle input:checked + .mllp-wizard-toggle-slider::before {
+    transform: translateX(15px);
+}
+
+.mllp-wizard-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.mllp-wizard-toggle-summary {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-done);
+}
+
+/* A non-empty summary is the way into the protocol options popup */
+.mllp-wizard-toggle-summary:not(:empty) {
+    cursor: pointer;
+    border-bottom: 1px dotted currentColor;
+}
+
+.mllp-wizard-toggle-summary:not(:empty):hover {
+    filter: brightness(0.8);
 }
 
 @keyframes mllp-wizard-summary-fade-in {
