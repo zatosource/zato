@@ -144,13 +144,13 @@ def parse_and_build(data:'str') -> 'stranydict':
     tree, is_complete = parse_display_tree(data)
 
     if is_complete:
-        parsed_text = render_display_text(tree)
+        pretty_text = render_display_text(tree)
     else:
-        parsed_text = render_segments_text(tree)
+        pretty_text = render_segments_text(tree)
 
     grid_nodes = display_tree_to_grid_nodes(tree)
 
-    out = {'parsed_text': parsed_text, 'parsed_tree': grid_nodes}
+    out = {'pretty_text': pretty_text, 'tree': grid_nodes}
     return out
 
 # ################################################################################################################################

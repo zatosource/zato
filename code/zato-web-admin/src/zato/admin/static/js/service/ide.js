@@ -212,7 +212,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     function resizeDataResponse() {
 
         // The panel is resized rather than the textarea inside it - both the raw
-        // and the parsed views fill the panel, so they always share one height
+        // and the rendered views fill the panel, so they always share one height
         // and the panel's bottom edge always stays in view.
         let responsePanel = document.getElementById('response-panel');
 
@@ -663,16 +663,16 @@ $.fn.zato.ide.config = {
     // localStorage key prefix for the per-service payload format
     "payload_format_key_prefix": "zato.ide.payload-format.",
 
-    // localStorage key prefix for the per-service tree/raw/parsed choice of each pane
+    // localStorage key prefix for the per-service tree/pretty/raw choice of each pane
     "pane_view_key_prefix": "zato.ide.pane-view.",
 
     // What view a pane starts with when a service has no remembered choice
     "default_pane_view": "raw",
 
-    // Where the parsed view of a payload is rendered
+    // Where the tree and pretty views of a payload are rendered
     "parse_payload_url": "/zato/service/ide/parse-payload/",
 
-    // What the parsed pane shows when the payload does not parse
+    // What the rendered pane shows when the payload does not parse
     "parse_failed_text": "(payload does not parse)",
 
     // What a grid view root is called when the payload has no name
@@ -723,7 +723,7 @@ $.fn.zato.ide.on_payload_format_changed = function() {
         localStorage.setItem($.fn.zato.ide.config.payload_format_key_prefix + service_name, format);
     }
 
-    $.fn.zato.ide.update_parsed_toggles();
+    $.fn.zato.ide.update_view_toggles();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -745,7 +745,7 @@ $.fn.zato.ide.restore_payload_format = function() {
     $("#payload-format-select").val(format);
     $("#data-format").val(format);
 
-    $.fn.zato.ide.update_parsed_toggles();
+    $.fn.zato.ide.update_view_toggles();
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -760,34 +760,6 @@ $.fn.zato.ide.on_invoke_mode_changed = function() {
         $("#payload-format-select").val("hl7-v2");
         $.fn.zato.ide.on_payload_format_changed();
     }
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.update_parsed_toggles = function() {
-
-    let format = $.fn.zato.ide.get_payload_format();
-
-    // The remembered view of each pane is re-applied under the new format
-    $.fn.zato.ide.apply_pane_view("request");
-    $.fn.zato.ide.apply_pane_view("response");
-
-    // Samples exist only for some formats
-    let sample_list = $.fn.zato.ide.config.samples[format];
-
-    if(sample_list === undefined) {
-        $("#insert-sample-link").addClass("hidden");
-    }
-    else {
-        $("#insert-sample-link").removeClass("hidden");
-    }
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.get_pane_view_key = function(pane_name) {
-    let service_name = $.fn.zato.ide.get_current_service_name();
-    return $.fn.zato.ide.config.pane_view_key_prefix + pane_name + "." + service_name;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -1731,186 +1703,6 @@ $.fn.zato.ide.render_grid_view = function(pane, parsed) {
     }
 
     pane.append(root);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.apply_pane_view = function(pane_name) {
-
-    // The remembered choice for this pane and service ..
-    let key = $.fn.zato.ide.get_pane_view_key(pane_name);
-    var view_name = localStorage.getItem(key);
-
-    // .. a pane seen for the first time starts with the default ..
-    if(view_name === null) {
-        view_name = $.fn.zato.ide.config.default_pane_view;
-    }
-
-    // .. an empty pane has nothing to parse, so it stays raw without
-    // .. overwriting the remembered choice ..
-    let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
-
-    if(view_name != "raw") {
-        if(!text_elem.val()) {
-            view_name = "raw";
-        }
-    }
-
-    // .. and re-applying a remembered view is not a new choice to persist.
-    $.fn.zato.ide.show_pane_view(pane_name, view_name, false);
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
-
-    let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
-    let parsed_elem = $(`#data-${pane_name}-parsed`);
-
-    let tree_link = $(`#${pane_name}-view-tree`);
-    let raw_link = $(`#${pane_name}-view-raw`);
-    let parsed_link = $(`#${pane_name}-view-parsed`);
-    let parsed_separator = $(`#${pane_name}-view-parsed-separator`);
-
-    let data = text_elem.val();
-
-    // The parsed view exists for HL7 payloads only, so its link comes and goes with them ..
-    let is_hl7 = $.fn.zato.ide.highlight.is_hl7(data);
-
-    parsed_link.toggleClass("hidden", !is_hl7);
-    parsed_separator.toggleClass("hidden", !is_hl7);
-
-    // .. and a remembered parsed view of a payload that is not HL7 shows as the tree.
-    if(view_name == "parsed") {
-        if(!is_hl7) {
-            view_name = "tree";
-        }
-    }
-
-    // A view chosen by hand is remembered for this pane and service
-    if(should_persist !== false) {
-        let service_name = $.fn.zato.ide.get_current_service_name();
-        if(service_name) {
-            localStorage.setItem($.fn.zato.ide.get_pane_view_key(pane_name), view_name);
-        }
-    }
-
-    // The drag-to-resize indicator belongs to the raw request view only
-    let resize_indicator = $("#data-request-resize-indicator");
-
-    // Only one link reads as the current one
-    let mark_current = function(link) {
-        tree_link.removeClass("current");
-        raw_link.removeClass("current");
-        parsed_link.removeClass("current");
-        link.addClass("current");
-    }
-
-    if(view_name == "raw") {
-        parsed_elem.addClass("hidden");
-        text_elem.removeClass("hidden");
-        mark_current(raw_link);
-
-        // The overlay repaints in case the payload changed while another view was up
-        $.fn.zato.ide.highlight.refresh(pane_name);
-
-        if(pane_name == "request") {
-            resize_indicator.removeClass("hidden");
-        }
-        return;
-    }
-
-    // The parsed view takes over the exact height of the raw one,
-    // so the swap never moves anything below the pane
-    if(pane_name == "request") {
-        let raw_height = text_elem[0].style.height;
-        if(raw_height) {
-            parsed_elem.css("height", raw_height);
-        }
-    }
-
-    // Brings the parsed pane forward once it has its content
-    let show_parsed_pane = function(link) {
-        text_elem.addClass("hidden");
-        parsed_elem.removeClass("hidden");
-        mark_current(link);
-
-        if(pane_name == "request") {
-            resize_indicator.addClass("hidden");
-        }
-    }
-
-    // Both remaining views get their content from the parse endpoint,
-    // except for the tree of a JSON payload
-    let fetch_views = function(handler) {
-        let format = $.fn.zato.ide.get_payload_format();
-        $.ajax({
-            type: "POST",
-            url: $.fn.zato.ide.config.parse_payload_url,
-            data: JSON.stringify({"data": data, "data_format": format}),
-            contentType: "application/json",
-            headers: {"X-CSRFToken": $.cookie("csrftoken")},
-            success: handler
-        });
-    }
-
-    if(view_name == "tree") {
-
-        // A payload that parses as JSON becomes the grid view,
-        // built right here without a round trip ..
-        try {
-            var parsed_json = JSON.parse(data);
-            var is_json = true;
-        }
-        catch(ignored) {
-            var is_json = false;
-        }
-
-        if(is_json) {
-            $.fn.zato.ide.render_grid_view(parsed_elem, parsed_json);
-            show_parsed_pane(tree_link);
-            return;
-        }
-
-        // .. every other format gets its grid nodes from the parse endpoint.
-        fetch_views(function(response) {
-
-            let nodes = response.parsed_tree;
-
-            if(nodes.length) {
-
-                let root = $("<div>").addClass("grid-view");
-
-                for(const node of nodes) {
-                    root.append($.fn.zato.ide.build_grid_view_node(node, ""));
-                }
-
-                parsed_elem.empty();
-                parsed_elem.append(root);
-            }
-            else {
-                parsed_elem.text($.fn.zato.ide.config.parse_failed_text);
-            }
-
-            show_parsed_pane(tree_link);
-        });
-        return;
-    }
-
-    // What is left is the parsed view - HL7's segment text, highlighted.
-    fetch_views(function(response) {
-
-        let parsed_text = response.parsed_text;
-
-        if(parsed_text === "") {
-            parsed_elem.text($.fn.zato.ide.config.parse_failed_text);
-        }
-        else {
-            $.fn.zato.ide.highlight.render_parsed(parsed_elem, parsed_text);
-        }
-
-        show_parsed_pane(parsed_link);
-    });
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */

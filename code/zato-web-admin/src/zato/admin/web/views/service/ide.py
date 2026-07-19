@@ -19,6 +19,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import BaseCallView, invoke_action_handler, method_allowed
 from zato.common.fhir.display import parse_and_render as fhir_parse_and_render
 from zato.common.hl7.grid import parse_and_build as hl7_parse_and_build
+from zato.common.util.xml_.display import build_grid_nodes as xml_build_grid_nodes, pretty_print as xml_pretty_print
+from zato.edifact.display import parse_and_build as edifact_parse_and_build
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +40,10 @@ logger = logging.getLogger(__name__)
 # What an ER7 segment line looks like - a three-character segment id followed by the field separator,
 # any segment counts because a payload may be a fragment that does not start with MSH.
 _er7_segment_prefix = re.compile('^[A-Z][A-Z0-9]{2}\\|')
+
+# What EDIFACT wire text looks like - a UNA service string advice or a three-letter
+# segment tag followed by the element separator, which ER7 lines never use.
+_edifact_prefix = re.compile("^(UNA|[A-Z]{3}\\+)")
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,9 +211,9 @@ def _build_json_views(data:'str') -> 'stranydict':
     """ JSON renders as pretty-printed text only - its grid view
     is built in the browser without a round trip.
     """
-    parsed_text = _json_parse_and_render(data)
+    pretty_text = _json_parse_and_render(data)
 
-    out = {'parsed_text': parsed_text, 'parsed_tree': []}
+    out = {'pretty_text': pretty_text, 'tree': []}
     return out
 
 # ################################################################################################################################
@@ -215,10 +221,10 @@ def _build_json_views(data:'str') -> 'stranydict':
 def _build_key_value_views(data:'str') -> 'stranydict':
     """ Builds both views of key=value lines.
     """
-    parsed_text = _key_value_parse_and_render(data)
-    parsed_tree = _key_value_build_tree(data)
+    pretty_text = _key_value_parse_and_render(data)
+    tree = _key_value_build_tree(data)
 
-    out = {'parsed_text': parsed_text, 'parsed_tree': parsed_tree}
+    out = {'pretty_text': pretty_text, 'tree': tree}
     return out
 
 # ################################################################################################################################
@@ -227,17 +233,29 @@ def _build_fhir_views(data:'str') -> 'stranydict':
     """ FHIR renders as text only - its payloads are JSON,
     so the browser builds the grid view on its own.
     """
-    parsed_text = fhir_parse_and_render(data)
+    pretty_text = fhir_parse_and_render(data)
 
-    out = {'parsed_text': parsed_text, 'parsed_tree': []}
+    out = {'pretty_text': pretty_text, 'tree': []}
+    return out
+
+# ################################################################################################################################
+
+def _build_xml_views(data:'str') -> 'stranydict':
+    """ Builds both views of an XML document.
+    """
+    pretty_text = xml_pretty_print(data)
+    tree = xml_build_grid_nodes(data)
+
+    out = {'pretty_text': pretty_text, 'tree': tree}
     return out
 
 # ################################################################################################################################
 
 def _build_auto_views(data:'str') -> 'stranydict':
     """ Builds the views of a payload the same way the direct invoke's auto mode treats it -
-    a payload opening with an ER7 segment line means HL7 v2, a first line with =
-    means key=value, anything else is tried as JSON.
+    a payload opening with an ER7 segment line means HL7 v2, one opening with < means XML,
+    one opening like a UNA advice or a segment tag with the element separator means EDIFACT,
+    a first line with = means key=value, anything else is tried as JSON.
     """
 
     # HL7 first because its lines never carry a leading = and JSON never opens with a segment id
@@ -245,6 +263,14 @@ def _build_auto_views(data:'str') -> 'stranydict':
 
     if _er7_segment_prefix.match(stripped):
         out = hl7_parse_and_build(data)
+        return out
+
+    if stripped.startswith('<'):
+        out = _build_xml_views(data)
+        return out
+
+    if _edifact_prefix.match(stripped):
+        out = edifact_parse_and_build(data)
         return out
 
     parts = data.split('\n', 1)
@@ -259,18 +285,20 @@ def _build_auto_views(data:'str') -> 'stranydict':
 
 # ################################################################################################################################
 
-# Per-format view builders - each returns an empty parsed_text when the payload does not parse
+# Per-format view builders - each returns an empty pretty_text when the payload does not parse
 _payload_view_builders = {
     'auto': _build_auto_views,
     'json': _build_json_views,
     'key-value': _build_key_value_views,
     'hl7-v2': hl7_parse_and_build,
     'fhir': _build_fhir_views,
+    'xml': _build_xml_views,
+    'edifact': edifact_parse_and_build,
 }
 
 @method_allowed('POST')
 def parse_payload(req:'HttpRequest') -> 'JsonResponse':
-    """ Renders the parsed views of a payload for the IDE's request and response panes -
+    """ Renders the tree and pretty views of a payload for the IDE's request and response panes -
     parsing happens right here in the Django process, the same way the audit-log browser does it.
     """
     body = json.loads(req.body)

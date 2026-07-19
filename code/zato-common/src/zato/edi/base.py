@@ -67,6 +67,14 @@ raw_segment_seq = Sequence[EDIRawSegment]
 _composite_classes:'strtypedict' = {}
 
 # ################################################################################################################################
+
+def get_composite_class(name:'str') -> 'type | None':
+    """ Returns the composite class registered under the given name - None when there is none.
+    """
+    out = _composite_classes.get(name)
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class EDIValidationError(Exception):

@@ -387,7 +387,7 @@ input[type="button"]:focus:not(:active) {
 }
 
 
-.invoker-parsed-pane {
+.invoker-pretty-pane {
     width: 100%;
     margin: 0;
     border: none;
@@ -400,11 +400,11 @@ input[type="button"]:focus:not(:active) {
     white-space: pre;
 }
 
-#data-request-parsed {
+#data-request-pretty {
     height: 19.1vh;
 }
 
-/* The response panel owns the height - raw and parsed views both fill it,
+/* The response panel owns the height - raw and rendered views both fill it,
    so switching between them never changes where the bottom edge sits.
    The height here is only the pre-JS default, init_editor resizes the panel
    to end just above the action area's bottom edge. */
@@ -415,7 +415,7 @@ input[type="button"]:focus:not(:active) {
 }
 
 #data-response,
-#data-response-parsed {
+#data-response-pretty {
     height: 100%;
 }
 
@@ -743,9 +743,9 @@ input[type="button"]:focus:not(:active) {
     overflow: visible !important;
 }
 
-/* The parsed panes scroll within their fixed height - without this,
+/* The rendered panes scroll within their fixed height - without this,
    the overflow override above would let their content spill below the pane */
-#action-area .invoker-parsed-pane {
+#action-area .invoker-pretty-pane {
     overflow: auto !important;
 }
 

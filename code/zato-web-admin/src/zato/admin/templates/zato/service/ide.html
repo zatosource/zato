@@ -16,7 +16,9 @@
 <script type="text/javascript" src="/static/js/invoker.js"></script>
 <script type="text/javascript" src="/static/js/log_streaming.js"></script>
 <script type="module" src="/static/message-viewer-src/message-viewer-init.js"></script>
-<script type="text/javascript" src="/static/js/service/ide_highlight.js"></script>
+<script type="text/javascript" src="/static/js/service/ide-tokenizers.js"></script>
+<script type="text/javascript" src="/static/js/service/ide-highlight.js"></script>
+<script type="text/javascript" src="/static/js/service/ide-view.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
 <link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
@@ -117,7 +119,8 @@
                         <td>
                             <div id="request-view-toggle" class="invoker-view-toggle">
                                 <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'tree')" id="request-view-tree" class="invoker-view-link">Tree</a> |
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'raw')" id="request-view-raw" class="invoker-view-link current">Raw</a><span id="request-view-parsed-separator" class="hidden"> | </span><a href="javascript:$.fn.zato.ide.show_pane_view('request', 'parsed')" id="request-view-parsed" class="invoker-view-link hidden">Parsed</a>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'pretty')" id="request-view-pretty" class="invoker-view-link hidden">Pretty</a><span id="request-view-pretty-separator" class="hidden"> | </span>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('request', 'raw')" id="request-view-raw" class="invoker-view-link current">Raw</a>
                             </div>
                             <div class="invoker-area">
                                 <form id="invoke-service-request-form"><input type="hidden" id="data-format" name="data_format" value="auto"/><textarea id="data-request" name="data-request"
@@ -127,7 +130,7 @@ key2=value2
 
 Ctrl+↑/↓ to browse history
 Ctrl+K for full history"></textarea></form>
-                                <div id="data-request-parsed" class="invoker-parsed-pane hidden"></div>
+                                <div id="data-request-pretty" class="invoker-pretty-pane hidden"></div>
                             </div>
                         </td>
                     </tr>
@@ -145,6 +148,8 @@ Ctrl+K for full history"></textarea></form>
                                             <option value="key-value">Key=value</option>
                                             <option value="hl7-v2">HL7 v2</option>
                                             <option value="fhir">FHIR</option>
+                                            <option value="xml">XML</option>
+                                            <option value="edifact">EDIFACT</option>
                                         </optgroup>
                                     </select>
                                     <select id="invoke-mode-select" class="default" title="How to invoke the service">
@@ -171,12 +176,13 @@ Ctrl+K for full history"></textarea></form>
                             <form id="invoke-service-form" novalidate="" method="post"></form>
                             <div id="response-view-toggle" class="invoker-view-toggle">
                                 <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'tree')" id="response-view-tree" class="invoker-view-link">Tree</a> |
-                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'raw')" id="response-view-raw" class="invoker-view-link current">Raw</a><span id="response-view-parsed-separator" class="hidden"> | </span><a href="javascript:$.fn.zato.ide.show_pane_view('response', 'parsed')" id="response-view-parsed" class="invoker-view-link hidden">Parsed</a>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'pretty')" id="response-view-pretty" class="invoker-view-link hidden">Pretty</a><span id="response-view-pretty-separator" class="hidden"> | </span>
+                                <a href="javascript:$.fn.zato.ide.show_pane_view('response', 'raw')" id="response-view-raw" class="invoker-view-link current">Raw</a>
                             </div>
                             <div id="response-panel" class="invoker-area">
                                 <textarea id="data-response" readonly
                                     placeholder="No response yet - invoke the service to see results here"></textarea>
-                                <div id="data-response-parsed" class="invoker-parsed-pane hidden"></div>
+                                <div id="data-response-pretty" class="invoker-pretty-pane hidden"></div>
                             </div>
                             <div id="message-viewer-wrapper" style="display: none;"></div>
                             </form>
