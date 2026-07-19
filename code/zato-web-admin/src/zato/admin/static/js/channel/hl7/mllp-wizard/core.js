@@ -68,7 +68,10 @@ $.fn.zato.channel.hl7.mllp.wizard.state = {
     securityGroupList: [],
 
     // Which group IDs are selected - id -> true
-    selectedGroups: {}
+    selectedGroups: {},
+
+    // Whether the last uniqueness check found the name already taken
+    isNameTaken: false
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -132,9 +135,13 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
     // .. the searchable select for services ..
     $.fn.zato.turn_selects_into_chosen('#mllp-wizard-service-row');
 
-    // .. live uniqueness indicators for the name and the REST URL path ..
-    $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name');
+    // .. live uniqueness indicators for the name and the REST URL path,
+    // with the name badge in the header following the checks ..
+    $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name', null, wizard.onNameCheckResult);
     $.fn.zato.validate_unique('#id_rest_url_path', 'channel_rest', 'url_path');
+
+    // .. the header badge mirrors the name and edits it in place ..
+    wizard.initNameBadge();
 
     // .. the per-field help badge in the footer - each popover micro-form
     // additionally wires a badge of its own when it opens ..
@@ -173,8 +180,12 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
         window.location.href = wizard.state.listUrl;
     });
 
-    // .. the Next button follows the name as the user types ..
-    $('#id_name').on('input', wizard.updateNextState);
+    // .. the Next button and the name badge follow the name as the user types ..
+    $('#id_name').on('input', function() {
+        wizard.state.isNameTaken = false;
+        wizard.updateNameBadge();
+        wizard.updateNextState();
+    });
     $('#id_service').on('change', wizard.updateNextState);
 
     // .. show the first step ..
@@ -230,6 +241,75 @@ $.fn.zato.channel.hl7.mllp.wizard.updateNextState = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The name badge in the header - it mirrors the name field on every step,
+// turns red when the uniqueness check finds the name taken and opens
+// the shared inline-edit form when clicked.
+$.fn.zato.channel.hl7.mllp.wizard.updateNameBadge = function() {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var badge = $('#mllp-wizard-name-badge');
+    var name = wizard.field('name').val().trim();
+
+    badge.prop('hidden', !name);
+    badge.text(name);
+    badge.toggleClass('mllp-wizard-name-badge-taken', wizard.state.isNameTaken);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Invoked by the shared uniqueness validator each time a check completes.
+$.fn.zato.channel.hl7.mllp.wizard.onNameCheckResult = function(exists) {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    wizard.state.isNameTaken = exists;
+    wizard.updateNameBadge();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.wizard.initNameBadge = function() {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+    var config = wizard.config;
+
+    $('#mllp-wizard-name-badge').on('click', function() {
+        var badge = this;
+
+        $.fn.zato.inline_edit.form_tippy({
+            link_elem: badge,
+            title: 'Name',
+            input_width: '18em',
+            rows: [
+                {name: 'name', label: 'Name', value: wizard.field('name').val()}
+            ],
+            validate: function(values) {
+                if(!values.name) {
+                    return 'This field is required: Name';
+                }
+                return '';
+            },
+            on_submit: function(values) {
+
+                // Writing through the field runs everything the field's own
+                // input event runs - the badge, the Next button and the
+                // debounced uniqueness check.
+                wizard.field('name').val(values.name);
+                wizard.field('name').trigger('input');
+
+                // The review step renders once, on entry - an edit made
+                // while it is on screen has to re-render it by hand.
+                if(wizard.state.currentStep === config.stepCount - 1) {
+                    wizard.review.render();
+                }
+            }
+        });
+    });
+
+    wizard.updateNameBadge();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
 
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
@@ -257,11 +337,13 @@ $.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
     $('#mllp-wizard-steps .mllp-wizard-step').each(function() {
         var step = $(this);
         var stepNumber = parseInt(step.attr('data-step'));
+        var isCurrent = stepNumber === stepIndex;
 
-        step.removeClass('mllp-wizard-step-active mllp-wizard-step-done');
+        step.removeClass('mllp-wizard-step-active mllp-wizard-step-done dashboard-tab-active');
+        step.attr('aria-selected', isCurrent ? 'true' : 'false');
 
-        if(stepNumber === stepIndex) {
-            step.addClass('mllp-wizard-step-active');
+        if(isCurrent) {
+            step.addClass('mllp-wizard-step-active dashboard-tab-active');
         }
         else if(stepNumber < stepIndex) {
             step.addClass('mllp-wizard-step-done');
